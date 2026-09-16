@@ -1,0 +1,41 @@
+# Entornos virtuales
+venv/
+env/
+.venv/
+ENV/
+
+# Archivos de configuración y secretos (¡NUNCA subir a GitHub!)
+.env
+.env.local
+firebase-credentials.json
+*.pem
+*.key
+
+# Caché de Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Pruebas y cobertura
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Editor e IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Sistema operativo
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# Archivos temporales y de scratch
+scratch/
+*.log

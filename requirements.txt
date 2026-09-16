@@ -1,0 +1,36 @@
+# ============================================================
+# LSEC Translator Prototype — Dependencias
+# ============================================================
+# Instalar con: pip install -r requirements.txt
+# Python >= 3.10 requerido
+# ============================================================
+
+# --- Backend & Comunicación ---
+fastapi>=0.111.0,<1.0.0
+uvicorn[standard]>=0.30.0,<1.0.0
+websockets>=12.0,<14.0
+python-multipart>=0.0.9,<1.0.0
+
+# --- Validación & Configuración ---
+pydantic>=2.7.0,<3.0.0
+pydantic-settings>=2.3.0,<3.0.0
+python-dotenv>=1.0.0,<2.0.0
+
+# --- Módulo 1: Reconocimiento de Voz (ASR) ---
+faster-whisper>=1.0.0,<2.0.0
+
+# --- Módulo 2: Procesamiento de Lenguaje Natural (NLP) ---
+spacy>=3.7.0,<4.0.0
+
+# --- Módulo 3: Visión Artificial ---
+mediapipe>=0.10.14,<1.0.0
+opencv-python-headless>=4.10.0,<5.0.0
+numpy>=1.26.0,<3.0.0
+
+# --- Base de Datos ---
+firebase-admin>=6.5.0,<7.0.0
+
+# --- Testing ---
+pytest>=8.2.0,<9.0.0
+pytest-asyncio>=0.23.0,<1.0.0
+httpx>=0.27.0,<1.0.0

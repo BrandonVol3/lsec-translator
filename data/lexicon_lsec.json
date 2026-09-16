@@ -1,0 +1,529 @@
+{
+  "_description": "Lexicón Lingüístico y Base de Reglas Semánticas para Traductor LSEC 2.0. Incluye unidades MWE, entidades institucionales, estrategias discursivas, paráfrasis con presupuesto temporal y metadatos de validación nativa.",
+  "_version": "2.0.0",
+
+  "phrase_replacements": [
+    ["\\bexcelencia\\s+cad[eé]nica\\b", "excelencia académica"],
+    ["\\bcad[eé]nica\\b", "académica"],
+    ["\\bcadenica\\b", "académica"],
+    ["\\bpolit[eé]cnica\\s+del\\s+carchi\\b", "Politécnica del Carchi"],
+    ["\\buniversidad\\s+polit[eé]cnica\\s+estatal\\s+del\\s+carchi\\b", "Universidad Politécnica Estatal del Carchi"],
+    ["\\bcampos\\s+tulk[aá]n\\b", "campus Tulcán"],
+    ["\\btulk[aá]n\\b", "Tulcán"],
+    ["\\bcallambe\\b", "Cayambe"],
+    ["\\bya\\s+le\\s+hicieron\\b", "ya lo hicieron"],
+    ["\\bhas\\s+posible\\b", "haz posible"],
+    ["\\bqui[eé]n\\s+quiere\\s+ser\\b", "quién quieres ser"],
+    ["\\bseres\\s+humanos\\b", "seres humanos"]
+  ],
+
+  "multi_word_expressions": [
+    {
+      "id": "mwe_seres_humanos",
+      "source_phrase": "seres humanos",
+      "semantic_concept": "human_person",
+      "prevent_component_parsing": true,
+      "prevent_verb_generation": ["SER"],
+      "preferred_gloss": "PERSONA",
+      "candidate_realizations": [
+        ["PERSONA"],
+        ["PERSONA", "HUMANA"],
+        ["PERSONA", "ÍNTEGRA"]
+      ],
+      "requires_native_review": true,
+      "confidence": 0.88,
+      "notes": "Evitar segmentación morfológica que produzca el verbo copulativo SER"
+    },
+    {
+      "id": "mwe_primer_dia",
+      "source_phrase": "primer día",
+      "semantic_concept": "from_the_start",
+      "prevent_component_parsing": true,
+      "preferred_gloss": "DÍA-PRIMERO",
+      "candidate_realizations": [
+        ["DÍA", "PRIMERO"],
+        ["INICIO", "DESDE"]
+      ],
+      "requires_native_review": true,
+      "confidence": 0.90
+    },
+    {
+      "id": "mwe_excelencia_academica",
+      "source_phrase": "excelencia académica",
+      "semantic_concept": "academic_excellence",
+      "prevent_component_parsing": true,
+      "preferred_gloss": "EXCELENCIA-ACADÉMICA",
+      "candidate_realizations": [
+        ["EXCELENCIA", "ACADÉMICA"],
+        ["CALIDAD", "EDUCACIÓN", "ALTA"]
+      ],
+      "requires_native_review": true,
+      "confidence": 0.92
+    },
+    {
+      "id": "mwe_carreras_de_grado",
+      "source_phrase": "carreras de grado",
+      "semantic_concept": "undergraduate_degrees",
+      "prevent_component_parsing": true,
+      "preferred_gloss": "CARRERA-GRADO",
+      "candidate_realizations": [
+        ["CARRERA", "GRADO"],
+        ["CARRERA", "UNIVERSIDAD"]
+      ],
+      "requires_native_review": true,
+      "confidence": 0.90
+    },
+    {
+      "id": "mwe_universidad_publica",
+      "source_phrase": "universidad pública",
+      "semantic_concept": "public_university",
+      "prevent_component_parsing": true,
+      "preferred_gloss": "UNIVERSIDAD-PÚBLICA",
+      "candidate_realizations": [
+        ["UNIVERSIDAD", "PÚBLICA"],
+        ["UNIVERSIDAD", "ESTADO"]
+      ],
+      "requires_native_review": true,
+      "confidence": 0.92
+    },
+    {
+      "id": "mwe_haz_posible",
+      "source_phrase": "haz posible",
+      "semantic_concept": "make_possible_realize",
+      "prevent_component_parsing": true,
+      "preferred_gloss": "REALIDAD-HACER",
+      "candidate_realizations": [
+        ["REALIDAD", "HACER"],
+        ["LOGRAR", "PODER"]
+      ],
+      "requires_native_review": true,
+      "confidence": 0.89
+    },
+    {
+      "id": "mwe_transformar_mundo",
+      "source_phrase": "transformar el mundo",
+      "semantic_concept": "transform_world",
+      "prevent_component_parsing": true,
+      "preferred_gloss": "MUNDO-TRANSFORMAR",
+      "candidate_realizations": [
+        ["MUNDO", "TRANSFORMAR"],
+        ["SOCIEDAD", "CAMBIAR", "MEJORAR"]
+      ],
+      "requires_native_review": true,
+      "confidence": 0.91
+    },
+    {
+      "id": "mwe_mas_de",
+      "source_phrase": "más de",
+      "semantic_concept": "more_than_quantifier",
+      "prevent_component_parsing": true,
+      "preferred_gloss": "MÁS-DE",
+      "candidate_realizations": [
+        ["MÁS-DE"],
+        ["SUPERAR"]
+      ],
+      "requires_native_review": true,
+      "confidence": 0.95
+    },
+    {
+      "id": "mwe_mas_que",
+      "source_phrase": "más que",
+      "semantic_concept": "beyond_not_only",
+      "prevent_component_parsing": true,
+      "preferred_gloss": "SOLAMENTE-NO",
+      "candidate_realizations": [
+        ["SOLAMENTE-NO"],
+        ["ADEMÁS"]
+      ],
+      "requires_native_review": true,
+      "confidence": 0.90
+    }
+  ],
+
+  "contextual_corrections": [
+    {
+      "pattern": "\\bcampos\\s+Tulk[aá]n\\b",
+      "replacement": "campus Tulcán",
+      "confidence": 0.99,
+      "asr_confidence": 0.588,
+      "normalization_confidence": 0.99,
+      "reason": "contextual: universidad tiene campus, no campos agrícolas",
+      "requires_human_review": false,
+      "alternative_candidates": ["campus Tulcán"]
+    },
+    {
+      "pattern": "\\bcampos\\s+Tulc[aá]n\\b",
+      "replacement": "campus Tulcán",
+      "confidence": 0.99,
+      "asr_confidence": 0.650,
+      "normalization_confidence": 0.99,
+      "reason": "contextual: entorno universitario",
+      "requires_human_review": false,
+      "alternative_candidates": ["campus Tulcán"]
+    },
+    {
+      "pattern": "\\bTulk[aá]n\\b",
+      "replacement": "Tulcán",
+      "confidence": 0.98,
+      "asr_confidence": 0.700,
+      "normalization_confidence": 0.98,
+      "reason": "topónimo oficial Carchi",
+      "requires_human_review": false,
+      "alternative_candidates": ["Tulcán"]
+    },
+    {
+      "pattern": "\\b[Cc]allambe\\b",
+      "replacement": "Cayambe",
+      "confidence": 0.98,
+      "asr_confidence": 0.720,
+      "normalization_confidence": 0.98,
+      "reason": "topónimo oficial Pichincha",
+      "requires_human_review": false,
+      "alternative_candidates": ["Cayambe"]
+    },
+    {
+      "pattern": "\\bexcelencia\\s+cad[eé]nica\\b",
+      "replacement": "excelencia académica",
+      "confidence": 0.99,
+      "asr_confidence": 0.550,
+      "normalization_confidence": 0.99,
+      "reason": "colocación semántica académica",
+      "requires_human_review": false,
+      "alternative_candidates": ["excelencia académica"]
+    },
+    {
+      "pattern": "\\bcad[eé]nica\\b",
+      "replacement": "académica",
+      "confidence": 0.97,
+      "asr_confidence": 0.600,
+      "normalization_confidence": 0.97,
+      "reason": "corrección fonética ASR",
+      "requires_human_review": false,
+      "alternative_candidates": ["académica"]
+    },
+    {
+      "pattern": "\\bya\\s+le\\s+hicieron\\b",
+      "replacement": "ya lo hicieron",
+      "confidence": 0.95,
+      "asr_confidence": 0.850,
+      "normalization_confidence": 0.95,
+      "reason": "corrección anafórica pronominal",
+      "requires_human_review": false,
+      "alternative_candidates": ["ya lo hicieron"]
+    },
+    {
+      "pattern": "\\bhas\\s+posible\\b",
+      "replacement": "haz posible",
+      "confidence": 0.99,
+      "asr_confidence": 0.900,
+      "normalization_confidence": 0.99,
+      "reason": "imperativo de hacer",
+      "requires_human_review": false,
+      "alternative_candidates": ["haz posible"]
+    },
+    {
+      "pattern": "\\bqui[eé]n\\s+quiere\\s+ser\\b",
+      "replacement": "quién quieres ser",
+      "confidence": 0.93,
+      "asr_confidence": 0.800,
+      "normalization_confidence": 0.93,
+      "reason": "concordancia segunda persona",
+      "requires_human_review": false,
+      "alternative_candidates": ["quién quieres ser"]
+    }
+  ],
+
+  "dubious_words_registry": [
+    {
+      "word": "liberan",
+      "contextual_sense_confidence": 0.35,
+      "asr_confidence": 0.989,
+      "requires_audio_review": true,
+      "review_reason": "high_acoustic_confidence_but_low_contextual_coherence",
+      "alternative_candidates": ["lideran", "crean", "proyectan"],
+      "suggested_action": "rehear_audio_segment"
+    }
+  ],
+
+  "entity_registry": {
+    "UPEC": {
+      "full_name": "Universidad Politécnica Estatal del Carchi",
+      "type": "organization",
+      "preferred_gloss": "U-P-E-C",
+      "default_spatial_location": "center",
+      "aliases": [
+        "Politécnica del Carchi",
+        "Politécnica Carchi",
+        "Universidad Politécnica Estatal del Carchi",
+        "UPEC",
+        "la universidad",
+        "la institución"
+      ]
+    },
+    "Tulcán": {
+      "full_name": "Tulcán",
+      "type": "location",
+      "preferred_gloss": "T-U-L-C-Á-N",
+      "default_spatial_location": "left",
+      "aliases": ["Tulkán", "Tulkan", "campus Tulcán"]
+    },
+    "Cayambe": {
+      "full_name": "Cayambe",
+      "type": "location",
+      "preferred_gloss": "C-A-Y-A-M-B-E",
+      "default_spatial_location": "right",
+      "aliases": ["Callambe", "Callambé", "campus Cayambe"]
+    },
+    "Carchi": {
+      "full_name": "Carchi",
+      "type": "location",
+      "preferred_gloss": "CARCHI",
+      "default_spatial_location": "center",
+      "aliases": ["Provincia del Carchi", "el Carchi"]
+    },
+    "Ecuador": {
+      "full_name": "República del Ecuador",
+      "type": "location",
+      "preferred_gloss": "ECUADOR",
+      "default_spatial_location": "center",
+      "aliases": ["país", "el Ecuador"]
+    }
+  },
+
+  "semantic_paraphrases": {
+    "imparable": {
+      "concept": "persona determinada que continúa avanzando y supera obstáculos",
+      "realizations": {
+        "compact": ["DETERMINADA", "CONTINUAR", "AVANZAR"],
+        "medium": ["OBSTÁCULO", "SUPERAR", "CONTINUAR", "AVANZAR"],
+        "expanded": ["PERSONA", "DETERMINADA", "OBSTÁCULO", "SUPERAR", "CONTINUAR", "AVANZAR"]
+      },
+      "gloss_sequence": ["PERSONA", "FUERTE", "AVANZAR", "OBSTÁCULO", "SUPERAR"],
+      "default_budget": "medium",
+      "strategy": "semantic_paraphrase",
+      "status": "requires_native_validation",
+      "temporal_cost_ms": {
+        "compact": 1200,
+        "medium": 1800,
+        "expanded": 2600
+      }
+    },
+    "cercanía": {
+      "concept": "trato humano y acompañamiento interpersonal",
+      "realizations": {
+        "compact": ["ACOMPAÑAR"],
+        "medium": ["TRATO", "CERCANO", "ACOMPAÑAR"],
+        "expanded": ["PERSONA", "ACOMPAÑAR", "RELACIÓN", "CERCANA"]
+      },
+      "gloss_sequence": ["TRATO", "CERCANO", "ACOMPAÑAR"],
+      "default_budget": "compact",
+      "strategy": "semantic_paraphrase",
+      "status": "requires_native_validation",
+      "temporal_cost_ms": {
+        "compact": 500,
+        "medium": 1200,
+        "expanded": 1800
+      }
+    },
+    "sostenible": {
+      "concept": "sostenibilidad ambiental e institucional como reconocimiento",
+      "realizations": {
+        "compact": ["SOSTENIBILIDAD", "DESTACAR"],
+        "medium": ["SOSTENIBILIDAD", "DESTACAR", "RECONOCIMIENTO"],
+        "expanded": ["MEDIO-AMBIENTE", "CUIDAR", "INSTITUCIÓN", "DESTACAR"]
+      },
+      "gloss_sequence": ["SOSTENIBILIDAD", "DESTACAR"],
+      "default_budget": "compact",
+      "strategy": "lexical_adaptation",
+      "status": "requires_native_validation",
+      "temporal_cost_ms": {
+        "compact": 900,
+        "medium": 1400,
+        "expanded": 2000
+      }
+    }
+  },
+
+  "institutional_dictionary": {
+    "UPEC":         {"gloss": "U-P-E-C",     "type": "DACTILOLOGÍA"},
+    "TIC":          {"gloss": "T-I-C",       "type": "DACTILOLOGÍA"},
+    "LSEC":         {"gloss": "L-S-E-C",     "type": "DACTILOLOGÍA"},
+    "TULCÁN":       {"gloss": "T-U-L-C-Á-N", "type": "DACTILOLOGÍA"},
+    "TULCAN":       {"gloss": "T-U-L-C-Á-N", "type": "DACTILOLOGÍA"},
+    "CAYAMBE":      {"gloss": "C-A-Y-A-M-B-E", "type": "DACTILOLOGÍA"},
+    "CARCHI":       {"gloss": "CARCHI",       "type": "SEÑA"},
+    "ECUADOR":      {"gloss": "ECUADOR",      "type": "SEÑA"},
+    "POLITÉCNICA":  {"gloss": "POLITECNICA",  "type": "SEÑA"},
+    "POLITECNICA":  {"gloss": "POLITECNICA",  "type": "SEÑA"}
+  },
+
+  "lemma_overrides": {
+    "eliges": "elegir",
+    "elige": "elegir",
+    "elijo": "elegir",
+    "eligió": "elegir",
+    "elegimos": "elegir",
+    "elig": "elegir",
+    "crean": "crear",
+    "creo": "crear",
+    "cree": "crear",
+    "como": "comer",
+    "comes": "comer",
+    "come": "comer",
+    "comemos": "comer",
+    "coméis": "comer",
+    "comen": "comer",
+    "comí": "comer",
+    "comiste": "comer",
+    "comió": "comer",
+    "comimos": "comer",
+    "comieron": "comer",
+    "comar": "comer",
+    "bebo": "beber",
+    "bebes": "beber",
+    "bebe": "beber",
+    "bebemos": "beber",
+    "bebéis": "beber",
+    "beben": "beber",
+    "bebí": "beber",
+    "bebiste": "beber",
+    "bebió": "beber",
+    "bebimos": "beber",
+    "bebieron": "beber",
+    "compra": "comprar",
+    "compras": "comprar",
+    "compran": "comprar",
+    "compro": "comprar",
+    "compró": "comprar",
+    "compré": "comprar",
+    "compraste": "comprar",
+    "compramos": "comprar",
+    "compráis": "comprar",
+    "compraron": "comprar",
+    "estudio": "estudiar",
+    "estudias": "estudiar",
+    "estudia": "estudiar",
+    "estudiamos": "estudiar",
+    "estudian": "estudiar",
+    "estudié": "estudiar",
+    "estudió": "estudiar",
+    "estudiaron": "estudiar",
+    "llego": "llegar",
+    "llegas": "llegar",
+    "llega": "llegar",
+    "llegamos": "llegar",
+    "llegan": "llegar",
+    "llegué": "llegar",
+    "llegó": "llegar",
+    "llegaron": "llegar",
+    "voy": "ir",
+    "vas": "ir",
+    "va": "ir",
+    "vamos": "ir",
+    "van": "ir",
+    "fui": "ir",
+    "fue": "ser",
+    "construyen": "construir",
+    "construye": "construir",
+    "construyo": "construir",
+    "imaginas": "imaginar",
+    "imagina": "imaginar",
+    "imagino": "imaginar",
+    "formamos": "formar",
+    "educamos": "educar",
+    "preparamos": "preparar",
+    "evoluciona": "evolucionar",
+    "liberan": "liberar",
+    "lideran": "liderar",
+    "graduados": "graduado",
+    "graduadas": "graduado",
+    "estudiantes": "estudiante",
+    "profesores": "profesor",
+    "profesionales": "profesional",
+    "oportunidades": "oportunidad",
+    "ideas": "idea",
+    "campus": "campus",
+    "campos": "campus",
+    "carreras": "carrera",
+    "libros": "libro",
+    "casas": "casa",
+    "proyectos": "proyecto",
+    "imparables": "imparable",
+    "manzana": "manzana",
+    "manzanas": "manzana",
+    "pan": "pan",
+    "panes": "pan",
+    "carne": "carne",
+    "carnes": "carne",
+    "agua": "agua",
+    "aguas": "agua"
+  },
+
+  "periphrasis_map": {
+    "ir_a":      {"marker": "FUTURO", "position": "before", "aux_lemmas": ["ir"],       "pattern": "aux + a + infinitivo"},
+    "haber_pp":  {"marker": "YA",     "position": "after",  "aux_lemmas": ["haber"],    "pattern": "aux + participio"},
+    "estar_ger": {"marker": "AHORA",  "position": "after",  "aux_lemmas": ["estar"],    "pattern": "aux + gerundio"},
+    "acabar_de": {"marker": "RECIÉN", "position": "before", "aux_lemmas": ["acabar"],   "pattern": "aux + de + infinitivo"},
+    "tener_que": {"marker": "DEBER",  "position": "before", "aux_lemmas": ["tener"],    "pattern": "aux + que + infinitivo"}
+  },
+
+  "pronoun_deixis_map": {
+    "yo":        "PRO1",
+    "me":        "PRO1",
+    "mí":        "PRO1",
+    "conmigo":   "PRO1",
+    "tú":        "PRO2",
+    "te":        "PRO2",
+    "ti":        "PRO2",
+    "contigo":   "PRO2",
+    "usted":     "PRO2",
+    "él":        "PRO3",
+    "ella":      "PRO3",
+    "le":        "PRO3",
+    "nosotros":  "PRO1-PL",
+    "nosotras":  "PRO1-PL",
+    "nos":       "PRO1-PL",
+    "ustedes":   "PRO2-PL",
+    "ellos":     "PRO3-PL",
+    "ellas":     "PRO3-PL",
+    "les":       "PRO3-PL"
+  },
+
+  "plural_marker": "VARIOS",
+
+  "quantifier_lemmas": [
+    "mucho", "muchos", "muchas", "mucha",
+    "varios", "varias",
+    "poco", "pocos", "pocas", "poca",
+    "todo", "todos", "todas", "toda",
+    "alguno", "algunos", "algunas", "alguna",
+    "ninguno", "ningunos", "ningunas", "ninguna",
+    "bastante", "bastantes",
+    "demasiado", "demasiados", "demasiadas", "demasiada",
+    "más", "menos"
+  ],
+
+  "wh_lemmas": [
+    "qué", "quién", "quiénes", "dónde", "cuándo",
+    "cómo", "cuál", "cuáles", "cuánto", "cuánta",
+    "cuántos", "cuántas"
+  ],
+
+  "time_markers": [
+    "ayer", "hoy", "mañana", "ahora", "antes", "después", "siempre",
+    "nunca", "jamás", "futuro", "pasado", "año", "mes", "día",
+    "tarde", "noche", "temprano", "pronto", "semana", "desde"
+  ],
+
+  "duration_ms": {
+    "sign_base": 500,
+    "sign_short": 400,
+    "sign_long": 600,
+    "fingerspelling_per_char": 300,
+    "temporal_marker": 400,
+    "aspectual_marker": 350,
+    "deixis": 350,
+    "plural_marker": 300,
+    "inter_clause_pause": 200
+  }
+}

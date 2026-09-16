@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LSEC Studio 2.1.1 — Estación de Trabajo Lingüística y Audiovisual</title>
+  <meta name="description" content="Estación de trabajo lingüística profesional para transformar transcripciones en español a glosas de Lengua de Señas Ecuatoriana (LSEC) y validación humana.">
+  
+  <!-- Estilos del Sistema de Diseño -->
+  <link rel="stylesheet" href="/static/css/app.css?v=2.1.4">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22%23B7D36B%22><rect width=%2224%22 height=%2224%22 rx=%226%22 fill=%22%23191B18%22/><path d=%22M7 6h3v12H7zm7 0h3v12h-3z%22 fill=%22%23B7D36B%22/></svg>">
+</head>
+<body>
+
+  <!-- Contenedor Principal de la Estación de Trabajo -->
+  <div id="app-container" role="application" aria-label="LSEC Studio 2.1.1">
+
+    <!-- 1. BARRA SUPERIOR COMPACTA -->
+    <header id="top-navbar" role="banner">
+      
+      <!-- Izquierda: Marca y Archivo de Proyecto -->
+      <div class="nav-left-group">
+        <a href="#" class="brand-badge" title="LSEC Studio 2.1.1 — Estación de Trabajo Lingüística">
+          <div class="brand-glyph" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          </div>
+          <span>LSEC Studio</span>
+        </a>
+
+        <div class="project-tag" id="nav-project-tag" title="Archivo cargado">
+          <span id="nav-project-name">Sin video cargado</span>
+        </div>
+
+        <span id="nav-save-indicator" class="save-indicator">Guardado</span>
+      </div>
+
+      <!-- Centro: Flujo de 3 Etapas Principales -->
+      <nav class="nav-stages-group" aria-label="Etapas de Trabajo">
+        <button class="stage-btn stage-locked disabled" data-stage="preparar" id="stage-btn-preparar" disabled title="1. Preparar: Bloqueado. Carga un video primero (Paso 1)">
+          <span class="stage-num">1</span>
+          <span>Preparar</span>
+          <span class="stage-lock-icon" id="lock-icon-preparar">🔒</span>
+        </button>
+        <button class="stage-btn stage-locked disabled" data-stage="traducir" id="stage-btn-traducir" disabled title="2. Traducir: Bloqueado hasta revisar subtítulos y traducir a glosas (Paso 2)">
+          <span class="stage-num">2</span>
+          <span>Traducir</span>
+          <span class="stage-lock-icon" id="lock-icon-traducir">🔒</span>
+        </button>
+        <button class="stage-btn stage-locked disabled" data-stage="revisar" id="stage-btn-revisar" disabled title="3. Revisar: Bloqueado hasta confirmar glosas LSEC (Paso 3)">
+          <span class="stage-num">3</span>
+          <span>Revisar</span>
+          <span class="stage-lock-icon" id="lock-icon-revisar">🔒</span>
+        </button>
+      </nav>
+
+      <!-- Derecha: Historial, Carga y Exportación -->
+      <div class="nav-right-group">
+        <input type="file" id="video-file-input" accept="video/mp4,video/webm,video/ogg,video/quicktime,video/x-matroska" style="display:none;">
+        <input type="file" id="json-file-input" accept=".json" style="display:none;">
+
+        <!-- Deshacer / Rehacer -->
+        <button class="btn-icon" id="btn-undo" title="Deshacer (Ctrl + Z)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12.5 8c-2.65 0-5.05 1-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+        </button>
+        <button class="btn-icon" id="btn-redo" title="Rehacer (Ctrl + Y)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M18.4 10.6C16.55 9 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/></svg>
+        </button>
+
+        <div style="width:1px; height:16px; background:var(--border-subtle); margin:0 2px;"></div>
+
+        <button class="btn btn-secondary btn-sm" id="btn-top-load-video" title="Cargar archivo de video local">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z"/></svg>
+          Video
+        </button>
+
+        <button class="btn btn-secondary btn-sm" id="btn-top-load-json" title="Cargar proyecto JSON">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+          JSON
+        </button>
+
+        <button class="btn btn-secondary btn-sm" id="btn-top-save" title="Guardar cambios (Ctrl + S)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+          Guardar
+        </button>
+
+        <button class="btn btn-primary btn-sm disabled" id="btn-top-export" disabled title="Exportar: Bloqueado hasta confirmar y aprobar la traducción final">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+          Exportar
+        </button>
+
+        <button class="btn btn-secondary btn-sm" id="btn-toggle-bottom-dock" title="Ocultar / Mostrar panel inferior de edición y línea de tiempo (Tecla B)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2zm0 2v8h16V6H4zm0 10v2h16v-2H4z"/></svg>
+          <span id="btn-toggle-bottom-dock-text">Panel Inferior</span>
+        </button>
+
+        <button class="btn-icon" id="btn-top-settings" title="Ajustes de accesibilidad y atajos (?)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 16h-2v-2h2v2zm1.07-7.75l-.9.92C12.45 11.9 12 12.5 12 14h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/></svg>
+        </button>
+      </div>
+
+    </header>
+
+    <!-- BARRA GUÍA DE FLUJO SECUENCIAL Y ACCIÓN PRINCIPAL -->
+    <div id="workflow-stepper-bar" class="workflow-stepper-container" aria-label="Progreso del Flujo Secuencial">
+      <div class="stepper-track">
+        <div class="stepper-step active" id="step-node-video">
+          <span class="step-badge">1</span>
+          <div class="step-info">
+            <span class="step-title">Cargar Video</span>
+            <span class="step-sub">Paso Inicial</span>
+          </div>
+        </div>
+        <div class="stepper-arrow">›</div>
+        <div class="stepper-step locked" id="step-node-prep">
+          <span class="step-badge">2</span>
+          <div class="step-info">
+            <span class="step-title">Revisar Subtítulos</span>
+            <span class="step-sub">Corregir Palabras</span>
+          </div>
+        </div>
+        <div class="stepper-arrow">›</div>
+        <div class="stepper-step locked" id="step-node-trans">
+          <span class="step-badge">3</span>
+          <div class="step-info">
+            <span class="step-title">Traducir a Glosas</span>
+            <span class="step-sub">Sintaxis LSEC</span>
+          </div>
+        </div>
+        <div class="stepper-arrow">›</div>
+        <div class="stepper-step locked" id="step-node-rev">
+          <span class="step-badge">4</span>
+          <div class="step-info">
+            <span class="step-title">Confirmar y Exportar</span>
+            <span class="step-sub">Validación Final</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Botón de Avance Dinámico del Paso Actual -->
+      <div class="stepper-action-zone">
+        <button class="btn btn-action-step" id="btn-step-action" style="display:none;">
+          <span id="btn-step-action-text">Traducir a Glosas LSEC ▶</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 2. ÁREA DE TRABAJO PRINCIPAL (PANELES REDIMENSIONABLES) -->
+    <main id="main-workspace">
+      
+      <!-- Contenedor Superior: Video (Izq) e Inspector Contextual (Der) -->
+      <div id="top-split-container">
+        
+        <!-- ZONA IZQUIERDA: REPRODUCTOR DE VIDEO Y CONTROLES -->
+        <section id="left-video-zone" aria-label="Reproductor Audiovisual">
+          <div class="video-wrapper" id="video-wrapper">
+            
+            <!-- Video Físico HTML5 -->
+            <video id="main-video-element" playsinline preload="auto"></video>
+            
+            <!-- Fallback Canvas Video Player -->
+            <canvas id="canvas-video-fallback"></canvas>
+
+            <!-- HUD de Metadatos Discreto -->
+            <div class="video-hud-badge" id="hud-res">
+              Sin video activo
+            </div>
+
+            <!-- Capa Textual de Glosas LSEC Sincronizada -->
+            <div id="gloss-overlay-container" aria-live="polite"></div>
+
+            <!-- Capa de Subtítulos Generados -->
+            <div id="subtitle-overlay-container" aria-live="polite"></div>
+
+            <!-- Empty State Inicial: Obligatoriedad de Cargar Video -->
+            <div id="video-empty-state" class="video-empty-overlay">
+              <div class="empty-state-card">
+                <div class="empty-state-icon">
+                  <svg width="34" height="34" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z"/></svg>
+                </div>
+                <h2 class="empty-state-title">Paso 1: Carga un Video para Comenzar</h2>
+                <p class="empty-state-desc">
+                  Para seguir el flujo lingüístico secuencial, primero carga un video para procesar la transcripción y subtítulos en español.
+                </p>
+                <div class="empty-state-actions">
+                  <button class="btn btn-primary" id="btn-empty-load-video">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
+                    Cargar Video Local
+                  </button>
+                </div>
+                <span class="empty-state-drop-hint">o arrastra y suelta tu archivo de video aquí</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Controles de Reproducción y Barra de Progreso -->
+          <div class="video-controls-panel">
+            
+            <!-- Barra de Progreso Limpia con Cabezal y Marcadores -->
+            <div class="video-progress-bar" id="video-progress-bar" title="Navegar en la línea de tiempo">
+              <div class="progress-track">
+                <div class="progress-markers-container" id="progress-markers-container"></div>
+                <div class="progress-fill" id="progress-fill">
+                  <div class="progress-playhead" id="progress-playhead"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Fila de Botones de Control -->
+            <div class="controls-row">
+              <div class="controls-group">
+                <button class="btn btn-secondary btn-sm" id="btn-step-back-5s" title="Retroceder 5s (J)">-5s</button>
+                <button class="btn btn-secondary btn-sm" id="btn-prev-frame" title="Fotograma anterior (Shift + ←)">|◀</button>
+                
+                <button class="btn btn-primary btn-sm" id="btn-play-pause" title="Reproducir / Pausar (Espacio / K)">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                </button>
+
+                <button class="btn btn-secondary btn-sm" id="btn-next-frame" title="Fotograma siguiente (Shift + →)">▶|</button>
+                <button class="btn btn-secondary btn-sm" id="btn-step-fwd-5s" title="Avanzar 5s (L)">+5s</button>
+
+                <div class="timecode-box" id="timecode-display">
+                  <span class="timecode-current" id="timecode-current">00:00.000</span>
+                  <span style="opacity:0.3;">/</span>
+                  <span id="timecode-total">00:00.000</span>
+                </div>
+              </div>
+
+              <!-- Centro: Puntos In/Out y Conmutadores de Capas -->
+              <div class="controls-group">
+                <button class="btn btn-secondary btn-sm" id="btn-set-in" title="Punto de entrada In (I)">[ In</button>
+                <button class="btn btn-secondary btn-sm" id="btn-set-out" title="Punto de salida Out (O)">Out ]</button>
+                <button class="btn btn-secondary btn-sm" id="btn-toggle-loop" title="Repetir bucle de segmento">Bucle</button>
+
+                <div style="width:1px; height:14px; background:var(--border-subtle); margin:0 2px;"></div>
+
+                <button class="btn btn-secondary btn-sm" id="btn-toggle-subtitles" title="Activar / Desactivar subtítulos (Tecla C)">
+                  CC Subtítulos
+                </button>
+                <button class="btn btn-secondary btn-sm" id="btn-toggle-glosses" title="Activar / Desactivar capa textual LSEC (Tecla G)">
+                  Glosas LSEC
+                </button>
+              </div>
+
+              <!-- Derecha: Velocidad, Volumen y Pantalla Completa -->
+              <div class="controls-group">
+                <select id="select-playback-speed" class="btn btn-secondary btn-sm" title="Velocidad de reproducción" style="padding:2px 4px;">
+                  <option value="0.25">0.25x</option>
+                  <option value="0.5">0.5x</option>
+                  <option value="0.75">0.75x</option>
+                  <option value="1.0" selected>1.0x</option>
+                  <option value="1.25">1.25x</option>
+                  <option value="1.5">1.5x</option>
+                  <option value="2.0">2.0x</option>
+                </select>
+
+                <button class="btn-icon" id="btn-toggle-mute" title="Silenciar / Activar audio (M)">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+                </button>
+                <input type="range" id="video-volume-slider" min="0" max="1" step="0.05" value="0.9" style="width:50px; accent-color:var(--action-primary);" title="Volumen">
+
+                <button class="btn-icon" id="btn-fullscreen" title="Pantalla completa">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- DIVISOR VERTICAL ARRASTRABLE -->
+        <div id="vertical-splitter" class="gutter-vertical" title="Arrastra para redimensionar paneles"></div>
+
+        <!-- ZONA DERECHA: PANELES LATERALES (TRANSCRIPCIÓN Y REGISTRO LINGÜÍSTICO) -->
+        <aside id="contextual-inspector-zone" role="complementary" aria-label="Panel Lateral de Transcripción e Inspector">
+          
+          <!-- Barra de Pestañas del Panel Derecho -->
+          <div class="sidebar-tabs-header">
+            <div class="sidebar-nav-tabs">
+              <button class="sidebar-tab-btn active" id="tab-btn-side-transcript" title="Ver transcripción total del video con minutos">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                <span>Transcripción</span>
+              </button>
+              <button class="sidebar-tab-btn" id="tab-btn-side-inspector" title="Ver inspector contextual de propiedades">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                <span>Inspector</span>
+              </button>
+              <button class="sidebar-tab-btn" id="tab-btn-side-subtitles" title="Editor de estilos y posición de subtítulos por segmento">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-9 7H9.5v-.5h-2v3h2V13H11v1c0 .55-.45 1-1 1H7c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1zm7 0h-1.5v-.5h-2v3h2V13H18v1c0 .55-.45 1-1 1h-3c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1z"/></svg>
+                <span>Subtítulos</span>
+              </button>
+            </div>
+            <div id="inspector-header-badge"></div>
+          </div>
+
+          <!-- VISTA 1: TRANSCRIPCIÓN TOTAL CON MINUTOS -->
+          <div class="sidebar-view-pane" id="view-side-transcript">
+            <div class="side-transcript-toolbar">
+              <div class="search-box-clean" style="flex:1;">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style="color:var(--text-muted);"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                <input type="text" id="side-transcript-search" placeholder="Buscar en la transcripción...">
+              </div>
+              <button class="btn btn-secondary btn-sm" id="btn-copy-transcript-text" title="Copiar texto completo al portapapeles">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                <span>Copiar</span>
+              </button>
+            </div>
+
+            <div class="full-transcript-stream" id="full-transcript-stream-list">
+              <!-- Renderizado dinámico de la transcripción total con minutos -->
+            </div>
+          </div>
+
+          <!-- VISTA 2: INSPECTOR CONTEXTUAL -->
+          <div class="sidebar-view-pane" id="view-side-inspector" style="display:none;">
+            <div class="inspector-header" style="border-top:none;">
+              <div class="inspector-title-cluster">
+                <div class="inspector-icon" id="inspector-header-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                </div>
+                <span class="inspector-title" id="inspector-title-text">Inspector Contextual</span>
+              </div>
+            </div>
+
+            <div class="inspector-body" id="inspector-body-content">
+              <!-- Renderizado dinámico según el elemento seleccionado -->
+            </div>
+          </div>
+
+          <!-- VISTA 3: EDITOR DE ESTILO Y POSICIÓN DE SUBTÍTULOS -->
+          <div class="sidebar-view-pane" id="view-side-subtitles" style="display:none;">
+            <!-- Renderizado por SubtitleEditorPanel -->
+          </div>
+
+        </aside>
+
+      </div>
+
+      <!-- DIVISOR HORIZONTAL ARRASTRABLE -->
+      <div id="horizontal-splitter" class="gutter-horizontal" title="Arrastra para redimensionar área inferior"></div>
+
+      <!-- ZONA INFERIOR: EDITOR DEL SEGMENTO ACTIVO Y TIMELINE COMPACTA -->
+      <section id="bottom-dock-zone" aria-label="Editor del Segmento y Línea de Tiempo">
+        
+        <!-- Barra de Pestañas del Dock Inferior -->
+        <div class="dock-nav-header">
+          <div class="dock-tabs">
+            <button class="dock-tab-btn active" id="tab-btn-segment-hub" title="Ver editor de segmentos bilingües y glosas">
+              Editor de Segmentos
+            </button>
+            <button class="dock-tab-btn" id="tab-btn-timeline" title="Ver línea de tiempo sincronizada">
+              Línea de Tiempo
+            </button>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button class="btn btn-secondary btn-sm" id="btn-timeline-prev-seg" title="Segmento anterior">◀ Seg</button>
+            <button class="btn btn-secondary btn-sm" id="btn-timeline-next-seg" title="Segmento siguiente">Seg ▶</button>
+            <button class="btn btn-secondary btn-sm" id="btn-timeline-prev-error" title="Incidencia anterior" style="color:var(--status-review);">◀ Incidencia</button>
+            <button class="btn btn-secondary btn-sm" id="btn-timeline-next-error" title="Incidencia siguiente" style="color:var(--status-review);">Incidencia ▶</button>
+
+            <button class="btn btn-ghost btn-sm" id="btn-toggle-advanced-layers" title="Mostrar u ocultar capas avanzadas de análisis">
+              Capas avanzadas ▾
+            </button>
+
+            <div style="display:flex; align-items:center; gap:4px; font-size:0.70rem; color:var(--text-muted); margin-left:6px;">
+              <span>Zoom:</span>
+              <input type="range" id="timeline-zoom-slider" min="30" max="250" value="100" style="width:60px; accent-color:var(--action-primary);">
+            </div>
+
+            <div style="width:1px; height:14px; background:var(--border-subtle); margin:0 2px;"></div>
+
+            <button class="btn btn-secondary btn-sm" id="btn-collapse-bottom-dock" title="Ocultar editor de segmentos y línea de tiempo (Tecla B)">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13H5v-2h14v2z"/></svg>
+              <span>Ocultar</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 1. VISTA EDITOR DE SEGMENTO CENTRAL (UNIDAD DE TRABAJO) -->
+        <div id="segment-hub-view" style="display:flex;">
+          <div class="segment-hub-toolbar">
+            <div class="search-box-clean">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="color:var(--text-muted);"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+              <input type="text" id="transcript-search-input" placeholder="Buscar por palabra, glosa o intervalo...">
+            </div>
+
+            <div class="filter-tags-row">
+              <button class="filter-tag active" id="chip-filter-all">Todos</button>
+              <button class="filter-tag" id="chip-filter-review">Revisar</button>
+              <button class="filter-tag" id="chip-filter-audio">Audio</button>
+              <button class="filter-tag" id="chip-filter-native">Sintaxis LSEC</button>
+              <button class="filter-tag" id="chip-filter-corrections">Corregidos</button>
+            </div>
+
+            <button class="btn btn-secondary btn-sm" id="btn-toggle-auto-scroll" style="margin-left:auto;">Auto-Scroll: ON</button>
+          </div>
+
+          <div class="segments-scrollable-list" id="transcript-segments-list">
+            <!-- Renderizado dinámico de tarjetas de segmento unificadas -->
+          </div>
+        </div>
+
+        <!-- 2. VISTA TIMELINE COMPACTA (3 CAPAS BASE + AVANZADAS) -->
+        <div id="timeline-view-wrap" style="display:none;">
+          <div class="timeline-viewport">
+            
+            <!-- Columna de Cabeceras de Pistas -->
+            <div class="timeline-headers-col" id="timeline-headers-col">
+              <!-- Capas Base -->
+              <div class="timeline-header-cell"><span>1. Frases (Español)</span></div>
+              <div class="timeline-header-cell"><span>2. Glosas LSEC (Frase)</span></div>
+              <div class="timeline-header-cell"><span>3. Revisiones</span></div>
+              
+              <!-- Capas Avanzadas (Ocultables) -->
+              <div class="timeline-header-cell advanced-layer" style="display:none;"><span>4. Subtítulos CC</span></div>
+              <div class="timeline-header-cell advanced-layer" style="display:none;"><span>5. Discurso (RST)</span></div>
+              <div class="timeline-header-cell advanced-layer" style="display:none;"><span>6. No Manuales</span></div>
+              <div class="timeline-header-cell advanced-layer" style="display:none;"><span>7. Espacio / Loci</span></div>
+              <div class="timeline-header-cell advanced-layer" style="display:none;"><span>8. Incidencias</span></div>
+            </div>
+
+            <!-- Área de Pistas y Regla -->
+            <div class="timeline-tracks-area" id="timeline-tracks-scrollable">
+              <div class="timeline-ruler-canvas-wrap" id="timeline-ruler-bar">
+                <!-- Canvas de regla temporal -->
+              </div>
+
+              <div id="timeline-tracks-content">
+                <!-- Pistas Base -->
+                <div class="timeline-track-lane" id="lane-track-1"><canvas id="timeline-waveform-canvas"></canvas></div>
+                <div class="timeline-track-lane" id="lane-track-2"></div>
+                <div class="timeline-track-lane" id="lane-track-3"></div>
+
+                <!-- Pistas Avanzadas -->
+                <div class="timeline-track-lane advanced-layer" id="lane-track-4" style="display:none;"></div>
+                <div class="timeline-track-lane advanced-layer" id="lane-track-5" style="display:none;"></div>
+                <div class="timeline-track-lane advanced-layer" id="lane-track-6" style="display:none;"></div>
+                <div class="timeline-track-lane advanced-layer" id="lane-track-7" style="display:none;"></div>
+                <div class="timeline-track-lane advanced-layer" id="lane-track-8" style="display:none;"></div>
+              </div>
+
+              <!-- Cabezal de Reproducción -->
+              <div class="timeline-playhead-line" id="timeline-main-playhead">
+                <div class="timeline-playhead-handle"></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </section>
+
+      <!-- Barra comprimida para restaurar el Dock Inferior cuando está oculto -->
+      <div id="bottom-dock-collapsed-bar" class="dock-collapsed-bar" style="display: none;">
+        <button class="btn-expand-dock" id="btn-expand-bottom-dock" title="Mostrar editor de segmentos y línea de tiempo (Tecla B)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8l-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z"/></svg>
+          <span>Mostrar Editor de Segmentos y Línea de Tiempo (Tecla B)</span>
+        </button>
+      </div>
+    </main>
+
+    <!-- 3. MODALES SOBRIOS DE ACCESIBILIDAD, EXPORTACIÓN Y REVISIÓN -->
+    <div id="generic-modal-backdrop" class="modal-backdrop" role="dialog" aria-modal="true">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3 class="modal-title" id="generic-modal-title">Diálogo</h3>
+          <button class="btn-icon" id="generic-modal-close" title="Cerrar">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="modal-body" id="generic-modal-body"></div>
+        <div class="modal-footer" id="generic-modal-footer"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Toast de Notificaciones Secuenciales -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- Scripts de la Aplicación -->
+  <script src="/static/js/demo-data.js"></script>
+  <script src="/static/js/state.js"></script>
+  <script src="/static/js/components/subtitle-engine.js"></script>
+  <script src="/static/js/components/pipeline-processor.js"></script>
+  <script src="/static/js/components/video-player.js"></script>
+  <script src="/static/js/components/subtitle-overlay.js"></script>
+  <script src="/static/js/components/subtitle-editor-panel.js"></script>
+  <script src="/static/js/components/gloss-overlay.js"></script>
+  <script src="/static/js/components/structural-validator.js"></script>
+  <script src="/static/js/components/sentence-engine.js"></script>
+  <script src="/static/js/components/timeline.js"></script>
+  <script src="/static/js/components/transcript-window.js"></script>
+  <script src="/static/js/components/sidebar-panels.js"></script>
+  <script src="/static/js/components/video-exporter.js"></script>
+  <script src="/static/js/components/modals-and-export.js"></script>
+  <script src="/static/js/app.js"></script>
+
+</body>
+</html>
