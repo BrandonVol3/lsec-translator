@@ -463,6 +463,235 @@ class SemanticProposition(BaseModel):
     review_reasons: List[str] = Field(default_factory=list)
 
 
+class SemanticFrame(BaseModel):
+    """
+    Representación semántica intermedia para la traducción a LSEC.
+
+    Abstracción entre la ``SemanticProposition`` (análisis lingüístico del español)
+    y la secuencia de ``GlossItem`` (producción LSEC). El motor de reglas
+    (``RuleEngine``) evalúa sus condiciones contra los campos de este frame.
+
+    Invariante: cada ``SemanticFrame`` se construye a partir de exactamente
+    una ``SemanticProposition`` y produce exactamente una secuencia de glosas.
+    """
+    frame_id: str = Field(description="ID único del frame (ej: 'frame_p1')")
+    proposition_id: str = Field(description="ID de la proposición fuente")
+    source_text: str = Field(default="")
+
+    # ── Tipo de oración ────────────────────────────────────────
+    sentence_type: str = Field(
+        default="declarative",
+        description="'declarative', 'interrogative_wh', 'interrogative_yn', 'imperative', 'exclamative', 'reflective'",
+    )
+    is_embedded: bool = Field(default=False, description="Indica si la cláusula está subordinada o embebida")
+    has_subordinate: bool = Field(default=False, description="Indica si la proposición contiene cláusula subordinada o relativa")
+
+    # ── Predicado ──────────────────────────────────────────────
+    predicate_lemma: Optional[str] = Field(default=None)
+    predicate_type: Optional[str] = Field(default=None, description="PredicateType value")
+    has_patient_or_theme: bool = Field(default=False)
+    explicit_subject: bool = Field(default=True)
+    is_copulative: bool = Field(default=False)
+    copula_type: Optional[str] = Field(
+        default=None,
+        description="'attributive', 'identificational', 'locativa', 'existencial', 'temporal'",
+    )
+    has_adjectival_predicate: bool = Field(default=False)
+    has_attributive_adjective: bool = Field(default=False)
+
+    # ── Polaridad, modalidad ───────────────────────────────────
+    polarity: str = Field(default="positive", description="'positive' | 'negative'")
+    modality: str = Field(default="declarative")
+    negation_scope: Optional[str] = Field(default=None, description="'clausal', 'constituent', 'existential'")
+
+    # ── Temporalidad y aspecto ─────────────────────────────────
+    has_temporal_reference: bool = Field(default=False)
+    has_past_reference: bool = Field(default=False)
+    temporal_marker: Optional[str] = Field(default=None, description="Marcador temporal (ej: 'hoy', 'ayer', 'futuro')")
+    grammatical_aspect: Optional[str] = Field(default=None, description="'progressive', 'perfect', 'prospective', 'habitual'")
+    tense: Optional[str] = Field(default=None, description="'past', 'present', 'future'")
+
+    # ── Participantes semánticos ───────────────────────────────
+    agent: Optional[str] = Field(default=None, description="Lema del agente")
+    agent_person: Optional[str] = Field(default=None, description="Persona gramatical: '1', '2', '3', etc.")
+    prodrop_type: Optional[str] = Field(
+        default=None,
+        description="'pro1', 'pro2', 'anaphoric', 'locus', 'generic', 'impersonal', 'ambiguous'",
+    )
+    patient: Optional[str] = Field(default=None, description="Lema del paciente/tema")
+    beneficiary: Optional[str] = Field(default=None, description="Lema del beneficiario")
+    instrument: Optional[str] = Field(default=None, description="Lema del instrumento")
+    location: Optional[str] = Field(default=None, description="Lema del lugar")
+    participants: List[Dict[str, Any]] = Field(default_factory=list)
+
+    # ── Estructura informativa ─────────────────────────────────
+    topic: Optional[str] = Field(default=None)
+    focus: Optional[str] = Field(default=None)
+    discourse_relation: Optional[str] = Field(default=None)
+    rhetorical_function: Optional[str] = Field(default=None)
+
+    # ── Correferencia y espacialidad ───────────────────────────
+    coreference_chains: List[Dict[str, Any]] = Field(default_factory=list)
+    spatial_assignments: List[Dict[str, Any]] = Field(default_factory=list)
+    functional_transfers: List[Dict[str, Any]] = Field(default_factory=list)
+    classifier_candidates: List[Dict[str, Any]] = Field(default_factory=list)
+
+    # ── Reglas aplicadas (trazabilidad) ────────────────────────
+    applied_rule_ids: List[str] = Field(default_factory=list)
+    confidence: float = Field(default=0.85, ge=0.0, le=1.0)
+    requires_review: bool = Field(default=False)
+    review_reasons: List[str] = Field(default_factory=list)
+
+    def to_eval_dict(self) -> Dict[str, Any]:
+        """Convierte el frame a un diccionario para evaluación de reglas."""
+        return self.model_dump(exclude_none=True)
+
+    @classmethod
+    def from_proposition(cls, prop: "SemanticProposition") -> "SemanticFrame":
+        """Construye un SemanticFrame a partir de una SemanticProposition existente."""
+        has_patient = any(
+            p.semantic_role in (SemanticRole.PATIENT, SemanticRole.THEME)
+            for p in prop.participants
+        )
+        explicit_subj = any(
+            p.semantic_role == SemanticRole.AGENT and not p.is_implicit
+            for p in prop.participants
+        ) if prop.participants else not bool(prop.predicate)
+
+        agent_p = next(
+            (p for p in prop.participants if p.semantic_role == SemanticRole.AGENT), None
+        )
+        patient_p = next(
+            (p for p in prop.participants if p.semantic_role in (SemanticRole.PATIENT, SemanticRole.THEME)), None
+        )
+        beneficiary_p = next(
+            (p for p in prop.participants if p.semantic_role == SemanticRole.BENEFICIARY), None
+        )
+        instrument_p = next(
+            (p for p in prop.participants if p.semantic_role == SemanticRole.INSTRUMENT), None
+        )
+        location_p = next(
+            (p for p in prop.participants if p.semantic_role == SemanticRole.LOCATION), None
+        )
+
+        # Determinar tipo de oración
+        s_type = prop.modality if prop.modality != "declarative" else "declarative"
+        text_lower = prop.source_text.lower()
+        if "?" in prop.source_text or "¿" in prop.source_text:
+            wh_words = {"quién", "quiénes", "qué", "dónde", "cuándo", "cómo", "cuál", "cuáles", "cuánto", "cuánta", "cuántos", "cuántas"}
+            if any(w in text_lower for w in wh_words):
+                s_type = "interrogative_wh"
+            else:
+                s_type = "interrogative_yn"
+        elif prop.modality == "imperative":
+            s_type = "imperative"
+
+        # Detectar aspecto gramatical y tiempo desde el predicado
+        g_aspect = None
+        tense = None
+        pred_lemma = prop.predicate.lemma.lower() if prop.predicate else None
+        pred_type_val = prop.predicate.predicate_type.value if prop.predicate else None
+
+        if prop.predicate:
+            ta = prop.predicate.tense_or_aspect
+            if ta in ("progressive", "perfect", "prospective", "habitual"):
+                g_aspect = ta
+            elif ta in ("past", "present", "future"):
+                tense = ta
+
+        # Detectar marcador temporal y referencia al pasado
+        has_temp = bool(prop.temporal_modifiers)
+        temp_marker = None
+        if prop.temporal_modifiers:
+            temp_marker = prop.temporal_modifiers[0].get("value") or prop.temporal_modifiers[0].get("lemma")
+
+        past_words = {"ayer", "anoche", "antes", "pasado", "año_pasado", "mes_pasado", "hace", "anterior"}
+        has_past = tense == "past" or any(pw in text_lower for pw in past_words)
+
+        # Cópula tipificada: atributiva, identificacional, locativa, existencial, temporal
+        is_cop = False
+        c_type = None
+        has_adj_pred = False
+        if pred_lemma in ("ser", "estar", "haber"):
+            is_cop = True
+            if pred_lemma == "haber":
+                c_type = "existencial"
+            elif any(tw in text_lower for tw in ("tarde", "temprano", "noche", "día", "lunes", "martes", "hora")):
+                c_type = "temporal"
+            elif location_p is not None or any(loc_w in text_lower for loc_w in ("en ", "sobre ", "bajo ", "aquí", "allí", "tulcán", "cayambe")):
+                c_type = "locativa"
+            elif pred_type_val in ("EQUATIVE",) or (prop.participants and any(p.semantic_role == SemanticRole.THEME for p in prop.participants) and not has_patient):
+                c_type = "identificacional"
+            else:
+                c_type = "attributive"
+                has_adj_pred = True
+        elif pred_type_val in ("STATE", "EQUATIVE") and not has_patient:
+            has_adj_pred = True
+
+        # Tipificación de pro-drop
+        pdrop_type = None
+        if not explicit_subj:
+            if agent_p and agent_p.grammatical_person in ("1", "1-PL"):
+                pdrop_type = "pro1"
+            elif agent_p and agent_p.grammatical_person in ("2", "2-PL"):
+                pdrop_type = "pro2"
+            elif agent_p and agent_p.coreference_id:
+                pdrop_type = "anaphoric"
+            elif pred_lemma in ("llover", "nevar", "granizar", "tronar") or "se " in text_lower:
+                pdrop_type = "impersonal"
+            elif agent_p and agent_p.grammatical_person in ("3", "3-PL"):
+                pdrop_type = "ambiguous"
+            else:
+                pdrop_type = "ambiguous"
+
+        # Detección de subordinación / embebido
+        has_subord = bool(prop.embedded_propositions) or "lo que" in text_lower or ("haz" in text_lower and "imagina" in text_lower)
+        is_emb = getattr(prop, "is_embedded", False) or bool(prop.parent_proposition_id)
+
+        return cls(
+            frame_id=f"frame_{prop.id}",
+            proposition_id=prop.id,
+            source_text=prop.source_text,
+            sentence_type=s_type,
+            is_embedded=is_emb,
+            has_subordinate=has_subord,
+            predicate_lemma=pred_lemma,
+            predicate_type=pred_type_val,
+            has_patient_or_theme=has_patient,
+            explicit_subject=explicit_subj,
+            is_copulative=is_cop,
+            copula_type=c_type,
+            has_adjectival_predicate=has_adj_pred,
+            has_attributive_adjective=False,
+            polarity=prop.polarity,
+            modality=prop.modality,
+            negation_scope="clausal" if prop.polarity == "negative" else None,
+            has_temporal_reference=has_temp or (temp_marker is not None),
+            has_past_reference=has_past,
+            temporal_marker=temp_marker,
+            grammatical_aspect=g_aspect,
+            tense=tense,
+            agent=agent_p.lemma if agent_p else None,
+            agent_person=agent_p.grammatical_person if agent_p else None,
+            prodrop_type=pdrop_type,
+            patient=patient_p.lemma if patient_p else None,
+            beneficiary=beneficiary_p.lemma if beneficiary_p else None,
+            instrument=instrument_p.lemma if instrument_p else None,
+            location=location_p.lemma if location_p else None,
+            participants=[
+                {"lemma": p.lemma, "role": p.semantic_role.value, "person": p.grammatical_person, "implicit": p.is_implicit}
+                for p in prop.participants
+            ],
+            topic=prop.topic,
+            focus=prop.focus,
+            discourse_relation=prop.discourse_relation,
+            rhetorical_function=prop.rhetorical_function,
+            confidence=prop.confidence,
+            requires_review=prop.requires_review or (pdrop_type == "ambiguous"),
+            review_reasons=list(prop.review_reasons) + (["Sujeto tácito ambiguo de 3ra persona"] if pdrop_type == "ambiguous" else []),
+        )
+
+
 # ============================================================
 # Módulo 3 — Operaciones Espaciales y Referentes
 # ============================================================
@@ -565,6 +794,8 @@ class TranslationPlan(BaseModel):
     confidence: float = Field(default=0.85, ge=0.0, le=1.0)
     requires_native_review: bool = Field(default=True)
     requires_audio_review: bool = Field(default=False)
+    applied_rule_ids: List[str] = Field(default_factory=list, description="IDs de reglas gramaticales aplicadas por el motor")
+    confidence_vector: Optional[Dict[str, Any]] = Field(default=None, description="Vector de confianza multidimensional")
 
 
 class DiscourseBlock(BaseModel):
@@ -823,6 +1054,8 @@ class GlossOutput(BaseModel):
     unresolved_items: List[Dict[str, Any]] = Field(default_factory=list)
     warnings: List[StructuralValidationError] = Field(default_factory=list)
     grammar_notes: Optional[str] = Field(default=None)
+    grammar_engine_version: str = Field(default="0.1.0", description="Versión del motor de gramática LSEC")
+    semantic_frames: List[SemanticFrame] = Field(default_factory=list, description="Frames semánticos intermedios (modo debug)")
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     def model_post_init(self, __context: Any) -> None:

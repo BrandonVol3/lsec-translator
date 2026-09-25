@@ -224,6 +224,16 @@ async def studio_ui():
     return {"status": "studio_interface_not_found"}
 
 
+@app.get("/avatarconfig", tags=["Avatar"])
+@app.get("/avatar-config", tags=["Avatar"])
+async def avatar_config_ui():
+    """Sirve la interfaz web dedicada para configuración y calibración del Avatar 3D LSEC."""
+    avatar_config_path = os.path.join(static_dir, "avatarconfig.html")
+    if os.path.exists(avatar_config_path):
+        return FileResponse(avatar_config_path)
+    return {"status": "avatar_config_interface_not_found"}
+
+
 @app.get("/api/info", tags=["Root"])
 async def api_info() -> dict:
     """Endpoint de información del sistema en formato JSON."""
@@ -238,6 +248,9 @@ async def api_info() -> dict:
             "transcribe": "/api/v1/transcribe",
             "translate": "/api/v1/translate",
             "pipeline": "/api/v1/pipeline",
+            "studio": "/studio",
+            "avatar_config": "/avatarconfig",
         },
     }
+
 

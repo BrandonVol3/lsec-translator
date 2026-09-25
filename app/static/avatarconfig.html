@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LSEC Studio — Configuración y Calibración del Avatar 3D</title>
+  <meta name="description" content="Entorno dedicado para la calibración biomecánica, configuración cinemática, pruebas de rasgos no manuales y carga de modelos VRM 1.0 del Avatar LSEC.">
+
+  <!-- Estilos del Sistema de Diseño -->
+  <link rel="stylesheet" href="/static/css/app.css?v=2.2.0">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22%23B7D36B%22><rect width=%2224%22 height=%2224%22 rx=%226%22 fill=%22%23191B18%22/><path d=%22M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z%22 fill=%22%23B7D36B%22/></svg>">
+
+  <!-- Import Map para Three.js y @pixiv/three-vrm (Módulos ES6 Locales) -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "/static/js/vendor/three.module.js",
+      "three/addons/": "/static/js/vendor/addons/",
+      "@pixiv/three-vrm": "/static/js/vendor/three-vrm.module.js"
+    }
+  }
+  </script>
+</head>
+<body class="avatar-config-page">
+
+  <!-- BARRA DE NAVEGACIÓN SUPERIOR DEDICADA -->
+  <header class="avatar-config-navbar" role="banner">
+    <div class="avatar-config-nav-left">
+      <a href="/studio" class="brand-badge" title="Ir a la Estación de Trabajo LSEC Studio">
+        <div class="brand-glyph" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+          </svg>
+        </div>
+        <span>LSEC Studio</span>
+      </a>
+
+      <div style="width: 1px; height: 16px; background: var(--border-subtle); margin: 0 4px;"></div>
+
+      <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+        <span style="color: var(--action-primary);">⚙</span> Configuración del Avatar 3D
+      </span>
+
+      <span class="avatar-model-pill avatar-pill-vrm" id="avatar-model-source-info">Cargando modelo...</span>
+    </div>
+
+    <div class="avatar-config-nav-right">
+      <span class="unvalidated-warning-badge" id="avatar-unvalidated-notice" title="Las animaciones son demostraciones técnicas no validadas lingüísticamente por la comunidad sorda">
+        DEMO NO VALIDADA
+      </span>
+
+      <span class="avatar-status-badge" id="avatar-playback-status-badge">Inactivo</span>
+
+      <span class="avatar-perf-badge" id="avatar-hud-perf-badge" title="Rendimiento en tiempo real (FPS)">60 FPS</span>
+
+      <div style="width: 1px; height: 16px; background: var(--border-subtle); margin: 0 4px;"></div>
+
+      <a href="/studio" class="btn btn-secondary btn-sm" id="btn-back-to-studio" title="Volver al Editor Principal de LSEC Studio">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+        <span>Volver a LSEC Studio</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- CONTENEDOR PRINCIPAL DE LA ESTACIÓN AVATAR (COMPATIBLE CON SELECTORES EXISTENTES) -->
+  <main class="avatar-config-main-grid" id="avatar-config-workspace" role="main">
+    
+    <!-- WRAPPER COMPATIBLE CON SELECTORES E2E (#view-side-avatar) -->
+    <div id="view-side-avatar" style="display:contents;">
+      <button id="tab-btn-side-avatar" style="display:none;" aria-hidden="true"></button>
+
+      <!-- ZONA IZQUIERDA: VISUALIZADOR 3D WEBGL Y TRANSPORTE -->
+      <section class="avatar-config-viewport-zone" aria-label="Visualizador WebGL del Avatar">
+        
+        <!-- Viewport 3D Principal con HUD Reactivo -->
+        <div class="avatar-viewport-container" id="avatar-viewport-wrap">
+          <canvas id="avatar-webgl-canvas" class="avatar-canvas"></canvas>
+
+          <!-- Overlay de Carga -->
+          <div class="avatar-overlay-loading" id="avatar-loading-indicator" style="display:none;">
+            <div class="avatar-spinner"></div>
+            <span id="avatar-loading-text">Cargando modelo VRM 1.0...</span>
+          </div>
+
+          <!-- Overlay de Error -->
+          <div class="avatar-overlay-error" id="avatar-error-banner" style="display:none;">
+            <div class="avatar-error-content">
+              <span class="avatar-error-icon">⚠️</span>
+              <span class="avatar-error-msg" id="avatar-error-message">Error de inicialización.</span>
+              <button class="btn btn-secondary btn-sm" id="btn-avatar-error-retry">Reintentar</button>
+            </div>
+          </div>
+
+          <!-- HUD Superior Reactivo: Glosa Activa, Tiempo y Estado -->
+          <div class="avatar-hud-top" id="avatar-hud-bar">
+            <div class="avatar-hud-gloss">
+              <span class="avatar-hud-label">PRUEBA ACTIVA:</span>
+              <span class="avatar-hud-value" id="avatar-active-gloss-hud">—</span>
+            </div>
+            <div class="avatar-hud-time">
+              <span id="avatar-hud-time-current">0.00s</span>
+              <span style="opacity:0.4;">/</span>
+              <span id="avatar-hud-time-total">0.00s</span>
+            </div>
+          </div>
+
+          <!-- Barra de Progreso Temporal del Clip -->
+          <div class="avatar-viewport-progress-track">
+            <div class="avatar-viewport-progress-fill" id="avatar-clip-progress-fill"></div>
+          </div>
+
+          <!-- Botón de Recentrado Rápido de Cámara -->
+          <button class="btn-avatar-hud-action" id="btn-avatar-reset-camera" title="Recentrar cámara frontal (Espacio de señas)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+          </button>
+
+          <!-- DOCK FLOTANTE DE CONTROLES DE CÁMARA (Girar, Mover, Deslizar) -->
+          <div class="avatar-cam-floating-dock" id="avatar-cam-dock" aria-label="Controles de Cámara 3D">
+            <div class="avatar-cam-dock-header">
+              <span class="avatar-cam-dock-title">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                Controles 3D
+              </span>
+              <button class="avatar-cam-dock-toggle" id="btn-cam-dock-toggle" title="Minimizar / Expandir panel de cámara">▾</button>
+            </div>
+            
+            <div class="avatar-cam-dock-body" id="avatar-cam-dock-body">
+              <!-- Girar (Órbita 360°) -->
+              <div class="avatar-cam-tool-section">
+                <div class="avatar-cam-section-label">Girar (Órbita)</div>
+                <div class="avatar-cam-dpad-row">
+                  <button class="avatar-cam-btn" id="btn-cam-rot-left" title="Girar a la izquierda">↺ Izq</button>
+                  <button class="avatar-cam-btn" id="btn-cam-rot-up" title="Inclinar arriba">▲ Arr</button>
+                  <button class="avatar-cam-btn" id="btn-cam-rot-down" title="Inclinar abajo">▼ Aba</button>
+                  <button class="avatar-cam-btn" id="btn-cam-rot-right" title="Girar a la derecha">Der ↻</button>
+                </div>
+              </div>
+
+              <!-- Mover (Desplazamiento / Pan) -->
+              <div class="avatar-cam-tool-section">
+                <div class="avatar-cam-section-label">Mover (Desplazamiento)</div>
+                <div class="avatar-cam-grid-dpad">
+                  <button class="avatar-cam-btn avatar-cam-btn-up" id="btn-cam-pan-up" title="Mover hacia arriba">▲</button>
+                  <div class="avatar-cam-dpad-mid">
+                    <button class="avatar-cam-btn" id="btn-cam-pan-left" title="Mover a la izquierda">◄</button>
+                    <button class="avatar-cam-btn avatar-cam-btn-center" id="btn-cam-pan-center" title="Recentrar vista">●</button>
+                    <button class="avatar-cam-btn" id="btn-cam-pan-right" title="Mover a la derecha">►</button>
+                  </div>
+                  <button class="avatar-cam-btn avatar-cam-btn-down" id="btn-cam-pan-down" title="Mover hacia abajo">▼</button>
+                </div>
+              </div>
+
+              <!-- Deslizar (Dolly / Zoom) -->
+              <div class="avatar-cam-tool-section">
+                <div class="avatar-cam-section-label">Deslizar (Zoom)</div>
+                <div class="avatar-cam-dpad-row">
+                  <button class="avatar-cam-btn" id="btn-cam-zoom-in" title="Acercar cámara (Dolly In)">
+                    <span>＋ Acercar</span>
+                  </button>
+                  <button class="avatar-cam-btn" id="btn-cam-zoom-out" title="Alejar cámara (Dolly Out)">
+                    <span>－ Alejar</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Hint Badge -->
+              <div class="avatar-cam-hint-badge">
+                <span class="avatar-cam-hint-icon">💡</span>
+                <span>Arrastrar: Girar<br>Clic Der / Shift: Mover<br>Rueda: Deslizar Zoom</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Indicador flotante en la base del visor -->
+          <div class="avatar-viewport-cam-hint" id="avatar-viewport-cam-hint">
+            <span>🖱️ Arrastrar: Girar</span>
+            <span>•</span>
+            <span>Clic Der: Mover</span>
+            <span>•</span>
+            <span>Rueda: Deslizar</span>
+          </div>
+        </div>
+
+        <!-- Barra de Controles de Cámara y Transporte de Reproducción -->
+        <div class="avatar-cam-presets-bar">
+          <!-- Presets de Cámara -->
+          <div class="avatar-cam-presets-group">
+            <span style="font-size:0.72rem; color:var(--text-muted); font-weight:600; margin-right:4px;">Cámara:</span>
+            <button class="avatar-cam-preset-btn active" id="btn-cam-medium" title="Vista plano medio (pecho y manos)">Plano Medio</button>
+            <button class="avatar-cam-preset-btn" id="btn-cam-full" title="Vista de cuerpo entero">Cuerpo Entero</button>
+            <button class="avatar-cam-preset-btn" id="btn-cam-face" title="Vista primer plano de rostro y mirada">Rostro</button>
+            <button class="avatar-cam-preset-btn" id="btn-cam-hands" title="Vista focalizada en manos y sien para señas">Manos / Sien</button>
+            
+            <!-- Herramientas Rápidas de Cámara -->
+            <div class="avatar-cam-tools-compact">
+              <button class="avatar-cam-icon-btn" id="btn-quick-rot-left" title="Girar izquierda ↺">↺</button>
+              <button class="avatar-cam-icon-btn" id="btn-quick-rot-right" title="Girar derecha ↻">↻</button>
+              <button class="avatar-cam-icon-btn" id="btn-quick-zoom-in" title="Acercar ＋">＋</button>
+              <button class="avatar-cam-icon-btn" id="btn-quick-zoom-out" title="Alejar －">－</button>
+              <button class="avatar-cam-icon-btn" id="btn-quick-cam-dock-toggle" title="Mostrar/Ocultar dock de controles">🎮</button>
+            </div>
+          </div>
+
+          <!-- Controles de Reproducción y Velocidad -->
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div style="display:flex; gap:6px;">
+              <button class="btn btn-primary btn-sm" id="btn-avatar-play" title="Reproducir prueba seleccionada">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                <span>Reproducir</span>
+              </button>
+              <button class="btn btn-secondary btn-sm" id="btn-avatar-pause" title="Pausar animación">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                <span>Pausar</span>
+              </button>
+              <button class="btn btn-secondary btn-sm" id="btn-avatar-reset" title="Reiniciar a postura neutral">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+                <span>Reiniciar</span>
+              </button>
+            </div>
+
+            <div style="width:1px; height:16px; background:var(--border-subtle); margin:0 2px;"></div>
+
+            <select id="select-avatar-speed" class="avatar-select" title="Velocidad de reproducción">
+              <option value="0.25">0.25x</option>
+              <option value="0.5">0.5x</option>
+              <option value="0.75">0.75x</option>
+              <option value="1.0" selected>1.0x</option>
+              <option value="1.25">1.25x</option>
+              <option value="1.5">1.5x</option>
+              <option value="2.0">2.0x</option>
+            </select>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ZONA DERECHA: PANELES DE CONFIGURACIÓN Y CALIBRACIÓN -->
+      <aside class="avatar-config-sidebar-zone" aria-label="Paneles de Configuración del Avatar">
+        
+        <!-- PANEL 1: SELECCIÓN DE CLIP TÉCNICO Y PRUEBAS -->
+        <div class="avatar-config-card">
+          <div class="avatar-config-card-header">
+            <span class="avatar-config-card-title">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z"/></svg>
+              Catálogo de Gestos y Clips
+            </span>
+            <span class="avatar-config-card-subtitle">22 Pruebas</span>
+          </div>
+
+          <div>
+            <label for="select-avatar-clip" class="avatar-control-label" style="display:block; margin-bottom:4px;">Clip / Prueba Biomecánica:</label>
+            <select id="select-avatar-clip" class="avatar-select" style="width:100%;">
+              <!-- Poblado dinámicamente por AvatarPanelController -->
+            </select>
+          </div>
+
+          <div style="display:flex; gap:6px; margin-top:2px;">
+            <button class="btn btn-secondary btn-sm" id="btn-avatar-play-sequence" style="flex:1; justify-content:center;" title="Secuencia encadenada de saludo y negación">
+              <span>▶ Secuencia Básica</span>
+            </button>
+            <button class="btn btn-secondary btn-sm" id="btn-avatar-play-all-tests" style="flex:1; justify-content:center;" title="Ejecutar batería continua de las 22 pruebas biomecánicas">
+              <span>⚡ Batería (22 Pruebas)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- PANEL 2: MODELO Y RIG VRM 1.0 -->
+        <div class="avatar-config-card">
+          <div class="avatar-config-card-header">
+            <span class="avatar-config-card-title">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/></svg>
+              Modelo Humanoide VRM 1.0
+            </span>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <input type="file" id="avatar-vrm-file-input" accept=".vrm,.glb" style="display:none;">
+            <button class="btn btn-primary btn-sm" id="btn-avatar-load-vrm" style="width:100%; justify-content:center;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
+              <span>Cargar Avatar VRM Local (.vrm)</span>
+            </button>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+              <button class="btn btn-secondary btn-sm" id="btn-toggle-model-source" title="Alternar entre VRM 1.0 y Rig Técnico de Reserva">
+                <span>Alternar Rig Técnico</span>
+              </button>
+              <button class="btn btn-secondary btn-sm" id="btn-reload-default-vrm" title="Recargar modelo original del proyecto">
+                <span>Restaurar Prototipo</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANEL 3: PRUEBAS DE RASGOS NO MANUALES (CNM) -->
+        <div class="avatar-config-card">
+          <div class="avatar-config-card-header">
+            <span class="avatar-config-card-title">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+              Rasgos No Manuales (CNM)
+            </span>
+            <span class="avatar-config-card-subtitle">Facial y Cabeza</span>
+          </div>
+
+          <div class="avatar-cnm-grid">
+            <button class="avatar-tool-btn" data-cnm-test="EYEBROW_RAISE">
+              <span>Cejas Elevadas</span>
+              <small style="opacity:0.6;">Sí/No</small>
+            </button>
+            <button class="avatar-tool-btn" data-cnm-test="EYEBROW_FURROW">
+              <span>Ceño Fruncido</span>
+              <small style="opacity:0.6;">Qu-</small>
+            </button>
+            <button class="avatar-tool-btn" data-cnm-test="HEAD_SHAKE">
+              <span>Negación Cabeza</span>
+              <small style="opacity:0.6;">NO</small>
+            </button>
+            <button class="avatar-tool-btn" data-cnm-test="HEAD_NOD">
+              <span>Asentimiento</span>
+              <small style="opacity:0.6;">SÍ</small>
+            </button>
+            <button class="avatar-tool-btn" data-cnm-test="BLINK" style="grid-column: span 2;">
+              <span>Parpadeo Natural (Blink)</span>
+              <small style="opacity:0.6;">60ms</small>
+            </button>
+          </div>
+        </div>
+
+        <!-- PANEL 4: ESPACIO DE ARTICULACIÓN Y LOCI ESPACIALES -->
+        <div class="avatar-config-card">
+          <div class="avatar-config-card-header">
+            <span class="avatar-config-card-title">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>
+              Espacio y Loci Espaciales
+            </span>
+          </div>
+
+          <div class="avatar-loci-grid">
+            <button class="avatar-tool-btn" data-locus-test="CENTRO">
+              <span>Locus Centro</span>
+              <small style="opacity:0.6;">[0, 1.2, 0]</small>
+            </button>
+            <button class="avatar-tool-btn" data-locus-test="DERECHA">
+              <span>Locus Derecha</span>
+              <small style="opacity:0.6;">[+0.35]</small>
+            </button>
+            <button class="avatar-tool-btn" data-locus-test="IZQUIERDA">
+              <span>Locus Izquierda</span>
+              <small style="opacity:0.6;">[-0.35]</small>
+            </button>
+            <button class="avatar-tool-btn" data-locus-test="ARRIBA">
+              <span>Locus Superior</span>
+              <small style="opacity:0.6;">[+0.25 Y]</small>
+            </button>
+          </div>
+        </div>
+
+        <!-- PANEL 5: ADVERTENCIA ÉTICA Y LINGÜÍSTICA -->
+        <div class="avatar-disclaimer-card">
+          <div class="avatar-disclaimer-header">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+            <strong>Verificación Técnica — No son señas LSEC validadas</strong>
+          </div>
+          <p class="avatar-disclaimer-text">
+            Este entorno ejecuta pruebas de cinemática esquelética, rigidez biomecánica y rendimiento a 60fps.
+            Toda seña definitiva de la Lengua de Señas Ecuatoriana (LSEC) requiere validación obligatoria con señantes sordos nativos.
+          </p>
+        </div>
+
+      </aside>
+
+    </div>
+
+  </main>
+
+  <!-- MÓDULO ES6 DE INICIALIZACIÓN DEL AVATAR -->
+  <script type="module">
+    import * as THREE from 'three';
+    window.THREE = THREE;
+    import { AvatarPanelController } from '/static/js/avatar/avatar-controller.js';
+    window.AvatarPanelController = AvatarPanelController;
+
+    const initAvatarConfig = () => {
+      try {
+        if (!window.avatarController) {
+          window.avatarController = new AvatarPanelController('avatar-config-workspace');
+          console.info('✓ AvatarPanelController activo en /avatarconfig');
+        }
+
+        // 1. Presets de Cámara
+        document.getElementById('btn-cam-face')?.addEventListener('click', () => {
+          if (window.avatarController) window.avatarController.setCameraPreset('face');
+        });
+        document.getElementById('btn-cam-medium')?.addEventListener('click', () => {
+          if (window.avatarController) window.avatarController.setCameraPreset('medium');
+        });
+        document.getElementById('btn-cam-full')?.addEventListener('click', () => {
+          if (window.avatarController) window.avatarController.setCameraPreset('full');
+        });
+
+        // 2. Pruebas de Rasgos No Manuales (CNM)
+        document.querySelectorAll('[data-cnm-test]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const marker = btn.getAttribute('data-cnm-test');
+            if (window.avatarController) {
+              window.avatarController.testExpression(marker);
+            }
+          });
+        });
+
+        // 3. Alternar Rig Técnico / VRM
+        document.getElementById('btn-toggle-model-source')?.addEventListener('click', () => {
+          if (window.avatarController) {
+            window.avatarController.toggleModelSource();
+          }
+        });
+
+        // 4. Restaurar Prototipo Original
+        document.getElementById('btn-reload-default-vrm')?.addEventListener('click', () => {
+          if (window.avatarController) {
+            window.avatarController.loadVRMFromUrl('/static/assets/lsec_avatar_prototype.vrm');
+          }
+        });
+
+      } catch (err) {
+        console.error('Error inicializando AvatarPanelController en /avatarconfig:', err);
+      }
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initAvatarConfig);
+    } else {
+      initAvatarConfig();
+    }
+  </script>
+
+</body>
+</html>

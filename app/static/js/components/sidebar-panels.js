@@ -16,9 +16,11 @@ class ContextualInspectorController {
     this.tabBtnTranscript = document.getElementById('tab-btn-side-transcript');
     this.tabBtnInspector = document.getElementById('tab-btn-side-inspector');
     this.tabBtnSubtitles = document.getElementById('tab-btn-side-subtitles');
+    this.tabBtnAvatar = document.getElementById('tab-btn-side-avatar');
     this.viewTranscript = document.getElementById('view-side-transcript');
     this.viewInspector = document.getElementById('view-side-inspector');
     this.viewSubtitles = document.getElementById('view-side-subtitles');
+    this.viewAvatar = document.getElementById('view-side-avatar');
 
     // Elementos de la Transcripción Lateral
     this.transcriptListEl = document.getElementById('full-transcript-stream-list');
@@ -31,7 +33,7 @@ class ContextualInspectorController {
     this.badgeEl = document.getElementById('inspector-header-badge');
     this.bodyEl = document.getElementById('inspector-body-content');
 
-    this.activeTab = 'transcript'; // 'transcript' | 'inspector'
+    this.activeTab = 'transcript'; // 'transcript' | 'inspector' | 'subtitles' | 'avatar'
     this.currentActiveSegId = null;
 
     this.init();
@@ -66,6 +68,12 @@ class ContextualInspectorController {
         this.switchTab('subtitles');
       });
     }
+
+    if (this.tabBtnAvatar) {
+      this.tabBtnAvatar.addEventListener('click', () => {
+        this.switchTab('avatar');
+      });
+    }
   }
 
   switchTab(tabName) {
@@ -74,7 +82,8 @@ class ContextualInspectorController {
     const tabs = [
       { name: 'transcript', btn: this.tabBtnTranscript, view: this.viewTranscript },
       { name: 'inspector', btn: this.tabBtnInspector, view: this.viewInspector },
-      { name: 'subtitles', btn: this.tabBtnSubtitles, view: this.viewSubtitles }
+      { name: 'subtitles', btn: this.tabBtnSubtitles, view: this.viewSubtitles },
+      { name: 'avatar', btn: this.tabBtnAvatar, view: this.viewAvatar }
     ];
 
     tabs.forEach(t => {
@@ -85,6 +94,10 @@ class ContextualInspectorController {
 
     if (this.badgeEl) {
       this.badgeEl.style.display = (tabName === 'inspector' && this.badgeEl.innerHTML.trim() !== '') ? 'inline-flex' : 'none';
+    }
+
+    if (tabName === 'avatar' && window.avatarController) {
+      window.avatarController.onTabActivated();
     }
   }
 

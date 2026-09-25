@@ -58,6 +58,17 @@ class GlossOverlayController {
     `;
 
     this.glossHost = this.container.querySelector('#avatar-pip-gloss-host');
+
+    const pipCard = this.container.querySelector('.avatar-pip-card');
+    if (pipCard) {
+      pipCard.style.cursor = 'pointer';
+      pipCard.title = 'Abrir panel de control y previsualización de Avatar 3D';
+      pipCard.addEventListener('click', () => {
+        if (window.contextualInspector) {
+          window.contextualInspector.switchTab('avatar');
+        }
+      });
+    }
   }
 
   subscribeState() {

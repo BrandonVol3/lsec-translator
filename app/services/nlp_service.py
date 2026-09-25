@@ -58,6 +58,7 @@ from app.services.metadata_linker import ExecutionMetadataLinker
 from app.services.mwe_detector import MWEDetector
 from app.services.review_service import ReviewPropagationService
 from app.services.semantic_parser import SemanticParser
+from app.services.linguistic_analyzer import EnhancedLinguisticAnalyzer
 from app.services.text_normalizer import CorrectionRecord, DubiousWordFinding, EntityInfo, TextNormalizer
 from app.services.timing_service import TimingService
 from app.services.validator import StructuralValidator
@@ -130,6 +131,9 @@ class LSECTranslatorService:
             mwe_detector=self._mwe_detector,
             plural_marker=self._plural_marker,
         )
+
+        # 7b. Analizador Lingüístico Avanzado
+        self._linguistic_analyzer = EnhancedLinguisticAnalyzer(nlp=self._nlp)
 
         # 8. Servicios Especializados LSEC 2.1.1
         self._duplicate_resolver = DuplicatePlanResolver()
@@ -297,6 +301,7 @@ class LSECTranslatorService:
         paraphrase_budget: str = "compact",
         source_audio_duration: Optional[float] = None,
         transcription: Optional[Union[TranscriptionInput, TranscriptionResult, Dict[str, Any]]] = None,
+        exclude_rule_ids: Optional[Set[str]] = None,
     ) -> GlossOutput:
         """
         Traduce texto o audio transcrito a representación intermedia y glosas LSEC 2.1.1.
@@ -335,6 +340,59 @@ class LSECTranslatorService:
             )
             all_propositions.extend(props)
 
+        # Paso 3b: Enriquecimiento Lingüístico Avanzado
+        if self._nlp is not None:
+            for prop in all_propositions:
+                doc = self._nlp(prop.source_text)
+
+                # Pro-drop resolution
+                prodrop = self._linguistic_analyzer.detect_prodrop(doc)
+                if prodrop:
+                    prop.context_info["prodrop_category"] = prodrop.category
+                    if prodrop.requires_deixis and prodrop.deixis_gloss and not prop.participants:
+                        from app.core.schemas import SemanticParticipant, ParticipantType, SemanticRole
+                        prop.participants.append(SemanticParticipant(
+                            lemma=prodrop.deixis_gloss.lower(),
+                            normalized_text=prodrop.deixis_gloss,
+                            participant_type=ParticipantType.PERSON,
+                            semantic_role=SemanticRole.AGENT,
+                            grammatical_person=prodrop.person,
+                            is_implicit=True,
+                        ))
+
+                # Negation scope
+                neg_info = self._linguistic_analyzer.detect_negation(doc)
+                if neg_info and prop.polarity != "negative":
+                    prop.polarity = "negative"
+                    if not any(
+                        op.get("type") == "NEGATION" for op in prop.operators
+                    ):
+                        prop.operators.append({
+                            "type": "NEGATION",
+                            "negation_type": neg_info.negation_type,
+                            "scope": f"{neg_info.scope_start_token}-{neg_info.scope_end_token}",
+                        })
+
+                # Temporal enrichment
+                temp_info = self._linguistic_analyzer.extract_temporal_info(doc)
+                if temp_info.tense and not prop.temporal_modifiers:
+                    prop.temporal_modifiers.append({
+                        "type": "TENSE",
+                        "value": temp_info.tense,
+                        "marker_gloss": temp_info.temporal_marker_gloss,
+                        "source_word": temp_info.source_word,
+                    })
+                if temp_info.aspect and prop.predicate and not prop.predicate.tense_or_aspect:
+                    prop.predicate.tense_or_aspect = temp_info.aspect
+
+                # Coreference links
+                coref_links = self._linguistic_analyzer.detect_coreference(doc)
+                for link in coref_links:
+                    # Enrich participants with coreference data
+                    for part in prop.participants:
+                        if part.lemma.lower() == link.pronoun:
+                            part.coreference_id = link.resolved_entity
+
         # Paso 4: Planificación Discursiva Preliminar
         (
             glosses,
@@ -346,6 +404,7 @@ class LSECTranslatorService:
         ) = self._planner.plan_and_generate(
             propositions=all_propositions,
             paraphrase_budget=paraphrase_budget,
+            exclude_rule_ids=exclude_rule_ids,
         )
 
         # Paso 5: Resolución y Reparación de Planes Duplicados y Fugas
@@ -668,3 +727,15 @@ class LSECTranslatorService:
             validation_summary=validation_summary,
             corrections_applied=[c.to_dict() for c in corrections],
         )
+
+
+_nlp_service_instance: Optional[LSECTranslatorService] = None
+
+
+def get_nlp_service() -> LSECTranslatorService:
+    """Retorna una instancia singleton de LSECTranslatorService."""
+    global _nlp_service_instance
+    if _nlp_service_instance is None:
+        _nlp_service_instance = LSECTranslatorService()
+    return _nlp_service_instance
+

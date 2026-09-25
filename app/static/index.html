@@ -9,6 +9,17 @@
   <!-- Estilos del Sistema de Diseño -->
   <link rel="stylesheet" href="/static/css/app.css?v=2.1.4">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22%23B7D36B%22><rect width=%2224%22 height=%2224%22 rx=%226%22 fill=%22%23191B18%22/><path d=%22M7 6h3v12H7zm7 0h3v12h-3z%22 fill=%22%23B7D36B%22/></svg>">
+
+  <!-- Import Map para Three.js y @pixiv/three-vrm (Módulos ES6 Locales) -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "/static/js/vendor/three.module.js",
+      "three/addons/": "/static/js/vendor/addons/",
+      "@pixiv/three-vrm": "/static/js/vendor/three-vrm.module.js"
+    }
+  }
+  </script>
 </head>
 <body>
 
@@ -87,6 +98,11 @@
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
           Exportar
         </button>
+
+        <a href="/avatarconfig" class="btn btn-secondary btn-sm" id="btn-top-avatar-config" title="Abrir configuración y calibración del Avatar 3D LSEC (/avatarconfig)" style="text-decoration:none; display:inline-flex; align-items:center; gap:5px;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/></svg>
+          <span>Avatar 3D</span>
+        </a>
 
         <button class="btn btn-secondary btn-sm" id="btn-toggle-bottom-dock" title="Ocultar / Mostrar panel inferior de edición y línea de tiempo (Tecla B)">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2zm0 2v8h16V6H4zm0 10v2h16v-2H4z"/></svg>
@@ -288,6 +304,10 @@
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-9 7H9.5v-.5h-2v3h2V13H11v1c0 .55-.45 1-1 1H7c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1zm7 0h-1.5v-.5h-2v3h2V13H18v1c0 .55-.45 1-1 1h-3c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1z"/></svg>
                 <span>Subtítulos</span>
               </button>
+              <button class="sidebar-tab-btn" id="tab-btn-side-avatar" title="Panel de previsualización y control de Avatar 3D LSEC">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2zM7.5 13A1.5 1.5 0 0 0 6 14.5 1.5 1.5 0 0 0 7.5 16 1.5 1.5 0 0 0 9 14.5 1.5 1.5 0 0 0 7.5 13zm9 0a1.5 1.5 0 0 0-1.5 1.5 1.5 1.5 0 0 0 1.5 1.5 1.5 1.5 0 0 0 1.5-1.5 1.5 1.5 0 0 0-1.5-1.5z"/></svg>
+                <span>Avatar 3D</span>
+              </button>
             </div>
             <div id="inspector-header-badge"></div>
           </div>
@@ -329,6 +349,24 @@
           <!-- VISTA 3: EDITOR DE ESTILO Y POSICIÓN DE SUBTÍTULOS -->
           <div class="sidebar-view-pane" id="view-side-subtitles" style="display:none;">
             <!-- Renderizado por SubtitleEditorPanel -->
+          </div>
+
+          <!-- VISTA 4: ACCESO A CONFIGURACIÓN Y CALIBRACIÓN DEL AVATAR 3D -->
+          <div class="sidebar-view-pane" id="view-side-avatar" style="display:none;">
+            <div class="avatar-relocated-card">
+              <div class="avatar-relocated-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/>
+                </svg>
+              </div>
+              <h4 class="avatar-relocated-title">Configuración del Avatar 3D</h4>
+              <p class="avatar-relocated-desc">
+                La estación de visualización 3D, calibración cinemática, pruebas de rasgos no manuales y administración de modelos VRM se gestionan en su entorno dedicado.
+              </p>
+              <a href="/avatarconfig" class="btn btn-primary btn-sm" id="btn-open-avatar-config-page" style="text-decoration:none;">
+                Abrir /avatarconfig ↗
+              </a>
+            </div>
           </div>
 
         </aside>
@@ -495,6 +533,8 @@
   <script src="/static/js/components/video-exporter.js"></script>
   <script src="/static/js/components/modals-and-export.js"></script>
   <script src="/static/js/app.js"></script>
+
+  <!-- Nota: La configuración y visor 3D del Avatar LSEC han sido reubicados a /avatarconfig -->
 
 </body>
 </html>

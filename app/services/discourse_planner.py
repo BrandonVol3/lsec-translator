@@ -33,6 +33,7 @@ from app.core.schemas import (
     NonManualSpan,
     RealizedConceptItem,
     RelationType,
+    SemanticFrame,
     SemanticProposition,
     SemanticRole,
     SourceConceptItem,
@@ -44,9 +45,14 @@ from app.core.schemas import (
     TranslationPlan,
     ValidationMetadata,
 )
+from app.lsec_grammar.registry import get_rule_registry
+from app.lsec_grammar.rule_engine import RuleEngine, RuleApplication
+from app.lsec_grammar.conflict_resolver import ConflictResolver
+from app.lsec_grammar.confidence import ConfidenceCalculator, ConfidenceVector
 from app.services.mwe_detector import MWEDetector, MWEMatch
 from app.services.text_normalizer import EntityInfo, PunctuationAnalyzer
 from app.services.semantic_parser import SpanishVerbLexicon
+from app.services.linguistic_analyzer import LinguisticAnalyzer
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +129,76 @@ class DiscoursePlanner:
             "tarde", "noche", "temprano", "pronto", "semana", "desde",
         }
 
+        # Motor de reglas gramaticales centralizado y analizador lingüístico
+        self._rule_registry = get_rule_registry()
+        self._rule_engine = RuleEngine()
+        self._conflict_resolver = ConflictResolver()
+        self._linguistic_analyzer = LinguisticAnalyzer()
+
+    def evaluate_grammar_rules(
+        self,
+        prop: SemanticProposition,
+        *,
+        exclude_ids: Optional[Set[str]] = None,
+    ) -> Tuple[SemanticFrame, List[RuleApplication], ConfidenceVector]:
+        """
+        Construye un ``SemanticFrame`` a partir de la proposición y evalúa
+        todas las reglas del registro central.
+
+        Retorna:
+          - El ``SemanticFrame`` enriquecido con las reglas aplicadas.
+          - La lista de ``RuleApplication`` para trazabilidad.
+          - El ``ConfidenceVector`` multidimensional.
+        """
+        frame = SemanticFrame.from_proposition(prop)
+
+        # Enriquecimiento lingüístico profundo si spaCy está disponible
+        if self._nlp is not None:
+            doc = self._nlp(prop.source_text)
+            ft = self._linguistic_analyzer.analyze_functional_transfer(doc)
+            if ft:
+                frame.functional_transfers = [
+                    f.__dict__ if hasattr(f, "__dict__") else f for f in ft
+                ]
+            cl = self._linguistic_analyzer.detect_classifiers(doc)
+            if cl:
+                frame.classifier_candidates = [
+                    c.__dict__ if hasattr(c, "__dict__") else c for c in cl
+                ]
+
+        # Obtener reglas ejecutables
+        all_rules = self._rule_registry.get_executable()
+
+        # Evaluar condiciones (con soporte para exclusión individual)
+        applications = self._rule_engine.apply_rules(
+            all_rules, frame.to_eval_dict(), exclude_ids=exclude_ids
+        )
+
+        # Resolver conflictos
+        if len(applications) > 1:
+            applied_rule_ids = {a.rule_id for a in applications}
+            candidate_rules = [r for r in all_rules if r.rule_id in applied_rule_ids]
+            winners, conflicts = self._conflict_resolver.resolve(candidate_rules)
+            winner_ids = {w.rule_id for w in winners}
+            applications = [a for a in applications if a.rule_id in winner_ids]
+
+        # Registrar reglas en el frame
+        frame.applied_rule_ids = [a.rule_id for a in applications]
+
+        # Calcular confianza multidimensional
+        confidence_vec = ConfidenceCalculator.from_rule_applications(
+            applications,
+            lexicon_hit_ratio=1.0,  # Se refinará con datos reales del lexicón
+            semantic_coverage=prop.confidence,
+            has_coreference=any(
+                p.coreference_id is not None for p in prop.participants
+            ),
+            has_spatial=bool(prop.context_info.get("spatial_entities")),
+            has_unresolved=prop.requires_review,
+        )
+
+        return frame, applications, confidence_vec
+
     def compute_duration(
         self,
         gloss_text: str,
@@ -177,33 +253,41 @@ class DiscoursePlanner:
                     results.append(("FUTURO", "before", consumed_set))
                     consumed |= consumed_set
 
-            # haber + participio -> YA
+            # haber + participio -> aspecto perfectivo completivo (separado de tiempo)
             elif lemma_lower == "haber" and token.pos_ in ("AUX", "VERB"):
-                if token.dep_ in ("aux", "auxpass") and "Part" in token.head.morph.get("VerbForm", []):
+                has_participle = (
+                    (token.dep_ in ("aux", "auxpass") and "Part" in token.head.morph.get("VerbForm", []))
+                    or any("Part" in child.morph.get("VerbForm", []) for child in token.children)
+                )
+                if has_participle:
                     consumed_set = {token.i}
-                    results.append(("YA", "after", consumed_set))
+                    has_conflicting_past = any(
+                        t.text.lower() in ("ayer", "anoche") and t.dep_ in ("obl", "advmod")
+                        for t in doc
+                    )
+                    if not has_conflicting_past:
+                        results.append(("YA", "after", consumed_set))
                     consumed |= consumed_set
-                else:
-                    for child in token.children:
-                        if "Part" in child.morph.get("VerbForm", []):
-                            consumed_set = {token.i}
-                            results.append(("YA", "after", consumed_set))
-                            consumed |= consumed_set
-                            break
 
-            # estar + gerundio -> AHORA
+            # estar + gerundio: aspecto progresivo (separado de tiempo deíctico)
             elif lemma_lower == "estar" and token.pos_ in ("AUX", "VERB"):
-                if token.dep_ in ("aux", "auxpass") and "Ger" in token.head.morph.get("VerbForm", []):
+                has_gerund = (
+                    (token.dep_ in ("aux", "auxpass") and "Ger" in token.head.morph.get("VerbForm", []))
+                    or any("Ger" in child.morph.get("VerbForm", []) for child in token.children)
+                )
+                if has_gerund:
                     consumed_set = {token.i}
-                    results.append(("AHORA", "after", consumed_set))
+                    # Separar aspecto progresivo de referencia temporal (Punto 4):
+                    # No convertir automáticamente aspecto progresivo en AHORA si hay anclaje temporal pasado/futuro
+                    # o si no hay evidencia temporal deíctica explícita en la oración
+                    has_explicit_present = any(t.text.lower() in ("ahora", "hoy", "actualmente") for t in doc)
+                    has_past_tense = any(
+                        "Past" in t.morph.get("Tense", []) or t.text.lower() in ("ayer", "antes", "anoche", "pasado")
+                        for t in doc
+                    )
+                    if has_explicit_present and not has_past_tense:
+                        results.append(("AHORA", "after", consumed_set))
                     consumed |= consumed_set
-                else:
-                    for child in token.children:
-                        if "Ger" in child.morph.get("VerbForm", []):
-                            consumed_set = {token.i}
-                            results.append(("AHORA", "after", consumed_set))
-                            consumed |= consumed_set
-                            break
 
             # tener + que + infinitivo -> DEBER
             elif lemma_lower == "tener" and token.pos_ in ("AUX", "VERB"):
@@ -223,6 +307,8 @@ class DiscoursePlanner:
         self,
         propositions: List[SemanticProposition],
         paraphrase_budget: str = "compact",
+        *,
+        exclude_rule_ids: Optional[Set[str]] = None,
     ) -> Tuple[
         List[GlossItem],
         List[TranslationPlan],
@@ -264,14 +350,36 @@ class DiscoursePlanner:
             elif any(k in p_text_lower for k in self._semantic_paraphrases):
                 strategy = StrategyType.SEMANTIC_PARAPHRASE
 
+            # 1b. Evaluación de reglas gramaticales centralizadas
+            frame, rule_applications, confidence_vec = self.evaluate_grammar_rules(
+                prop, exclude_ids=exclude_rule_ids
+            )
+            active_rule_ids = set(frame.applied_rule_ids)
+
             # 2. Generación de Glosas LSEC generales con motor lingüístico spaCy
             prop_glosses: List[GlossItem] = []
 
             # Motor Lingüístico General spaCy para cualquier oración
             if self._nlp is not None:
-                prop_glosses = self._translate_general_spacy(prop, global_order)
+                prop_glosses = self._translate_general_spacy(
+                    prop, global_order, active_rule_ids=active_rule_ids
+                )
             else:
                 prop_glosses = self._translate_general_heuristic(prop, global_order)
+
+            # Ejecutar acciones directas del RuleEngine sobre la secuencia de glosas
+            if prop_glosses:
+                executable_rules = [
+                    r for r in self._rule_registry.get_executable()
+                    if r.rule_id in active_rule_ids
+                ]
+                prop_glosses = self._rule_engine.execute_actions(
+                    rules=executable_rules,
+                    applications=rule_applications,
+                    glosses=prop_glosses,
+                    frame=frame.to_eval_dict(),
+                    start_order=global_order,
+                )
 
             if not prop_glosses:
                 continue
@@ -373,6 +481,18 @@ class DiscoursePlanner:
                     "cercanía": {"ACOMPAÑAR"},
                     "decir": {"EXPLICAR", "DECIR"},
                     "imparable": {"PERSONA", "FUERTE", "AVANZAR", "DETERMINADA", "CONTINUAR"},
+                    "tú": {"PRO2", "TÚ"},
+                    "tu": {"PRO2", "TÚ"},
+                    "te": {"PRO2", "TÚ"},
+                    "yo": {"PRO1", "YO"},
+                    "me": {"PRO1", "YO"},
+                    "nosotros": {"PRO1-PL", "PRO1", "NOSOTROS"},
+                    "nos": {"PRO1-PL", "PRO1", "NOSOTROS"},
+                    "él": {"PRO3", "ÉL"},
+                    "ella": {"PRO3", "ELLA"},
+                    "ellos": {"PRO3-PL", "PRO3", "ELLOS"},
+                    "ellas": {"PRO3-PL", "PRO3", "ELLAS"},
+                    "ustedes": {"PRO2-PL", "PRO2", "USTEDES"},
                 }
 
                 if c_clean in mwe_synonyms:
@@ -509,8 +629,11 @@ class DiscoursePlanner:
                     if _concept_is_realized(sci.lemma, {g.gloss}, [g]) or sci.lemma.lower() == (g.normalized_word or "").lower() or sci.lemma.lower() == (g.source_word or "").lower():
                         mapped_cids.append(sci.id)
 
+                if g.gloss.startswith("PRO") and not g.inference_rule_id:
+                    g.inference_rule_id = "LSEC_PRODROP_RESOLVE"
+
                 has_explicit_support = bool(mapped_cids)
-                has_inferred_support = (g.alignment_type == AlignmentType.INFERRED and bool(g.inference_rule_id))
+                has_inferred_support = (g.alignment_type == AlignmentType.INFERRED and bool(g.inference_rule_id)) or (g.gloss.startswith("PRO") and bool(g.inference_rule_id))
                 has_coref_support = (g.alignment_type == AlignmentType.COREFERENCE and bool(g.antecedent_proposition_id or g.coreference_target_id))
                 has_discourse_support = (g.alignment_type == AlignmentType.DISCOURSE_MARKER and bool(g.discourse_relation))
                 has_paraphrase_support = (g.alignment_type == AlignmentType.PARAPHRASE and bool(g.semantic_concept or g.source_word))
@@ -559,6 +682,11 @@ class DiscoursePlanner:
                 )
 
             unsupported_concepts = [r.concept for r in realized_concept_items_list if not r.is_supported]
+            # Punto 11: Bloquear adiciones semánticas no respaldadas
+            if unsupported_concepts:
+                unsupported_set = set(unsupported_concepts)
+                prop_glosses = [g for g in prop_glosses if g.gloss not in unsupported_set]
+
             realization_precision = (len(realized_concept_items_list) - len(unsupported_concepts) - len(cross_prop_concepts)) / max(len(realized_concept_items_list), 1)
             realization_precision = max(min(round(realization_precision, 2), 1.0), 0.0)
 
@@ -616,8 +744,10 @@ class DiscoursePlanner:
                     realization_precision=realization_precision,
                     coverage_ratio=source_recall,
                     coverage_status=cov_status,
-                    confidence=prop.confidence,
+                    confidence=confidence_vec.overall if confidence_vec.overall > 0 else prop.confidence,
                     requires_native_review=prop.requires_review or any(g.requires_review for g in prop_glosses) or strategy == StrategyType.SEMANTIC_PARAPHRASE,
+                    applied_rule_ids=frame.applied_rule_ids,
+                    confidence_vector=confidence_vec.to_dict(),
                 )
             )
 
@@ -661,7 +791,12 @@ class DiscoursePlanner:
     # Motor Lingüístico General spaCy
     # ------------------------------------------------------------------ #
 
-    def _translate_general_spacy(self, prop: SemanticProposition, start_order: int) -> List[GlossItem]:
+    def _translate_general_spacy(
+        self,
+        prop: SemanticProposition,
+        start_order: int,
+        active_rule_ids: Optional[Set[str]] = None,
+    ) -> List[GlossItem]:
         """Traduce una proposición usando spaCy con reglas gramaticales completas."""
         doc = self._nlp(prop.source_text)
         tokens_info: List[Tuple[Any, str, str, str, Dict[str, Any]]] = []
@@ -817,11 +952,46 @@ class DiscoursePlanner:
                 tokens_info.append((t, pos, dep, lemma, meta))
                 continue
 
+            # Transferencia funcional de determinantes y preposiciones (Punto 3 de auditoría)
+            if pos in ("DET", "ADP"):
+                if active_rule_ids is not None and "LSEC_FUNCTIONAL_TRANSFER_DET_ADP" not in active_rule_ids:
+                    # Regla desactivada: conservar token
+                    tokens_info.append((t, pos, dep, clean_word, {}))
+                    continue
+                ft_list = self._linguistic_analyzer.analyze_functional_transfer(doc)
+                ft_matches = [f for f in ft_list if f.token_idx == t.i]
+                if ft_matches:
+                    ft = ft_matches[0]
+                    if ft.target_action == "omit_structural":
+                        continue
+                    elif ft.target_gloss:
+                        is_pro = "PRO" in ft.target_gloss
+                        meta["is_deixis" if is_pro else "is_functional_transfer"] = True
+                        meta["deixis_gloss" if is_pro else "ft_gloss"] = ft.target_gloss
+                        tokens_info.append((t, pos, dep, ft.target_gloss.lower(), meta))
+                        continue
+                if pos in _BLACKLIST_POS_TAGS and not verb_lemma and pos not in ("NOUN", "PROPN"):
+                    continue
+
             if pos in _BLACKLIST_POS_TAGS and not verb_lemma and pos not in ("NOUN", "PROPN"):
                 continue
 
+            # Cópula tipificada (Punto 2 de auditoría)
             if pos in ("AUX", "VERB") and lemma in _COPULATIVE_LEMMAS:
-                continue
+                if (
+                    active_rule_ids is not None
+                    and "LSEC_COPULA_OMISSION" not in active_rule_ids
+                    and "LSEC_COPULA_EXISTENTIAL" not in active_rule_ids
+                    and "LSEC_COPULA_LOCATIVE" not in active_rule_ids
+                ):
+                    # Regla de omisión desactivada: retener la cópula
+                    tokens_info.append((t, pos, dep, lemma.upper(), {"is_copula": True}))
+                    continue
+                elif active_rule_ids is not None and "LSEC_COPULA_EXISTENTIAL" in active_rule_ids and lemma == "haber":
+                    tokens_info.append((t, pos, dep, "haber", {"is_existential": True}))
+                    continue
+                else:
+                    continue
 
             if dep == "amod" and pos == "ADJ":
                 head_is_verb = t.head.pos_ in ("VERB", "AUX") or SpanishVerbLexicon.get_lemma(PunctuationAnalyzer.strip_punctuation(t.head.text.lower())) is not None
@@ -844,7 +1014,7 @@ class DiscoursePlanner:
 
             tokens_info.append((t, pos, dep, lemma, meta))
 
-        # Reordenamiento discursivo LSEC (Tiempo/Lugar, Sujeto, Objeto, Modificadores, Verbo, Wh, Negación)
+        # Reordenamiento discursivo LSEC condicionado (Puntos 7 y 10 de auditoría)
         time_place: List[Any] = []
         subjects: List[Any] = []
         objects: List[Any] = []
@@ -893,7 +1063,34 @@ class DiscoursePlanner:
             else:
                 modifiers_others.append(item)
 
-        reordered = time_place + subjects + objects + modifiers_others + verbs + wh_tokens + neg_tokens
+        apply_time = active_rule_ids is None or "LSEC_TIME_INITIAL" in active_rule_ids
+        apply_wh = active_rule_ids is None or "LSEC_WH_FINAL" in active_rule_ids
+        apply_neg = active_rule_ids is None or "LSEC_NEGATION_POSTVERBAL" in active_rule_ids
+        apply_sov = active_rule_ids is None or "LSEC_SOV_ORDER" in active_rule_ids
+
+        if apply_time and apply_wh and apply_neg and apply_sov:
+            reordered = time_place + subjects + objects + modifiers_others + verbs + wh_tokens + neg_tokens
+        else:
+            curr_tp = time_place if apply_time else []
+            curr_wh = wh_tokens if apply_wh else []
+            curr_neg = neg_tokens if apply_neg else []
+
+            non_displaced: List[Any] = []
+            for item in tokens_info:
+                if (item in time_place and apply_time) or (item in wh_tokens and apply_wh) or (item in neg_tokens and apply_neg):
+                    continue
+                non_displaced.append(item)
+
+            if apply_sov:
+                s_list = [it for it in non_displaced if it in subjects]
+                o_list = [it for it in non_displaced if it in objects]
+                v_list = [it for it in non_displaced if it in verbs]
+                m_list = [it for it in non_displaced if it not in s_list and it not in o_list and it not in v_list]
+                core_ordered = s_list + o_list + m_list + v_list
+            else:
+                core_ordered = non_displaced
+
+            reordered = curr_tp + core_ordered + curr_wh + curr_neg
         if "haz posible" in prop.source_text.lower() and "imagina" in prop.source_text.lower():
             # Estructura topic-comment de cláusula relativa LSEC: Tiempo + Sujeto + Verbo relativo + Objeto relativo + Predicado matriz
             tokens_by_key = {}
@@ -1047,6 +1244,46 @@ class DiscoursePlanner:
                             proposition_id=prop.id,
                             duration_ms=self.compute_duration(deix_g, GlossType.SIGN, is_deixis=True),
                             notes="Deixis pronominal",
+                        )
+                    )
+                    current_order += 1
+                continue
+
+            if meta.get("is_functional_transfer"):
+                ft_g = meta["ft_gloss"].upper()
+                if ft_g != last_gloss:
+                    last_gloss = ft_g
+                    gloss_items.append(
+                        GlossItem(
+                            gloss=ft_g,
+                            gloss_type=GlossType.SIGN,
+                            order=current_order,
+                            source_word=clean_text,
+                            normalized_word=clean_text,
+                            proposition_id=prop.id,
+                            duration_ms=self.compute_duration(ft_g, GlossType.SIGN),
+                            notes="Transferencia funcional",
+                            alignment_type=AlignmentType.GRAMMATICAL,
+                        )
+                    )
+                    current_order += 1
+                continue
+
+            if meta.get("is_copula"):
+                cop_g = lemma.upper()
+                if cop_g != last_gloss:
+                    last_gloss = cop_g
+                    gloss_items.append(
+                        GlossItem(
+                            gloss=cop_g,
+                            gloss_type=GlossType.SIGN,
+                            order=current_order,
+                            source_word=clean_text,
+                            normalized_word=clean_text,
+                            proposition_id=prop.id,
+                            duration_ms=self.compute_duration(cop_g, GlossType.SIGN),
+                            notes="Cópula retenida (regla desactivada)",
+                            alignment_type=AlignmentType.NORMALIZED,
                         )
                     )
                     current_order += 1
