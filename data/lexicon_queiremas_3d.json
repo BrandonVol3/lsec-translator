@@ -1,0 +1,1112 @@
+{
+  "A": {
+    "letter": "A",
+    "name": "QUEIREMA_A",
+    "description": "Configuración manual LSEC para A",
+    "extendedFingers": [],
+    "curledFingers": [],
+    "landmarksNormalized": null,
+    "jointAngles": null,
+    "retargetingQuaternions": {
+      "thumbMetacarpal": [
+        0.0436,
+        0.0872,
+        0.0436,
+        0.9942
+      ],
+      "thumbProximal": [
+        0.0,
+        0.1736,
+        0.0,
+        0.9848
+      ],
+      "thumbDistal": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "indexProximal": [
+        0.0,
+        0.0,
+        0.6756,
+        0.7373
+      ],
+      "indexIntermediate": [
+        0.0,
+        0.0,
+        0.7193,
+        0.6947
+      ],
+      "indexDistal": [
+        0.0,
+        0.0,
+        0.6088,
+        0.7934
+      ],
+      "middleProximal": [
+        0.0,
+        0.0,
+        0.6756,
+        0.7373
+      ],
+      "middleIntermediate": [
+        0.0,
+        0.0,
+        0.7193,
+        0.6947
+      ],
+      "middleDistal": [
+        0.0,
+        0.0,
+        0.6088,
+        0.7934
+      ],
+      "ringProximal": [
+        0.0,
+        0.0,
+        0.6756,
+        0.7373
+      ],
+      "ringIntermediate": [
+        0.0,
+        0.0,
+        0.7193,
+        0.6947
+      ],
+      "ringDistal": [
+        0.0,
+        0.0,
+        0.6088,
+        0.7934
+      ],
+      "littleProximal": [
+        0.0,
+        0.0,
+        0.6756,
+        0.7373
+      ],
+      "littleIntermediate": [
+        0.0,
+        0.0,
+        0.7193,
+        0.6947
+      ],
+      "littleDistal": [
+        0.0,
+        0.0,
+        0.6088,
+        0.7934
+      ]
+    },
+    "confidence": 0.85,
+    "source": "HARDCODED_FROM_MANUAL_CALIBRATION",
+    "needsValidation": true,
+    "pageNumber": 10,
+    "cropCoordinates": [
+      10,
+      10,
+      90,
+      90
+    ]
+  },
+  "B": {
+    "letter": "B",
+    "name": "QUEIREMA_B",
+    "description": "Configuración manual LSEC para B",
+    "extendedFingers": [],
+    "curledFingers": [],
+    "landmarksNormalized": null,
+    "jointAngles": null,
+    "retargetingQuaternions": {
+      "thumbMetacarpal": [
+        0.0872,
+        -0.342,
+        0.1736,
+        0.925
+      ],
+      "thumbProximal": [
+        0.0,
+        -0.2588,
+        0.342,
+        0.902
+      ],
+      "thumbDistal": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "indexProximal": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "indexIntermediate": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "indexDistal": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "middleProximal": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "middleIntermediate": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "middleDistal": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "ringProximal": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "ringIntermediate": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "ringDistal": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "littleProximal": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "littleIntermediate": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "littleDistal": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    "confidence": 0.85,
+    "source": "HARDCODED_FROM_MANUAL_CALIBRATION",
+    "needsValidation": true,
+    "pageNumber": 10,
+    "cropCoordinates": [
+      10,
+      10,
+      90,
+      90
+    ]
+  },
+  "C": {
+    "letter": "C",
+    "name": "QUEIREMA_C",
+    "description": "Configuración manual LSEC para C",
+    "extendedFingers": [],
+    "curledFingers": [],
+    "landmarksNormalized": null,
+    "jointAngles": null,
+    "retargetingQuaternions": {
+      "thumbMetacarpal": [
+        0.05,
+        0.15,
+        0.2,
+        0.96
+      ],
+      "thumbProximal": [
+        0.0,
+        0.1,
+        0.3,
+        0.94
+      ],
+      "thumbDistal": [
+        0.0,
+        0.0,
+        0.2,
+        0.98
+      ],
+      "indexProximal": [
+        0.0,
+        0.0,
+        0.38,
+        0.92
+      ],
+      "indexIntermediate": [
+        0.0,
+        0.0,
+        0.38,
+        0.92
+      ],
+      "indexDistal": [
+        0.0,
+        0.0,
+        0.25,
+        0.96
+      ],
+      "middleProximal": [
+        0.0,
+        0.0,
+        0.38,
+        0.92
+      ],
+      "middleIntermediate": [
+        0.0,
+        0.0,
+        0.38,
+        0.92
+      ],
+      "middleDistal": [
+        0.0,
+        0.0,
+        0.25,
+        0.96
+      ],
+      "ringProximal": [
+        0.0,
+        0.0,
+        0.38,
+        0.92
+      ],
+      "ringIntermediate": [
+        0.0,
+        0.0,
+        0.38,
+        0.92
+      ],
+      "ringDistal": [
+        0.0,
+        0.0,
+        0.25,
+        0.96
+      ],
+      "littleProximal": [
+        0.0,
+        0.0,
+        0.38,
+        0.92
+      ],
+      "littleIntermediate": [
+        0.0,
+        0.0,
+        0.38,
+        0.92
+      ],
+      "littleDistal": [
+        0.0,
+        0.0,
+        0.25,
+        0.96
+      ]
+    },
+    "confidence": 0.85,
+    "source": "HARDCODED_FROM_MANUAL_CALIBRATION",
+    "needsValidation": true,
+    "pageNumber": 10,
+    "cropCoordinates": [
+      10,
+      10,
+      90,
+      90
+    ]
+  },
+  "D": {
+    "letter": "D",
+    "name": "QUEIREMA_D",
+    "description": "Configuración manual LSEC para D",
+    "extendedFingers": [],
+    "curledFingers": [],
+    "landmarksNormalized": null,
+    "jointAngles": null,
+    "retargetingQuaternions": {
+      "thumbMetacarpal": [
+        0.08,
+        -0.2,
+        0.25,
+        0.94
+      ],
+      "thumbProximal": [
+        0.0,
+        -0.15,
+        0.35,
+        0.92
+      ],
+      "thumbDistal": [
+        0.0,
+        0.0,
+        0.2,
+        0.98
+      ],
+      "indexProximal": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "indexIntermediate": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "indexDistal": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "middleProximal": [
+        0.0,
+        0.0,
+        0.6756,
+        0.7373
+      ],
+      "middleIntermediate": [
+        0.0,
+        0.0,
+        0.7193,
+        0.6947
+      ],
+      "middleDistal": [
+        0.0,
+        0.0,
+        0.6088,
+        0.7934
+      ],
+      "ringProximal": [
+        0.0,
+        0.0,
+        0.6756,
+        0.7373
+      ],
+      "ringIntermediate": [
+        0.0,
+        0.0,
+        0.7193,
+        0.6947
+      ],
+      "ringDistal": [
+        0.0,
+        0.0,
+        0.6088,
+        0.7934
+      ],
+      "littleProximal": [
+        0.0,
+        0.0,
+        0.6756,
+        0.7373
+      ],
+      "littleIntermediate": [
+        0.0,
+        0.0,
+        0.7193,
+        0.6947
+      ],
+      "littleDistal": [
+        0.0,
+        0.0,
+        0.6088,
+        0.7934
+      ]
+    },
+    "confidence": 0.85,
+    "source": "HARDCODED_FROM_MANUAL_CALIBRATION",
+    "needsValidation": true,
+    "pageNumber": 10,
+    "cropCoordinates": [
+      10,
+      10,
+      90,
+      90
+    ]
+  },
+  "I": {
+    "letter": "I",
+    "name": "QUEIREMA_I",
+    "description": "Configuración manual LSEC para I",
+    "extendedFingers": [],
+    "curledFingers": [],
+    "landmarksNormalized": null,
+    "jointAngles": null,
+    "retargetingQuaternions": {
+      "thumbMetacarpal": [
+        -0.0338,
+        -0.2566,
+        -0.1261,
+        0.9577
+      ],
+      "thumbProximal": [
+        -0.0262,
+        -0.2996,
+        -0.0831,
+        0.9501
+      ],
+      "thumbDistal": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "indexProximal": [
+        0.0,
+        0.0,
+        0.6756,
+        0.7373
+      ],
+      "indexIntermediate": [
+        0.0,
+        0.0,
+        0.7193,
+        0.6947
+      ],
+      "indexDistal": [
+        0.0,
+        0.0,
+        0.6088,
+        0.7934
+      ],
+      "middleProximal": [
+        0.0,
+        0.0,
+        0.6756,
+        0.7373
+      ],
+      "middleIntermediate": [
+        0.0,
+        0.0,
+        0.7193,
+        0.6947
+      ],
+      "middleDistal": [
+        0.0,
+        0.0,
+        0.6088,
+        0.7934
+      ],
+      "ringProximal": [
+        0.0,
+        0.0,
+        0.6756,
+        0.7373
+      ],
+      "ringIntermediate": [
+        0.0,
+        0.0,
+        0.7193,
+        0.6947
+      ],
+      "ringDistal": [
+        0.0,
+        0.0,
+        0.6088,
+        0.7934
+      ],
+      "littleProximal": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "littleIntermediate": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "littleDistal": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    "confidence": 0.85,
+    "source": "HARDCODED_FROM_MANUAL_CALIBRATION",
+    "needsValidation": true,
+    "pageNumber": 10,
+    "cropCoordinates": [
+      10,
+      10,
+      90,
+      90
+    ]
+  },
+  "J": {
+    "letter": "J",
+    "name": "QUEIREMA_J",
+    "description": "Configuración manual LSEC para J",
+    "extendedFingers": [],
+    "curledFingers": [],
+    "landmarksNormalized": null,
+    "jointAngles": null,
+    "retargetingQuaternions": {
+      "thumbMetacarpal": [
+        -0.0338,
+        -0.2566,
+        -0.1261,
+        0.9577
+      ],
+      "thumbProximal": [
+        -0.0262,
+        -0.2996,
+        -0.0831,
+        0.9501
+      ],
+      "thumbDistal": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "indexProximal": [
+        0.0,
+        0.0,
+        0.6756,
+        0.7373
+      ],
+      "indexIntermediate": [
+        0.0,
+        0.0,
+        0.7193,
+        0.6947
+      ],
+      "indexDistal": [
+        0.0,
+        0.0,
+        0.6088,
+        0.7934
+      ],
+      "middleProximal": [
+        0.0,
+        0.0,
+        0.6756,
+        0.7373
+      ],
+      "middleIntermediate": [
+        0.0,
+        0.0,
+        0.7193,
+        0.6947
+      ],
+      "middleDistal": [
+        0.0,
+        0.0,
+        0.6088,
+        0.7934
+      ],
+      "ringProximal": [
+        0.0,
+        0.0,
+        0.6756,
+        0.7373
+      ],
+      "ringIntermediate": [
+        0.0,
+        0.0,
+        0.7193,
+        0.6947
+      ],
+      "ringDistal": [
+        0.0,
+        0.0,
+        0.6088,
+        0.7934
+      ],
+      "littleProximal": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "littleIntermediate": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "littleDistal": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    "confidence": 0.85,
+    "source": "HARDCODED_FROM_MANUAL_CALIBRATION",
+    "needsValidation": true,
+    "pageNumber": 10,
+    "cropCoordinates": [
+      10,
+      10,
+      90,
+      90
+    ]
+  },
+  "L": {
+    "letter": "L",
+    "name": "QUEIREMA_L",
+    "description": "Configuración manual LSEC para L",
+    "extendedFingers": [],
+    "curledFingers": [],
+    "landmarksNormalized": null,
+    "jointAngles": null,
+    "retargetingQuaternions": {
+      "thumbMetacarpal": [
+        0.0436,
+        0.0872,
+        0.0436,
+        0.9942
+      ],
+      "thumbProximal": [
+        0.0,
+        0.1736,
+        0.0,
+        0.9848
+      ],
+      "thumbDistal": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "indexProximal": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "indexIntermediate": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "indexDistal": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "middleProximal": [
+        0.0,
+        0.0,
+        0.6756,
+        0.7373
+      ],
+      "middleIntermediate": [
+        0.0,
+        0.0,
+        0.7193,
+        0.6947
+      ],
+      "middleDistal": [
+        0.0,
+        0.0,
+        0.6088,
+        0.7934
+      ],
+      "ringProximal": [
+        0.0,
+        0.0,
+        0.6756,
+        0.7373
+      ],
+      "ringIntermediate": [
+        0.0,
+        0.0,
+        0.7193,
+        0.6947
+      ],
+      "ringDistal": [
+        0.0,
+        0.0,
+        0.6088,
+        0.7934
+      ],
+      "littleProximal": [
+        0.0,
+        0.0,
+        0.6756,
+        0.7373
+      ],
+      "littleIntermediate": [
+        0.0,
+        0.0,
+        0.7193,
+        0.6947
+      ],
+      "littleDistal": [
+        0.0,
+        0.0,
+        0.6088,
+        0.7934
+      ]
+    },
+    "confidence": 0.85,
+    "source": "HARDCODED_FROM_MANUAL_CALIBRATION",
+    "needsValidation": true,
+    "pageNumber": 10,
+    "cropCoordinates": [
+      10,
+      10,
+      90,
+      90
+    ]
+  },
+  "M": {
+    "letter": "M",
+    "name": "QUEIREMA_M",
+    "description": "Configuración manual LSEC para M",
+    "extendedFingers": [],
+    "curledFingers": [],
+    "landmarksNormalized": null,
+    "jointAngles": null,
+    "retargetingQuaternions": {
+      "thumbMetacarpal": [
+        0.15,
+        -0.32,
+        0.08,
+        0.93
+      ],
+      "thumbProximal": [
+        0.08,
+        -0.24,
+        0.16,
+        0.95
+      ],
+      "thumbDistal": [
+        0.0,
+        -0.12,
+        0.08,
+        0.99
+      ],
+      "indexProximal": [
+        0.0,
+        -0.02,
+        0.6,
+        0.8
+      ],
+      "indexIntermediate": [
+        0.0,
+        0.0,
+        0.13,
+        0.99
+      ],
+      "indexDistal": [
+        0.0,
+        0.0,
+        0.09,
+        0.99
+      ],
+      "middleProximal": [
+        0.0,
+        0.0,
+        0.6,
+        0.8
+      ],
+      "middleIntermediate": [
+        0.0,
+        0.0,
+        0.13,
+        0.99
+      ],
+      "middleDistal": [
+        0.0,
+        0.0,
+        0.09,
+        0.99
+      ],
+      "ringProximal": [
+        0.0,
+        0.02,
+        0.6,
+        0.8
+      ],
+      "ringIntermediate": [
+        0.0,
+        0.0,
+        0.13,
+        0.99
+      ],
+      "ringDistal": [
+        0.0,
+        0.0,
+        0.09,
+        0.99
+      ],
+      "littleProximal": [
+        0.0,
+        0.03,
+        0.68,
+        0.73
+      ],
+      "littleIntermediate": [
+        0.0,
+        0.0,
+        0.22,
+        0.97
+      ],
+      "littleDistal": [
+        0.0,
+        0.0,
+        0.13,
+        0.99
+      ]
+    },
+    "confidence": 0.85,
+    "source": "HARDCODED_FROM_MANUAL_CALIBRATION",
+    "needsValidation": true,
+    "pageNumber": 10,
+    "cropCoordinates": [
+      10,
+      10,
+      90,
+      90
+    ]
+  },
+  "V": {
+    "letter": "V",
+    "name": "QUEIREMA_V",
+    "description": "Configuración manual LSEC para V",
+    "extendedFingers": [],
+    "curledFingers": [],
+    "landmarksNormalized": null,
+    "jointAngles": null,
+    "retargetingQuaternions": {
+      "thumbMetacarpal": [
+        0.14,
+        -0.38,
+        0.06,
+        0.91
+      ],
+      "thumbProximal": [
+        0.11,
+        -0.3,
+        0.09,
+        0.94
+      ],
+      "thumbDistal": [
+        0.04,
+        -0.14,
+        0.09,
+        0.98
+      ],
+      "indexProximal": [
+        0.0,
+        0.1,
+        0.0,
+        0.99
+      ],
+      "indexIntermediate": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "indexDistal": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "middleProximal": [
+        0.0,
+        -0.09,
+        0.0,
+        0.99
+      ],
+      "middleIntermediate": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "middleDistal": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "ringProximal": [
+        0.0,
+        0.0,
+        0.6756,
+        0.7373
+      ],
+      "ringIntermediate": [
+        0.0,
+        0.0,
+        0.7193,
+        0.6947
+      ],
+      "ringDistal": [
+        0.0,
+        0.0,
+        0.6088,
+        0.7934
+      ],
+      "littleProximal": [
+        0.0,
+        0.0,
+        0.6756,
+        0.7373
+      ],
+      "littleIntermediate": [
+        0.0,
+        0.0,
+        0.7193,
+        0.6947
+      ],
+      "littleDistal": [
+        0.0,
+        0.0,
+        0.6088,
+        0.7934
+      ]
+    },
+    "confidence": 0.85,
+    "source": "HARDCODED_FROM_MANUAL_CALIBRATION",
+    "needsValidation": true,
+    "pageNumber": 10,
+    "cropCoordinates": [
+      10,
+      10,
+      90,
+      90
+    ]
+  },
+  "Y": {
+    "letter": "Y",
+    "name": "QUEIREMA_Y",
+    "description": "Configuración manual LSEC para Y",
+    "extendedFingers": [],
+    "curledFingers": [],
+    "landmarksNormalized": null,
+    "jointAngles": null,
+    "retargetingQuaternions": {
+      "thumbMetacarpal": [
+        0.0,
+        0.04,
+        0.08,
+        0.99
+      ],
+      "thumbProximal": [
+        0.0,
+        0.07,
+        0.1,
+        0.99
+      ],
+      "thumbDistal": [
+        0.0,
+        0.04,
+        0.13,
+        0.99
+      ],
+      "indexProximal": [
+        0.0,
+        0.0,
+        0.6756,
+        0.7373
+      ],
+      "indexIntermediate": [
+        0.0,
+        0.0,
+        0.7193,
+        0.6947
+      ],
+      "indexDistal": [
+        0.0,
+        0.0,
+        0.6088,
+        0.7934
+      ],
+      "middleProximal": [
+        0.0,
+        0.0,
+        0.6756,
+        0.7373
+      ],
+      "middleIntermediate": [
+        0.0,
+        0.0,
+        0.7193,
+        0.6947
+      ],
+      "middleDistal": [
+        0.0,
+        0.0,
+        0.6088,
+        0.7934
+      ],
+      "ringProximal": [
+        0.0,
+        0.0,
+        0.6756,
+        0.7373
+      ],
+      "ringIntermediate": [
+        0.0,
+        0.0,
+        0.7193,
+        0.6947
+      ],
+      "ringDistal": [
+        0.0,
+        0.0,
+        0.6088,
+        0.7934
+      ],
+      "littleProximal": [
+        0.0,
+        0.07,
+        0.0,
+        0.99
+      ],
+      "littleIntermediate": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "littleDistal": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    "confidence": 0.85,
+    "source": "HARDCODED_FROM_MANUAL_CALIBRATION",
+    "needsValidation": true,
+    "pageNumber": 10,
+    "cropCoordinates": [
+      10,
+      10,
+      90,
+      90
+    ]
+  }
+}

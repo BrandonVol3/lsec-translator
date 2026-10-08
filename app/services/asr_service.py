@@ -74,11 +74,14 @@ class WhisperASRService:
         try:
             from faster_whisper import WhisperModel
 
-            logger.info("Cargando modelo Whisper '%s'...", self._model_size)
+            model_ref, local_only = self._resolve_model_reference()
+            logger.info("Cargando modelo Whisper '%s'%s...", model_ref, " (local)" if local_only else "")
+            kwargs = {"local_files_only": True} if local_only else {}
             self._model = WhisperModel(
-                self._model_size,
+                model_ref,
                 device=self._device,
                 compute_type=self._compute_type,
+                **kwargs,
             )
             logger.info("Modelo Whisper cargado exitosamente.")
         except ImportError:
@@ -90,6 +93,23 @@ class WhisperASRService:
         except Exception as exc:
             logger.error("Error al cargar modelo Whisper: %s", exc)
             raise RuntimeError(f"No se pudo cargar el modelo Whisper: {exc}") from exc
+
+    def _resolve_model_reference(self) -> tuple[str, bool]:
+        """
+        Devuelve (referencia_del_modelo, solo_local).
+
+        Prioriza pesos locales para funcionar sin Internet: ``<whisper_model_path>/<tamaño>`` o
+        ``<whisper_model_path>`` si contiene directamente ``model.bin``. Si no hay pesos locales,
+        usa el nombre del modelo (descarga automática de faster-whisper).
+        """
+        project_root = Path(__file__).resolve().parent.parent.parent
+        base = Path(settings.whisper_model_path)
+        if not base.is_absolute():
+            base = project_root / base
+        for candidate in (base / self._model_size, base):
+            if (candidate / "model.bin").exists():
+                return str(candidate), True
+        return self._model_size, False
 
     def transcribe_file(
         self,

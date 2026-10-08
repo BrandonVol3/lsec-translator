@@ -7,7 +7,7 @@ Este documento presenta el desglose técnico exhaustivo de los dos subsistemas q
 
 # PARTE 1: ARQUITECTURA DEL BACKEND
 
-El backend está diseñado bajo una arquitectura modular y desacoplada en Python 3.10+, estructurada según los estándares de Clean Architecture y Domain-Driven Design (DDD). Su función principal es procesar texto o audio en español, ejecutar un análisis morfosintáctico y semántico profundo, generar una representación intermedia proposicional, proyectar la estructura visoespacial de la Lengua de Señas Ecuatoriana (LSEC), validar 13 invariantes estructurales obligatorias y emitir cargas útiles para la API, WebSocket y motores de animación 3D (Unreal Engine / MetaHuman).
+El backend está diseñado bajo una arquitectura modular y desacoplada en Python 3.10+, estructurada según los estándares de Clean Architecture y Domain-Driven Design (DDD). Su función principal es procesar texto o audio en español, ejecutar un análisis morfosintáctico y semántico profundo, generar una representación intermedia proposicional, proyectar la estructura visoespacial de la Lengua de Señas Ecuatoriana (LSEC), validar 13 invariantes estructurales obligatorias y emitir cargas útiles para la API, WebSocket y el visor 3D del frontend (Three.js + VRM), que reproduce clips de animación generados por un proyecto externo.
 
 ```mermaid
 graph TD
@@ -37,7 +37,7 @@ graph TD
         Validator --> ActiveLearning["ActiveLearningService (Cola Prioritaria)"]
         Validator --> DatasetValidator["DatasetValidator (Auditoría SHA-256)"]
         Validator --> MLOps["MLOpsPipeline (Frozen Test Benchmark)"]
-        Validator --> Outputs["FastAPI / WebSocket / Payload Avatar 3D"]
+        Validator --> Outputs["FastAPI / WebSocket / Payload por glosa para el visor 3D"]
     end
 ```
 
@@ -53,8 +53,7 @@ graph TD
 | **Pydantic v2 & Pydantic-Settings** | `>=2.7.0` | Modelado de esquemas de datos, validación estricta en tiempo de ejecución y parseo declarativo de `.env`. |
 | **spaCy** | `>=3.7.0` | Motor industrial de PLN en español (`es_core_news_md` / `es_core_news_sm`) para POS-tagging, lemmatización y análisis de dependencias. |
 | **Faster-Whisper** | `>=1.0.0` | Motor de reconocimiento automático del habla (ASR) con cuantización CTranslate2 (int8/float16) y cálculo de marcas de tiempo a nivel de palabra. |
-| **MediaPipe** | `>=0.10.14` | Framework de visión artificial para captura y tracking de Pose, Manos (21 landmarks por mano) y Face Mesh (468 landmarks faciales + blendshapes). |
-| **Firebase Admin SDK** | `>=6.5.0` | Conexión con Google Cloud Firestore para auditoría y persistencia de proyectos (con fallback tolerante a fallos in-memory). |
+| **SQLite (stdlib)** | incluido en Python | Persistencia local 100% offline de logs de traducción y revisiones (`data/lsec_database.sqlite`). |
 | **Pytest & Pytest-asyncio** | `>=8.2.0` | Suite integral de pruebas automatizadas y asíncronas con 172 tests unitarios y de integración (100% de aprobación). |
 | **HTTPX** | `>=0.27.0` | Cliente HTTP asíncrono para pruebas de integración y llamadas a servicios externos. |
 
@@ -64,15 +63,13 @@ graph TD
 
 ### `app/config.py` — `Settings`
 Utiliza `pydantic_settings.BaseSettings` para cargar variables de entorno con validación de tipos:
-- **LLM Local / OpenAI:** `openai_api_key`, `openai_model` (`qwen2.5:3b`), `openai_base_url` (`http://localhost:11434/v1`).
-- **Protección de GPU (VRAM 4GB):** `llm_max_tokens` (800), `llm_request_timeout` (300s), límites de concurrencia Ollama.
 - **Whisper ASR:** `whisper_model_size` (`small` / `base`), `whisper_device` (`cuda` / `cpu`), `whisper_compute_type` (`float16` / `int8`).
 - **Servidor y CORS:** `app_host` (`0.0.0.0`), `app_port` (8000), `cors_origins`, `app_debug`.
 
 ### `app/main.py` — Punto de Entrada y Lifespan
 - **Inyección de DLLs CUDA:** En sistemas Windows, detecta dinámicamente el directorio de `nvidia` en el entorno virtual e inyecta las rutas al `PATH` y a `os.add_dll_directory` para garantizar aceleración por GPU.
 - **`lifespan(app: FastAPI)`:**
-  - Inicializa los servicios pesados de forma controlada (`WhisperASRService`, `LSECTranslatorService`, `FirebaseService`).
+  - Inicializa los servicios pesados de forma controlada (`WhisperASRService`, `LSECTranslatorService`, `LocalStorageService`).
   - Aplica carga lazy en Whisper para minimizar la ocupación inicial de VRAM.
   - Inyecta las instancias de los servicios en los enrutadores REST y WebSockets.
   - En el shutdown, libera los recursos de visión y conexiones de base de datos.
@@ -187,7 +184,7 @@ Aplica el motor formal de validación que audita las **13 Invariantes de la LSEC
 ## 1.5 Endpoints y Rutas del Backend (`app/api/`)
 
 ### Endpoints Principales (`app/api/endpoints.py`)
-- `GET /api/v1/health`: Diagnóstico de disponibilidad de servicios (ASR, NLP, Firebase) y versión del motor.
+- `GET /api/v1/health`: Diagnóstico de disponibilidad de servicios (ASR, NLP, almacenamiento local) y versión del motor.
 - `POST /api/v1/transcribe`: Ingesta de archivos de audio (`.wav`, `.mp3`, `.m4a`), ejecución de Whisper y retorno de texto con `word_timestamps`.
 - `POST /api/v1/translate`: Traducción de texto a glosas con modos `detailed`, `legacy` o `debug` y control de presupuesto de paráfrasis.
 - `POST /api/v1/pipeline`: Flujo combinado extremo a extremo: audio → transcripción ASR → normalización → glosas LSEC → plan de temporización.
@@ -201,7 +198,7 @@ Aplica el motor formal de validación que audita las **13 Invariantes de la LSEC
 ### WebSocket Bidireccional (`app/api/websocket.py`)
 - `WS /ws/pipeline`: Protocolo de streaming en tiempo real.
   - **Entrada:** Chunks de audio binarios (`audio_chunk`), texto directo (`text_input`) o señales de control (`control`).
-  - **Salida:** Transcripción parcial continua (`transcription`), actualización de glosas (`gloss_result`) y fotogramas tridimensionales de animación para MetaHuman (`avatar_payload`).
+  - **Salida:** Transcripción parcial continua (`transcription`), actualización de glosas (`gloss_result`) y un mensaje `avatar_payload` por glosa (glosa, marcadores no manuales y metadatos de secuencia) para el visor 3D.
 
 ---
 
@@ -399,7 +396,7 @@ La interfaz está dividida ergonómicamente en 4 macro-zonas:
 | **Ingesta de Audio** | Frontend (`video-player` / archivo) | Backend (`/api/v1/transcribe`) | `multipart/form-data` | Conversión de voz a texto con timestamps de palabras vía Whisper. |
 | **Traducción Directa** | Frontend (`pipeline-processor`) | Backend (`/api/v1/translate`) | JSON (HTTP POST) | Generación de la representación intermedia, glosas LSEC y validación de invariantes. |
 | **Streaming en Tiempo Real** | Frontend (Micrófono / Canvas) | Backend (`/ws/pipeline`) | WebSocket (JSON / Binario) | Transcripción incremental y streaming de glosas cuadro a cuadro. |
-| **Animación 3D Avatar** | Backend (`websocket.py`) | Motor Externo (Unreal / MetaHuman) | JSON (`AvatarPayload`) | Posición de landmarks, blendshapes faciales y duración de cada seña. |
+| **Animación 3D Avatar** | Backend (`websocket.py`) | Visor 3D (Three.js + VRM) | JSON (`AvatarPayload`) | Glosa, marcadores no manuales y duración de cada seña; los clips de animación los genera un proyecto externo. |
 | **Auditoría de Anotaciones** | Frontend (`sidebar-panels`) | Backend (`/api/v1/annotations/submit`) | JSON (HTTP POST) | Registro inmutable append-only de correcciones humanas y validaciones sordas. |
 | **Composición Audiovisual** | Frontend (`video-exporter`) | Disco Local del Usuario | Blob binario (`.webm` / `.mp4`) | Fusión en cliente de video con capas de subtítulos y glosas quemadas. |
 

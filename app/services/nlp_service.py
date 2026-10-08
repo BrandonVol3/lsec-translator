@@ -428,6 +428,9 @@ class LSECTranslatorService:
             spans=spans,
         )
 
+        # Paso 5b: Diccionario Oficial LSEC (idempotente; cubre glosas creadas durante la reparación)
+        self._planner.apply_dictionary(glosses)
+
         # Paso 6: Enlace Bidireccional de Metadatos de Ejecución
         (
             glosses,

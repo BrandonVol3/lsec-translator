@@ -1,36 +1,41 @@
 # ============================================================
-# LSEC Translator Prototype — Dependencias
+# LSEC Translator — Dependencias
 # ============================================================
 # Instalar con: pip install -r requirements.txt
-# Python >= 3.10 requerido
+# Python >= 3.10 requerido (probado con 3.13)
+#
+# Proyecto 100% offline: sin servicios en la nube ni modelos externos.
+# La persistencia usa SQLite (biblioteca estándar de Python, no requiere instalación).
+#
+# Para preparar una carpeta de instalación sin Internet:
+#   pip download -r requirements.txt -d wheels
+#   pip install --no-index --find-links wheels -r requirements.txt
 # ============================================================
 
 # --- Backend & Comunicación ---
 fastapi>=0.111.0,<1.0.0
-uvicorn[standard]>=0.30.0,<1.0.0
-websockets>=12.0,<14.0
-python-multipart>=0.0.9,<1.0.0
+uvicorn[standard]>=0.30.0,<1.0.0      # incluye websockets (/ws/pipeline)
+python-multipart>=0.0.9,<1.0.0         # subida de audio/video (/transcribe, /pipeline)
 
-# --- Validación & Configuración ---
+# --- Validación & Configuración (lee .env; incluye python-dotenv) ---
 pydantic>=2.7.0,<3.0.0
 pydantic-settings>=2.3.0,<3.0.0
-python-dotenv>=1.0.0,<2.0.0
 
 # --- Módulo 1: Reconocimiento de Voz (ASR) ---
+# Incluye ctranslate2 y av. Pesos del modelo: data/models/whisper/<tamaño>/ (ver README)
 faster-whisper>=1.0.0,<2.0.0
+numpy>=1.26.0,<3.0.0
 
 # --- Módulo 2: Procesamiento de Lenguaje Natural (NLP) ---
 spacy>=3.7.0,<4.0.0
-
-# --- Módulo 3: Visión Artificial ---
-mediapipe>=0.10.14,<1.0.0
-opencv-python-headless>=4.10.0,<5.0.0
-numpy>=1.26.0,<3.0.0
-
-# --- Base de Datos ---
-firebase-admin>=6.5.0,<7.0.0
+# Modelo de español requerido por nlp_service.py (usa es_core_news_md si está instalado,
+# si no es_core_news_sm). Descargar el .whl con Internet y conservarlo para instalar offline.
+es_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/es_core_news_sm-3.8.0/es_core_news_sm-3.8.0-py3-none-any.whl
 
 # --- Testing ---
 pytest>=8.2.0,<9.0.0
 pytest-asyncio>=0.23.0,<1.0.0
 httpx>=0.27.0,<1.0.0
+# Opcional: solo para las pruebas E2E del navegador (requieren el servidor en :8000)
+#   pip install playwright && playwright install chromium
+# playwright>=1.40.0

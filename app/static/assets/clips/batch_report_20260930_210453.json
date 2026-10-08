@@ -1,0 +1,26 @@
+{
+  "batchId": "912e7090-9d8b-470f-9230-52e06f3935c9",
+  "startedAt": "2026-10-01T02:04:47.584081+00:00",
+  "totalPairs": 1,
+  "processed": 1,
+  "failed": 0,
+  "skipped": 0,
+  "skippedValidated": 0,
+  "signs": {
+    "DIEZ_1": {
+      "status": "SUCCESS",
+      "durationMs": 3533,
+      "queirema": "QUEIREMA_NEUTRO",
+      "locus": "PECTORAL_CENTRO",
+      "confidence": 0.95,
+      "outputFile": "DIEZ_1_MULTIMODAL.json",
+      "warnings": [],
+      "conflicts": []
+    }
+  },
+  "unpaired": {
+    "videosWithoutImages": [],
+    "imagesWithoutVideos": []
+  },
+  "completedAt": "2026-10-01T02:04:53.352219+00:00"
+}

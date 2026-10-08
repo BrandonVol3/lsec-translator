@@ -1,0 +1,124 @@
+{
+  "schemaVersion": "1.0.0",
+  "opacityRules": {
+    "translucent70": {
+      "semantic": "INITIAL_POSE",
+      "timePhase": "t_start"
+    },
+    "solid100": {
+      "semantic": "FINAL_OR_HOLD_POSE",
+      "timePhase": "t_apex"
+    }
+  },
+  "arrowRules": {
+    "singleStraight": {
+      "repetitions": 1,
+      "motionPattern": "LINEAR"
+    },
+    "doubleChevron": {
+      "repetitions": 2,
+      "motionPattern": "LINEAR_BOUNCE"
+    },
+    "bidirectionalDoubleChevron": {
+      "continuous": true,
+      "motionPattern": "OSCILLATING_SWING"
+    },
+    "hookCurveJ": {
+      "repetitions": 1,
+      "motionPattern": "J_CURVE_DESCENT"
+    }
+  },
+  "speedModifiers": {
+    "solidLine": {
+      "speedFactor": 1.0,
+      "label": "NORMAL_SPEED"
+    },
+    "dashedLine": {
+      "speedFactor": 0.6,
+      "label": "SLOWER_SPEED"
+    }
+  },
+  "interactionTerms": {
+    "desplazar": {
+      "contact": false,
+      "description": "Movimiento en el espacio sin contacto"
+    },
+    "deslizar": {
+      "contact": true,
+      "description": "Movimiento con contacto"
+    }
+  },
+  "readingOrder": {
+    "rule": "LEFT_TO_RIGHT_THEN_TOP_TO_BOTTOM",
+    "sequence": [
+      "A",
+      "B"
+    ]
+  },
+  "lociReferenceGrid": {
+    "cefalicoFrente": {
+      "bodyPart": "frente",
+      "yMin": 0.75,
+      "yMax": 0.95,
+      "xMin": -0.15,
+      "xMax": 0.15,
+      "vrmTarget": "head"
+    },
+    "cefalicoEntrecejo": {
+      "bodyPart": "entrecejo",
+      "yMin": 0.7,
+      "yMax": 0.85,
+      "xMin": -0.1,
+      "xMax": 0.1,
+      "vrmTarget": "head"
+    },
+    "cefalicoSienDerecha": {
+      "bodyPart": "sien",
+      "yMin": 0.7,
+      "yMax": 0.85,
+      "xMin": -0.25,
+      "xMax": -0.1,
+      "vrmTarget": "head"
+    },
+    "facialMenton": {
+      "bodyPart": "menton",
+      "yMin": 0.6,
+      "yMax": 0.72,
+      "xMin": -0.12,
+      "xMax": 0.12,
+      "vrmTarget": "head"
+    },
+    "hombroDerecho": {
+      "bodyPart": "hombro",
+      "yMin": 0.5,
+      "yMax": 0.68,
+      "xMin": -0.4,
+      "xMax": -0.15,
+      "vrmTarget": "rightUpperArm"
+    },
+    "pectoralCentro": {
+      "bodyPart": "pecho",
+      "yMin": 0.4,
+      "yMax": 0.6,
+      "xMin": -0.15,
+      "xMax": 0.15,
+      "vrmTarget": "chest"
+    },
+    "pectoralDerecho": {
+      "bodyPart": "pecho_derecho",
+      "yMin": 0.4,
+      "yMax": 0.62,
+      "xMin": -0.3,
+      "xMax": -0.05,
+      "vrmTarget": "chest"
+    },
+    "abdominalCintura": {
+      "bodyPart": "cintura",
+      "yMin": 0.25,
+      "yMax": 0.42,
+      "xMin": -0.25,
+      "xMax": 0.25,
+      "vrmTarget": "spine"
+    }
+  }
+}

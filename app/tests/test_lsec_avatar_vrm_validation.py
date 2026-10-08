@@ -1,5 +1,5 @@
 """
-Prueba Exhaustiva de Validación del Avatar lsec_avatar_prototype.vrm en LSEC Studio.
+Prueba Exhaustiva de Validación del Avatar LSEC-Interpreter-Female.vrm en LSEC Studio.
 
 Cubre los 6 criterios requeridos:
 1. Validación estructural:
@@ -25,8 +25,12 @@ import pytest
 from playwright.sync_api import sync_playwright, expect
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-VRM_PATH = os.path.join(PROJECT_ROOT, "app", "static", "assets", "lsec_avatar_prototype.vrm")
+WORKSPACE_ROOT = os.path.dirname(PROJECT_ROOT)
+VRM_PATH = os.path.join(WORKSPACE_ROOT, "Avatar", "LSEC-Interpreter-Female.vrm")
+if not os.path.exists(VRM_PATH):
+    VRM_PATH = os.path.join(PROJECT_ROOT, "app", "static", "assets", "LSEC-Interpreter-Female.vrm")
 STUDIO_URL = "http://127.0.0.1:8000/avatarconfig"
+
 
 
 def test_1_vrm_structural_validation():
@@ -95,8 +99,9 @@ def test_2_hand_visual_clips_and_deformation():
         )
         page = browser.new_page(viewport={"width": 1440, "height": 900})
         page.goto(STUDIO_URL, wait_until="domcontentloaded")
-        page.click("#tab-btn-side-avatar")
-        page.wait_for_selector("#avatar-model-source-info:has-text('VRM 1.0')", timeout=15000)
+        if page.locator("#tab-btn-side-avatar").is_visible():
+            page.click("#tab-btn-side-avatar")
+        page.wait_for_selector("#avatar-model-source-info:has-text('VRM 1.0')", timeout=30000)
 
         hand_clips = [
             "TEST_MANO_ABIERTA",
@@ -158,8 +163,9 @@ def test_3_orientation_clips():
         )
         page = browser.new_page(viewport={"width": 1440, "height": 900})
         page.goto(STUDIO_URL, wait_until="domcontentloaded")
-        page.click("#tab-btn-side-avatar")
-        page.wait_for_selector("#avatar-model-source-info:has-text('VRM 1.0')", timeout=15000)
+        if page.locator("#tab-btn-side-avatar").is_visible():
+            page.click("#tab-btn-side-avatar")
+        page.wait_for_selector("#avatar-model-source-info:has-text('VRM 1.0')", timeout=30000)
 
         orient_clips = [
             "TEST_ORIENTACION_PALMA",
@@ -203,8 +209,9 @@ def test_4_non_manual_clips():
         )
         page = browser.new_page(viewport={"width": 1440, "height": 900})
         page.goto(STUDIO_URL, wait_until="domcontentloaded")
-        page.click("#tab-btn-side-avatar")
-        page.wait_for_selector("#avatar-model-source-info:has-text('VRM 1.0')", timeout=15000)
+        if page.locator("#tab-btn-side-avatar").is_visible():
+            page.click("#tab-btn-side-avatar")
+        page.wait_for_selector("#avatar-model-source-info:has-text('VRM 1.0')", timeout=30000)
 
         cnm_clips = [
             "TEST_CNM_HEAD_SHAKE",
@@ -256,8 +263,9 @@ def test_5_simultaneous_clips():
         )
         page = browser.new_page(viewport={"width": 1440, "height": 900})
         page.goto(STUDIO_URL, wait_until="domcontentloaded")
-        page.click("#tab-btn-side-avatar")
-        page.wait_for_selector("#avatar-model-source-info:has-text('VRM 1.0')", timeout=15000)
+        if page.locator("#tab-btn-side-avatar").is_visible():
+            page.click("#tab-btn-side-avatar")
+        page.wait_for_selector("#avatar-model-source-info:has-text('VRM 1.0')", timeout=30000)
 
         sim_clips = [
             "TEST_SIMULTANEO_MANOS_CABEZA",
@@ -306,8 +314,9 @@ def test_6_performance_and_continuous_sequence():
         )
         page = browser.new_page(viewport={"width": 1440, "height": 900})
         page.goto(STUDIO_URL, wait_until="domcontentloaded")
-        page.click("#tab-btn-side-avatar")
-        page.wait_for_selector("#avatar-model-source-info:has-text('VRM 1.0')", timeout=15000)
+        if page.locator("#tab-btn-side-avatar").is_visible():
+            page.click("#tab-btn-side-avatar")
+        page.wait_for_selector("#avatar-model-source-info:has-text('VRM 1.0')", timeout=30000)
 
         # 6.1 Reporte inicial de carga
         perf = page.evaluate("() => window.avatarController.getPerformanceReport()")

@@ -37,6 +37,7 @@ class FacialExpression(str, Enum):
     NEUTRAL = "neutral"
     QUESTION_WH = "pregunta_qu"        # Cejas fruncidas (qué, quién, dónde)
     QUESTION_YESNO = "pregunta_sn"     # Cejas levantadas (sí/no)
+    RHETORICAL = "pregunta_retorica"   # Cejas levantadas: pregunta retórica seguida de su respuesta (FENASEC)
     NEGATION = "negación"              # Cabeza negando + ceño fruncido
     AFFIRMATION = "afirmación"         # Cabeza asintiendo
     EMPHASIS = "énfasis"               # Ojos abiertos, movimiento exagerado
@@ -821,6 +822,31 @@ class DiscourseBlock(BaseModel):
 # Módulo 6 — Elementos de Glosa y Temporización
 # ============================================================
 
+class DictionarySignMetadata(BaseModel):
+    """
+    Ficha de una seña del Diccionario Oficial LSEC "Gabriel Román" (CONADIS).
+
+    `verified_in_conadis=True` solo indica que la seña existe en el diccionario oficial;
+    no sustituye la validación por personas sordas usuarias nativas de LSEC.
+    """
+    verified_in_conadis: bool = Field(default=False)
+    status: str = Field(
+        default="NO_VERIFICADO",
+        description="'VERIFICADO_CONADIS' | 'NO_VERIFICADO' | 'EXENTO_GRAMATICAL' | 'DACTILOLOGIA'",
+    )
+    conadis_slug: Optional[str] = None
+    official_sign_title: Optional[str] = None
+    matched_variant: Optional[str] = Field(default=None, description="Variante léxica del título que coincidió")
+    match_type: Optional[str] = Field(default=None, description="'exact' | 'normalized' | 'lemma' | 'fuzzy'")
+    hand_configuration: Optional[str] = None
+    alphabetical_group: Optional[str] = None
+    thematic_categories: List[str] = Field(default_factory=list)
+    video_url: Optional[str] = None
+    illustration_url: Optional[str] = None
+    source_url: Optional[str] = None
+    lexical_alternatives: List[str] = Field(default_factory=list)
+
+
 class GlossItem(BaseModel):
     """Elemento individual de la secuencia de glosas LSEC."""
     id: str = Field(default_factory=lambda: f"g_{uuid4().hex[:6]}")
@@ -867,6 +893,10 @@ class GlossItem(BaseModel):
     requires_native_review: bool = Field(default=False)
     requires_audio_review: bool = Field(default=False)
     review_reasons: List[str] = Field(default_factory=list)
+    dictionary_metadata: Optional[DictionarySignMetadata] = Field(
+        default=None,
+        description="Ficha del Diccionario Oficial LSEC (CONADIS) asociada a la glosa, si aplica.",
+    )
 
     # Compatibilidad hacia atrás: alias de original_word
     original_word: Optional[str] = Field(default=None, description="[DEPRECATED] Use source_word o normalized_word")
@@ -1076,7 +1106,7 @@ class GlossOutput(BaseModel):
 
 
 # ============================================================
-# Módulo 8 — Keypoints y Payload 3D (MetaHuman / Unreal Engine 5)
+# Módulo 8 — Keypoints y Payload para el visor 3D
 # ============================================================
 
 class Landmark3D(BaseModel):
@@ -1088,20 +1118,20 @@ class Landmark3D(BaseModel):
 
 
 class HandKeypoints(BaseModel):
-    """21 puntos de referencia de una mano (MediaPipe Hand)."""
+    """21 puntos de referencia de una mano (formato de mano)."""
     landmarks: List[Landmark3D] = Field(min_length=21, max_length=21)
     handedness: str = Field(default="right")
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
 
 
 class PoseKeypoints(BaseModel):
-    """33 puntos de referencia del cuerpo (MediaPipe Pose)."""
+    """33 puntos de referencia del cuerpo (formato de pose)."""
     landmarks: List[Landmark3D] = Field(min_length=33, max_length=33)
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
 
 
 class FaceKeypoints(BaseModel):
-    """468 puntos de referencia del rostro (MediaPipe Face Mesh)."""
+    """468 puntos de referencia del rostro (formato de malla facial)."""
     landmarks: List[Landmark3D] = Field(min_length=468, max_length=468)
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
 
@@ -1124,7 +1154,7 @@ class KeypointsFrame(BaseModel):
 
 
 class AvatarPayload(BaseModel):
-    """Payload completo para el renderizador 3D (Unreal Engine 5 / MetaHuman)."""
+    """Payload por glosa para el visor 3D (glosa, marcadores no manuales y metadatos de secuencia)."""
     session_id: UUID = Field(default_factory=uuid4)
     sequence_index: int = Field(default=0, ge=0)
     gloss: Optional[GlossItem] = Field(default=None)

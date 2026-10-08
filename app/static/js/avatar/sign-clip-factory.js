@@ -2,7 +2,7 @@
  * LSEC Studio — Fábrica de Clips Técnicos de Demostración y Validación
  * 
  * Genera programáticamente los clips requeridos para la evaluación técnica
- * del avatar VRM 1.0 (lsec_avatar_prototype.vrm):
+ * del avatar VRM 1.0 (LSEC-Interpreter-Female.vrm):
  * 1. Base y demostración estándar: NEUTRAL, SALUDAR_DEMO, NEGACION_DEMO.
  * 2. Pruebas visuales de manos: mano abierta, puño, índice extendido, dos dedos,
  *    pinza índice-pulgar, mano curva, garra, dedos juntos y separados.

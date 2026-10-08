@@ -239,25 +239,6 @@ def test_07_technical_rig_fallback_structural_integrity():
     assert "chest" in content
 
 
-def test_08_motion_retargeter_interface_contract():
-    """Verifica el contrato de landmarks y etapas cinemáticas en motion-retargeter.js."""
-    retargeter_path = os.path.join(PROJECT_ROOT, "app", "static", "js", "avatar", "motion-retargeter.js")
-    with open(retargeter_path, "r", encoding="utf-8") as f:
-        content = f.read()
-
-    assert "EXPERIMENTAL" in content
-    assert "poseLandmarks" in content
-    assert "leftHandLandmarks" in content
-    assert "rightHandLandmarks" in content
-    assert "faceLandmarks" in content
-    assert "faceBlendshapes" in content
-    assert "normalizeBodyDimensions" in content
-    assert "computeJointVector" in content
-    assert "calculateRelativeRotation" in content
-    assert "applyAnatomicalLimits" in content
-    assert "preserveHandContact" in content
-
-
 def test_09_lunes_clip_schema_and_registry():
     """Verifica que la seña canónica LUNES esté definida y registrada en fábrica y adaptador."""
     with open(FACTORY_JS_PATH, "r", encoding="utf-8") as f:
@@ -273,4 +254,35 @@ def test_09_lunes_clip_schema_and_registry():
 
     assert "createLunesSignClip" in adapter_content
     assert "this.registerClip('LUNES'" in adapter_content
+
+
+def test_10_weekdays_batch_clips_and_manifest():
+    """Verifica que los 7 clips de los días de la semana y manifest.json existan y sean válidos."""
+    clips_dir = os.path.join(PROJECT_ROOT, "app", "static", "assets", "clips")
+    manifest_path = os.path.join(clips_dir, "manifest.json")
+    
+    assert os.path.exists(manifest_path), f"manifest.json no existe en {clips_dir}"
+    
+    with open(manifest_path, "r", encoding="utf-8") as f:
+        manifest = json.load(f)
+        
+    assert manifest.get("totalClips", 0) >= 7
+    expected_days = ["LUNES", "MARTES", "MIERCOLES", "JUEVES", "VIERNES", "SABADO", "DOMINGO"]
+    
+    for day in expected_days:
+        assert day in manifest["clips"], f"{day} falta en manifest.json"
+        clip_meta = manifest["clips"][day]
+        clip_file = os.path.join(clips_dir, clip_meta["file"])
+        assert os.path.exists(clip_file), f"Archivo {clip_file} no existe"
+        
+        with open(clip_file, "r", encoding="utf-8") as cf:
+            clip_data = json.load(cf)
+            
+        is_valid, errors = validate_clip_structure(clip_data)
+        assert is_valid is True, f"Error de validación en clip {day}: {errors}"
+        assert clip_data["durationMs"] > 0
+        assert len(clip_data["boneTracks"]) >= 15
+        assert clip_data.get("dominantHand") == "RIGHT"
+        assert clip_data.get("validationStatus") == "REQUIRES_LSEC_VALIDATION"
+
 

@@ -256,11 +256,35 @@
 
           <div style="display:flex; gap:6px; margin-top:2px;">
             <button class="btn btn-secondary btn-sm" id="btn-avatar-play-sequence" style="flex:1; justify-content:center;" title="Secuencia encadenada de saludo y negación">
-              <span>▶ Secuencia Básica</span>
+              <span>▶ Básica</span>
             </button>
             <button class="btn btn-secondary btn-sm" id="btn-avatar-play-all-tests" style="flex:1; justify-content:center;" title="Ejecutar batería continua de las 22 pruebas biomecánicas">
-              <span>⚡ Batería (22 Pruebas)</span>
+              <span>⚡ 22 Pruebas</span>
             </button>
+          </div>
+
+          <div style="margin-top:6px;">
+            <button class="btn btn-primary btn-sm" id="btn-avatar-play-week" style="width:100%; justify-content:center; background:linear-gradient(135deg, #059669 0%, #047857 100%); border-color:#059669; font-weight:600;" title="Reproducir secuencia de los 7 días de la semana (Lunes a Domingo)">
+              <span>📅 Días de la Semana (7 Días LSEC)</span>
+            </button>
+          </div>
+
+          <!-- Edición Manual y Carga de Señas Corregidas -->
+          <div style="margin-top:10px; padding-top:8px; border-top:1px dashed var(--border-subtle); display:flex; flex-direction:column; gap:6px;">
+            <div style="font-size:0.73rem; font-weight:600; color:var(--text-secondary); display:flex; align-items:center; gap:5px;">
+              <span>✏️ Edición Manual de Señas (Blender / JSON)</span>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button class="btn btn-secondary btn-sm" id="btn-avatar-export-clip" style="flex:1; justify-content:center;" title="Exportar la seña actualmente seleccionada (ej. Lunes) a formato JSON para inspeccionar o editar">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                <span>Exportar Seña</span>
+              </button>
+              <input type="file" id="avatar-clip-file-input" accept=".json" style="display:none;">
+              <button class="btn btn-primary btn-sm" id="btn-avatar-import-clip" style="flex:1; justify-content:center; background:linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%); border-color:#2563EB; font-weight:600;" title="Cargar seña corregida (.json) y reproducirla directamente en el avatar">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
+                <span>Cargar Seña Corregida</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -417,7 +441,7 @@
         // 4. Restaurar Prototipo Original
         document.getElementById('btn-reload-default-vrm')?.addEventListener('click', () => {
           if (window.avatarController) {
-            window.avatarController.loadVRMFromUrl('/static/assets/lsec_avatar_prototype.vrm');
+            window.avatarController.loadVRMFromUrl('/avatar/LSEC-Interpreter-Female.vrm');
           }
         });
 

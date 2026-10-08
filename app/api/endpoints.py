@@ -21,7 +21,7 @@ from pydantic import BaseModel, Field
 
 from app.core.schemas import GlossOutput, TranscriptionResult, TranslationMode
 from app.services.asr_service import WhisperASRService
-from app.services.firebase_service import FirebaseService
+from app.services.storage_service import LocalStorageService
 from app.services.nlp_service import LSECTranslatorService
 
 logger = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ router = APIRouter(prefix="/api/v1", tags=["LSEC Pipeline"])
 
 _asr_service: WhisperASRService | None = None
 _nlp_service: LSECTranslatorService | None = None
-_firebase_service: FirebaseService | None = None
+_storage_service: LocalStorageService | None = None
 
 # Almacén en memoria de revisiones (para auditoría, delimitado a 500 registros)
 _MAX_REVIEW_LOG_SIZE = 500
@@ -89,13 +89,13 @@ def validate_media_magic_bytes(file_path: str) -> bool:
 def set_services(
     asr: WhisperASRService,
     nlp: LSECTranslatorService,
-    firebase: Optional[FirebaseService],
+    storage: Optional[LocalStorageService] = None,
 ) -> None:
     """Inyecta las instancias de servicios en los endpoints."""
-    global _asr_service, _nlp_service, _firebase_service
+    global _asr_service, _nlp_service, _storage_service
     _asr_service = asr
     _nlp_service = nlp
-    _firebase_service = firebase
+    _storage_service = storage
 
 
 # ============================================================
@@ -160,7 +160,7 @@ async def health_check() -> HealthResponse:
         services={
             "asr": _asr_service is not None and _asr_service.is_ready(),
             "nlp": _nlp_service is not None,
-            "firebase": _firebase_service is not None and _firebase_service.is_connected,
+            "storage": _storage_service is not None and _storage_service.is_connected,
         },
         version="2.0.0",
     )
@@ -253,16 +253,16 @@ async def translate_text(
             paraphrase_budget=budget,
         )
 
-        if _firebase_service is not None:
+        if _storage_service is not None:
             try:
-                await _firebase_service.save_translation_log({
+                await _storage_service.save_translation_log({
                     "original_text": body.text,
                     "glosses_count": len(result.glosses),
                     "session_id": str(result.session_id),
                     "schema_version": result.schema_version,
                 })
             except Exception:
-                logger.warning("No se pudo guardar el log en Firebase.")
+                logger.warning("No se pudo guardar el log de traducción en la base local.")
 
         return result
 
@@ -378,6 +378,11 @@ async def submit_linguistic_review(review: ReviewSubmission) -> ReviewRecordResp
     _REVIEW_LOG.append(record)
     if len(_REVIEW_LOG) > _MAX_REVIEW_LOG_SIZE:
         _REVIEW_LOG.pop(0)
+    if _storage_service is not None:
+        try:
+            await _storage_service.save_review(record)
+        except Exception:
+            logger.warning("No se pudo persistir la revisión en la base local.")
 
     logger.info(
         "Revisión registrada [%s]: revisor=%s (nativo=%s), decisión=%s",
@@ -398,4 +403,9 @@ async def submit_linguistic_review(review: ReviewSubmission) -> ReviewRecordResp
 )
 async def get_review_history() -> List[Dict[str, Any]]:
     """Consulta el registro histórico de revisiones."""
+    if _storage_service is not None:
+        try:
+            return await _storage_service.get_reviews(_MAX_REVIEW_LOG_SIZE)
+        except Exception:
+            logger.warning("No se pudo leer el historial desde la base local; se usa la memoria.")
     return list(_REVIEW_LOG)

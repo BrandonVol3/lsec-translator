@@ -1,0 +1,422 @@
+{
+  "comparisonTimestamp": "2026-10-01T02:05:00Z",
+  "description": "Comparación Técnica entre Clips Calibrados Manualmente y Clips Generados por el Pipeline Multimodal",
+  "groundTruthComparison": {
+    "groundTruthStatus": "HUMAN_REVIEWED",
+    "groundTruthValidation": "VALIDATED_LSEC",
+    "groundTruthTotalKeyframesRUA": 127,
+    "multimodalTotalKeyframesRUA": 0,
+    "groundTruthSampling": "Dense Baked (~30 FPS)",
+    "multimodalSampling": "Parametric SLERP with Organically Extracted Keyframes",
+    "groundTruthSource": "Blender 5.2.2 LTS",
+    "multimodalSource": "Multimodal Fusion Engine v4.1"
+  },
+  "weekdayComparisons": {
+    "LUNES": {
+      "gloss": "LUNES",
+      "calibratedAvailable": true,
+      "multimodalAvailable": true,
+      "durationMs": {
+        "calibrated": 4200,
+        "multimodal": 4200,
+        "diffMs": 0
+      },
+      "semiotics": {
+        "queirema": {
+          "calibrated": "QUEIREMA_L",
+          "multimodal": "QUEIREMA_L",
+          "match": true
+        },
+        "locus": {
+          "calibrated": "PECTORAL_CENTRO",
+          "multimodal": "PECTORAL_CENTRO",
+          "match": true
+        },
+        "movementType": {
+          "calibrated": "VAIVEN_HORIZONTAL",
+          "multimodal": "VAIVEN_HORIZONTAL_ARCO_DOBLE",
+          "match": false
+        }
+      },
+      "boneTracks": {
+        "calibratedCount": 24,
+        "multimodalCount": 24,
+        "commonCount": 24,
+        "keyframeDensity": {
+          "rightUpperArm": {
+            "calibrated": 8,
+            "multimodal": 0
+          },
+          "rightHand": {
+            "calibrated": 8,
+            "multimodal": 0
+          }
+        }
+      },
+      "expressions": {
+        "calibrated": [
+          "blink",
+          "aa"
+        ],
+        "multimodal": [
+          "blink"
+        ],
+        "autoVisemeRemoved": true
+      },
+      "multimodalKinematics": {
+        "fps": 15.0,
+        "samplesCount": 60,
+        "hasBilateralTracking": true,
+        "phasesCount": 10
+      }
+    },
+    "MARTES": {
+      "gloss": "MARTES",
+      "calibratedAvailable": true,
+      "multimodalAvailable": true,
+      "durationMs": {
+        "calibrated": 3998,
+        "multimodal": 3998,
+        "diffMs": 0
+      },
+      "semiotics": {
+        "queirema": {
+          "calibrated": "QUEIREMA_M",
+          "multimodal": "QUEIREMA_M",
+          "match": true
+        },
+        "locus": {
+          "calibrated": "PECTORAL_CENTRO",
+          "multimodal": "PECTORAL_CENTRO",
+          "match": true
+        },
+        "movementType": {
+          "calibrated": "LINEAL",
+          "multimodal": "VAIVEN_HORIZONTAL_ARCO_DOBLE",
+          "match": false
+        }
+      },
+      "boneTracks": {
+        "calibratedCount": 24,
+        "multimodalCount": 24,
+        "commonCount": 24,
+        "keyframeDensity": {
+          "rightUpperArm": {
+            "calibrated": 5,
+            "multimodal": 0
+          },
+          "rightHand": {
+            "calibrated": 5,
+            "multimodal": 0
+          }
+        }
+      },
+      "expressions": {
+        "calibrated": [
+          "blink",
+          "aa"
+        ],
+        "multimodal": [
+          "blink"
+        ],
+        "autoVisemeRemoved": true
+      },
+      "multimodalKinematics": {
+        "fps": 15.0,
+        "samplesCount": 60,
+        "hasBilateralTracking": true,
+        "phasesCount": 10
+      }
+    },
+    "MIERCOLES": {
+      "gloss": "MIERCOLES",
+      "calibratedAvailable": true,
+      "multimodalAvailable": true,
+      "durationMs": {
+        "calibrated": 4166,
+        "multimodal": 4166,
+        "diffMs": 0
+      },
+      "semiotics": {
+        "queirema": {
+          "calibrated": "QUEIREMA_M",
+          "multimodal": "QUEIREMA_M",
+          "match": true
+        },
+        "locus": {
+          "calibrated": "PECTORAL_CENTRO",
+          "multimodal": "PECTORAL_CENTRO",
+          "match": true
+        },
+        "movementType": {
+          "calibrated": "VAIVEN_HORIZONTAL",
+          "multimodal": "VAIVEN_HORIZONTAL_ARCO_DOBLE",
+          "match": false
+        }
+      },
+      "boneTracks": {
+        "calibratedCount": 24,
+        "multimodalCount": 24,
+        "commonCount": 24,
+        "keyframeDensity": {
+          "rightUpperArm": {
+            "calibrated": 8,
+            "multimodal": 0
+          },
+          "rightHand": {
+            "calibrated": 8,
+            "multimodal": 0
+          }
+        }
+      },
+      "expressions": {
+        "calibrated": [
+          "blink",
+          "aa"
+        ],
+        "multimodal": [
+          "blink"
+        ],
+        "autoVisemeRemoved": true
+      },
+      "multimodalKinematics": {
+        "fps": 24.0,
+        "samplesCount": 50,
+        "hasBilateralTracking": true,
+        "phasesCount": 10
+      }
+    },
+    "JUEVES": {
+      "gloss": "JUEVES",
+      "calibratedAvailable": true,
+      "multimodalAvailable": true,
+      "durationMs": {
+        "calibrated": 3733,
+        "multimodal": 3733,
+        "diffMs": 0
+      },
+      "semiotics": {
+        "queirema": {
+          "calibrated": "QUEIREMA_J",
+          "multimodal": "QUEIREMA_J",
+          "match": true
+        },
+        "locus": {
+          "calibrated": "PECTORAL_CENTRO",
+          "multimodal": "PECTORAL_CENTRO",
+          "match": true
+        },
+        "movementType": {
+          "calibrated": "DIAGONAL_DESCENDENTE_AFUERA_DOBLE",
+          "multimodal": "VAIVEN_HORIZONTAL_ARCO_DOBLE",
+          "match": false
+        }
+      },
+      "boneTracks": {
+        "calibratedCount": 24,
+        "multimodalCount": 24,
+        "commonCount": 24,
+        "keyframeDensity": {
+          "rightUpperArm": {
+            "calibrated": 7,
+            "multimodal": 0
+          },
+          "rightHand": {
+            "calibrated": 7,
+            "multimodal": 0
+          }
+        }
+      },
+      "expressions": {
+        "calibrated": [
+          "blink",
+          "aa"
+        ],
+        "multimodal": [
+          "blink"
+        ],
+        "autoVisemeRemoved": true
+      },
+      "multimodalKinematics": {
+        "fps": 15.0,
+        "samplesCount": 56,
+        "hasBilateralTracking": true,
+        "phasesCount": 10
+      }
+    },
+    "VIERNES": {
+      "gloss": "VIERNES",
+      "calibratedAvailable": true,
+      "multimodalAvailable": true,
+      "durationMs": {
+        "calibrated": 4000,
+        "multimodal": 4000,
+        "diffMs": 0
+      },
+      "semiotics": {
+        "queirema": {
+          "calibrated": "QUEIREMA_V",
+          "multimodal": "QUEIREMA_V",
+          "match": true
+        },
+        "locus": {
+          "calibrated": "PECTORAL_CENTRO",
+          "multimodal": "PECTORAL_CENTRO",
+          "match": true
+        },
+        "movementType": {
+          "calibrated": "LINEAL",
+          "multimodal": "VAIVEN_HORIZONTAL_ARCO_DOBLE",
+          "match": false
+        }
+      },
+      "boneTracks": {
+        "calibratedCount": 24,
+        "multimodalCount": 24,
+        "commonCount": 24,
+        "keyframeDensity": {
+          "rightUpperArm": {
+            "calibrated": 5,
+            "multimodal": 0
+          },
+          "rightHand": {
+            "calibrated": 5,
+            "multimodal": 0
+          }
+        }
+      },
+      "expressions": {
+        "calibrated": [
+          "blink",
+          "aa"
+        ],
+        "multimodal": [
+          "blink"
+        ],
+        "autoVisemeRemoved": true
+      },
+      "multimodalKinematics": {
+        "fps": 15.0,
+        "samplesCount": 60,
+        "hasBilateralTracking": true,
+        "phasesCount": 10
+      }
+    },
+    "SABADO": {
+      "gloss": "SABADO",
+      "calibratedAvailable": true,
+      "multimodalAvailable": true,
+      "durationMs": {
+        "calibrated": 3266,
+        "multimodal": 3266,
+        "diffMs": 0
+      },
+      "semiotics": {
+        "queirema": {
+          "calibrated": "QUEIREMA_Y",
+          "multimodal": "QUEIREMA_Y",
+          "match": true
+        },
+        "locus": {
+          "calibrated": "HOMBRO_DERECHO",
+          "multimodal": "PECTORAL_CENTRO",
+          "match": false
+        },
+        "movementType": {
+          "calibrated": "LINEAL",
+          "multimodal": "VAIVEN_HORIZONTAL_ARCO_DOBLE",
+          "match": false
+        }
+      },
+      "boneTracks": {
+        "calibratedCount": 24,
+        "multimodalCount": 24,
+        "commonCount": 24,
+        "keyframeDensity": {
+          "rightUpperArm": {
+            "calibrated": 5,
+            "multimodal": 0
+          },
+          "rightHand": {
+            "calibrated": 5,
+            "multimodal": 0
+          }
+        }
+      },
+      "expressions": {
+        "calibrated": [
+          "blink",
+          "aa"
+        ],
+        "multimodal": [
+          "blink"
+        ],
+        "autoVisemeRemoved": true
+      },
+      "multimodalKinematics": {
+        "fps": 15.0,
+        "samplesCount": 49,
+        "hasBilateralTracking": true,
+        "phasesCount": 10
+      }
+    },
+    "DOMINGO": {
+      "gloss": "DOMINGO",
+      "calibratedAvailable": true,
+      "multimodalAvailable": true,
+      "durationMs": {
+        "calibrated": 3399,
+        "multimodal": 3399,
+        "diffMs": 0
+      },
+      "semiotics": {
+        "queirema": {
+          "calibrated": "QUEIREMA_DOMINGO",
+          "multimodal": "QUEIREMA_DOMINGO",
+          "match": true
+        },
+        "locus": {
+          "calibrated": "PECTORAL_CENTRO",
+          "multimodal": "PECTORAL_CENTRO",
+          "match": true
+        },
+        "movementType": {
+          "calibrated": "VAIVEN_HORIZONTAL",
+          "multimodal": "VAIVEN_HORIZONTAL_ARCO_DOBLE",
+          "match": false
+        }
+      },
+      "boneTracks": {
+        "calibratedCount": 24,
+        "multimodalCount": 24,
+        "commonCount": 24,
+        "keyframeDensity": {
+          "rightUpperArm": {
+            "calibrated": 8,
+            "multimodal": 0
+          },
+          "rightHand": {
+            "calibrated": 8,
+            "multimodal": 0
+          }
+        }
+      },
+      "expressions": {
+        "calibrated": [
+          "blink",
+          "aa"
+        ],
+        "multimodal": [
+          "blink"
+        ],
+        "autoVisemeRemoved": true
+      },
+      "multimodalKinematics": {
+        "fps": 15.0,
+        "samplesCount": 51,
+        "hasBilateralTracking": true,
+        "phasesCount": 10
+      }
+    }
+  }
+}

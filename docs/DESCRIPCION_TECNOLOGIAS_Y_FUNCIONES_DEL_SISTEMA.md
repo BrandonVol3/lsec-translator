@@ -3,7 +3,7 @@
 > **Versión del Sistema:** LSEC Translator Architecture 2.2 / LSEC Studio 2.1.1  
 > **Área:** Tecnologías de la Información y Comunicación (TIC) — Procesamiento de Lenguaje Natural y Accesibilidad  
 > **Fecha:** Septiembre 2026  
-> **Entorno:** Backend (Python 3.10+, FastAPI, PyTorch/CTranslate2, MediaPipe) & Frontend (Vanilla Web Standards ES6+, HTML5 Canvas, MediaRecorder)
+> **Entorno:** Backend (Python 3.10+, FastAPI, CTranslate2) & Frontend (Vanilla Web Standards ES6+, HTML5 Canvas, MediaRecorder)
 
 ---
 
@@ -31,11 +31,10 @@ A diferencia de aproximaciones tradicionales basadas en mapeos ingenuos palabra 
 | **Pydantic v2 & Pydantic-Settings** | `>=2.7.0` | Validación de tipos en tiempo de ejecución, serialización/deserialización de alto rendimiento y carga declarativa de variables de entorno `.env`. |
 | **Faster-Whisper (CTranslate2)** | `>=1.0.0` | Motor de Reconocimiento Automático del Habla (ASR) 4 veces más rápido que Whisper original con un tercio del consumo de VRAM (cuantización `int8`/`float16` y timestamps de palabras milimétricos). |
 | **spaCy** | `>=3.7.0` | Procesamiento morfosintáctico en español con modelos `es_core_news_md` / `es_core_news_sm`. Proporciona etiquetado de partes de la oración (POS), análisis de dependencias sintácticas y lematización. |
-| **MediaPipe Holistic** | `>=0.10.14` | Framework de visión artificial y aprendizaje automático para seguimiento de movimiento humano: 543 puntos de referencia tridimensionales (468 faciales con blendshapes, 33 de pose corporal y 21 por cada mano). |
 | **OpenCV (headless)** | `>=4.10.0` | Manipulación de fotogramas, cálculo de matrices espaciales y operaciones matriciales en video. |
 | **NumPy** | `>=1.26.0` | Computación numérica para vectores espaciales, distancias euclidianas y transformaciones de coordenadas 3D. |
-| **Firebase Admin SDK** | `>=6.5.0` | Conexión con Google Cloud Firestore para la persistencia inmutable de auditorías y proyectos, con mecanismo de contingencia (*fallback*) tolerante a fallos en memoria. |
-| **Pytest & Pytest-asyncio** | `>=8.2.0` | Suite de pruebas unitarias y de integración asíncronas con 180 casos de prueba automatizados (100% de éxito). |
+| **SQLite (stdlib)** | incluido en Python | Persistencia local 100% offline de logs de traducción y revisiones (`data/lsec_database.sqlite`), sin dependencias ni servicios en la nube. |
+| **Pytest & Pytest-asyncio** | `>=8.2.0` | Suite de pruebas unitarias y de integración asíncronas con 358 casos de prueba automatizados (100% de éxito, sin contar las pruebas E2E de navegador). |
 | **HTTPX** | `>=0.27.0` | Cliente HTTP asíncrono para pruebas de integración de la API. |
 
 ### 2.2 Frontend (LSEC Studio 2.1.1)
@@ -83,7 +82,7 @@ graph TD
     subgraph OUTPUT_MLOPS["4. Consumo, Anotación y MLOps"]
         Validator --> REST_WS["API REST & WebSockets (/translate, /ws/pipeline)"]
         REST_WS --> StudioUI["LSEC Studio (Frontend NLE en Navegador)"]
-        REST_WS --> AvatarOut["Payload 3D (MetaHuman / Unreal Engine 5)"]
+        REST_WS --> AvatarOut["Payload por glosa para el visor 3D (Three.js + VRM)"]
         Validator --> ActiveLearn["ActiveLearningService (Cola por Incertidumbre)"]
         ActiveLearn --> AnnotationPlatform["Plataforma de Validación Sorda Nativa"]
         AnnotationPlatform --> DatasetVal["DatasetValidator (Auditoría SHA-256 sin Fugas)"]
@@ -151,10 +150,6 @@ Audita matemáticamente las **13 Invariantes Lingüísticas LSEC 2.1.1** (descri
 - **Auditoría Antifugas SHA-256:** Genera hashes criptográficos de cada texto y glosa para garantizar matemáticamente que ningún ejemplo de entrenamiento contamine los conjuntos de prueba congelados (*Frozen Test Set*).
 - **Compuerta MLOps Automatizada:** Ejecuta pruebas de regresión cuantitativas evaluando métricas estrictas: Exact Match (EM), F1 sintáctico, distancia de edición de Levenshtein y dictamina `PASS` o `FAIL`.
 
-### 4.11 Visión Artificial y Mapeo Gestual (`app/services/vision_service.py`)
-- Extrae los 543 puntos clave de MediaPipe Holistic a partir de secuencias de video.
-- Normaliza coordenadas respecto a la distancia entre hombros y genera paquetes compatibles con motores gráficos (Unreal Engine 5 / MetaHuman) y redes convolucionales espacio-temporales (ST-GCN).
-
 ---
 
 ## 5. Funciones y Características del Frontend (LSEC Studio 2.1.1)
@@ -216,8 +211,8 @@ El validador estructural (`StructuralValidator`) audita automáticamente las sig
 ### 7.1 Endpoints REST Principales (`app/api/endpoints.py`)
 
 - **`GET /api/v1/health`**
-  - Verifica el estado de operatividad de los motores de ASR, NLP y Firebase.
-  - **Respuesta:** Versión del motor (`2.1.1` / `2.2`), estado de salud de cada módulo y memoria disponible.
+  - Verifica el estado de operatividad de los motores de ASR, NLP y almacenamiento local.
+  - **Respuesta:** estado de cada servicio (`asr`, `nlp`, `storage`) y versión de la API.
 
 - **`POST /api/v1/transcribe`**
   - **Entrada:** Archivo de audio multipart (`.wav`, `.mp3`, `.m4a`, etc.).
@@ -255,7 +250,7 @@ El validador estructural (`StructuralValidator`) audita automáticamente las sig
   - **Mensajes salientes:**
     - `transcription`: Actualizaciones parciales de la voz transcripta.
     - `gloss_result`: Secuencia incremental de glosas LSEC a medida que se completan las cláusulas.
-    - `avatar_payload`: Coordenadas de puntos clave 3D y pesos de blendshapes faciales listos para animación en tiempo real en MetaHuman / Unreal Engine 5.
+    - `avatar_payload`: una glosa individual con sus marcadores no manuales y metadatos de secuencia (`sequence_index`, texto original, latencia), lista para que el visor 3D reproduzca el clip correspondiente. No incluye puntos clave de visión artificial.
 
 ---
 
@@ -279,7 +274,7 @@ El sistema cuenta con un esquema de datos formal (`app/core/dataset_schemas.py`)
 | **Control de Calidad** | StructuralValidator (13 Invariantes) | Blindaje algorítmico contra agramaticalidades antes de que el contenido llegue al usuario o al avatar. |
 | **Edición Frontend** | LSEC Studio (Vanilla Web + Canvas) | Interfaz no lineal bilingüe de 60 FPS, accesible, con edición in-situ y navegación precisa por fotogramas. |
 | **Composición Video** | MediaRecorder en Navegador | Exportación de videos con subtítulos y glosas quemadas directamente en el cliente, reduciendo a cero el coste de render en servidor. |
-| **Animación 3D** | MediaPipe Holistic (543 Landmarks) | Compatibilidad directa con avatares tridimensionales MetaHuman y redes neuronales espacio-temporales. |
+| **Visor 3D** | Three.js + VRM 1.0 | Reproduce clips JSON de animación generados por un proyecto externo; este sistema no genera señas. |
 | **MLOps y Ética** | Active Learning + Auditoría SHA-256 | Entrenamiento continuo priorizado por incertidumbre garantizando la soberanía lingüística de la comunidad sorda. |
 
 ---

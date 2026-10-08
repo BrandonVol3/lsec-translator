@@ -84,7 +84,17 @@ class SourceAlignmentService:
             curr_char = max(end, curr_char)
 
         # 3. Alinear cada Proposición Semántica
-        global_cursor = 0
+        # Tokens del audio eliminados por el depurador de habla (muletillas, repeticiones):
+        # no existen en el texto normalizado, por lo que se omiten al ubicar proposiciones.
+        removed_global: set = set()
+        for c in corrections:
+            cd = c if isinstance(c, dict) else (c.to_dict() if hasattr(c, "to_dict") else {})
+            if cd.get("normalized_text", None) == "" and cd.get("asr_text"):
+                removed_global.update(cd.get("global_source_token_indexes") or [])
+        alive_idx = [i for i in range(total_global_tokens) if i not in removed_global]
+        n_alive = len(alive_idx)
+
+        global_cursor = 0  # posición dentro de alive_idx
         for prop in propositions:
             p_text = prop.source_text.strip()
             p_words = [w for w in re.findall(r"\b[\wáéíóúñüÁÉÍÓÚÑÜ\-]+\b", p_text)]
@@ -97,8 +107,9 @@ class SourceAlignmentService:
             matched_global_idxs: List[int] = []
             if prop.global_source_token_indexes and all(0 <= idx < total_global_tokens for idx in prop.global_source_token_indexes):
                 matched_global_idxs = prop.global_source_token_indexes
-                global_cursor = matched_global_idxs[-1] + 1
-            elif p_words and total_global_tokens > 0:
+                last_g = matched_global_idxs[-1]
+                global_cursor = sum(1 for i in alive_idx if i <= last_g)
+            elif p_words and n_alive > 0:
                 clean_p_words = [re.sub(r"[^\wáéíóúñüÁÉÍÓÚÑÜ\-]", "", w.lower()) for w in p_words if w]
                 # Filtrar palabras agregadas sintéticamente que no existen en el audio
                 real_p_words = [w for w in clean_p_words if w not in ("ofrecer", "varias", "dos")]
@@ -106,18 +117,18 @@ class SourceAlignmentService:
                     real_p_words = clean_p_words
 
                 best_start = global_cursor
-                for i in range(global_cursor, min(global_cursor + 6, total_global_tokens)):
-                    gw = re.sub(r"[^\wáéíóúñüÁÉÍÓÚÑÜ\-]", "", global_words[i].lower())
+                for i in range(global_cursor, min(global_cursor + 6, n_alive)):
+                    gw = re.sub(r"[^\wáéíóúñüÁÉÍÓÚÑÜ\-]", "", global_words[alive_idx[i]].lower())
                     if real_p_words and (gw == real_p_words[0] or (len(gw) >= 4 and real_p_words[0].startswith(gw))):
                         best_start = i
                         break
 
-                end_i = min(best_start + len(real_p_words), total_global_tokens)
-                matched_global_idxs = list(range(best_start, end_i))
+                end_i = min(best_start + len(real_p_words), n_alive)
+                matched_global_idxs = alive_idx[best_start:end_i]
                 global_cursor = end_i
             else:
-                end_i = min(global_cursor + p_len, total_global_tokens)
-                matched_global_idxs = list(range(global_cursor, end_i))
+                end_i = min(global_cursor + p_len, n_alive)
+                matched_global_idxs = alive_idx[global_cursor:end_i]
                 global_cursor = end_i
 
             prop.global_source_token_indexes = matched_global_idxs

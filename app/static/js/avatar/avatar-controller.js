@@ -90,7 +90,87 @@ export class AvatarPanelController {
     this.bindDOM();
     this.initSubsystems();
     this.initClipsCache();
+    this.loadManifestClips();
     this.loadInitialAvatar();
+  }
+
+  renderClipOptions() {
+    if (!this.selectClip) return;
+    const optionsHtml = this.categories.map((group) => {
+      const options = group.clips.map((c) => {
+        const isSelected = c.id === this.selectedClipId ? 'selected' : '';
+        return `<option value="${c.id}" ${isSelected}>${c.label}</option>`;
+      }).join('\n');
+      return `<optgroup label="${group.groupName}">\n${options}\n</optgroup>`;
+    }).join('\n');
+    this.selectClip.innerHTML = optionsHtml;
+  }
+
+  async loadManifestClips() {
+    try {
+      const res = await fetch('/static/assets/clips/manifest.json');
+      if (!res.ok) return;
+      const manifest = await res.json();
+      if (manifest && manifest.clips) {
+        const weekClips = [];
+        const numberClips = [];
+        const labelMap = {
+          'LUNES': '📅 Lunes (LSEC — Queirema L, Vaivén)',
+          'MARTES': '📅 Martes (LSEC — Queirema M, Doble Descenso)',
+          'MIERCOLES': '📅 Miércoles (LSEC — Queirema M, Vaivén Pectoral)',
+          'JUEVES': '📅 Jueves (LSEC — Queirema J, Trazo Curvo)',
+          'VIERNES': '📅 Viernes (LSEC — Queirema V, Vaivén)',
+          'SABADO': '📅 Sábado (LSEC — Queirema Y, Diagonal ↙)',
+          'DOMINGO': '📅 Domingo (LSEC — Cruz en Frente)'
+        };
+
+        const weekDayKeys = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'];
+
+        for (const [glossKey, clipMeta] of Object.entries(manifest.clips)) {
+          const isWeekDay = weekDayKeys.includes(glossKey);
+          const label = labelMap[glossKey] || (isWeekDay ? `📅 ${glossKey} (LSEC)` : `🔢 ${glossKey} (LSEC)`);
+          
+          if (isWeekDay) {
+            weekClips.push({ id: glossKey, label });
+          } else {
+            numberClips.push({ id: glossKey, label });
+          }
+
+          // Registrar cargador bajo demanda en this.clips (manifest tiene prioridad)
+          this.clips[glossKey] = async () => {
+            const clipRes = await fetch(`/static/assets/clips/${clipMeta.file}?t=${Date.now()}`);
+            const clipData = await clipRes.json();
+            defaultAnimationCache.setClip(clipData.clipId, clipData);
+            return clipData;
+          };
+        }
+
+        // Categoría de Días de la Semana
+        const weekCategory = {
+          groupName: '📅 Días de la Semana (Glosario LSEC)',
+          clips: weekClips
+        };
+
+        // Categoría de Numerales y Léxico
+        const numberCategory = {
+          groupName: '🔢 Numerales y Léxico Adicional (LSEC)',
+          clips: numberClips
+        };
+
+        // Reemplazar o anteponer categorías
+        const existingWeekIdx = this.categories.findIndex(c => c.groupName.includes('Léxico LSEC') || c.groupName.includes('Días de la Semana'));
+        if (existingWeekIdx >= 0) {
+          this.categories.splice(existingWeekIdx, 1, weekCategory, ...(numberClips.length > 0 ? [numberCategory] : []));
+        } else {
+          this.categories.unshift(weekCategory, ...(numberClips.length > 0 ? [numberCategory] : []));
+        }
+
+        this.renderClipOptions();
+        console.info(`[AvatarPanelController] ${weekClips.length} días de la semana y ${numberClips.length} señas adicionales cargadas desde manifest.json`);
+      }
+    } catch (err) {
+      console.warn('[AvatarPanelController] No se pudo cargar manifest.json:', err);
+    }
   }
 
   buildDOM() {
@@ -287,6 +367,9 @@ export class AvatarPanelController {
             <button class="btn btn-action-step btn-sm" id="btn-avatar-play-sequence" title="Reproducir secuencia de demostración básica">
               <span>▶ Secuencia Básica</span>
             </button>
+            <button class="btn btn-secondary btn-sm" id="btn-avatar-play-week" style="background:linear-gradient(135deg, #059669 0%, #047857 100%); border-color:#059669; color:#fff;" title="Reproducir secuencia completa de los 7 días de la semana (Lunes a Domingo)">
+              <span>📅 7 Días Semana</span>
+            </button>
             <button class="btn btn-secondary btn-sm" id="btn-avatar-play-all-tests" title="Ejecutar batería continua de todas las pruebas técnicas (22 clips)">
               <span>⚡ Batería Pruebas (22)</span>
             </button>
@@ -319,6 +402,24 @@ export class AvatarPanelController {
             <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
             <span>Cargar Avatar VRM 1.0 (.vrm local)</span>
           </button>
+        </div>
+
+        <!-- Fila 4: Edición Manual y Carga de Señas Corregidas -->
+        <div class="avatar-clip-edit-row" style="display:flex; flex-direction:column; gap:6px; margin-top:8px; padding-top:8px; border-top:1px dashed var(--border-subtle);">
+          <div style="font-size:0.75rem; font-weight:600; color:var(--text-secondary); display:flex; align-items:center; gap:5px;">
+            <span>✏️ Edición Manual de Señas (Blender / JSON)</span>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button class="btn btn-secondary btn-sm" id="btn-avatar-export-clip" style="flex:1; justify-content:center;" title="Exportar la seña actualmente seleccionada (ej. LUNES) como archivo JSON para referencia o edición">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+              <span>Exportar Seña</span>
+            </button>
+            <input type="file" id="avatar-clip-file-input" accept=".json" style="display:none;">
+            <button class="btn btn-primary btn-sm" id="btn-avatar-import-clip" style="flex:1; justify-content:center; background:linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%); border-color:#2563EB;" title="Cargar seña corregida o personalizada (.json) y visualizar en el avatar">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
+              <span>Cargar Seña Corregida</span>
+            </button>
+          </div>
         </div>
 
       </div>
@@ -360,10 +461,16 @@ export class AvatarPanelController {
     this.btnReset = findEl('#btn-avatar-reset');
     this.btnPlaySeq = findEl('#btn-avatar-play-sequence');
     this.btnPlayAllTests = findEl('#btn-avatar-play-all-tests');
+    this.btnPlayWeek = findEl('#btn-avatar-play-week');
     this.btnLoadVrm = findEl('#btn-avatar-load-vrm');
     this.btnResetCam = findEl('#btn-avatar-reset-camera');
     this.btnRetry = findEl('#btn-avatar-error-retry');
     this.fileInputVrm = findEl('#avatar-vrm-file-input');
+
+    // Botones de Importación y Exportación de Señas
+    this.btnExportClip = findEl('#btn-avatar-export-clip');
+    this.btnImportClip = findEl('#btn-avatar-import-clip');
+    this.fileInputClip = findEl('#avatar-clip-file-input');
 
     // Selectores
     this.selectClip = findEl('#select-avatar-clip');
@@ -387,6 +494,7 @@ export class AvatarPanelController {
     if (this.btnReset) this.btnReset.addEventListener('click', () => this.reset());
     if (this.btnPlaySeq) this.btnPlaySeq.addEventListener('click', () => this.playDemoSequence());
     if (this.btnPlayAllTests) this.btnPlayAllTests.addEventListener('click', () => this.playAllTestsSequence());
+    if (this.btnPlayWeek) this.btnPlayWeek.addEventListener('click', () => this.playWeekSequence());
     if (this.btnResetCam) this.btnResetCam.addEventListener('click', () => this.resetCamera());
 
     // Helper para acciones continuas al mantener presionado un botón
@@ -495,6 +603,28 @@ export class AvatarPanelController {
       });
     }
 
+    // Manejo de exportación e importación de clips de señas
+    if (this.btnExportClip) {
+      this.btnExportClip.addEventListener('click', () => {
+        this.exportCurrentClip();
+      });
+    }
+
+    if (this.btnImportClip && this.fileInputClip) {
+      this.btnImportClip.addEventListener('click', () => {
+        this.fileInputClip.click();
+      });
+
+      this.fileInputClip.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) {
+          this.importCustomClip(file);
+          // Limpiar valor para permitir recargar el mismo archivo si se edita de nuevo
+          this.fileInputClip.value = '';
+        }
+      });
+    }
+
     if (this.btnRetry) {
       this.btnRetry.addEventListener('click', () => {
         this.hideError();
@@ -570,7 +700,9 @@ export class AvatarPanelController {
 
   initClipsCache() {
     for (const [id, clip] of Object.entries(this.clips)) {
-      defaultAnimationCache.setClip(clip.clipId || `${id}_V1`, clip);
+      if (clip && typeof clip === 'object') {
+        defaultAnimationCache.setClip(clip.clipId || `${id}_V1`, clip);
+      }
     }
   }
 
@@ -623,16 +755,15 @@ export class AvatarPanelController {
 
   /**
    * Intenta cargar el avatar inicial:
-   * 1. Verifica si existe el prototipo en /static/assets/lsec_avatar_prototype.vrm
-   * 2. Si no existe, prueba /static/assets/avatar.vrm
-   * 3. Si ninguno existe, activa el Rig Técnico de Reserva.
+   * 1. Carga el modelo predeterminado LSEC-Interpreter-Female.vrm.
+   * 2. Si no se puede cargar, activa el Rig Técnico de Reserva.
    */
   async loadInitialAvatar() {
     this.showLoading(true, 'Verificando avatar VRM...');
 
     const candidates = [
-      '/static/assets/lsec_avatar_prototype.vrm',
-      '/static/assets/avatar.vrm'
+      '/avatar/LSEC-Interpreter-Female.vrm',
+      '/static/assets/LSEC-Interpreter-Female.vrm'
     ];
 
     for (const vrmUrl of candidates) {
@@ -730,8 +861,17 @@ export class AvatarPanelController {
     this.prepareSelectedClip();
   }
 
-  prepareSelectedClip() {
-    const clip = this.clips[this.selectedClipId] || this.clips.NEUTRAL;
+  async prepareSelectedClip() {
+    let clip = this.clips[this.selectedClipId];
+    if (typeof clip === 'function') {
+      try {
+        clip = await clip();
+        this.clips[this.selectedClipId] = clip;
+      } catch (e) {
+        console.error('Error al resolver clip dinámico:', e);
+      }
+    }
+    if (!clip) clip = this.clips.NEUTRAL;
     this.player.loadClip(clip);
 
     if (this.activeGlossHud) {
@@ -744,9 +884,18 @@ export class AvatarPanelController {
     }
   }
 
-  playCurrentSelection() {
+  async playCurrentSelection() {
     this.hideError();
-    const clip = this.clips[this.selectedClipId] || this.clips.NEUTRAL;
+    let clip = this.clips[this.selectedClipId];
+    if (typeof clip === 'function') {
+      try {
+        clip = await clip();
+        this.clips[this.selectedClipId] = clip;
+      } catch (e) {
+        console.error('Error al resolver clip dinámico:', e);
+      }
+    }
+    if (!clip) clip = this.clips.NEUTRAL;
     if (this.activeGlossHud) {
       this.activeGlossHud.textContent = clip.gloss;
     }
@@ -788,6 +937,37 @@ export class AvatarPanelController {
       this.clips.NEUTRAL
     ];
 
+    this.sequencer.playSequence(sequence);
+  }
+
+  /**
+   * Reproduce la secuencia completa de los 7 Días de la Semana en LSEC:
+   * NEUTRAL -> LUNES -> MARTES -> MIERCOLES -> JUEVES -> VIERNES -> SABADO -> DOMINGO -> NEUTRAL
+   */
+  async playWeekSequence() {
+    this.hideError();
+    const weekDays = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'];
+    const sequence = [this.clips.NEUTRAL || createNeutralClip()];
+
+    for (const day of weekDays) {
+      let clip = this.clips[day];
+      if (typeof clip === 'function') {
+        try {
+          clip = await clip();
+          this.clips[day] = clip;
+        } catch (e) {
+          console.error(`[AvatarPanelController] Error al resolver clip dinámico de ${day}:`, e);
+        }
+      }
+      if (clip) {
+        sequence.push(clip);
+      } else {
+        console.warn(`[AvatarPanelController] Clip no disponible para el día: ${day}`);
+      }
+    }
+    sequence.push(this.clips.NEUTRAL || createNeutralClip());
+
+    console.info(`[AvatarPanelController] Iniciando secuencia de ${sequence.length - 2} días de la semana...`);
     this.sequencer.playSequence(sequence);
   }
 
@@ -924,9 +1104,118 @@ export class AvatarPanelController {
     }
   }
 
+  /**
+   * Exporta el clip actualmente seleccionado como archivo JSON descargable.
+   */
+  async exportCurrentClip() {
+    let clip = this.clips[this.selectedClipId];
+    if (typeof clip === 'function') {
+      try {
+        clip = await clip();
+        this.clips[this.selectedClipId] = clip;
+      } catch (err) {
+        console.error('Error al resolver clip para exportar:', err);
+        alert('No se pudo resolver el clip seleccionado para exportar.');
+        return;
+      }
+    }
+
+    if (!clip) {
+      alert('No hay ninguna seña o clip seleccionado para exportar.');
+      return;
+    }
+
+    try {
+      const fileName = `${clip.gloss || clip.clipId || 'sign_clip'}.json`;
+      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(clip, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute('href', dataStr);
+      downloadAnchor.setAttribute('download', fileName);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      console.info(`[AvatarPanelController] Clip "${clip.gloss || clip.clipId}" exportado exitosamente como ${fileName}`);
+    } catch (exportErr) {
+      console.error('[AvatarPanelController] Error al descargar JSON del clip:', exportErr);
+      alert('Error al generar la descarga del clip: ' + exportErr.message);
+    }
+  }
+
+  /**
+   * Importa y valida un archivo JSON de seña corregida o personalizada.
+   * @param {File} file 
+   */
+  async importCustomClip(file) {
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      let customClip;
+      try {
+        customClip = JSON.parse(text);
+      } catch (jsonErr) {
+        throw new Error('El archivo no contiene un formato JSON válido.');
+      }
+
+      // Validar esquema
+      const validation = validateSignClip(customClip);
+      if (!validation.valid) {
+        const errorList = validation.errors.join('\n- ');
+        throw new Error(`Estructura de seña incompatible:\n- ${errorList}`);
+      }
+
+      const clipId = customClip.clipId || customClip.gloss || `CUSTOM_${Date.now()}`;
+      const gloss = customClip.gloss || customClip.clipId || 'PERSONALIZADA';
+
+      // Registrar en el catálogo de clips
+      this.clips[clipId] = customClip;
+      defaultAnimationCache.setClip(clipId, customClip);
+
+      // Buscar o crear la categoría de Señas Personalizadas / Corregidas
+      let customCategory = this.categories.find(c => c.groupName.includes('Señas Corregidas / Importadas'));
+      if (!customCategory) {
+        customCategory = {
+          groupName: '✨ Señas Corregidas / Importadas',
+          clips: []
+        };
+        this.categories.unshift(customCategory);
+      }
+
+      // Si ya existía el clip con ese ID en la categoría, actualizarlo; sino añadirlo
+      const existingClipIdx = customCategory.clips.findIndex(c => c.id === clipId);
+      const clipEntry = {
+        id: clipId,
+        label: `✨ ${gloss} (Corregida / Importada)`
+      };
+
+      if (existingClipIdx >= 0) {
+        customCategory.clips[existingClipIdx] = clipEntry;
+      } else {
+        customCategory.clips.unshift(clipEntry);
+      }
+
+      // Actualizar selector y seleccionar el clip nuevo
+      this.selectedClipId = clipId;
+      this.renderClipOptions();
+      if (this.selectClip) {
+        this.selectClip.value = clipId;
+      }
+
+      // Cargar en el reproductor y reproducir de inmediato para verificación visual
+      await this.prepareSelectedClip();
+      this.player.play(customClip);
+
+      console.info(`[AvatarPanelController] Seña personalizada "${gloss}" importada y cargada con éxito.`);
+    } catch (err) {
+      console.error('[AvatarPanelController] Error al importar seña:', err);
+      alert('Error al importar la seña: ' + err.message);
+    }
+  }
+
   dispose() {
     if (this.engine) this.engine.dispose();
     if (this.technicalRig) this.technicalRig.dispose();
     if (this.vrmLoader) this.vrmLoader.unloadCurrentVRM();
   }
 }
+

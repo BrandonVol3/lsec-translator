@@ -1,0 +1,19 @@
+{
+  "batchId": "cec16475-4f77-4804-883b-a81792a73894",
+  "startedAt": "2026-10-01T02:01:45.696575+00:00",
+  "totalPairs": 1,
+  "processed": 0,
+  "failed": 0,
+  "skipped": 1,
+  "skippedValidated": 0,
+  "signs": {
+    "LUNES": {
+      "status": "SKIPPED_MACHINE_PROPOSED"
+    }
+  },
+  "unpaired": {
+    "videosWithoutImages": [],
+    "imagesWithoutVideos": []
+  },
+  "completedAt": "2026-10-01T02:01:45.709647+00:00"
+}

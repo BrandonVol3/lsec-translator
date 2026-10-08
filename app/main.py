@@ -3,7 +3,7 @@ LSEC Translator Prototype — Punto de entrada principal.
 
 Inicializa FastAPI, configura middleware CORS, monta las rutas
 HTTP y WebSocket, y gestiona el ciclo de vida de los servicios
-pesados (Whisper, MediaPipe) mediante lifespan events.
+pesados (Whisper) y la persistencia local SQLite mediante lifespan events.
 """
 
 from __future__ import annotations
@@ -36,13 +36,13 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.annotation_endpoints import annotation_router
+from app.api.dictionary_endpoints import dictionary_router
 from app.api.endpoints import router as api_router, set_services
 from app.api.websocket import ws_router, set_ws_services
 from app.config import settings
 from app.services.asr_service import WhisperASRService
-from app.services.firebase_service import FirebaseService
 from app.services.nlp_service import LSECTranslatorService
-from app.services.vision_service import SpatialGestureService
+from app.services.storage_service import LocalStorageService
 
 # ============================================================
 # Logging
@@ -61,8 +61,7 @@ logger = logging.getLogger(__name__)
 
 asr_service: WhisperASRService | None = None
 nlp_service: LSECTranslatorService | None = None
-vision_service: SpatialGestureService | None = None
-firebase_service: FirebaseService | None = None
+storage_service: LocalStorageService | None = None
 
 
 # ============================================================
@@ -77,7 +76,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     Startup: inicializa todos los servicios de IA.
     Shutdown: libera recursos (modelos, conexiones).
     """
-    global asr_service, nlp_service, vision_service, firebase_service
+    global asr_service, nlp_service, storage_service
 
     logger.info("=" * 60)
     logger.info("LSEC Translator Prototype — Iniciando servicios...")
@@ -98,19 +97,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.error("✗ Error creando LSECTranslatorService: %s", exc)
         nlp_service = None
 
-    # Vision service (MediaPipe) desacoplado del inicio para optimizar recursos
-    vision_service = None
-
     try:
-        firebase_service = FirebaseService()
-        logger.info("✓ FirebaseService creado (conectado=%s)", firebase_service.is_connected)
+        storage_service = LocalStorageService()
+        logger.info("✓ LocalStorageService creado (persistente=%s)", storage_service.is_persistent)
     except Exception as exc:
-        logger.error("✗ Error creando FirebaseService: %s", exc)
-        firebase_service = None
+        logger.error("✗ Error creando LocalStorageService: %s", exc)
+        storage_service = None
 
     # Inyectar servicios en los routers
     if asr_service and nlp_service:
-        set_services(asr_service, nlp_service, firebase_service)
+        set_services(asr_service, nlp_service, storage_service)
         set_ws_services(asr_service, nlp_service)
 
     logger.info("=" * 60)
@@ -122,8 +118,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Shutdown: liberar recursos
     logger.info("Cerrando servicios...")
-    if vision_service:
-        vision_service.close()
+    if storage_service:
+        storage_service.close()
     logger.info("Servicios cerrados correctamente.")
 
 
@@ -136,7 +132,7 @@ app = FastAPI(
     description=(
         "Sistema de Transcripción Inteligente y Traducción Automática "
         "a Lengua de Señas Ecuatoriana (LSEC). "
-        "Pipeline: Whisper ASR → NLP/LLM Gloss → MediaPipe Vision → WebSocket → Avatar 3D."
+        "Pipeline: Whisper ASR → NLP basado en reglas (glosas LSEC) → WebSocket → LSEC Studio."
     ),
     version="0.1.0",
     docs_url="/docs",
@@ -162,6 +158,7 @@ app.add_middleware(
 
 app.include_router(api_router)
 app.include_router(annotation_router)
+app.include_router(dictionary_router)
 app.include_router(ws_router)
 
 
@@ -176,9 +173,17 @@ static_dir = os.path.join(os.path.dirname(__file__), "static")
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
+# Montar carpeta de modelos VRM desde la carpeta Avatar del proyecto
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+avatar_dir = os.path.join(project_root, "Avatar")
+if not os.path.exists(avatar_dir):
+    avatar_dir = os.path.join(os.path.dirname(project_root), "Avatar")
+if os.path.exists(avatar_dir):
+    logger.info("✓ Montando /avatar desde: %s", avatar_dir)
+    app.mount("/avatar", StaticFiles(directory=avatar_dir), name="avatar")
+
 # Montar carpeta de videos de prueba únicamente si app_debug está activo
 if settings.app_debug:
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     videos_dir = os.path.join(project_root, "Videos de Prueba")
     if not os.path.exists(videos_dir):
         videos_dir = os.path.join(os.path.dirname(project_root), "Videos de Prueba")

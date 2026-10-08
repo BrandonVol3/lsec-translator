@@ -25,29 +25,32 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # --- OpenAI / LLM (OpenAI u Ollama) ---
-    openai_api_key: str = "llave-local-gratuita"
-    openai_model: str = "qwen2.5:3b"
-    openai_base_url: str = "http://localhost:11434/v1"
-
-    # --- Protección GPU (GTX 1650 4GB VRAM) ---
-    llm_max_tokens: int = 800
-    llm_request_timeout: int = 300
-
     # --- Whisper ASR ---
     whisper_model_size: str = "base"
     whisper_device: str = "cpu"
     whisper_compute_type: str = "int8"
 
-    # --- Firebase ---
-    firebase_credentials_path: str = "./firebase-credentials.json"
-    firebase_project_id: str = ""
+    # Carpeta con pesos locales de faster-whisper (modo 100% offline). Si existe, tiene prioridad
+    # sobre la descarga automática desde Internet.
+    whisper_model_path: str = "data/models/whisper"
+
+    # --- Persistencia local (SQLite, 100% offline) ---
+    lsec_database_path: str = "data/lsec_database.sqlite"
 
     # --- Servidor ---
     app_host: str = "0.0.0.0"
     app_port: int = 8000
     app_debug: bool = False
     cors_origins: List[str] = ["http://localhost:3000", "http://localhost:8080"]
+
+    # --- Diccionario Oficial LSEC (CONADIS) ---
+    # Ruta al catálogo; si está vacía se resuelve automáticamente (data/ → ../Diccionario LSEC/).
+    lsec_dictionary_catalog_path: str = ""
+    lsec_dictionary_enabled: bool = True
+    # Marca para revisión nativa las glosas léxicas ausentes del diccionario (política OOV).
+    lsec_dictionary_flag_unverified: bool = True
+    # Detecta entradas de varias palabras del diccionario ("a diario", "buenos días") como una sola seña.
+    lsec_dictionary_phrase_matching: bool = True
 
     @field_validator("cors_origins", mode="before")
     @classmethod
@@ -61,23 +64,6 @@ class Settings(BaseSettings):
             except (json.JSONDecodeError, TypeError):
                 return [origin.strip() for origin in v.split(",") if origin.strip()]
         return v  # type: ignore[return-value]
-
-    @property
-    def firebase_credentials_file(self) -> Path:
-        """Retorna la ruta al archivo de credenciales Firebase."""
-        return Path(self.firebase_credentials_path)
-
-    @property
-    def has_openai_key(self) -> bool:
-        """Verifica si hay un proveedor LLM configurado (OpenAI u Ollama local)."""
-        if self.openai_base_url:
-            return True
-        return bool(self.openai_api_key and self.openai_api_key != "sk-your-api-key-here")
-
-    @property
-    def has_firebase_credentials(self) -> bool:
-        """Verifica si existen credenciales de Firebase."""
-        return self.firebase_credentials_file.exists()
 
 
 # Instancia singleton de configuración

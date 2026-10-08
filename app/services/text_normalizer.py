@@ -272,6 +272,160 @@ _DEFAULT_CONTEXTUAL_CORRECTIONS: List[Dict[str, Any]] = [
 
 
 # ============================================================
+# Modismos y quechuismos del habla ecuatoriana (LSEC 2.2)
+# ============================================================
+
+# Gerundios irregulares o de la 3.ª conjugación (-ir) que no siguen -iendo → -er.
+_GERUND_TO_INFINITIVE_IRREGULAR: Dict[str, str] = {
+    "trayendo": "traer", "yendo": "ir", "leyendo": "leer", "creyendo": "creer",
+    "oyendo": "oír", "cayendo": "caer", "diciendo": "decir", "pidiendo": "pedir",
+    "sirviendo": "servir", "durmiendo": "dormir", "viniendo": "venir",
+    "escribiendo": "escribir", "abriendo": "abrir", "subiendo": "subir",
+    "viviendo": "vivir", "recibiendo": "recibir", "partiendo": "partir",
+    "repitiendo": "repetir", "siguiendo": "seguir", "sintiendo": "sentir",
+    "prefiriendo": "preferir", "consiguiendo": "conseguir", "eligiendo": "elegir",
+    "construyendo": "construir", "incluyendo": "incluir", "poniendo": "poner",
+    "teniendo": "tener", "haciendo": "hacer", "pudiendo": "poder",
+}
+
+
+def gerund_to_infinitive(gerund: str) -> Optional[str]:
+    """Convierte un gerundio español a infinitivo mediante reglas morfológicas."""
+    g = gerund.lower()
+    if g in _GERUND_TO_INFINITIVE_IRREGULAR:
+        return _GERUND_TO_INFINITIVE_IRREGULAR[g]
+    if g.endswith("ando") and len(g) > 5:
+        return g[:-4] + "ar"
+    if g.endswith("iendo") and len(g) > 6:
+        return g[:-5] + "er"
+    return None
+
+
+_DAME_GERUND_RE = (
+    r"\b(?:d[aá]me|d[eé]me|d[aá]nos|d[eé]nos)\s+"
+    r"([a-záéíóúñ]+(?:ando|iendo|yendo))\b"
+)
+
+
+def _dame_gerund_replacer(match: "re.Match[str]") -> str:
+    """'dame pasando la sal' → 'por favor pasar la sal' (cortesía indirecta ecuatoriana)."""
+    infinitive = gerund_to_infinitive(match.group(1))
+    if infinitive is None:
+        return match.group(0)  # sin base morfológica segura: no se altera
+    tail = match.string[match.end():].lower()
+    head = match.string[:match.start()].lower()
+    already_polite = "por favor" in tail or "por favor" in head
+    return infinitive if already_polite else f"por favor {infinitive}"
+
+
+_SLANG_NOUN_MAP: Dict[str, str] = {
+    "ñaño": "hermano", "ñaña": "hermana", "ñaños": "hermanos", "ñañas": "hermanas",
+    "guagua": "niño", "guaguas": "niños",
+    "pana": "amigo", "panas": "amigos",
+}
+
+
+def _slang_noun_replacer(match: "re.Match[str]") -> str:
+    word = match.group(0)
+    mapped = _SLANG_NOUN_MAP.get(word.lower())
+    if mapped is None:
+        return word
+    return mapped.capitalize() if word[:1].isupper() else mapped
+
+
+def _de_una_replacer(match: "re.Match[str]") -> str:
+    """'de una' → 'ahora' solo como locución adverbial (inicio de cláusula o ante verbo)."""
+    s = match.string
+    before = s[:match.start()].rstrip()
+    at_clause_start = (not before) or before[-1] in ",;.¿¡?!"
+    nxt = re.match(r"\s*([\wáéíóúñ]+)", s[match.end():])
+    nxt_word = nxt.group(1).lower() if nxt else ""
+    try:
+        from app.services.semantic_parser import SpanishVerbLexicon
+        next_is_verb = nxt_word in SpanishVerbLexicon.KNOWN_VERB_FORMS
+    except Exception:  # pragma: no cover
+        next_is_verb = False
+    # Excluye 'de una vez/manera/forma...' y usos nominales.
+    if nxt_word in {"vez", "manera", "forma", "parte", "casa", "persona", "ciudad", "sola", "solo"}:
+        return match.group(0)
+    if at_clause_start or next_is_verb:
+        return "ahora"
+    return match.group(0)
+
+
+_DEFAULT_CONTEXTUAL_CORRECTIONS.extend([
+    {
+        "pattern": _DAME_GERUND_RE,
+        "replacement": "",
+        "replacer": _dame_gerund_replacer,
+        "asr_confidence": 0.90,
+        "normalization_confidence": 0.95,
+        "reason": "cortesía indirecta ecuatoriana: 'dame + gerundio' → 'por favor + infinitivo'",
+        "requires_human_review": False,
+        "alternative_candidates": ["por favor + infinitivo"],
+    },
+    {
+        "pattern": r"\b(?:ñaños?|ñañas?|guaguas?)\b",
+        "replacement": "",
+        "replacer": _slang_noun_replacer,
+        "asr_confidence": 0.90,
+        "normalization_confidence": 0.95,
+        "reason": "quechuismo/coloquialismo ecuatoriano → léxico general LSEC",
+        "requires_human_review": False,
+        "alternative_candidates": ["hermano", "niño"],
+    },
+    {
+        # 'pana' (amigo) no debe confundirse con la tela: 'pantalón de pana'.
+        "pattern": r"(?<!de )(?<!la )(?<!una )\bpanas?\b",
+        "replacement": "",
+        "replacer": _slang_noun_replacer,
+        "asr_confidence": 0.90,
+        "normalization_confidence": 0.90,
+        "reason": "coloquialismo ecuatoriano 'pana' → 'amigo'",
+        "requires_human_review": False,
+        "alternative_candidates": ["amigo"],
+    },
+    {
+        "pattern": r"\bachachay\b",
+        "replacement": "frío",
+        "asr_confidence": 0.90,
+        "normalization_confidence": 0.95,
+        "reason": "interjección quechua 'achachay' (¡qué frío!)",
+        "requires_human_review": False,
+        "alternative_candidates": ["frío"],
+    },
+    {
+        "pattern": r"\barrarray\b",
+        "replacement": "calor",
+        "asr_confidence": 0.90,
+        "normalization_confidence": 0.95,
+        "reason": "interjección quechua 'arrarray' (¡qué calor!)",
+        "requires_human_review": False,
+        "alternative_candidates": ["calor"],
+    },
+    {
+        "pattern": r"\bde\s+una\b",
+        "replacement": "",
+        "replacer": _de_una_replacer,
+        "asr_confidence": 0.85,
+        "normalization_confidence": 0.90,
+        "reason": "locución adverbial ecuatoriana 'de una' → 'ahora'",
+        "requires_human_review": False,
+        "alternative_candidates": ["ahora", "de inmediato"],
+    },
+    {
+        "pattern": r"\bya\s+(?:regreso|vuelvo)\s+no\s?m[aá]s\b",
+        "replacement": "vuelvo pronto",
+        "asr_confidence": 0.90,
+        "normalization_confidence": 0.95,
+        "reason": "locución ecuatoriana 'ya regreso nomás' → 'vuelvo pronto'",
+        "requires_human_review": False,
+        "alternative_candidates": ["vuelvo pronto"],
+    },
+])
+
+
+# ============================================================
 # Representación Numérica y Cuantificadores
 # ============================================================
 
@@ -365,6 +519,8 @@ class TextNormalizer:
     ) -> None:
         self._entity_registry = entity_registry or dict(_DEFAULT_ENTITY_REGISTRY)
         self._min_confidence = min_confidence
+        from app.services.spoken_text_cleaner import SpokenTextCleaner
+        self._spoken_cleaner: Optional[SpokenTextCleaner] = SpokenTextCleaner()
         self._dubious_words: List[Dict[str, Any]] = [
             {
                 "word": "liberan",
@@ -411,6 +567,7 @@ class TextNormalizer:
                         "reason": item.get("reason", "contextual"),
                         "requires_human_review": item.get("requires_human_review", False),
                         "alternative_candidates": item.get("alternative_candidates", [repl]),
+                        "replacer": item.get("replacer"),
                     })
                 except re.error as exc:
                     logger.warning("Patrón inválido '%s': %s", pat, exc)
@@ -452,42 +609,95 @@ class TextNormalizer:
             for m in re.finditer(r"\b[\wáéíóúñüÁÉÍÓÚÑÜ\-]+\b", text):
                 token_spans.append((m.start(), m.end()))
 
+        # ── Etapa 0: depuración del habla espontánea (LSEC 2.2) ──────────────
+        def _ts_seconds(idxs: List[int]) -> Tuple[Optional[float], Optional[float]]:
+            valid = [i for i in idxs if word_timestamps and i < len(word_timestamps)]
+            if not valid:
+                return None, None
+            first, last = word_timestamps[valid[0]], word_timestamps[valid[-1]]
+            s = first.start if hasattr(first, "start") else first.get("start")
+            e = last.end if hasattr(last, "end") else last.get("end")
+            return s, e
+
+        char_map: List[int] = list(range(len(text)))
+        if self._spoken_cleaner is not None:
+            clean_res = self._spoken_cleaner.clean(text, token_spans)
+            if clean_res.removed:
+                for seg in clean_res.removed:
+                    s_sec, e_sec = _ts_seconds(seg.token_indexes)
+                    corrections.append(
+                        CorrectionRecord(
+                            id=f"corr_{len(corrections) + 1}",
+                            normalization_id=f"corr_{len(corrections) + 1}",
+                            asr_text=seg.text,
+                            normalized_text="",
+                            source_char_start=seg.start,
+                            source_char_end=seg.end,
+                            source_token_indexes=list(seg.token_indexes),
+                            global_source_token_indexes=list(seg.token_indexes),
+                            source_start_seconds=s_sec,
+                            source_end_seconds=e_sec,
+                            alignment_type="NORMALIZED",
+                            alignment_confidence=0.97,
+                            asr_confidence=0.90,
+                            normalization_confidence=0.97,
+                            correction_confidence=0.97,
+                            reason=f"disfluencia oral eliminada: {seg.reason}",
+                            correction_reason=f"disfluencia oral eliminada: {seg.reason}",
+                            requires_human_review=False,
+                            alternative_candidates=[],
+                            position=seg.start,
+                        )
+                    )
+                result = clean_res.text
+                char_map = list(clean_res.char_map)
+
+        def _interp_map(orig_s: int, orig_e: int, length: int) -> List[int]:
+            """Mapa de offsets para un tramo de reemplazo de ``length`` caracteres."""
+            if length <= 0:
+                return []
+            if length == 1 or orig_e - 1 <= orig_s:
+                return [orig_s] * length
+            span = orig_e - 1 - orig_s
+            return [orig_s + round(i * span / (length - 1)) for i in range(length)]
+
         for entry in self._compiled_corrections:
             conf = entry["normalization_confidence"]
             if conf < self._min_confidence:
                 continue
 
             regex = entry["regex"]
-            replacement = entry["replacement"]
+            replacer = entry.get("replacer")
             match = regex.search(result)
 
             while match:
                 original_fragment = match.group(0)
                 start_pos = match.start()
                 end_pos = match.end()
+                replacement = replacer(match) if replacer else entry["replacement"]
 
                 if original_fragment.lower() != replacement.lower():
+                    # Offsets reales en el texto ORIGINAL (tras depuración y reemplazos previos)
+                    if char_map and start_pos < len(char_map):
+                        orig_s = char_map[start_pos]
+                        last_i = min(max(end_pos - 1, start_pos), len(char_map) - 1)
+                        orig_e = char_map[last_i] + 1
+                    else:
+                        orig_s, orig_e = start_pos, end_pos
+
                     # Encontrar tokens fuente que se solapan
                     matching_tok_idxs: List[int] = []
                     for t_idx, (ts_start, ts_end) in enumerate(token_spans):
-                        if max(start_pos, ts_start) < min(end_pos, ts_end):
+                        if max(orig_s, ts_start) < min(orig_e, ts_end):
                             matching_tok_idxs.append(t_idx)
 
                     if not matching_tok_idxs and token_spans:
                         # Buscar el más cercano
                         for t_idx, (ts_start, ts_end) in enumerate(token_spans):
-                            if ts_start >= start_pos and ts_end <= end_pos + 2:
+                            if ts_start >= orig_s and ts_end <= orig_e + 2:
                                 matching_tok_idxs.append(t_idx)
 
-                    src_start_sec: Optional[float] = None
-                    src_end_sec: Optional[float] = None
-                    if word_timestamps and matching_tok_idxs:
-                        valid_t = [i for i in matching_tok_idxs if i < len(word_timestamps)]
-                        if valid_t:
-                            wt_first = word_timestamps[valid_t[0]]
-                            wt_last = word_timestamps[valid_t[-1]]
-                            src_start_sec = wt_first.start if hasattr(wt_first, "start") else wt_first.get("start")
-                            src_end_sec = wt_last.end if hasattr(wt_last, "end") else wt_last.get("end")
+                    src_start_sec, src_end_sec = _ts_seconds(matching_tok_idxs)
 
                     align_type = "NORMALIZED_MULTIWORD" if len(matching_tok_idxs) > 1 else "NORMALIZED"
 
@@ -496,8 +706,8 @@ class TextNormalizer:
                         normalization_id=f"corr_{len(corrections) + 1}",
                         asr_text=original_fragment,
                         normalized_text=replacement,
-                        source_char_start=start_pos,
-                        source_char_end=start_pos + len(original_fragment),
+                        source_char_start=orig_s,
+                        source_char_end=orig_s + len(original_fragment),
                         source_token_indexes=matching_tok_idxs,
                         global_source_token_indexes=matching_tok_idxs,
                         source_start_seconds=src_start_sec,
@@ -511,11 +721,16 @@ class TextNormalizer:
                         correction_reason=entry["reason"],
                         requires_human_review=entry["requires_human_review"],
                         alternative_candidates=entry["alternative_candidates"],
-                        position=start_pos,
+                        position=orig_s,
                     )
                     corrections.append(rec)
 
                     result = result[:start_pos] + replacement + result[end_pos:]
+                    char_map = (
+                        char_map[:start_pos]
+                        + _interp_map(orig_s, orig_e, len(replacement))
+                        + char_map[end_pos:]
+                    )
                     match = regex.search(result, start_pos + len(replacement))
                 else:
                     match = regex.search(result, end_pos)

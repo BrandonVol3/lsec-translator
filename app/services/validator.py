@@ -99,6 +99,23 @@ class StructuralValidator:
                     )
                 )
 
+        # Diccionario Oficial LSEC (CONADIS): señas léxicas no verificadas (advertencia no bloqueante)
+        for g in glosses:
+            dm = getattr(g, "dictionary_metadata", None)
+            if dm is not None and dm.status == "NO_VERIFICADO" and g.requires_native_review:
+                hint = f" Sugerencias del diccionario: {', '.join(dm.lexical_alternatives)}." if dm.lexical_alternatives else ""
+                errors.append(
+                    StructuralValidationError(
+                        severity=ValidationSeverity.INFO,
+                        code="UNVERIFIED_LEXICAL_SIGN",
+                        message=(
+                            f"La glosa '{g.gloss}' (orden {g.order}) no figura en el Diccionario Oficial LSEC (CONADIS); "
+                            f"requiere validación nativa.{hint}"
+                        ),
+                        affected_ids=[str(g.id)],
+                    )
+                )
+
         for op in operations:
             if not op.operation_trigger_gloss_id:
                 errors.append(
@@ -699,8 +716,13 @@ class StructuralValidator:
 
         # 7. MODALITY_MISMATCH
         if "¿" in original_text or "?" in original_text:
+            _q_prop_ids = set()
             for prop in propositions:
-                if prop.modality == "declarative":
+                _src = getattr(prop, "source_text", "") or ""
+                if "?" in _src or "\u00bf" in _src:
+                    _q_prop_ids.add(prop.id)
+            for prop in propositions:
+                if prop.modality == "declarative" and prop.id in _q_prop_ids:
                     errors.append(
                         StructuralValidationError(
                             severity=ValidationSeverity.ERROR,
@@ -711,7 +733,8 @@ class StructuralValidator:
                         )
                     )
             for block in blocks:
-                if block.discourse_function == "statement":
+                _block_pids = set(getattr(block, "proposition_ids", []) or [])
+                if block.discourse_function == "statement" and (_block_pids & _q_prop_ids):
                     errors.append(
                         StructuralValidationError(
                             severity=ValidationSeverity.ERROR,

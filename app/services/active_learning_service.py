@@ -70,6 +70,18 @@ class ActiveLearningService:
             uncertainty = min(uncertainty + 0.20, 1.0)
             reasons.append(f"{len(output.unresolved_items)} elementos no resueltos o acústicamente dudosos.")
 
+        # 6. Señas léxicas ausentes del Diccionario Oficial LSEC (CONADIS): prioridad de validación sorda
+        unverified = [
+            g for g in output.glosses
+            if getattr(getattr(g, "dictionary_metadata", None), "status", None) == "NO_VERIFICADO"
+        ]
+        if unverified:
+            uncertainty = min(uncertainty + min(0.10 + 0.05 * len(unverified), 0.30), 1.0)
+            sample = ", ".join(g.gloss for g in unverified[:5])
+            reasons.append(
+                f"{len(unverified)} glosas léxicas no figuran en el Diccionario Oficial LSEC (CONADIS): {sample}."
+            )
+
         uncertainty_score = round(max(0.0, min(uncertainty, 1.0)), 3)
         return uncertainty_score, reasons
 

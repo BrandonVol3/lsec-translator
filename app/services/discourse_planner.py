@@ -53,8 +53,23 @@ from app.services.mwe_detector import MWEDetector, MWEMatch
 from app.services.text_normalizer import EntityInfo, PunctuationAnalyzer
 from app.services.semantic_parser import SpanishVerbLexicon
 from app.services.linguistic_analyzer import LinguisticAnalyzer
+from app.services.dictionary_service import LSECDictionaryService, get_dictionary_service, to_gloss_form
 
 logger = logging.getLogger(__name__)
+
+# Tokens cuya glosa gestionan las reglas FENASEC por palabra individual (negación incorporada, cortesía).
+_RULE_MANAGED_TOKENS: Set[str] = {
+    "no", "nunca", "jamas", "nadie", "ni", "tampoco", "nada", "ninguno", "ninguna", "favor",
+}
+_INTENSIFIER_RE = re.compile(r"^(muchísim[oa]s?|\w{3,}ísim[oa]s?)$", re.IGNORECASE)
+
+
+def _strip_accents_lower(text: str) -> str:
+    import unicodedata
+    return "".join(
+        c for c in unicodedata.normalize("NFD", text.lower()) if unicodedata.category(c) != "Mn"
+    )
+
 
 _BLACKLIST_POS_TAGS: Set[str] = {
     "DET",    # Artículos
@@ -86,6 +101,8 @@ class DiscoursePlanner:
         entity_registry: Optional[Dict[str, EntityInfo]] = None,
         mwe_detector: Optional[MWEDetector] = None,
         plural_marker: str = "VARIOS",
+        dictionary_service: Optional[LSECDictionaryService] = None,
+        use_dictionary: Optional[bool] = None,
     ) -> None:
         self._nlp = nlp
         self._institutional_dict = institutional_dict or {}
@@ -134,6 +151,136 @@ class DiscoursePlanner:
         self._rule_engine = RuleEngine()
         self._conflict_resolver = ConflictResolver()
         self._linguistic_analyzer = LinguisticAnalyzer()
+
+        # Diccionario Oficial LSEC (CONADIS): fuente de verdad léxica y cascada OOV
+        if use_dictionary is None:
+            try:
+                from app.config import settings
+                use_dictionary = bool(settings.lsec_dictionary_enabled)
+            except Exception:  # pragma: no cover
+                use_dictionary = True
+        self._dictionary: Optional[LSECDictionaryService] = None
+        if use_dictionary:
+            try:
+                self._dictionary = dictionary_service or get_dictionary_service()
+            except Exception as exc:  # pragma: no cover - el diccionario nunca debe romper el pipeline
+                logger.warning("Diccionario LSEC no disponible: %s", exc)
+        self._phrase_matching: bool = False
+        if self._dictionary is not None:
+            try:
+                from app.config import settings
+                self._phrase_matching = bool(settings.lsec_dictionary_phrase_matching)
+            except Exception:  # pragma: no cover
+                self._phrase_matching = True
+        self._known_local_glosses: Set[str] = self._build_known_local_glosses()
+
+    def _build_known_local_glosses(self) -> Set[str]:
+        """Glosas ya curadas en el léxico local del proyecto (no se marcan como no verificadas)."""
+        known: Set[str] = {self._plural_marker.upper()}
+        known.update(m.upper() for m in self._time_markers)
+        for info in self._institutional_dict.values():
+            g = info.get("gloss") if isinstance(info, dict) else None
+            if g:
+                known.add(str(g).upper())
+        for g in self._pronoun_deixis.values():
+            known.add(str(g).upper())
+        for target in self._lemma_overrides.values():
+            known.add(str(target).upper().replace(" ", "-"))
+        for ent in self._entity_registry.values():
+            pref = getattr(ent, "preferred_gloss", None)
+            if pref:
+                known.add(str(pref).upper())
+        for d in getattr(self._mwe_detector, "_definitions", []) or []:
+            pref = getattr(d, "preferred_gloss", None)
+            if pref:
+                known.add(str(pref).upper().replace(" ", "-"))
+            for realization in getattr(d, "candidate_realizations", None) or []:
+                for g in realization:
+                    known.add(str(g).upper())
+        for para in self._semantic_paraphrases.values():
+            if not isinstance(para, dict):
+                continue
+            for g in para.get("gloss_sequence", []) or []:
+                known.add(str(g).upper())
+            for seq in (para.get("realizations") or {}).values():
+                for g in seq:
+                    known.add(str(g).upper())
+        return known
+
+    def _detect_dictionary_phrases(
+        self,
+        doc,
+        source_text: str,
+        blocked_token_ids: Set[int],
+    ) -> List[Tuple[MWEMatch, Any]]:
+        """
+        Detecta entradas de varias palabras del Diccionario Oficial LSEC en el documento spaCy.
+
+        Devuelve (MWEMatch, token_raíz) por frase; el token raíz aporta POS/dependencia para el
+        ordenamiento posterior. Se omiten frases que solapan con tokens ya consumidos por MWE
+        del léxico o perífrasis verbales.
+        """
+        if not self._phrase_matching or self._dictionary is None:
+            return []
+        try:
+            toks = [t for t in doc if not t.is_punct and not t.is_space]
+            matches = self._dictionary.find_phrases(
+                [(t.text, t.lemma_, t.idx, t.idx + len(t.text)) for t in toks],
+                text=source_text,
+            )
+        except Exception as exc:  # pragma: no cover - nunca debe romper el pipeline
+            logger.warning("Detección de frases del diccionario omitida: %s", exc)
+            return []
+
+        results: List[Tuple[MWEMatch, Any]] = []
+        for pm in matches:
+            span = toks[pm.start_token:pm.end_token]
+            if any(t.i in blocked_token_ids for t in span):
+                continue
+            # Una coincidencia solo por lema con verbos (conjugaciones, idiomatismos) se deja al análisis gramatical
+            if pm.match_basis == "lemma" and any(t.pos_ in ("VERB", "AUX") for t in span):
+                continue
+            # Interrogativos: la expresión facial de pregunta la asignan las reglas gramaticales por token
+            if any(t.text.lower() in self._wh_lemmas or t.lemma_.lower() in self._wh_lemmas for t in span):
+                continue
+            # Tokens gobernados por reglas FENASEC por palabra (negación, cortesía, intensidad)
+            if any(
+                _strip_accents_lower(t.text) in _RULE_MANAGED_TOKENS or _INTENSIFIER_RE.match(t.text)
+                for t in span
+            ):
+                continue
+            span_ids = {t.i for t in span}
+            root = next((t for t in span if t.head.i not in span_ids or t.head.i == t.i), span[-1])
+            matched_text = source_text[pm.start_char:pm.end_char]
+            results.append((
+                MWEMatch(
+                    id=f"dict_{pm.entry.slug}",
+                    source_phrase=matched_text.lower(),
+                    matched_text=matched_text,
+                    start_char=pm.start_char,
+                    end_char=pm.end_char,
+                    semantic_concept="conadis_phrase",
+                    prevent_component_parsing=True,
+                    preferred_gloss=to_gloss_form(pm.matched_form),
+                    requires_native_review=False,
+                    confidence=0.95,
+                ),
+                root,
+            ))
+        return results
+
+    def apply_dictionary(self, glosses: List[GlossItem]) -> Dict[str, int]:
+        """
+        Cascada léxica sobre las glosas: seña oficial CONADIS -> dactilología/partículas exentas ->
+        léxico local curado -> glosa no verificada marcada para revisión nativa.
+        """
+        if self._dictionary is None or not glosses:
+            return {}
+        try:
+            return self._dictionary.enrich_glosses(glosses, known_glosses=self._known_local_glosses)
+        except Exception as exc:  # pragma: no cover - el diccionario nunca debe romper el pipeline
+            logger.warning("Enriquecimiento con diccionario LSEC omitido: %s", exc)
+            return {}
 
     def evaluate_grammar_rules(
         self,
@@ -383,6 +530,37 @@ class DiscoursePlanner:
 
             if not prop_glosses:
                 continue
+
+            # FENASEC: verbos de movimiento incorporan la dirección; se evita la fuga de la preposición 'a' (HACIA)
+            _motion = {"ENTRAR", "SALIR", "IR", "LLEGAR", "VENIR", "REGRESAR", "VOLVER"}
+            if any(g.gloss == "HACIA" for g in prop_glosses) and any(g.gloss in _motion for g in prop_glosses):
+                prop_glosses = [g for g in prop_glosses if g.gloss != "HACIA"]
+                for k, g in enumerate(prop_glosses):
+                    g.order = prop_start_order + k
+
+            # FENASEC: la duplicación (++) subsume el aspecto durativo (AHORA)
+            if any(g.gloss.endswith("++") for g in prop_glosses):
+                prop_glosses = [
+                    g for g in prop_glosses
+                    if not (g.gloss == "AHORA" and (g.notes or "").startswith("Insertado por regla LSEC_ASPECT"))
+                ]
+                for k, g in enumerate(prop_glosses):
+                    g.order = prop_start_order + k
+
+            # FENASEC regla 6: pregunta directa seguida de su respuesta => retórica (cejas levantadas)
+            _is_q = "?" in p_text or "\u00bf" in p_text
+            if _is_q and p_idx + 1 < len(propositions):
+                _next_txt = propositions[p_idx + 1].source_text
+                if "?" not in _next_txt and "\u00bf" not in _next_txt:
+                    prop.context_info["is_rhetorical"] = True
+                    for g in prop_glosses:
+                        if g.non_manual and g.non_manual.expression in (
+                            FacialExpression.QUESTION_WH, FacialExpression.QUESTION_YESNO
+                        ):
+                            g.non_manual.expression = FacialExpression.RHETORICAL
+
+            # 2c. Diccionario Oficial LSEC (CONADIS): fichas oficiales y marca de glosas no verificadas
+            self.apply_dictionary(prop_glosses)
 
             # 3. Registrar operaciones espaciales vinculadas a las glosas de esta proposición
             for g in prop_glosses:
@@ -847,6 +1025,23 @@ class DiscoursePlanner:
                         },
                     )
 
+        # 2b. Frases oficiales del Diccionario LSEC (una sola seña); no solapan con MWE ni perífrasis
+        blocked_ids: Set[int] = set(periphrasis_consumed) | mwe_consumed
+        for dict_mwe, root_tok in self._detect_dictionary_phrases(doc, prop.source_text, blocked_ids):
+            span_toks = [tok for tok in doc if dict_mwe.start_char <= tok.idx < dict_mwe.end_char]
+            if not span_toks:
+                continue
+            for tok in span_toks:
+                mwe_consumed.add(tok.i)
+            pref = dict_mwe.preferred_gloss or to_gloss_form(dict_mwe.source_phrase)
+            mwe_emitted[span_toks[0].i] = (
+                span_toks[0],
+                root_tok.pos_ or "NOUN",
+                root_tok.dep_ or "obj",
+                pref.lower(),
+                {"is_mwe": True, "mwe": dict_mwe, "mwe_gloss": pref, "is_dictionary_phrase": True},
+            )
+
         # 3. Detección de numeral y cuantificador
         has_numeral = any(t.pos_ == "NUM" or re.match(r"^\d+", t.text) for t in doc)
         has_quantifier = any(t.text.lower() in self._quantifier_lemmas or t.lemma_.lower() in self._quantifier_lemmas for t in doc)
@@ -1301,6 +1496,8 @@ class DiscoursePlanner:
                 }
                 c_w = re.sub(r"[^\wáéíóúñüÁÉÍÓÚÑÜ]", "", clean_text.lower())
                 wh_g = wh_map.get(c_w, wh_map.get(lemma.lower(), lemma.upper()))
+                if wh_g == "QUÉ" and t.i > 0 and t.doc[t.i - 1].text.lower() == "por":
+                    wh_g = "POR-QUÉ"
                 if wh_g != last_gloss:
                     last_gloss = wh_g
                     gloss_items.append(
@@ -1439,6 +1636,12 @@ class DiscoursePlanner:
                 )
                 current_order += 1
 
+        try:
+            from app.services.fenasec_rules import apply_fenasec_rules
+            gloss_items = apply_fenasec_rules(gloss_items, doc, start_order)
+        except Exception as exc:  # pragma: no cover - las reglas nunca deben romper el pipeline
+            logger.warning("Reglas FENASEC omitidas: %s", exc)
+
         return gloss_items
 
     def _translate_general_heuristic(self, prop: SemanticProposition, start_order: int) -> List[GlossItem]:
@@ -1559,6 +1762,9 @@ class DiscoursePlanner:
             prop_head = "inclinar"
             prop_intensity = 1.2
             prop_priority = 3
+            if prop.context_info.get("is_rhetorical"):
+                prop_span_type = "rhetorical"
+                prop_expr = FacialExpression.RHETORICAL
 
         if prop_span_type:
             spans.append(
@@ -1578,7 +1784,7 @@ class DiscoursePlanner:
 
         # Span de negación local
         if prop.polarity == "negative" or "nadie" in p_text_lower or "no " in p_text_lower or p_text_lower.startswith("no "):
-            neg_items = [g for g in glosses if g.gloss in ("NADIE", "SOLAMENTE-NO", "NO", "NUNCA")]
+            neg_items = [g for g in glosses if g.gloss in ("NADIE", "SOLAMENTE-NO", "NO", "NUNCA") or g.gloss.startswith("NO-")]
             if neg_items:
                 neg_start = min(g.order for g in neg_items)
                 neg_end = max(g.order for g in neg_items)

@@ -195,19 +195,7 @@ class TestNLPServiceHeuristic:
         """Crea una instancia del servicio NLP en modo heurístico."""
         from app.services.nlp_service import LSECTranslatorService
 
-        # Forzar modo heurístico (sin API key ni base_url)
-        import app.config as config
-        original_key = config.settings.openai_api_key
-        original_url = config.settings.openai_base_url
-        config.settings.openai_api_key = ""
-        config.settings.openai_base_url = ""
-
-        service = LSECTranslatorService()
-
-        # Restaurar
-        config.settings.openai_api_key = original_key
-        config.settings.openai_base_url = original_url
-        return service
+        return LSECTranslatorService()
 
     @pytest.mark.asyncio
     async def test_basic_translation(self, nlp_service) -> None:
@@ -251,8 +239,8 @@ class TestNLPServiceHeuristic:
     async def test_negation_detection(self, nlp_service) -> None:
         """Verifica detección de negaciones exclusivamente en la palabra 'NO'."""
         result = await nlp_service.translate_to_gloss("No quiero ir")
-        no_glosses = [g for g in result.glosses if g.gloss == "NO"]
-        other_glosses = [g for g in result.glosses if g.gloss != "NO"]
+        no_glosses = [g for g in result.glosses if g.gloss == "NO" or g.gloss.startswith("NO-")]
+        other_glosses = [g for g in result.glosses if not (g.gloss == "NO" or g.gloss.startswith("NO-"))]
         assert len(no_glosses) > 0
         assert all(g.non_manual.expression == FacialExpression.NEGATION for g in no_glosses)
         assert all(g.non_manual.expression == FacialExpression.NEUTRAL for g in other_glosses)
@@ -408,7 +396,7 @@ class TestSpaCyPreprocessing:
         """Verifica que 'expression' sea 'neutral' por defecto y sólo 'negación' en la palabra 'NO'."""
         result = await nlp_service.translate_to_gloss("No quiero comer pan")
         for g in result.glosses:
-            if g.gloss == "NO":
+            if g.gloss == "NO" or g.gloss.startswith("NO-"):
                 assert g.non_manual.expression == FacialExpression.NEGATION
                 assert g.non_manual.head_movement == "negar"
             else:
