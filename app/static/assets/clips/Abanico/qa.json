@@ -1,0 +1,29 @@
+{
+  "left_hand_coverage": 1.0,
+  "right_hand_coverage": 1.0,
+  "any_hand_coverage": 1.0,
+  "arm_conf_mean": 7.9622,
+  "body_coverage": 1.0,
+  "depth_coverage": 1.0,
+  "face_coverage": 1.0,
+  "pure_1to1_copy": true,
+  "preparatory_pose": false,
+  "prior_source": "none_direct_1a1",
+  "sign": "Abanico",
+  "fps": 60.0,
+  "frames": 181,
+  "duration": 3.017,
+  "subject_switches": 0,
+  "missing_subject_frames": 0,
+  "invalid_rotation_count": 0,
+  "max_rotation_jump_deg": 91.67,
+  "lead_in_frames": 0,
+  "lead_out_frames": 0,
+  "has_illustration": false,
+  "needs_review": true,
+  "review_reasons": [
+    "Salto angular elevado (91.7°)"
+  ],
+  "processing_status": "OK",
+  "processing_seconds": 2.037
+}

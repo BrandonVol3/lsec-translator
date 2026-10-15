@@ -663,14 +663,22 @@ class MultiTrackTimelineController {
     const lane = document.getElementById('lane-track-4');
     if (!lane) return;
     lane.innerHTML = '';
-    segments.forEach(s => {
-      const left = s.start_seconds * this.pxPerSecond;
-      const width = Math.max(16, (s.end_seconds - s.start_seconds) * this.pxPerSecond - 2);
+    const sorted = [...(segments || [])].sort((a, b) => (a.start_seconds || 0) - (b.start_seconds || 0));
+    sorted.forEach((s, idx) => {
+      const startSec = s.start_seconds || 0;
+      const nextStartSec = idx + 1 < sorted.length ? (sorted[idx + 1].start_seconds ?? Infinity) : Infinity;
+      const endSec = Math.min(s.end_seconds || (startSec + 2), nextStartSec);
+      const left = Math.round(startSec * this.pxPerSecond);
+      const maxWidth = Number.isFinite(nextStartSec)
+        ? Math.max(4, Math.floor(nextStartSec * this.pxPerSecond) - left - 2)
+        : Infinity;
+      const width = Math.min(maxWidth, Math.max(16, Math.round((endSec - startSec) * this.pxPerSecond) - 2));
       const block = document.createElement('div');
       block.className = 'timeline-block-item';
       block.style.left = `${left}px`;
       block.style.width = `${width}px`;
-      block.textContent = `CC: ${s.normalized_text}`;
+      block.title = `CC: ${s.normalized_text || ''}`;
+      block.textContent = `CC: ${s.normalized_text || ''}`;
       lane.appendChild(block);
     });
   }
@@ -679,14 +687,23 @@ class MultiTrackTimelineController {
     const lane = document.getElementById('lane-track-5');
     if (!lane) return;
     lane.innerHTML = '';
-    blocks.forEach((b, idx) => {
-      const left = (b.start_seconds || idx * 5.0) * this.pxPerSecond;
-      const width = Math.max(20, ((b.end_seconds || (idx + 1) * 5.0) - (b.start_seconds || idx * 5.0)) * this.pxPerSecond - 2);
+    const sorted = [...(blocks || [])].sort((a, b) => (a.start_seconds || 0) - (b.start_seconds || 0));
+    sorted.forEach((b, idx) => {
+      const startSec = b.start_seconds ?? (idx * 5.0);
+      const nextStartSec = idx + 1 < sorted.length ? (sorted[idx + 1].start_seconds ?? ((idx + 1) * 5.0)) : Infinity;
+      const endSec = Math.min(b.end_seconds ?? ((idx + 1) * 5.0), nextStartSec);
+      const left = Math.round(startSec * this.pxPerSecond);
+      const maxWidth = Number.isFinite(nextStartSec)
+        ? Math.max(4, Math.floor(nextStartSec * this.pxPerSecond) - left - 2)
+        : Infinity;
+      const width = Math.min(maxWidth, Math.max(20, Math.round((endSec - startSec) * this.pxPerSecond) - 2));
       const block = document.createElement('div');
       block.className = 'timeline-block-item';
       block.style.left = `${left}px`;
       block.style.width = `${width}px`;
-      block.textContent = b.label || b.topic || `RST ${idx + 1}`;
+      const label = b.label || b.topic || `RST ${idx + 1}`;
+      block.title = label;
+      block.textContent = label;
       lane.appendChild(block);
     });
   }
@@ -695,14 +712,28 @@ class MultiTrackTimelineController {
     const lane = document.getElementById('lane-track-6');
     if (!lane) return;
     lane.innerHTML = '';
-    spans.forEach(s => {
-      const left = (s.start_seconds || 0) * this.pxPerSecond;
-      const width = Math.max(16, ((s.end_seconds || 2) - (s.start_seconds || 0)) * this.pxPerSecond - 2);
+    const sorted = [...(spans || [])].sort((a, b) => (a.start_seconds || 0) - (b.start_seconds || 0));
+    let prevRight = -Infinity;
+    sorted.forEach((s, idx) => {
+      const startSec = s.start_seconds || 0;
+      const nextStartSec = idx + 1 < sorted.length ? (sorted[idx + 1].start_seconds ?? Infinity) : Infinity;
+      const rawEndSec = s.end_seconds || (startSec + 2);
+      const effectiveEndSec = Math.min(rawEndSec, nextStartSec);
+      const left = Math.max(prevRight + 2, Math.round(startSec * this.pxPerSecond));
+      const nextLeft = Number.isFinite(nextStartSec) ? Math.floor(nextStartSec * this.pxPerSecond) : Infinity;
+      const maxAvailablePx = Number.isFinite(nextLeft) ? Math.max(4, nextLeft - left - 2) : Infinity;
+      const desiredWidth = Math.max(12, Math.round((effectiveEndSec - startSec) * this.pxPerSecond) - 2);
+      const width = Math.max(4, Math.min(maxAvailablePx, desiredWidth));
+      prevRight = left + width;
+
       const block = document.createElement('div');
       block.className = 'timeline-block-item';
       block.style.left = `${left}px`;
       block.style.width = `${width}px`;
-      block.textContent = s.facial_expression || s.expression || 'Facial';
+      if (width < 18) block.style.padding = '0 2px';
+      const label = s.facial_expression || s.expression || 'Facial';
+      block.title = label;
+      block.textContent = label;
       lane.appendChild(block);
     });
   }
@@ -711,13 +742,26 @@ class MultiTrackTimelineController {
     const lane = document.getElementById('lane-track-7');
     if (!lane) return;
     lane.innerHTML = '';
-    ops.forEach(op => {
-      const left = (op.time_seconds || 0) * this.pxPerSecond;
+    const sorted = [...(ops || [])].sort((a, b) => (a.time_seconds || 0) - (b.time_seconds || 0));
+    let prevRight = -Infinity;
+    sorted.forEach((op, idx) => {
+      const timeSec = op.time_seconds || 0;
+      const nextTimeSec = idx + 1 < sorted.length ? (sorted[idx + 1].time_seconds ?? Infinity) : Infinity;
+      const left = Math.max(prevRight + 2, Math.round(timeSec * this.pxPerSecond));
+      const nextLeft = Number.isFinite(nextTimeSec) ? Math.floor(nextTimeSec * this.pxPerSecond) : Infinity;
+      const maxAvailablePx = Number.isFinite(nextLeft) ? Math.max(4, nextLeft - left - 2) : 44;
+      const width = Math.max(4, Math.min(44, maxAvailablePx));
+      prevRight = left + width;
+
       const block = document.createElement('div');
       block.className = 'timeline-block-item';
       block.style.left = `${left}px`;
-      block.style.width = '30px';
-      block.textContent = op.target_space || 'Locus';
+      block.style.width = `${width}px`;
+      if (width < 18) block.style.padding = '0 2px';
+      const locusLabel = op.target_space || op.location || op.label || 'Locus';
+      const fullTitle = op.label && op.location ? `${op.label} (${op.location})` : locusLabel;
+      block.title = fullTitle;
+      block.textContent = locusLabel;
       lane.appendChild(block);
     });
   }
@@ -726,12 +770,22 @@ class MultiTrackTimelineController {
     const lane = document.getElementById('lane-track-8');
     if (!lane) return;
     lane.innerHTML = '';
-    issues.forEach(it => {
-      const left = (it.time_seconds || 0) * this.pxPerSecond;
+    const sorted = [...(issues || [])].sort((a, b) => (a.time_seconds || 0) - (b.time_seconds || 0));
+    let prevRight = -Infinity;
+    sorted.forEach((it, idx) => {
+      const timeSec = it.time_seconds || 0;
+      const nextTimeSec = idx + 1 < sorted.length ? (sorted[idx + 1].time_seconds ?? Infinity) : Infinity;
+      const left = Math.max(prevRight + 2, Math.round(timeSec * this.pxPerSecond));
+      const nextLeft = Number.isFinite(nextTimeSec) ? Math.floor(nextTimeSec * this.pxPerSecond) : Infinity;
+      const maxAvailablePx = Number.isFinite(nextLeft) ? Math.max(4, nextLeft - left - 2) : 40;
+      const width = Math.max(4, Math.min(40, maxAvailablePx));
+      prevRight = left + width;
+
       const block = document.createElement('div');
       block.className = 'timeline-block-item issue';
       block.style.left = `${left}px`;
-      block.style.width = '40px';
+      block.style.width = `${width}px`;
+      block.title = it.description || it.reason || 'Alerta';
       block.textContent = 'Alerta';
       lane.appendChild(block);
     });

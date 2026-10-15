@@ -50,6 +50,8 @@ class SourceAlignmentService:
         """
         corrections = corrections or []
 
+        has_real_timestamps = bool(word_timestamps)
+
         # 1. Si no hay word_timestamps, generar marcas sintéticas continuas
         if not word_timestamps:
             raw_tokens = [m.group(0) for m in re.finditer(r"\b[\wáéíóúñüÁÉÍÓÚÑÜ\-]+\b", original_text)]
@@ -133,12 +135,20 @@ class SourceAlignmentService:
 
             prop.global_source_token_indexes = matched_global_idxs
 
-            # Asignar tiempos de inicio y fin a la proposición
+            # Asignar tiempos de inicio y fin a la proposición y confianza acústica promedio real
             if matched_global_idxs and word_timestamps:
                 valid_idxs = [i for i in matched_global_idxs if i < len(word_timestamps)]
                 if valid_idxs:
                     prop.source_start_seconds = round(word_timestamps[valid_idxs[0]].start, 3)
                     prop.source_end_seconds = round(word_timestamps[valid_idxs[-1]].end, 3)
+                    if has_real_timestamps:
+                        confs = [
+                            word_timestamps[i].confidence
+                            for i in valid_idxs
+                            if word_timestamps[i].confidence is not None
+                        ]
+                        if confs:
+                            prop.confidence = round(sum(confs) / len(confs), 3)
 
             # Asignar límites de caracteres
             if matched_global_idxs and token_spans:

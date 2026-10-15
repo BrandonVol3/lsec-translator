@@ -81,19 +81,19 @@ class SubtitleEditorPanel {
 
             <div class="sub-form-row sub-row-dual">
               <div>
-                <label>Estilo</label>
-                <div class="sub-toggle-group">
-                  <button type="button" class="sub-btn-toggle" id="sub-cfg-bold" title="Negrita"><b>B</b></button>
-                  <button type="button" class="sub-btn-toggle" id="sub-cfg-italic" title="Cursiva"><i>I</i></button>
+                <span class="sub-field-label" id="lbl-sub-cfg-style">Estilo</span>
+                <div class="sub-toggle-group" role="group" aria-labelledby="lbl-sub-cfg-style">
+                  <button type="button" class="sub-btn-toggle" id="sub-cfg-bold" title="Negrita" aria-label="Negrita"><b>B</b></button>
+                  <button type="button" class="sub-btn-toggle" id="sub-cfg-italic" title="Cursiva" aria-label="Cursiva"><i>I</i></button>
                 </div>
               </div>
 
               <div>
-                <label>Alineación</label>
-                <div class="sub-toggle-group" id="sub-cfg-align-group">
-                  <button type="button" class="sub-btn-toggle" data-align="left" title="Izquierda">Izq</button>
-                  <button type="button" class="sub-btn-toggle active" data-align="center" title="Centro">Cen</button>
-                  <button type="button" class="sub-btn-toggle" data-align="right" title="Derecha">Der</button>
+                <span class="sub-field-label" id="lbl-sub-cfg-align">Alineación</span>
+                <div class="sub-toggle-group" id="sub-cfg-align-group" role="group" aria-labelledby="lbl-sub-cfg-align">
+                  <button type="button" class="sub-btn-toggle" data-align="left" title="Izquierda" aria-label="Alinear a la izquierda">Izq</button>
+                  <button type="button" class="sub-btn-toggle active" data-align="center" title="Centro" aria-label="Alinear al centro">Cen</button>
+                  <button type="button" class="sub-btn-toggle" data-align="right" title="Derecha" aria-label="Alinear a la derecha">Der</button>
                 </div>
               </div>
             </div>
@@ -108,7 +108,7 @@ class SubtitleEditorPanel {
                 <label for="sub-cfg-text-color">Color de texto</label>
                 <div class="sub-color-input-wrap">
                   <input type="color" id="sub-cfg-text-color" value="#ffffff">
-                  <input type="text" id="sub-cfg-text-color-hex" class="sub-hex-input" value="#ffffff" maxlength="7">
+                  <input type="text" id="sub-cfg-text-color-hex" class="sub-hex-input" value="#ffffff" maxlength="7" aria-label="Código hexadecimal de color de texto">
                 </div>
               </div>
 
@@ -116,7 +116,7 @@ class SubtitleEditorPanel {
                 <label for="sub-cfg-bg-color">Color de fondo</label>
                 <div class="sub-color-input-wrap">
                   <input type="color" id="sub-cfg-bg-color" value="#000000">
-                  <input type="text" id="sub-cfg-bg-color-hex" class="sub-hex-input" value="#000000" maxlength="7">
+                  <input type="text" id="sub-cfg-bg-color-hex" class="sub-hex-input" value="#000000" maxlength="7" aria-label="Código hexadecimal de color de fondo">
                 </div>
               </div>
             </div>
@@ -157,9 +157,9 @@ class SubtitleEditorPanel {
                 <input type="checkbox" id="sub-cfg-shadow-toggle" checked style="width:16px; height:16px; accent-color:var(--action-primary); cursor:pointer;">
               </div>
               <div class="sub-slider-group" id="sub-shadow-controls">
-                <input type="range" id="sub-cfg-shadow-blur" min="0" max="20" step="1" value="4">
+                <input type="range" id="sub-cfg-shadow-blur" min="0" max="20" step="1" value="4" aria-label="Desenfoque de sombra de texto">
                 <span class="sub-value-display" id="sub-cfg-shadow-blur-val">4px</span>
-                <input type="color" id="sub-cfg-shadow-color" value="#000000" style="margin-left:6px;" title="Color de sombra">
+                <input type="color" id="sub-cfg-shadow-color" value="#000000" style="margin-left:6px;" title="Color de sombra" aria-label="Color de sombra de texto">
               </div>
             </div>
           </div>
@@ -185,8 +185,8 @@ class SubtitleEditorPanel {
             </div>
 
             <div class="sub-form-row">
-              <label>Posición Rápida</label>
-              <div class="sub-preset-buttons">
+              <span class="sub-field-label" id="lbl-sub-cfg-quick-pos">Posición Rápida</span>
+              <div class="sub-preset-buttons" role="group" aria-labelledby="lbl-sub-cfg-quick-pos">
                 <button type="button" class="btn btn-secondary btn-xs" id="btn-pos-preset-bottom">Inferior (88%)</button>
                 <button type="button" class="btn btn-secondary btn-xs" id="btn-pos-preset-center">Centro (50%)</button>
                 <button type="button" class="btn btn-secondary btn-xs" id="btn-pos-preset-top">Superior (14%)</button>

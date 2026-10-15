@@ -17,6 +17,11 @@ import {
   createLunesSignClip
 } from './sign-clip-factory.js';
 import { defaultAnimationCache } from './animation-cache.js';
+import {
+  convertDirectAnimationToSignClip,
+  validateSignClip,
+  trimSignClipStroke
+} from './sign-animation-schema.js';
 
 export class AvatarSyncController {
   /**
@@ -27,6 +32,8 @@ export class AvatarSyncController {
 
     // Registro canónico: glosa -> { clipId, version, validationStatus, factory }
     this.clipRegistry = new Map();
+    this.resolutionCache = new Map();
+    this.clipCache = new Map();
     this.initDefaultRegistry();
   }
 
@@ -133,10 +140,178 @@ export class AvatarSyncController {
   }
 
   /**
-   * Obtiene un clip de forma asíncrona por nombre de glosa.
+   * Obtiene y convierte la animación de una seña usando el endpoint libre de 404
+   * (/api/animations-direct/resolve/{gloss}?version=2.6) sobre las 5,061 señas v2.6.
+   * Recorta automáticamente los frames muertos de reposo al stroke activo.
+   * @param {string} glossName
+   * @param {Object} [options]
+   * @param {string} [options.version='2.6'] - Versión solicitada ('2.6' o '2.5')
+   * @param {boolean} [options.trimStroke=true] - Recortar frames muertos de entrada/salida
+   * @returns {Promise<Object|null>} SignClip compatible con SignPlayer o null si no existe.
    */
-  async loadClipAsync(glossName) {
+  async fetchDirectClip(glossName, options = { version: '2.6', trimStroke: true }) {
+    if (!glossName || typeof glossName !== 'string') return null;
+    const clean = glossName.trim();
+    if (!clean) return null;
+    const normKey = clean.toUpperCase();
+    const verTag = (options && options.version) ? String(options.version) : '2.6';
+    const shouldTrim = options && options.trimStroke !== undefined ? Boolean(options.trimStroke) : true;
+    const verPrefix = verTag.startsWith('2.5') ? 'v25_' : 'v26_';
+    const cacheKey = `${verPrefix}${shouldTrim ? 'trim_' : 'raw_'}${normKey}`;
+
+    // 1. Revisar caché en memoria
+    let cached = defaultAnimationCache.getClip(cacheKey);
+    if (cached) return cached;
+
+    if (this.resolutionCache.has(`${verPrefix}${normKey}`)) {
+      const prevRes = this.resolutionCache.get(`${verPrefix}${normKey}`);
+      if (prevRes && prevRes.found === false) {
+        return null;
+      }
+    }
+
+    // 2. Consultar el endpoint libre de 404 (/api/animations-direct/resolve/{gloss})
+    if (typeof fetch === 'function') {
+      try {
+        const resolveUrl = `/api/animations-direct/resolve/${encodeURIComponent(clean)}?version=${encodeURIComponent(verTag)}&include_animation=true`;
+        let res = await fetch(resolveUrl);
+        if (!res || !res.ok) {
+          res = await fetch(`/api/v1/animations/resolve/${encodeURIComponent(clean)}?version=${encodeURIComponent(verTag)}&include_animation=true`);
+        }
+
+        if (res && res.ok) {
+          const payload = await res.json();
+          const isEnvelope = payload && typeof payload === 'object' && ('found' in payload);
+          if (isEnvelope) {
+            this.resolutionCache.set(`${verPrefix}${normKey}`, {
+              found: Boolean(payload.found),
+              match_type: payload.match_type || 'none',
+              warning: payload.warning || null,
+              needs_review: Boolean(payload.needs_review),
+              resolved_gloss: payload.resolved_gloss || payload.sign || null,
+              version_served: payload.version_served || verTag,
+              is_fingerspelling: Boolean(payload.is_fingerspelling)
+            });
+            if (!payload.found || !payload.animation) {
+              return null;
+            }
+          }
+
+          const rawData = isEnvelope ? payload.animation : payload;
+          const resolvedGloss = isEnvelope ? (payload.resolved_gloss || payload.sign || clean) : clean;
+
+          if (rawData && typeof rawData === 'object') {
+            let clip = convertDirectAnimationToSignClip(rawData, clean);
+            if (clip && Array.isArray(clip.boneTracks) && clip.boneTracks.length > 0) {
+              if (isEnvelope) {
+                clip.metadata = {
+                  ...(clip.metadata || {}),
+                  resolvedGloss,
+                  matchType: payload.match_type || 'exact',
+                  resolutionStatus: payload.status || 'EXACT',
+                  needsReview: Boolean(payload.needs_review),
+                  warning: payload.warning || null,
+                  versionServed: payload.version_served || verTag
+                };
+              }
+              if (shouldTrim) {
+                clip = trimSignClipStroke(clip);
+              }
+              defaultAnimationCache.setClip(cacheKey, clip);
+              defaultAnimationCache.setClip(`${verPrefix}${normKey}`, clip);
+              this.clipCache.set(normKey, clip);
+              this.clipCache.set(`${verPrefix}${normKey}`, clip);
+              if (clip.clipId) {
+                defaultAnimationCache.setClip(clip.clipId, clip);
+              }
+              return clip;
+            }
+          }
+        }
+      } catch (err) {
+        // Fallback silencioso ante modo offline o error de red
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Alias de retrocompatibilidad para el pipeline v2.5 Directo 1:1 ('2.5_Directo_1a1').
+   * Preserva compatibilidad con suites de pruebas y componentes existentes.
+   * @param {string} glossName
+   * @returns {Promise<Object|null>}
+   */
+  async fetchDirectV25Clip(glossName) {
+    return this.fetchDirectClip(glossName, { version: '2.5' });
+  }
+
+  /**
+   * Obtiene un clip previamente cargado en caché para una glosa.
+   * @param {string} glossName
+   * @param {string} [version='2.6']
+   * @returns {Object|null}
+   */
+  getCachedClip(glossName, version = '2.6') {
+    const normKey = (glossName || '').trim().toUpperCase();
+    if (!normKey) return null;
+    if (this.clipCache.has(normKey)) {
+      return this.clipCache.get(normKey);
+    }
+    const verPrefix = String(version).startsWith('2.5') ? 'v25_' : 'v26_';
+    return (
+      defaultAnimationCache.getClip(`${verPrefix}trim_${normKey}`) ||
+      defaultAnimationCache.getClip(`${verPrefix}${normKey}`) ||
+      defaultAnimationCache.getClip(`v25_trim_${normKey}`) ||
+      defaultAnimationCache.getClip(`v25_${normKey}`) ||
+      null
+    );
+  }
+
+  /**
+   * Obtiene la información de resolución léxica para una glosa (match_type, warning, needs_review).
+   * @param {string} glossName
+   * @param {string} [version='2.6']
+   */
+  getResolutionMetadata(glossName, version = '2.6') {
+    const normKey = (glossName || '').trim().toUpperCase();
+    const verPrefix = String(version).startsWith('2.5') ? 'v25_' : 'v26_';
+    return this.resolutionCache.get(`${verPrefix}${normKey}`) || null;
+  }
+
+  getResolutionMeta(glossName, version = '2.6') {
+    return this.getResolutionMetadata(glossName, version);
+  }
+
+  /**
+   * Obtiene un clip de forma asíncrona por nombre de glosa, priorizando la versión oficial 2.6
+   * corregida, con fallback de continuidad a v2.5 y registro canónico local.
+   */
+  async loadClipAsync(glossName, options = {}) {
     const key = (glossName || '').trim().toUpperCase();
+    if (!key) return null;
+
+    const shouldTrim = options.trimStroke !== undefined ? Boolean(options.trimStroke) : true;
+
+    // 1. Prioridad Máxima: Pipeline v2.6 Corregido Oficial
+    let directClip = await this.fetchDirectClip(glossName, { version: '2.6', trimStroke: shouldTrim });
+    if (directClip) {
+      this.clipCache.set(key, directClip);
+      return directClip;
+    }
+
+    const resMeta = this.getResolutionMetadata(glossName, '2.6');
+    if (resMeta && resMeta.is_fingerspelling) {
+      return null;
+    }
+
+    // 2. Fallback de Continuidad: Pipeline v2.5 Directo 1:1
+    directClip = await this.fetchDirectClip(glossName, { version: '2.5', trimStroke: shouldTrim });
+    if (directClip) {
+      this.clipCache.set(key, directClip);
+      return directClip;
+    }
+
+    // 3. Fallback: Registro canónico local / manifest offline
     const entry = this.lookup(key);
     if (!entry) return null;
     let clip = defaultAnimationCache.getClip(entry.clipId);
@@ -146,6 +321,9 @@ export class AvatarSyncController {
       if (clip) {
         defaultAnimationCache.setClip(entry.clipId, clip);
       }
+    }
+    if (clip) {
+      this.clipCache.set(key, clip);
     }
     return clip;
   }
@@ -175,15 +353,11 @@ export class AvatarSyncController {
 
   /**
    * Adapta una estructura de glosas de LSEC Studio para el secuenciador.
-   * Acepta:
-   * {
-   *   glosses: [{ id, gloss, startMs, endMs, validationStatus }],
-   *   nonManualMarkers: [],
-   *   spatialLoci: []
-   * }
+   * Ejecuta TODAS las glosas resueltas sin omisión (incluyendo SER, CON, ESO, etc.),
+   * aplicando recorte de stroke activo y escalado dinámico de velocidad legible.
    * 
    * @param {Object} inputData 
-   * @returns {Object} Resultado de la adaptación con clips listos y advertencias.
+   * @returns {Promise<Object>} Resultado de la adaptación con clips listos y advertencias.
    */
   async adaptProjectGlossesToSequence(inputData) {
     const rawGlosses = (inputData && Array.isArray(inputData.glosses))
@@ -200,68 +374,96 @@ export class AvatarSyncController {
       const normKey = glossName.toUpperCase();
       const startMs = typeof item.startMs === 'number' ? item.startMs : (item.start ? item.start * 1000 : index * 1000);
       const endMs = typeof item.endMs === 'number' ? item.endMs : (item.end ? item.end * 1000 : startMs + 1000);
+      const slotSec = Math.max(0.4, (endMs - startMs) / 1000.0);
 
-      const regEntry = this.lookup(normKey);
+      // 1. Intentar resolver vía Pipeline v2.6 Oficial Corregido (o fallback v2.5 directo)
+      let clip = await this.fetchDirectClip(glossName, { version: '2.6', trimStroke: true });
+      if (!clip) {
+        const rm = this.getResolutionMetadata(glossName, '2.6');
+        if (!rm || !rm.is_fingerspelling) {
+          clip = await this.fetchDirectClip(glossName, { version: '2.5', trimStroke: true });
+        }
+      }
 
-      if (regEntry && typeof regEntry.factory === 'function') {
-        let clip = defaultAnimationCache.getClip(regEntry.clipId);
-        if (!clip) {
-          try {
-            const res = regEntry.factory();
-            clip = (res instanceof Promise) ? await res : res;
-            if (clip) {
-              defaultAnimationCache.setClip(regEntry.clipId, clip);
+      let clipVersion = (clip && clip.metadata && clip.metadata.pipelineVersion) || '2.6_Directo_1a1_corregido';
+      let clipSource = (clip && clip.metadata && clip.metadata.source) || 'Pipeline v2.6 Directo 1:1 Oficial';
+      let validationStatus = (clip && clip.validationStatus) || 'REQUIRES_LSEC_VALIDATION';
+      let regEntry = null;
+
+      // 2. Si no se resolvió vía API directa, buscar en el registro local / manifest offline
+      const resMeta = this.getResolutionMetadata(glossName, '2.6');
+      if (!clip && (!resMeta || !resMeta.is_fingerspelling)) {
+        regEntry = this.lookup(normKey);
+
+        if (regEntry && typeof regEntry.factory === 'function') {
+          clip = defaultAnimationCache.getClip(regEntry.clipId);
+          if (!clip) {
+            try {
+              const res = regEntry.factory();
+              clip = (res instanceof Promise) ? await res : res;
+              if (clip) {
+                defaultAnimationCache.setClip(regEntry.clipId, clip);
+              }
+            } catch (fetchErr) {
+              console.error(`[AvatarSyncController] Error al resolver clip para "${glossName}":`, fetchErr);
             }
-          } catch (fetchErr) {
-            console.error(`[AvatarSyncController] Error al resolver clip para "${glossName}":`, fetchErr);
+          }
+
+          if (clip) {
+            clipVersion = regEntry.version || '1.0.0';
+            clipSource = 'Registro Canónico Local';
+            validationStatus = regEntry.validationStatus || 'REQUIRES_LSEC_VALIDATION';
           }
         }
+      }
 
-        if (clip) {
-          playableClips.push(clip);
-          sequencePlan.push({
-            index,
-            id: item.id || `g_${index}`,
-            gloss: glossName,
-            clipId: regEntry.clipId,
-            version: regEntry.version,
-            status: 'AVAILABLE',
-            validationStatus: regEntry.validationStatus,
-            startMs,
-            endMs
-          });
-        } else {
-          missingGlosses.push(glossName);
-          sequencePlan.push({
-            index,
-            id: item.id || `g_${index}`,
-            gloss: glossName,
-            clipId: null,
-            version: null,
-            status: 'MISSING_ANIMATION',
-            validationStatus: 'NO_CLIP_AVAILABLE',
-            startMs,
-            endMs,
-            warning: `Fallo al resolver animación para "${glossName}".`
-          });
-        }
+      if (clip) {
+        const clipDurSec = Math.max(0.35, (clip.durationMs || 1000) / 1000.0);
+        const recommendedSpeed = Math.max(1.0, Math.min(2.0, Number((clipDurSec / slotSec).toFixed(2))));
+        const clipWithSpeed = {
+          ...clip,
+          gloss: glossName,
+          recommendedSpeed,
+          startMs,
+          endMs
+        };
+
+        playableClips.push(clipWithSpeed);
+        sequencePlan.push({
+          index,
+          id: item.id || `g_${index}`,
+          gloss: glossName,
+          resolvedGloss: (clip.metadata && clip.metadata.resolvedGloss) || (resMeta && resMeta.resolved_gloss) || glossName,
+          matchType: (clip.metadata && clip.metadata.matchType) || (resMeta && resMeta.match_type) || 'exact',
+          needsReview: Boolean((clip.metadata && clip.metadata.needsReview) || (resMeta && resMeta.needs_review)),
+          warning: (clip.metadata && clip.metadata.warning) || (resMeta && resMeta.warning) || null,
+          clipId: clip.clipId || regEntry?.clipId || normKey,
+          version: clipVersion,
+          source: clipSource,
+          status: 'AVAILABLE',
+          validationStatus: validationStatus,
+          recommendedSpeed,
+          startMs,
+          endMs
+        });
       } else {
-        // Glosa sin animación en el registro
+        // Glosa sin animación en v2.6/v2.5 ni en registro
         missingGlosses.push(glossName);
         sequencePlan.push({
           index,
           id: item.id || `g_${index}`,
           gloss: glossName,
+          resolvedGloss: null,
+          matchType: (resMeta && resMeta.match_type) || 'none',
+          needsReview: false,
           clipId: null,
           version: null,
-          status: 'MISSING_ANIMATION',
+          status: (resMeta && resMeta.is_fingerspelling) ? 'FINGERSPELLING_PENDING' : 'MISSING_ANIMATION',
           validationStatus: 'NO_CLIP_AVAILABLE',
           startMs,
           endMs,
-          warning: `Sin animación registrada para la glosa "${glossName}". Se omite sin interrumpir el flujo.`
+          warning: (resMeta && resMeta.warning) || `Sin animación v2.6/v2.5 ni clip registrado para la glosa "${glossName}". Se omite sin interrumpir el flujo.`
         });
-
-        console.warn(`[AvatarSyncController] Glosa "${glossName}" marcada como MISSING_ANIMATION (sin clip en catálogo).`);
       }
     }
 

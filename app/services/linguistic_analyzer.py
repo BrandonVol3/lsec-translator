@@ -370,10 +370,17 @@ class EnhancedLinguisticAnalyzer:
                 info.source_word = t_lower
                 break
 
+        nominal_homographs = {"dibujo", "música", "danza", "cine", "teatro", "pintura", "arte", "artes", "taller", "club", "correo", "whatsapp", "parte", "grado"}
         for token in doc:
             if token.pos_ not in ("VERB", "AUX"):
                 continue
             if token.dep_ in ("aux", "auxpass"):
+                continue
+            if token.text.lower() in nominal_homographs:
+                continue
+            if any(c.dep_ in ("amod", "det", "compound") for c in token.children) or (
+                token.dep_ == "conj" and token.head.pos_ in ("NOUN", "PROPN")
+            ):
                 continue
 
             # Extraer tiempo desde morfología
@@ -590,8 +597,31 @@ class EnhancedLinguisticAnalyzer:
                             justification="Preposición 'de' puramente conectiva omitida en LSEC",
                         ))
 
-                elif text_l in ("a", "hacia"):
-                    if any(c.dep_ in ("iobj", "obj") and c.pos_ == "NOUN" and "anim" in c.tag_.lower() for c in token.children):
+                elif text_l in ("a", "al", "hacia"):
+                    next_tok = doc[token.i + 1] if token.i + 1 < len(doc) else None
+                    next_is_inf = next_tok is not None and (
+                        "Inf" in next_tok.morph.get("VerbForm", [])
+                        or next_tok.text.lower().endswith(("ar", "er", "ir", "arse", "erse", "irse", "arte", "erte", "irte"))
+                    )
+                    head_is_inf = head_tok.pos_ in ("VERB", "AUX") and (
+                        "Inf" in head_tok.morph.get("VerbForm", [])
+                        or head_tok.text.lower().endswith(("ar", "er", "ir", "arse", "erse", "irse", "arte", "erte", "irte"))
+                    )
+                    non_locative_targets = {
+                        "whatsapp", "correo", "teléfono", "telefono", "celular",
+                        "número", "numero", "contacto", "parte", "través", "traves",
+                    }
+                    head_or_next_non_loc = (
+                        head_tok.text.lower() in non_locative_targets
+                        or head_tok.lemma_.lower() in non_locative_targets
+                        or (next_tok is not None and next_tok.text.lower() in non_locative_targets)
+                    )
+                    is_personal_acc = any(
+                        c.dep_ in ("iobj", "obj") and c.pos_ == "NOUN" and "anim" in c.tag_.lower()
+                        for c in token.children
+                    ) or (dep == "case" and head_tok.dep_ in ("obj", "iobj") and head_tok.pos_ in ("NOUN", "PROPN", "PRON"))
+
+                    if text_l in ("a", "al") and (is_personal_acc or next_is_inf or head_is_inf or head_or_next_non_loc):
                         transfers.append(FunctionalTransfer(
                             token_idx=token.i,
                             source_word=token.text,
@@ -599,7 +629,7 @@ class EnhancedLinguisticAnalyzer:
                             pos=pos,
                             function_type="structural_omission",
                             target_action="omit_structural",
-                            justification="Marca de acusativo personal del español omitida en LSEC",
+                            justification="Preposición estructural 'a'/'al' (régimen verbal, infinitivo o canal de contacto) omitida en LSEC",
                         ))
                     else:
                         transfers.append(FunctionalTransfer(

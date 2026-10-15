@@ -23,7 +23,14 @@
  */
 
 import * as THREE from 'three';
-import { validateSignClip } from './sign-animation-schema.js';
+import {
+  validateSignClip,
+  REST_POSE,
+  computeSignClipStrokeWindow,
+  trimSignClipStroke
+} from './sign-animation-schema.js';
+
+export { REST_POSE, computeSignClipStrokeWindow, trimSignClipStroke };
 
 /**
  * Convierte ángulos de Euler (en radianes) a un cuaternión unitario [x, y, z, w].
@@ -51,15 +58,15 @@ const Q_CHEST_REST = eulerToQuat(deg2rad(1), 0, 0);
 const Q_NECK_REST  = [0, 0, 0, 1];
 const Q_HEAD_REST  = [0, 0, 0, 1];
 
-// Brazo izquierdo en reposo
-const Q_LUA_REST = eulerToQuat(deg2rad(15), 0, deg2rad(22));
-const Q_LLA_REST = eulerToQuat(deg2rad(-25), 0, 0);
-const Q_LH_REST  = eulerToQuat(0, 0, deg2rad(10));
+// Brazo izquierdo en reposo biomecánico natural (unificado con v2.6 y SignPlayer.restoreNeutralPose)
+const Q_LUA_REST = [0.0435, 0.0028, -0.6087, 0.7921];
+const Q_LLA_REST = [0, 0.0872, 0, 0.9962];
+const Q_LH_REST  = [0, 0, 0, 1];
 
-// Brazo derecho en reposo
-const Q_RUA_REST = eulerToQuat(deg2rad(15), 0, deg2rad(-22));
-const Q_RLA_REST = eulerToQuat(deg2rad(-25), 0, 0);
-const Q_RH_REST  = eulerToQuat(0, 0, deg2rad(-10));
+// Brazo derecho en reposo biomecánico natural (unificado con v2.6 y SignPlayer.restoreNeutralPose)
+const Q_RUA_REST = [0.0435, -0.0028, 0.6087, 0.7921];
+const Q_RLA_REST = [0, -0.0872, 0, 0.9962];
+const Q_RH_REST  = [0, 0, 0, 1];
 
 // Brazo derecho en espacio de señas frontal (altura de pecho/hombro, palma al frente)
 const Q_RUA_SIGN = eulerToQuat(deg2rad(32), deg2rad(-20), deg2rad(-62));

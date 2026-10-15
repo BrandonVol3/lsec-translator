@@ -113,19 +113,14 @@ def test_avatar_3d_complete_e2e_flow(browser_page):
     # 1. Verificar carga inicial de LSEC Studio
     expect(page.locator("#app-container")).to_be_visible()
 
-    # 2. Localizar acceso a configuración del Avatar 3D y navegar a /avatarconfig
+    # 2. Localizar acceso a configuración del Avatar 3D y abrir panel interno en Studio
     btn_top_avatar = page.locator("#btn-top-avatar-config")
     if btn_top_avatar.is_visible():
-        with page.expect_navigation():
-            btn_top_avatar.click()
+        btn_top_avatar.click()
     else:
         page.click("#tab-btn-side-avatar")
-        with page.expect_navigation():
-            page.click("#btn-open-avatar-config-page")
 
-    assert "/avatarconfig" in page.url
-
-    # 3. Verificar que en /avatarconfig aparece el canvas WebGL y el Rig / Modelo activo
+    # 3. Verificar que en LSEC Studio aparece el canvas WebGL y el Rig / Modelo activo
     canvas = page.locator("#avatar-webgl-canvas")
     expect(canvas).to_be_visible()
 
@@ -176,7 +171,11 @@ def test_avatar_3d_complete_e2e_flow(browser_page):
     first_seq_gloss = gloss_hud.inner_text()
     assert first_seq_gloss in ["NEUTRAL", "SALUDAR_DEMO", "NEGACION_DEMO"]
 
-    # 10. Probar navegación recíproca: volver a LSEC Studio
+    # 10. Probar navegación recíproca al entorno de calibración y volver a LSEC Studio
+    with page.expect_navigation():
+        page.click("#btn-open-avatar-config-page")
+    assert "/avatarconfig" in page.url
+
     with page.expect_navigation():
         page.click("#btn-back-to-studio")
     assert "/studio" in page.url

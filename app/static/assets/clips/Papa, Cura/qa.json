@@ -1,0 +1,29 @@
+{
+  "left_hand_coverage": 1.0,
+  "right_hand_coverage": 0.3986,
+  "any_hand_coverage": 1.0,
+  "arm_conf_mean": 8.8204,
+  "body_coverage": 1.0,
+  "depth_coverage": 1.0,
+  "face_coverage": 1.0,
+  "pure_1to1_copy": true,
+  "preparatory_pose": false,
+  "prior_source": "none_direct_1a1",
+  "sign": "Papa, Cura",
+  "fps": 60.0,
+  "frames": 429,
+  "duration": 7.15,
+  "subject_switches": 0,
+  "missing_subject_frames": 0,
+  "invalid_rotation_count": 0,
+  "max_rotation_jump_deg": 107.41,
+  "lead_in_frames": 0,
+  "lead_out_frames": 0,
+  "has_illustration": false,
+  "needs_review": true,
+  "review_reasons": [
+    "Salto angular elevado (107.4°)"
+  ],
+  "processing_status": "OK",
+  "processing_seconds": 4.442
+}

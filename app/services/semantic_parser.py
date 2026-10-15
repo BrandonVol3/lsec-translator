@@ -77,8 +77,9 @@ class SpanishVerbLexicon:
         "hago": "hacer", "haces": "hacer", "hace": "hacer", "hacemos": "hacer", "hacen": "hacer", "haz": "hacer", "hizo": "hacer", "hicieron": "hacer", "haciendo": "hacer", "hecho": "hacer",
         # decir
         "digo": "decir", "dices": "decir", "dice": "decir", "decimos": "decir", "dicen": "decir", "dijo": "decir", "dijeron": "decir",
-        # decidir
+        # decidir / elegir
         "decido": "decidir", "decides": "decidir", "decide": "decidir", "decidimos": "decidir", "deciden": "decidir", "decidí": "decidir", "decidió": "decidir",
+        "elijo": "elegir", "eliges": "elegir", "elige": "elegir", "elegimos": "elegir", "eligen": "elegir", "elegí": "elegir", "eligiste": "elegir", "eligió": "elegir", "eligieron": "elegir", "eligiendo": "elegir", "elegido": "elegir", "elegir": "elegir",
         # ver / salvar / atender / postular / explicar / inaugurar / etc.
         "salvas": "salvar", "salva": "salvar", "salvamos": "salvar", "salvan": "salvar", "salvé": "salvar", "salvó": "salvar",
         "atiendes": "atender", "atiende": "atender", "atendemos": "atender", "atienden": "atender",
@@ -88,6 +89,28 @@ class SpanishVerbLexicon:
         "preparamos": "preparar", "evoluciona": "evolucionar", "ofrecemos": "ofrecer", "ofrece": "ofrecer",
         "crean": "crear", "creo": "crear", "cree": "crear", "construyen": "construir", "construye": "construir",
         "liberan": "liberar", "lideran": "liderar",
+        # invitar / formar / inscribir / participar / comunicar
+        "invito": "invitar", "invitas": "invitar", "invita": "invitar", "invitamos": "invitar", "invitan": "invitar",
+        "invité": "invitar", "invitó": "invitar", "invitaron": "invitar", "invitando": "invitar", "invitado": "invitar",
+        "formo": "formar", "formas": "formar", "forma": "formar", "forman": "formar", "formando": "formar", "formado": "formar",
+        "inscribo": "inscribir", "inscribes": "inscribir", "inscribe": "inscribir", "inscribimos": "inscribir", "inscriben": "inscribir",
+        "inscribirse": "inscribir", "inscríbete": "inscribir", "inscribirte": "inscribir",
+        "participo": "participar", "participas": "participar", "participa": "participar", "participamos": "participar", "participan": "participar",
+        "comunico": "comunicar", "comunicas": "comunicar", "comunica": "comunicar", "comunicamos": "comunicar", "comunican": "comunicar",
+        "comunícate": "comunicar", "comunicate": "comunicar", "comunicarse": "comunicar", "comunicarte": "comunicar",
+        "contáctate": "contactar", "contactate": "contactar", "contactarse": "contactar", "contactar": "contactar",
+        "regístrate": "registrar", "registrate": "registrar", "registrarse": "registrar",
+        "infórmate": "informar", "informate": "informar", "informarse": "informar",
+        "acércate": "acercar", "acercate": "acercar", "acercarse": "acercar",
+        "matricúlate": "matricular", "matriculate": "matricular", "matricularse": "matricular",
+        "prepárate": "preparar", "preparate": "preparar", "prepararse": "preparar",
+    }
+
+    NOMINAL_HOMOGRAPHS: Set[str] = {
+        "dibujo", "música", "danza", "cine", "teatro", "pintura", "arte", "artes",
+        "taller", "talleres", "club", "clubes", "correo", "whatsapp", "parte", "grado",
+        "lugar", "lugares", "hogar", "hogares", "mujer", "mujeres", "celular", "celulares",
+        "mar", "par", "líder", "líderes", "placer", "carácter", "escolar", "familiar", "popular",
     }
 
     @classmethod
@@ -96,23 +119,56 @@ class SpanishVerbLexicon:
         return cls.KNOWN_VERB_FORMS.get(w_clean)
 
     @classmethod
+    def normalize_verb_lemma(cls, word: str, raw_lemma: str) -> str:
+        """
+        Corrige errores de lematización estadística de spaCy (ej. 'invitamos' -> 'invitir',
+        'comunícate' -> 'comunícatir') usando desinencias morfológicas del español.
+        """
+        w_clean = PunctuationAnalyzer.strip_punctuation(word.lower())
+        known = cls.KNOWN_VERB_FORMS.get(w_clean)
+        if known:
+            return known
+        lemma_clean = PunctuationAnalyzer.strip_punctuation((raw_lemma or "").lower())
+        if w_clean in cls.NOMINAL_HOMOGRAPHS or lemma_clean in cls.NOMINAL_HOMOGRAPHS:
+            return lemma_clean or w_clean
+        # Imperativos con pronombre enclítico -te (ej. comunícate -> comunícatir -> comunicar)
+        if w_clean.endswith("ate") and lemma_clean.endswith(("atir", "ater", "ate")) and len(lemma_clean) > 5:
+            stem = lemma_clean[:-4] if lemma_clean.endswith(("atir", "ater")) else lemma_clean[:-3]
+            stem = stem.translate(str.maketrans("áéíóú", "aeiou"))
+            return stem + "ar"
+        if (
+            w_clean != "vamos"
+            and w_clean.endswith(("amos", "aste", "aron", "aba", "abas", "ábamos", "aban", "ando", "ado"))
+            and lemma_clean.endswith(("ir", "er"))
+            and len(lemma_clean) > 3
+        ):
+            return lemma_clean[:-2] + "ar"
+        return lemma_clean or w_clean
+
+    @classmethod
     def get_person(cls, word: str) -> Optional[str]:
         w = PunctuationAnalyzer.strip_punctuation(word.lower())
-        if w in ("como", "bebo", "compro", "estudio", "llego", "voy", "quiero", "puedo", "hago", "digo", "decido", "comí", "bebí", "compré", "estudié", "llegué"):
+        if w in cls.NOMINAL_HOMOGRAPHS:
+            return None
+        if w in ("como", "bebo", "compro", "estudio", "llego", "voy", "quiero", "puedo", "hago", "digo", "decido", "elijo", "comí", "bebí", "compré", "estudié", "llegué", "invito"):
             return "1"
-        if w in ("comes", "bebes", "compras", "estudias", "llegas", "vas", "quieres", "puedes", "haces", "dices", "decides", "haz", "comiste", "bebiste", "compraste"):
+        if w in ("comes", "bebes", "compras", "estudias", "llegas", "vas", "quieres", "puedes", "haces", "dices", "decides", "eliges", "haz", "comiste", "bebiste", "compraste", "invitas", "comunícate", "comunicate", "inscríbete", "inscribete", "regístrate", "infórmate"):
             return "2"
-        if w in ("come", "bebe", "compra", "estudia", "llega", "va", "quiere", "puede", "hace", "dice", "decide", "comió", "bebió", "compró", "estudió", "llegó", "hizo", "dijo", "decidió"):
+        if w in ("come", "bebe", "compra", "estudia", "llega", "va", "quiere", "puede", "hace", "dice", "decide", "elige", "comió", "bebió", "compró", "estudió", "llegó", "hizo", "dijo", "decidió", "invita"):
             return "3"
-        if w in ("comemos", "bebemos", "compramos", "estudiamos", "llegamos", "vamos", "queremos", "podemos", "hacemos", "decimos", "decidimos", "comimos", "bebimos", "educamos", "formamos", "preparamos"):
+        if w in ("comemos", "bebemos", "compramos", "estudiamos", "llegamos", "vamos", "queremos", "podemos", "hacemos", "decimos", "decidimos", "elegimos", "comimos", "bebimos", "educamos", "formamos", "preparamos", "invitamos", "inscribimos", "participamos", "comunicamos") or (
+            w.endswith(("amos", "emos", "imos")) and len(w) > 4
+        ):
             return "1-PL"
-        if w in ("comen", "beben", "compran", "estudian", "llegan", "van", "quieren", "pueden", "hacen", "dicen", "deciden", "comieron", "bebieron", "compraron", "estudiaron", "llegaron", "crean", "construyen", "liberan", "lideran"):
+        if w in ("comen", "beben", "compran", "estudian", "llegan", "van", "quieren", "pueden", "hacen", "dicen", "deciden", "eligen", "comieron", "bebieron", "compraron", "estudiaron", "llegaron", "crean", "construyen", "liberan", "lideran", "invitan"):
             return "3-PL"
         return None
 
     @classmethod
     def is_verb(cls, word: str) -> bool:
         w_clean = PunctuationAnalyzer.strip_punctuation(word.lower())
+        if w_clean in cls.NOMINAL_HOMOGRAPHS:
+            return False
         return (
             w_clean in cls.KNOWN_VERB_FORMS
             or w_clean.endswith(("ar", "er", "ir", "ando", "iendo", "ado", "ido", "aron", "ieron", "amos", "emos", "imos"))
@@ -149,7 +205,8 @@ class PredicateDetector:
         "el", "la", "los", "las", "un", "una", "unos", "unas",
         "qué", "que", "quién", "quien", "quiénes", "quienes", "dónde", "donde", "cuándo", "cuando", "cómo", "como",
         "por qué", "para qué", "cuál", "cual", "cuáles", "cuales",
-        "manzana", "manzanas", "carne", "carnes", "pan", "panes", "agua", "aguas", "libro", "casa"
+        "manzana", "manzanas", "carne", "carnes", "pan", "panes", "agua", "aguas", "libro", "casa",
+        "dibujo", "música", "danza", "cine", "teatro", "pintura", "arte", "artes", "taller", "club", "correo", "whatsapp"
     }
 
     @classmethod
@@ -171,6 +228,8 @@ class PredicateDetector:
 
         # 1. Priorizar verbos explícitos por inventario morfológico
         for w in tokens_lower:
+            if w in SpanishVerbLexicon.NOMINAL_HOMOGRAPHS:
+                continue
             verb_lemma = SpanishVerbLexicon.get_lemma(w)
             if verb_lemma:
                 if verb_lemma in ("ser", "estar", "haber") and any(
@@ -189,13 +248,18 @@ class PredicateDetector:
         if not detected_lemma and doc is not None:
             for t in doc:
                 t_clean = PunctuationAnalyzer.strip_punctuation(t.text.lower())
-                if t_clean in cls.FORBIDDEN_PREDICATE_LEMMAS:
+                if t_clean in cls.FORBIDDEN_PREDICATE_LEMMAS or t_clean in SpanishVerbLexicon.NOMINAL_HOMOGRAPHS:
                     continue
                 if t.pos_ in ("VERB", "AUX"):
+                    # Evitar falsos positivos nominales (ej. sustantivo coordinado o con modificador adjetival)
+                    if any(c.dep_ in ("amod", "det", "compound") for c in t.children) or (
+                        t.dep_ == "conj" and t.head.pos_ in ("NOUN", "PROPN")
+                    ):
+                        continue
                     t_lemma = (
                         SpanishVerbLexicon.get_lemma(t_clean)
                         or (lemma_overrides.get(t_clean) if lemma_overrides else None)
-                        or t.lemma_.lower()
+                        or SpanishVerbLexicon.normalize_verb_lemma(t_clean, t.lemma_.lower())
                     )
                     t_lemma = PunctuationAnalyzer.strip_punctuation(t_lemma)
                     if t_lemma not in cls.FORBIDDEN_PREDICATE_LEMMAS:

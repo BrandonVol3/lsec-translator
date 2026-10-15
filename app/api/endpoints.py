@@ -120,6 +120,7 @@ class HealthResponse(BaseModel):
     status: str
     services: Dict[str, bool]
     version: str = "2.0.0"
+    hardware: Optional[Dict[str, Any]] = None
 
 
 class ReviewSubmission(BaseModel):
@@ -155,6 +156,7 @@ class ReviewRecordResponse(BaseModel):
 )
 async def health_check() -> HealthResponse:
     """Endpoint de verificación de salud del sistema."""
+    hw = _asr_service.get_hardware_status() if _asr_service else None
     return HealthResponse(
         status="ok",
         services={
@@ -163,7 +165,20 @@ async def health_check() -> HealthResponse:
             "storage": _storage_service is not None and _storage_service.is_connected,
         },
         version="2.0.0",
+        hardware=hw,
     )
+
+
+@router.get(
+    "/hardware-status",
+    summary="Estado de Aceleración por Hardware",
+    description="Devuelve información sobre el uso de GPU CUDA o CPU.",
+)
+async def hardware_status() -> Dict[str, Any]:
+    """Endpoint para inspeccionar si se está utilizando GPU o CPU."""
+    if _asr_service is None:
+        return {"device": "unknown", "is_gpu": False, "status_text": "Servicio no disponible"}
+    return _asr_service.get_hardware_status()
 
 
 @router.post(

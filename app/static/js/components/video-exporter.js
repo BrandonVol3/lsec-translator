@@ -28,6 +28,9 @@ class CompositeVideoExporter {
    * Prepara y asegura la carga de la imagen del avatar intérprete
    */
   async ensureAvatarLoaded() {
+    if (window.studioAvatarBridge && window.studioAvatarBridge.isReady) {
+      return true;
+    }
     if (this.isAvatarLoaded && this.avatarImg.complete && this.avatarImg.naturalWidth > 0) {
       return true;
     }
@@ -37,7 +40,6 @@ class CompositeVideoExporter {
         resolve(true);
       };
       this.avatarImg.onerror = () => {
-        console.warn('No se pudo cargar avatar_ilustracion.png, se continuará con renderizado vectorial');
         resolve(false);
       };
       if (this.avatarImg.complete) {
@@ -103,28 +105,22 @@ class CompositeVideoExporter {
       }
     }
 
-    // 3. Capturar Stream de Canvas y Audio
-    const canvasStream = exportCanvas.captureStream(30);
+    // 3. Capturar Stream de Canvas determinista (30 FPS exactos)
+    const TARGET_FPS = 30;
+    const DT = 1.0 / TARGET_FPS;
+    const canvasStream = typeof exportCanvas.captureStream === 'function'
+      ? exportCanvas.captureStream(0)
+      : null;
+    const canvasVideoTrack = canvasStream && canvasStream.getVideoTracks
+      ? canvasStream.getVideoTracks()[0]
+      : null;
 
-    // Intentar capturar audio del video
-    if (videoEl && typeof videoEl.captureStream === 'function') {
-      try {
-        const vStream = videoEl.captureStream();
-        const audioTracks = vStream ? vStream.getAudioTracks() : [];
-        if (audioTracks.length > 0) {
-          canvasStream.addTrack(audioTracks[0]);
-        }
-      } catch (err) {
-        console.warn('Captura directa de audio no soportada, continuando sin audio:', err);
-      }
-    }
-
-    // 4. Inicializar MediaRecorder
+    // 4. Inicializar MediaRecorder para captura intermedia de cuadros renderizados
     let mediaRecorder;
     try {
       mediaRecorder = new MediaRecorder(canvasStream, {
         mimeType: selectedMime,
-        videoBitsPerSecond: 4500000 // 4.5 Mbps para alta definición
+        videoBitsPerSecond: 5500000 // 5.5 Mbps para alta definición
       });
     } catch (err) {
       this.isExporting = false;
@@ -140,25 +136,72 @@ class CompositeVideoExporter {
       }
     };
 
-    mediaRecorder.onstop = () => {
-      this.isExporting = false;
+    mediaRecorder.onstop = async () => {
       if (this.isCancelled) {
+        this.isExporting = false;
         onProgress({ progress: 0, status: 'cancelled' });
         return;
       }
 
-      const isMp4 = selectedMime.includes('mp4');
-      const ext = isMp4 ? 'mp4' : 'webm';
+      const rawBlob = new Blob(this.recordedChunks, { type: selectedMime });
       const baseFilename = (project.media_info && project.media_info.filename)
         ? project.media_info.filename.replace(/\.[^/.]+$/, '')
         : 'video_lsec';
-      const outputFilename = `${baseFilename}_con_interprete_y_glosas.${ext}`;
 
-      const blob = new Blob(this.recordedChunks, { type: selectedMime });
-      onComplete(blob, outputFilename);
+      // Intentar empaquetado final determinista a MP4 (H.264 + AAC a 30.0 FPS constantes)
+      let finalBlob = rawBlob;
+      let ext = selectedMime.includes('mp4') ? 'mp4' : 'webm';
+
+      try {
+        onProgress({
+          progress: 99,
+          currentTime: duration,
+          duration,
+          exportCanvas,
+          status: 'finalizing_mp4'
+        });
+
+        const formData = new FormData();
+        formData.append('video_file', rawBlob, `capture.${ext}`);
+        formData.append('fps', String(TARGET_FPS));
+
+        // Adjuntar fuente de audio original si el video tiene un src accesible
+        if (videoEl && videoEl.src) {
+          try {
+            const audioRes = await fetch(videoEl.src);
+            if (audioRes && audioRes.ok) {
+              const audioBlob = await audioRes.blob();
+              if (audioBlob && audioBlob.size > 0) {
+                formData.append('audio_file', audioBlob, 'original_audio.mp4');
+              }
+            }
+          } catch (audioFetchErr) {
+            console.warn('[CompositeVideoExporter] Aviso obteniendo pista de audio original:', audioFetchErr);
+          }
+        }
+
+        const mp4Res = await fetch('/api/v1/animations/finalize-export-mp4', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (mp4Res && mp4Res.ok) {
+          const mp4Blob = await mp4Res.blob();
+          if (mp4Blob && mp4Blob.size > 0) {
+            finalBlob = new Blob([mp4Blob], { type: 'video/mp4' });
+            ext = 'mp4';
+          }
+        }
+      } catch (muxErr) {
+        console.warn('[CompositeVideoExporter] Fallback a contenedor local por error en finalize-export-mp4:', muxErr);
+      }
+
+      this.isExporting = false;
+      const outputFilename = `${baseFilename}_con_interprete_y_glosas.${ext}`;
+      onComplete(finalBlob, outputFilename);
     };
 
-    // 5. Guardar estado previo y preparar reproducción
+    // 5. Guardar estado previo y preparar exportación determinista cuadro a cuadro
     const previousTime = (window.appState && window.appState.state.playback.currentTime) || 0;
     const previousPlaybackRate = (videoEl && videoEl.playbackRate) || 1.0;
     const previousMuted = (videoEl && videoEl.muted) || false;
@@ -166,109 +209,179 @@ class CompositeVideoExporter {
     if (window.appState && window.appState.state.playback.isPlaying) {
       window.appState.pause();
     }
+    if (videoEl) {
+      videoEl.pause();
+    }
 
-    // Posición del PiP
+    // Posición y opciones del PiP
     const pipPosition = options.pipPosition || 'bottom-right';
     const includeSubtitles = options.includeSubtitles !== false;
     const includeGlosses = options.includeGlosses !== false;
     const includeInterpreter = options.includeInterpreter !== false;
-    const playbackSpeed = options.playbackSpeed || 1.0;
 
-    // Colocar video en tiempo 0
-    if (videoEl) {
-      videoEl.currentTime = 0;
-      videoEl.playbackRate = playbackSpeed;
-    }
-
-    // Esperar a que el video esté listo en tiempo 0
-    await new Promise((res) => {
-      if (!videoEl || videoEl.readyState >= 2) {
-        setTimeout(res, 200);
-      } else {
-        videoEl.onseeked = () => {
-          videoEl.onseeked = null;
-          res();
-        };
-      }
-    });
-
-    // Iniciar grabación de stream
-    mediaRecorder.start(250);
-
-    if (videoEl) {
-      try {
-        await videoEl.play();
-      } catch (e) {
-        console.warn('Reproducción de video en exportador:', e);
-      }
-    }
-
-    // 6. Ciclo de Renderizado Fotograma a Fotograma
     const segments = (window.appState && window.appState.state.project?.segments) || project.segments || [];
     const allGlosses = (window.appState && window.appState.state.project?.glosses) || project.glosses || [];
 
-    const renderLoop = () => {
-      if (this.isCancelled) {
-        if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-        if (videoEl) {
-          videoEl.pause();
-          videoEl.currentTime = previousTime;
-          videoEl.playbackRate = previousPlaybackRate;
-          videoEl.muted = previousMuted;
-        }
+    if (allGlosses.length > 1 && window.appState?.resolveOverlappingGlossIntervals) {
+      window.appState.resolveOverlappingGlossIntervals(allGlosses, segments);
+    }
+
+    // Precargar clips de señas del proyecto antes de iniciar el bucle determinista
+    if (window.studioAvatarBridge && typeof window.studioAvatarBridge.preloadProjectSigns === 'function') {
+      try {
+        await window.studioAvatarBridge.preloadProjectSigns({ glosses: allGlosses, segments });
+      } catch (e) {}
+    }
+
+    // Buffer persistente del último fotograma válido decodificado para evitar frames negros
+    const lastFrameCanvas = document.createElement('canvas');
+    lastFrameCanvas.width = targetWidth;
+    lastFrameCanvas.height = targetHeight;
+    const lastFrameCtx = lastFrameCanvas.getContext('2d', { alpha: false });
+    this._lastFrameCanvas = lastFrameCanvas;
+    this._hasLastValidFrame = false;
+
+    // Helper para posicionar el video de forma determinista en t segundos sin abortar decodificación GOP
+    const seekVideoDeterministic = (targetSec) => new Promise((resolve) => {
+      if (!videoEl || !(videoEl.readyState >= 1)) {
+        resolve();
         return;
       }
-
-      const currentTime = (videoEl && !isNaN(videoEl.currentTime))
-        ? videoEl.currentTime
-        : (window.appState ? window.appState.state.playback.currentTime : 0);
-
-      // Dibujar fotograma compuesto
-      this.drawCompositeFrame(
-        ctx,
-        targetWidth,
-        targetHeight,
-        currentTime,
-        videoEl,
-        canvasFallback,
-        segments,
-        allGlosses,
-        {
-          pipPosition,
-          includeSubtitles,
-          includeGlosses,
-          includeInterpreter
-        }
-      );
-
-      // Reportar progreso
-      const progress = Math.min(100, (currentTime / duration) * 100);
-      onProgress({
-        progress,
-        currentTime,
-        duration,
-        exportCanvas,
-        status: 'rendering'
-      });
-
-      // Verificar si finalizó el video
-      const isFinished = (currentTime >= duration - 0.05) || (videoEl && videoEl.ended);
-
-      if (isFinished) {
-        if (videoEl) {
-          videoEl.pause();
-          videoEl.playbackRate = previousPlaybackRate;
-          videoEl.muted = previousMuted;
-        }
-        if (mediaRecorder.state !== 'inactive') {
-          mediaRecorder.stop();
-        }
-      } else {
-        this.animFrameId = requestAnimationFrame(renderLoop);
+      if (!videoEl.seeking && videoEl.readyState >= 2 && Math.abs(videoEl.currentTime - targetSec) < 0.004) {
+        resolve();
+        return;
       }
-    };
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        videoEl.removeEventListener('seeked', onSeeked);
+        videoEl.removeEventListener('canplay', onSeeked);
+        resolve();
+      };
+      const onSeeked = () => {
+        if (!videoEl.seeking && videoEl.readyState >= 2) {
+          clearTimeout(timer);
+          finish();
+        }
+      };
+      const timer = setTimeout(finish, 600);
+      videoEl.addEventListener('seeked', onSeeked);
+      videoEl.addEventListener('canplay', onSeeked);
+      try {
+        videoEl.currentTime = targetSec;
+      } catch (e) {
+        clearTimeout(timer);
+        finish();
+      }
+    });
 
-    this.animFrameId = requestAnimationFrame(renderLoop);
+    // Posicionar en t=0 antes de comenzar y capturar el primer cuadro válido
+    await seekVideoDeterministic(0);
+    if (videoEl && videoEl.videoWidth > 0 && videoEl.readyState >= 2) {
+      try {
+        lastFrameCtx.drawImage(videoEl, 0, 0, targetWidth, targetHeight);
+        this._hasLastValidFrame = true;
+      } catch (e) {}
+    }
+
+    if (includeInterpreter && window.studioAvatarBridge && typeof window.studioAvatarBridge.beginDeterministicExport === 'function') {
+      window.studioAvatarBridge.beginDeterministicExport();
+    }
+
+    // Iniciar grabación de stream
+    mediaRecorder.start(200);
+
+    // 6. Ciclo de Renderizado Determinista a 30.0 FPS constantes (dt = 1/30 s)
+    const totalFrames = Math.max(1, Math.round(duration * TARGET_FPS));
+
+    try {
+      for (let frameIdx = 0; frameIdx < totalFrames; frameIdx++) {
+        if (this.isCancelled) {
+          if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+          if (videoEl) {
+            videoEl.pause();
+            videoEl.currentTime = previousTime;
+            videoEl.playbackRate = previousPlaybackRate;
+            videoEl.muted = previousMuted;
+          }
+          return;
+        }
+
+        const currentTime = Math.min(duration, frameIdx * DT);
+
+        // 6.1 Posicionar video fuente en currentTime
+        await seekVideoDeterministic(currentTime);
+
+        if (videoEl && videoEl.videoWidth > 0 && videoEl.readyState >= 2 && !videoEl.seeking) {
+          try {
+            lastFrameCtx.drawImage(videoEl, 0, 0, targetWidth, targetHeight);
+            this._hasLastValidFrame = true;
+          } catch (e) {}
+        }
+
+        // 6.2 Avanzar determinísticamente el motor 3D del avatar (mixer.update(dt), vrm.update(dt), renderer.render)
+        if (includeInterpreter && window.studioAvatarBridge && typeof window.studioAvatarBridge.stepAtVideoTime === 'function') {
+          await window.studioAvatarBridge.stepAtVideoTime(currentTime, DT);
+        }
+
+        // 6.3 Dibujar fotograma compuesto (video + PiP 3D + glosa + subtítulos)
+        this.drawCompositeFrame(
+          ctx,
+          targetWidth,
+          targetHeight,
+          currentTime,
+          videoEl,
+          canvasFallback,
+          segments,
+          allGlosses,
+          {
+            pipPosition,
+            includeSubtitles,
+            includeGlosses,
+            includeInterpreter,
+            alreadySteppedAvatar: true
+          }
+        );
+
+        // 6.4 Emitir fotograma exacto al stream de captura
+        if (canvasVideoTrack && typeof canvasVideoTrack.requestFrame === 'function') {
+          try {
+            canvasVideoTrack.requestFrame();
+          } catch (e) {}
+        }
+
+        const progress = Math.min(98, ((frameIdx + 1) / totalFrames) * 98);
+        onProgress({
+          progress,
+          currentTime,
+          duration,
+          frameIndex: frameIdx + 1,
+          totalFrames,
+          fps: TARGET_FPS,
+          exportCanvas,
+          status: 'rendering'
+        });
+
+        // Ceder brevemente al event loop para que MediaRecorder codifique el fotograma sin descartes
+        await new Promise(r => setTimeout(r, 4));
+      }
+    } finally {
+      if (window.studioAvatarBridge && typeof window.studioAvatarBridge.endDeterministicExport === 'function') {
+        window.studioAvatarBridge.endDeterministicExport();
+      }
+    }
+
+    // Restaurar estado del reproductor y cerrar grabación
+    if (videoEl) {
+      videoEl.pause();
+      videoEl.currentTime = previousTime;
+      videoEl.playbackRate = previousPlaybackRate;
+      videoEl.muted = previousMuted;
+    }
+    if (mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop();
+    }
   }
 
   /**
@@ -277,6 +390,9 @@ class CompositeVideoExporter {
   cancelExport() {
     this.isCancelled = true;
     this.isExporting = false;
+    if (window.studioAvatarBridge && typeof window.studioAvatarBridge.endDeterministicExport === 'function') {
+      window.studioAvatarBridge.endDeterministicExport();
+    }
     if (this.animFrameId) {
       cancelAnimationFrame(this.animFrameId);
       this.animFrameId = null;
@@ -292,12 +408,18 @@ class CompositeVideoExporter {
    * Dibuja un fotograma completo con fondo, avatar PiP, glosas y subtítulos
    */
   drawCompositeFrame(ctx, width, height, currentTime, videoEl, canvasFallback, segments, allGlosses, opts) {
-    // 1. Fondo base de video
+    // 1. Fondo base de video (usa frame en vivo o el último frame decodificado válido para evitar parpadeos negros)
     ctx.fillStyle = '#0a0c10';
     ctx.fillRect(0, 0, width, height);
 
-    if (videoEl && videoEl.videoWidth > 0 && videoEl.readyState >= 2) {
+    if (videoEl && videoEl.videoWidth > 0 && videoEl.readyState >= 2 && !videoEl.seeking) {
       ctx.drawImage(videoEl, 0, 0, width, height);
+    } else if (this._hasLastValidFrame && this._lastFrameCanvas) {
+      ctx.drawImage(this._lastFrameCanvas, 0, 0, width, height);
+    } else if (videoEl && videoEl.videoWidth > 0) {
+      try {
+        ctx.drawImage(videoEl, 0, 0, width, height);
+      } catch (e) {}
     } else if (canvasFallback) {
       ctx.drawImage(canvasFallback, 0, 0, width, height);
     }
@@ -314,17 +436,17 @@ class CompositeVideoExporter {
   }
 
   /**
-   * Renderiza la tarjeta Picture-in-Picture del intérprete con su ilustración y glosas
+   * Renderiza la tarjeta Picture-in-Picture del intérprete con paridad de aspect ratio (1 : 1.15) y glosas
    */
   drawInterpreterPiPCard(ctx, width, height, currentTime, allGlosses, segments, opts) {
-    const cardWidth = Math.round(width * 0.23);
-    const cardHeight = Math.round(cardWidth * 1.30);
+    const cardWidth = Math.round(width * 0.22);
+    const cardHeight = Math.round(cardWidth * 1.15);
     const margin = Math.round(width * 0.02);
 
     const isLeft = opts.pipPosition === 'bottom-left';
     const cardX = isLeft ? margin : (width - cardWidth - margin);
     const cardY = height - cardHeight - margin - Math.round(height * 0.02);
-    const radius = 10;
+    const radius = 8;
 
     ctx.save();
 
@@ -334,101 +456,94 @@ class CompositeVideoExporter {
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 6;
 
-    // Fondo degradado de la tarjeta
+    // Fondo sólido contrastante (#20242b) calibrado para contrastar con la ropa oscura
     ctx.beginPath();
     ctx.roundRect(cardX, cardY, cardWidth, cardHeight, radius);
-    const bgGrad = ctx.createLinearGradient(cardX, cardY, cardX, cardY + cardHeight);
-    bgGrad.addColorStop(0, 'rgba(24, 30, 42, 0.95)');
-    bgGrad.addColorStop(1, 'rgba(10, 12, 16, 0.98)');
-    ctx.fillStyle = bgGrad;
+    ctx.fillStyle = '#20242b';
     ctx.fill();
 
-    // Borde LSEC verde oliva característico
+    // Borde sutil minimalista
     ctx.shadowColor = 'transparent';
-    ctx.strokeStyle = 'rgba(183, 211, 107, 0.45)';
-    ctx.lineWidth = Math.max(1.5, Math.round(width * 0.0015));
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
+    ctx.lineWidth = Math.max(1, Math.round(width * 0.001));
     ctx.stroke();
 
     // Región de recorte para contenido interno
     ctx.clip();
 
-    // Encabezado de la tarjeta
-    const headerHeight = Math.round(cardHeight * 0.10);
-    ctx.fillStyle = 'rgba(18, 22, 30, 0.95)';
-    ctx.fillRect(cardX, cardY, cardWidth, headerHeight);
+    // Renderizado del Avatar 3D real preservando aspect ratio (cover centrado sin estiramiento)
+    // y garantizando encuadre del torso a la cabeza (pip_bust) en todo momento
+    let avatarDrawn = false;
+    if (window.studioAvatarBridge && typeof window.studioAvatarBridge.captureFrame === 'function') {
+      const bridge = window.studioAvatarBridge;
+      const eng = bridge.controller?.engine;
+      let savedCam = null;
+      if (!opts.alreadySteppedAvatar) {
+        if (typeof bridge.onTimeUpdate === 'function') {
+          bridge.onTimeUpdate(currentTime);
+        }
+        if (eng && !eng.exportLockCameraPreset && eng.currentPreset !== 'pip_bust' && eng.camera && eng.controls) {
+          savedCam = {
+            preset: eng.currentPreset,
+            fov: eng.camera.fov,
+            pos: eng.camera.position.clone(),
+            target: eng.controls.target.clone()
+          };
+          if (typeof eng._applyCameraPresetInternal === 'function') {
+            eng._applyCameraPresetInternal('pip_bust');
+          } else {
+            eng.setCameraPreset('pip_bust');
+          }
+        }
+      }
+      const avatarCanvas = bridge.captureFrame();
+      if (savedCam && eng && eng.camera && eng.controls) {
+        eng.currentPreset = savedCam.preset;
+        eng.camera.fov = savedCam.fov;
+        eng.camera.position.copy(savedCam.pos);
+        eng.controls.target.copy(savedCam.target);
+        eng.camera.updateProjectionMatrix();
+        eng.controls.update();
+      }
+      if (avatarCanvas && avatarCanvas.width > 0 && avatarCanvas.height > 0) {
+        const srcW = avatarCanvas.width;
+        const srcH = avatarCanvas.height;
+        const srcAspect = srcW / srcH;
+        const dstAspect = cardWidth / cardHeight;
+        let sx = 0, sy = 0, sw = srcW, sh = srcH;
+        if (Math.abs(srcAspect - dstAspect) > 0.01) {
+          if (srcAspect > dstAspect) {
+            sw = Math.round(srcH * dstAspect);
+            sx = Math.round((srcW - sw) / 2);
+          } else {
+            sh = Math.round(srcW / dstAspect);
+            sy = Math.round((srcH - sh) / 2);
+          }
+        }
+        ctx.drawImage(avatarCanvas, sx, sy, sw, sh, cardX, cardY, cardWidth, cardHeight);
+        avatarDrawn = true;
+      }
+    }
 
-    // Línea divisoria del encabezado
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(cardX, cardY + headerHeight);
-    ctx.lineTo(cardX + cardWidth, cardY + headerHeight);
-    ctx.stroke();
-
-    // Punto indicador verde
-    const dotRadius = Math.max(3, Math.round(cardWidth * 0.015));
-    const dotX = cardX + Math.round(cardWidth * 0.05);
-    const dotY = cardY + Math.round(headerHeight * 0.5);
-    ctx.beginPath();
-    ctx.arc(dotX, dotY, dotRadius, 0, Math.PI * 2);
-    ctx.fillStyle = '#B7D36B';
-    ctx.fill();
-
-    // Título del encabezado
-    ctx.font = `600 ${Math.round(cardHeight * 0.040)}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
-    ctx.fillStyle = '#F1F5F9';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('Avatar 3D (LSEC)', dotX + dotRadius + 6, dotY);
-
-    // Etiqueta "ILUSTRACIÓN"
-    const tagText = 'Ilustración';
-    ctx.font = `600 ${Math.round(cardHeight * 0.030)}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
-    const tagW = ctx.measureText(tagText).width + 8;
-    const tagH = Math.round(headerHeight * 0.55);
-    const tagX = cardX + cardWidth - tagW - Math.round(cardWidth * 0.04);
-    const tagY = dotY - (tagH / 2);
-
-    ctx.fillStyle = 'rgba(183, 211, 107, 0.18)';
-    ctx.beginPath();
-    ctx.roundRect(tagX, tagY, tagW, tagH, 3);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(183, 211, 107, 0.35)';
-    ctx.stroke();
-
-    ctx.fillStyle = '#B7D36B';
-    ctx.textAlign = 'center';
-    ctx.fillText(tagText, tagX + (tagW / 2), dotY);
-
-    // Área central: Imagen del Avatar Intérprete
-    const badgeHeight = opts.includeGlosses ? Math.round(cardHeight * 0.18) : 0;
-    const imgAreaY = cardY + headerHeight;
-    const imgAreaH = cardHeight - headerHeight - badgeHeight;
-
-    if (this.isAvatarLoaded && this.avatarImg.naturalWidth > 0) {
+    if (!avatarDrawn && this.isAvatarLoaded && this.avatarImg.naturalWidth > 0) {
       const imgRatio = this.avatarImg.naturalWidth / this.avatarImg.naturalHeight;
       let drawW = cardWidth * 0.95;
       let drawH = drawW / imgRatio;
 
-      if (drawH > imgAreaH) {
-        drawH = imgAreaH;
+      if (drawH > cardHeight) {
+        drawH = cardHeight;
         drawW = drawH * imgRatio;
       }
 
       const drawX = cardX + (cardWidth - drawW) / 2;
-      const drawY = imgAreaY + (imgAreaH - drawH) / 2;
+      const drawY = cardY + (cardHeight - drawH) / 2;
 
       ctx.drawImage(this.avatarImg, drawX, drawY, drawW, drawH);
     }
 
-    // Nota de marca de agua
-    ctx.font = `500 ${Math.round(cardHeight * 0.028)}px monospace`;
-    ctx.fillStyle = 'rgba(183, 211, 107, 0.45)';
-    ctx.textAlign = 'center';
-    ctx.fillText('ESPACIO PARA AVATAR 3D', cardX + (cardWidth / 2), imgAreaY + Math.round(imgAreaH * 0.08));
-
     // Badge inferior de Glosa LSEC Sincronizada
     if (opts.includeGlosses) {
+      const badgeHeight = Math.round(cardHeight * 0.19);
       this.drawGlossBadge(ctx, cardX, cardY + cardHeight - badgeHeight - 6, cardWidth, badgeHeight, currentTime, allGlosses, segments);
     }
 
@@ -446,8 +561,8 @@ class CompositeVideoExporter {
 
     // Encontrar glosa activa
     let activeGloss = allGlosses.find(g => {
-      const st = g.start_time !== undefined ? g.start_time : (g.start !== undefined ? g.start : 0);
-      const et = g.end_time !== undefined ? g.end_time : (g.end !== undefined ? g.end : 0);
+      const st = g.start_seconds !== undefined ? g.start_seconds : (g.start_time !== undefined ? g.start_time : (g.start !== undefined ? g.start : 0));
+      const et = g.end_seconds !== undefined ? g.end_seconds : (g.end_time !== undefined ? g.end_time : (g.end !== undefined ? g.end : 0));
       return currentTime >= st && currentTime <= et;
     });
 
@@ -470,13 +585,23 @@ class CompositeVideoExporter {
     }
 
     if (activeGloss) {
-      const glossName = (activeGloss.gloss || activeGloss.lemma || '').toUpperCase();
-      const isFingerspelling = activeGloss.is_fingerspelling || glossName.includes('-') || (activeGloss.gloss_type === 'DACTILOLOGÍA');
+      const glossName = (activeGloss.gloss || activeGloss.lemma || '').toUpperCase().trim();
+      const isSingleLetterHyphenated = glossName.includes('-') && glossName.split('-').filter(Boolean).every(p => p.trim().length === 1);
+      const isFingerspelling = Boolean(activeGloss.is_fingerspelling || isSingleLetterHyphenated || (activeGloss.gloss_type === 'DACTILOLOGÍA'));
       const isParaphrase = activeGloss.is_paraphrase || (activeGloss.type_badge === 'paráfrasis');
       
       let typeLabel = activeGloss.gloss_type || 'SEÑA LÉXICA';
-      if (isFingerspelling) typeLabel = 'DACTILOLOGÍA';
+      if (isFingerspelling) typeLabel = 'DACTILOLOGÍA (PENDIENTE)';
       if (isParaphrase) typeLabel = 'PARÁFRASIS LSEC';
+
+      const resMeta = (!isFingerspelling && window.studioAvatarBridge && typeof window.studioAvatarBridge.getResolutionMetaForGloss === 'function')
+        ? window.studioAvatarBridge.getResolutionMetaForGloss(glossName)
+        : null;
+      if (resMeta && ((resMeta.matchType && !['exact', 'fingerspelling', 'none'].includes(resMeta.matchType)) || resMeta.needsReview)) {
+        typeLabel = (resMeta.matchType && resMeta.matchType !== 'exact' && resMeta.resolvedGloss)
+          ? `⚠ APROX: ${resMeta.resolvedGloss.toUpperCase()}`
+          : '⚠ REVISIÓN QA';
+      }
 
       // Fondo del badge activo
       ctx.beginPath();

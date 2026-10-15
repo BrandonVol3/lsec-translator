@@ -1065,13 +1065,25 @@ class DiscoursePlanner:
             if not clean_word:
                 continue
 
-            verb_lemma = SpanishVerbLexicon.get_lemma(clean_word)
-            if clean_word in self._lemma_overrides or text_lower in self._lemma_overrides:
+            is_nominal_homograph = (
+                clean_word in SpanishVerbLexicon.NOMINAL_HOMOGRAPHS
+                and (
+                    any(c.dep_ in ("amod", "det", "compound") for c in t.children)
+                    or (dep == "conj" and t.head.pos_ in ("NOUN", "PROPN"))
+                    or (t.i > 0 and doc[t.i - 1].pos_ in ("DET", "ADP", "CCONJ"))
+                )
+            )
+            verb_lemma = None if is_nominal_homograph else SpanishVerbLexicon.get_lemma(clean_word)
+            if is_nominal_homograph:
+                pos = "NOUN"
+                base_nom = raw_lemma if (raw_lemma in SpanishVerbLexicon.NOMINAL_HOMOGRAPHS or not raw_lemma.endswith(("ar", "er", "ir"))) else clean_word
+                lemma = self._lemma_overrides.get(clean_word, base_nom)
+            elif clean_word in self._lemma_overrides or text_lower in self._lemma_overrides:
                 lemma = self._lemma_overrides.get(clean_word, self._lemma_overrides.get(text_lower))
                 lemma = PunctuationAnalyzer.strip_punctuation(lemma)
-                if not verb_lemma:
+                if not verb_lemma and lemma not in SpanishVerbLexicon.NOMINAL_HOMOGRAPHS:
                     verb_lemma = SpanishVerbLexicon.get_lemma(lemma) or (lemma if lemma.endswith(("ar", "er", "ir")) else None)
-                if verb_lemma or lemma.endswith(("ar", "er", "ir")):
+                if verb_lemma or (lemma.endswith(("ar", "er", "ir")) and lemma not in SpanishVerbLexicon.NOMINAL_HOMOGRAPHS):
                     pos = "VERB"
             elif verb_lemma:
                 pos = "VERB"
@@ -1081,9 +1093,14 @@ class DiscoursePlanner:
                 else:
                     lemma = verb_lemma
             else:
-                lemma = self._lemma_overrides.get(raw_lemma, raw_lemma)
+                norm_lemma = SpanishVerbLexicon.normalize_verb_lemma(clean_word, raw_lemma)
+                lemma = self._lemma_overrides.get(norm_lemma, self._lemma_overrides.get(raw_lemma, norm_lemma))
                 lemma = PunctuationAnalyzer.strip_punctuation(lemma)
-                if lemma.endswith(("ar", "er", "ir")):
+                if (
+                    lemma.endswith(("ar", "er", "ir"))
+                    and lemma not in SpanishVerbLexicon.NOMINAL_HOMOGRAPHS
+                    and pos not in ("NOUN", "PROPN", "ADJ")
+                ):
                     pos = "VERB"
                     verb_lemma = lemma
 
@@ -1189,7 +1206,11 @@ class DiscoursePlanner:
                     continue
 
             if dep == "amod" and pos == "ADJ":
-                head_is_verb = t.head.pos_ in ("VERB", "AUX") or SpanishVerbLexicon.get_lemma(PunctuationAnalyzer.strip_punctuation(t.head.text.lower())) is not None
+                head_clean = PunctuationAnalyzer.strip_punctuation(t.head.text.lower())
+                head_is_verb = (
+                    (t.head.pos_ in ("VERB", "AUX") or SpanishVerbLexicon.get_lemma(head_clean) is not None)
+                    and head_clean not in SpanishVerbLexicon.NOMINAL_HOMOGRAPHS
+                )
                 if not head_is_verb and clean_word not in ("manzana", "pan", "carne", "agua", "leche", "comida"):
                     meta["is_amod"] = True
                     meta["head_idx"] = t.head.i
@@ -1240,7 +1261,11 @@ class DiscoursePlanner:
                     modifiers_others.append(item)
             elif l_lower in self._time_markers or t_lower in self._time_markers or dep in ("obl:tmod",):
                 time_place.append(item)
-            elif dep in ("obl", "loc") and pos in ("PROPN", "NOUN") and not subjects:
+            elif (
+                (dep in ("obl", "loc") or (dep in ("flat", "nmod", "appos", "compound") and t.head.dep_ in ("obl", "loc")))
+                and pos in ("PROPN", "NOUN")
+                and not subjects
+            ):
                 time_place.append(item)
             elif pos == "VERB":
                 verbs.append(item)
@@ -1272,6 +1297,8 @@ class DiscoursePlanner:
 
             non_displaced: List[Any] = []
             for item in tokens_info:
+                if item[4].get("is_amod"):
+                    continue
                 if (item in time_place and apply_time) or (item in wh_tokens and apply_wh) or (item in neg_tokens and apply_neg):
                     continue
                 non_displaced.append(item)

@@ -7,7 +7,7 @@
   <meta name="description" content="Estación de trabajo lingüística profesional para transformar transcripciones en español a glosas de Lengua de Señas Ecuatoriana (LSEC) y validación humana.">
   
   <!-- Estilos del Sistema de Diseño -->
-  <link rel="stylesheet" href="/static/css/app.css?v=2.1.4">
+  <link rel="stylesheet" href="/static/css/app.css?v=2.4.0">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22%23B7D36B%22><rect width=%2224%22 height=%2224%22 rx=%226%22 fill=%22%23191B18%22/><path d=%22M7 6h3v12H7zm7 0h3v12h-3z%22 fill=%22%23B7D36B%22/></svg>">
 
   <!-- Import Map para Three.js y @pixiv/three-vrm (Módulos ES6 Locales) -->
@@ -66,14 +66,14 @@
 
       <!-- Derecha: Historial, Carga y Exportación -->
       <div class="nav-right-group">
-        <input type="file" id="video-file-input" accept="video/mp4,video/webm,video/ogg,video/quicktime,video/x-matroska" style="display:none;">
-        <input type="file" id="json-file-input" accept=".json" style="display:none;">
+        <input type="file" id="video-file-input" accept="video/mp4,video/webm,video/ogg,video/quicktime,video/x-matroska" style="display:none;" aria-label="Cargar archivo de video">
+        <input type="file" id="json-file-input" accept=".json" style="display:none;" aria-label="Cargar proyecto JSON">
 
         <!-- Deshacer / Rehacer -->
-        <button class="btn-icon" id="btn-undo" title="Deshacer (Ctrl + Z)">
+        <button class="btn-icon" id="btn-undo" title="Deshacer (Ctrl + Z)" aria-label="Deshacer (Ctrl + Z)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12.5 8c-2.65 0-5.05 1-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
         </button>
-        <button class="btn-icon" id="btn-redo" title="Rehacer (Ctrl + Y)">
+        <button class="btn-icon" id="btn-redo" title="Rehacer (Ctrl + Y)" aria-label="Rehacer (Ctrl + Y)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M18.4 10.6C16.55 9 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/></svg>
         </button>
 
@@ -99,17 +99,23 @@
           Exportar
         </button>
 
-        <a href="/avatarconfig" class="btn btn-secondary btn-sm" id="btn-top-avatar-config" title="Abrir configuración y calibración del Avatar 3D LSEC (/avatarconfig)" style="text-decoration:none; display:inline-flex; align-items:center; gap:5px;">
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-top-avatar-config" title="Abrir panel de control y estación de Avatar 3D LSEC" style="display:inline-flex; align-items:center; gap:5px;">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/></svg>
           <span>Avatar 3D</span>
-        </a>
+        </button>
 
         <button class="btn btn-secondary btn-sm" id="btn-toggle-bottom-dock" title="Ocultar / Mostrar panel inferior de edición y línea de tiempo (Tecla B)">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2zm0 2v8h16V6H4zm0 10v2h16v-2H4z"/></svg>
           <span id="btn-toggle-bottom-dock-text">Panel Inferior</span>
         </button>
 
-        <button class="btn-icon" id="btn-top-settings" title="Ajustes de accesibilidad y atajos (?)">
+        <!-- Indicador de Aceleración por Hardware (GPU / CPU) -->
+        <div id="hardware-accel-badge" class="badge-hardware" style="display:inline-flex; align-items:center; gap:6px; font-size:0.75rem; padding:3px 8px; border-radius:6px; font-weight:600; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); cursor:help; transition:all 0.2s ease;" title="Estado de aceleración por hardware">
+          <span id="hardware-accel-dot" style="width:7px; height:7px; border-radius:50%; background:#888; display:inline-block;"></span>
+          <span id="hardware-accel-text" style="color:var(--text-secondary, #ccc);">HW...</span>
+        </div>
+
+        <button class="btn-icon" id="btn-top-settings" title="Ajustes de accesibilidad y atajos (?)" aria-label="Ajustes de accesibilidad y atajos (?)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 16h-2v-2h2v2zm1.07-7.75l-.9.92C12.45 11.9 12 12.5 12 14h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/></svg>
         </button>
       </div>
@@ -227,7 +233,7 @@
                 <button class="btn btn-secondary btn-sm" id="btn-step-back-5s" title="Retroceder 5s (J)">-5s</button>
                 <button class="btn btn-secondary btn-sm" id="btn-prev-frame" title="Fotograma anterior (Shift + ←)">|◀</button>
                 
-                <button class="btn btn-primary btn-sm" id="btn-play-pause" title="Reproducir / Pausar (Espacio / K)">
+                <button class="btn btn-primary btn-sm" id="btn-play-pause" title="Reproducir / Pausar (Espacio / K)" aria-label="Reproducir o Pausar">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                 </button>
 
@@ -259,7 +265,7 @@
 
               <!-- Derecha: Velocidad, Volumen y Pantalla Completa -->
               <div class="controls-group">
-                <select id="select-playback-speed" class="btn btn-secondary btn-sm" title="Velocidad de reproducción" style="padding:2px 4px;">
+                <select id="select-playback-speed" class="btn btn-secondary btn-sm" title="Velocidad de reproducción" aria-label="Velocidad de reproducción" style="padding:2px 4px;">
                   <option value="0.25">0.25x</option>
                   <option value="0.5">0.5x</option>
                   <option value="0.75">0.75x</option>
@@ -269,12 +275,12 @@
                   <option value="2.0">2.0x</option>
                 </select>
 
-                <button class="btn-icon" id="btn-toggle-mute" title="Silenciar / Activar audio (M)">
+                <button class="btn-icon" id="btn-toggle-mute" title="Silenciar / Activar audio (M)" aria-label="Silenciar o Activar audio">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
                 </button>
-                <input type="range" id="video-volume-slider" min="0" max="1" step="0.05" value="0.9" style="width:50px; accent-color:var(--action-primary);" title="Volumen">
+                <input type="range" id="video-volume-slider" min="0" max="1" step="0.05" value="0.9" style="width:50px; accent-color:var(--action-primary);" title="Volumen" aria-label="Volumen de audio">
 
-                <button class="btn-icon" id="btn-fullscreen" title="Pantalla completa">
+                <button class="btn-icon" id="btn-fullscreen" title="Pantalla completa" aria-label="Pantalla completa">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
                 </button>
               </div>
@@ -309,7 +315,6 @@
                 <span>Avatar 3D</span>
               </button>
             </div>
-            <div id="inspector-header-badge"></div>
           </div>
 
           <!-- VISTA 1: TRANSCRIPCIÓN TOTAL CON MINUTOS -->
@@ -317,7 +322,7 @@
             <div class="side-transcript-toolbar">
               <div class="search-box-clean" style="flex:1;">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style="color:var(--text-muted);"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-                <input type="text" id="side-transcript-search" placeholder="Buscar en la transcripción...">
+                <input type="text" id="side-transcript-search" placeholder="Buscar en la transcripción..." aria-label="Buscar en la transcripción">
               </div>
               <button class="btn btn-secondary btn-sm" id="btn-copy-transcript-text" title="Copiar texto completo al portapapeles">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
@@ -339,6 +344,7 @@
                 </div>
                 <span class="inspector-title" id="inspector-title-text">Inspector Contextual</span>
               </div>
+              <div id="inspector-header-badge"></div>
             </div>
 
             <div class="inspector-body" id="inspector-body-content">
@@ -351,22 +357,9 @@
             <!-- Renderizado por SubtitleEditorPanel -->
           </div>
 
-          <!-- VISTA 4: ACCESO A CONFIGURACIÓN Y CALIBRACIÓN DEL AVATAR 3D -->
-          <div class="sidebar-view-pane" id="view-side-avatar" style="display:none;">
-            <div class="avatar-relocated-card">
-              <div class="avatar-relocated-icon">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/>
-                </svg>
-              </div>
-              <h4 class="avatar-relocated-title">Configuración del Avatar 3D</h4>
-              <p class="avatar-relocated-desc">
-                La estación de visualización 3D, calibración cinemática, pruebas de rasgos no manuales y administración de modelos VRM se gestionan en su entorno dedicado.
-              </p>
-              <a href="/avatarconfig" class="btn btn-primary btn-sm" id="btn-open-avatar-config-page" style="text-decoration:none;">
-                Abrir /avatarconfig ↗
-              </a>
-            </div>
+          <!-- VISTA 4: PANEL DE CONTROL Y ESTACIÓN DEL AVATAR 3D -->
+          <div class="sidebar-view-pane" id="view-side-avatar" style="display:none; flex-direction:column; height:100%;">
+            <!-- Renderizado y gestionado por AvatarPanelController y StudioAvatarBridge -->
           </div>
 
         </aside>
@@ -402,7 +395,7 @@
 
             <div style="display:flex; align-items:center; gap:4px; font-size:0.70rem; color:var(--text-muted); margin-left:6px;">
               <span>Zoom:</span>
-              <input type="range" id="timeline-zoom-slider" min="30" max="250" value="100" style="width:60px; accent-color:var(--action-primary);">
+              <input type="range" id="timeline-zoom-slider" min="30" max="250" value="100" style="width:60px; accent-color:var(--action-primary);" aria-label="Zoom de línea de tiempo">
             </div>
 
             <div style="width:1px; height:14px; background:var(--border-subtle); margin:0 2px;"></div>
@@ -419,7 +412,7 @@
           <div class="segment-hub-toolbar">
             <div class="search-box-clean">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="color:var(--text-muted);"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-              <input type="text" id="transcript-search-input" placeholder="Buscar por palabra, glosa o intervalo...">
+              <input type="text" id="transcript-search-input" placeholder="Buscar por palabra, glosa o intervalo..." aria-label="Buscar por palabra, glosa o intervalo">
             </div>
 
             <div class="filter-tags-row">
@@ -498,11 +491,11 @@
     </main>
 
     <!-- 3. MODALES SOBRIOS DE ACCESIBILIDAD, EXPORTACIÓN Y REVISIÓN -->
-    <div id="generic-modal-backdrop" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div id="generic-modal-backdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-hidden="true">
       <div class="modal-dialog">
         <div class="modal-header">
           <h3 class="modal-title" id="generic-modal-title">Diálogo</h3>
-          <button class="btn-icon" id="generic-modal-close" title="Cerrar">
+          <button class="btn-icon" id="generic-modal-close" title="Cerrar" aria-label="Cerrar diálogo">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
           </button>
         </div>
@@ -530,11 +523,9 @@
   <script src="/static/js/components/timeline.js"></script>
   <script src="/static/js/components/transcript-window.js"></script>
   <script src="/static/js/components/sidebar-panels.js"></script>
-  <script src="/static/js/components/video-exporter.js"></script>
-  <script src="/static/js/components/modals-and-export.js"></script>
-  <script src="/static/js/app.js"></script>
-
-  <!-- Nota: La configuración y visor 3D del Avatar LSEC han sido reubicados a /avatarconfig -->
-
+  <script src="/static/js/components/video-exporter.js?v=2.4.0"></script>
+  <script src="/static/js/components/modals-and-export.js?v=2.4.0"></script>
+  <script src="/static/js/app.js?v=2.4.0"></script>
+  <script type="module" src="/static/js/avatar/studio-avatar-bridge.js?v=2.4.0"></script>
 </body>
 </html>

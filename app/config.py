@@ -26,9 +26,9 @@ class Settings(BaseSettings):
     )
 
     # --- Whisper ASR ---
-    whisper_model_size: str = "base"
-    whisper_device: str = "cpu"
-    whisper_compute_type: str = "int8"
+    whisper_model_size: str = "small"
+    whisper_device: str = "cuda"
+    whisper_compute_type: str = "float16"
 
     # Carpeta con pesos locales de faster-whisper (modo 100% offline). Si existe, tiene prioridad
     # sobre la descarga automática desde Internet.

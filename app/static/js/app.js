@@ -293,7 +293,11 @@ function initTopNavbarAndStages() {
         return;
       }
       if (window.modalsController) {
-        window.modalsController.openExportModal();
+        if (typeof window.modalsController.openExportModal === 'function') {
+          window.modalsController.openExportModal();
+        } else if (typeof window.modalsController.openExportDialog === 'function') {
+          window.modalsController.openExportDialog();
+        }
       }
     });
   }
@@ -316,7 +320,11 @@ function initTopNavbarAndStages() {
         showToast('¡Traducción final confirmada y validada! Ya puedes exportar tu video.', 'success');
       } else if (step === 'completed') {
         if (window.modalsController) {
-          window.modalsController.openExportModal();
+          if (typeof window.modalsController.openExportModal === 'function') {
+            window.modalsController.openExportModal();
+          } else if (typeof window.modalsController.openExportDialog === 'function') {
+            window.modalsController.openExportDialog();
+          }
         }
       }
     });
@@ -325,8 +333,24 @@ function initTopNavbarAndStages() {
   // 5. Deshacer / Rehacer
   const btnUndo = document.getElementById('btn-undo');
   const btnRedo = document.getElementById('btn-redo');
+  const syncUndoRedoButtons = () => {
+    const canUndo = Array.isArray(appState.historyStack) && appState.historyStack.length > 0;
+    const canRedo = Array.isArray(appState.redoStack) && appState.redoStack.length > 0;
+    if (btnUndo) {
+      btnUndo.disabled = !canUndo;
+      btnUndo.classList.toggle('disabled', !canUndo);
+    }
+    if (btnRedo) {
+      btnRedo.disabled = !canRedo;
+      btnRedo.classList.toggle('disabled', !canRedo);
+    }
+  };
   if (btnUndo) btnUndo.addEventListener('click', () => appState.undo());
   if (btnRedo) btnRedo.addEventListener('click', () => appState.redo());
+  appState.subscribe('historyChanged', syncUndoRedoButtons);
+  appState.subscribe('projectLoaded', syncUndoRedoButtons);
+  appState.subscribe('projectCleared', syncUndoRedoButtons);
+  syncUndoRedoButtons();
 
   // 6. Actualización del Nombre del Proyecto e Indicadores
   const projectNameEl = document.getElementById('nav-project-name');
@@ -523,7 +547,7 @@ function initBottomDockToggle() {
   const btnCollapseDock = document.getElementById('btn-collapse-bottom-dock');
   const btnExpandDock = document.getElementById('btn-expand-bottom-dock');
 
-  let savedHeight = 380;
+  let savedHeight = null;
   window._setSavedBottomDockHeight = (h) => { savedHeight = h; };
 
   function updateDockUI(isCollapsed) {
@@ -770,7 +794,7 @@ function initFileLoadersAndDragDrop() {
 
 
 // ============================================================
-// VERIFICACIÓN CON BACKEND FASTAPI
+// VERIFICACIÓN CON BACKEND FASTAPI Y HARDWARE ACCELERATION
 // ============================================================
 
 async function checkBackendHealth() {
@@ -779,8 +803,56 @@ async function checkBackendHealth() {
     if (res.ok) {
       const data = await res.json();
       console.log('Backend FastAPI conectado:', data);
+      updateHardwareStatusBadge(data.hardware);
     }
   } catch (err) {
     console.log('Operando en modo autónomo.');
+    updateHardwareStatusBadge(null);
   }
 }
+
+function updateHardwareStatusBadge(hw) {
+  const badge = document.getElementById('hardware-accel-badge');
+  const dot = document.getElementById('hardware-accel-dot');
+  const text = document.getElementById('hardware-accel-text');
+  if (!badge || !dot || !text) return;
+
+  if (!hw) {
+    dot.style.background = '#888';
+    dot.style.boxShadow = 'none';
+    text.textContent = 'Autónomo';
+    badge.title = 'Modo local autónomo (backend desconectado)';
+    return;
+  }
+
+  window.systemHardwareStatus = hw;
+
+  if (hw.is_gpu) {
+    dot.style.background = '#10b981';
+    dot.style.boxShadow = '0 0 6px #10b981';
+    text.textContent = 'GPU Activa (CUDA)';
+    text.style.color = '#10b981';
+    badge.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+    badge.style.background = 'rgba(16, 185, 129, 0.12)';
+    badge.title = `Aceleración por GPU NVIDIA activa (${hw.compute_type || 'float16'}). Procesamiento Whisper de alta velocidad.`;
+    badge.onclick = () => {
+      alert(`[ACELERACIÓN POR GPU ACTIVA]\n\nDispositivo: GPU NVIDIA (CUDA)\nTipo de cómputo: ${hw.compute_type || 'float16'}\nEstado: Operacional`);
+    };
+  } else {
+    dot.style.background = '#f59e0b';
+    dot.style.boxShadow = '0 0 6px #f59e0b';
+    text.textContent = 'Modo CPU';
+    text.style.color = '#f59e0b';
+    badge.style.borderColor = 'rgba(245, 158, 11, 0.4)';
+    badge.style.background = 'rgba(245, 158, 11, 0.12)';
+    const warningMsg = hw.notice || 'Whisper está operando en la CPU sin aceleración GPU.';
+    badge.title = `${warningMsg} Haga clic para ver detalles.`;
+    badge.onclick = () => {
+      alert(`[AVISO DE HARDWARE - MODO CPU]\n\n${warningMsg}\n\nDispositivo: CPU\nTipo de cómputo: ${hw.compute_type || 'int8'}\nFallback: ${hw.fallback_occurred ? 'Sí (' + hw.fallback_reason + ')' : 'No'}`);
+    };
+  }
+}
+
+window.checkBackendHealth = checkBackendHealth;
+window.updateHardwareStatusBadge = updateHardwareStatusBadge;
+

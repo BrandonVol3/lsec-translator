@@ -227,3 +227,14 @@ class TestLSEC211UPECRegression:
             assert pl.coverage_ratio > 0.0
             assert pl.source_recall > 0.0
             assert pl.realization_precision > 0.0
+
+        # Criterio 30: Preservación íntegra del tópico locativo 'En la Politécnica del Carchi'
+        prop_carchi = next(
+            (p for p in out.semantic_propositions if "politécnica del carchi" in p.source_text.lower()),
+            None,
+        )
+        assert prop_carchi is not None, "El prefijo 'En la Politécnica del Carchi' no debe perderse en las proposiciones"
+        carchi_glosses = [g.gloss for g in out.glosses if g.proposition_id == prop_carchi.id]
+        assert any("POLITECNICA" in g or "POLITÉCNICA" in g for g in carchi_glosses)
+        assert "CARCHI" in carchi_glosses
+

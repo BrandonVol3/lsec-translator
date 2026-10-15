@@ -10,7 +10,7 @@
  */
 
 import * as THREE from 'three';
-import { validateSignClip, HUMAN_BONE_NAMES } from './sign-animation-schema.js';
+import { validateSignClip, HUMAN_BONE_NAMES, REST_POSE } from './sign-animation-schema.js';
 
 export class SignPlayer {
   constructor() {
@@ -30,12 +30,27 @@ export class SignPlayer {
 
     // Cache interno de estructuras de keyframes para evaluación ultra rápida
     this.processedTracks = [];
+    this.processedTrackMap = new Map();
     this.processedExpressions = [];
 
     // Objetos temporales reciclables para evitar alloc en el render loop
     this.tempQuat0 = new THREE.Quaternion();
     this.tempQuat1 = new THREE.Quaternion();
     this.tempQuatResult = new THREE.Quaternion();
+
+    // Estado para interpolación suave (ease-out) a postura neutral
+    this.isTransitioning = false;
+    this.transitionTime = 0.0;
+    this.transitionDuration = 0.25;
+    this.transitionBoneSnapshots = new Map();
+    this.transitionExpressionSnapshots = new Map();
+    this.transitionOnComplete = null;
+
+    // Estado para coarticulación SLERP directa entre señas consecutivas (sin pasar por neutral)
+    this.coartActive = false;
+    this.coartDuration = 0.12;
+    this.coartBoneSnapshots = new Map();
+    this.returnToNeutralOnEnd = true;
   }
 
   /**
@@ -44,32 +59,86 @@ export class SignPlayer {
    * @param {boolean} isVRM 
    */
   setModel(model, isVRM = false) {
-    this.stop();
+    this.stop(false);
     this.model = model;
     this.isVRM = isVRM;
     this.restoreNeutralPose();
   }
 
   /**
+   * Captura la postura actual de todos los huesos del avatar para coarticulación SLERP.
+   */
+  captureCurrentPoseSnapshot() {
+    this.coartBoneSnapshots.clear();
+    if (!this.model) return;
+    for (const bName of HUMAN_BONE_NAMES) {
+      const node = this.getBoneNode(bName);
+      if (node) {
+        this.coartBoneSnapshots.set(bName, node.quaternion.clone());
+      }
+    }
+  }
+
+  /**
    * Carga un clip para reproducción validando su estructura.
    * @param {Object} clip 
+   * @param {Object} [options] - { coarticulate: boolean, blendDuration: number, returnToNeutralOnEnd: boolean }
    * @returns {boolean}
    */
-  loadClip(clip) {
+  loadClip(clip, options = {}) {
     const { valid, errors } = validateSignClip(clip);
     if (!valid) {
       console.warn(`[SignPlayer] No se pudo cargar el clip "${clip ? clip.clipId : 'nulo'}":`, errors);
       return false;
     }
 
+    const shouldCoarticulate = options.coarticulate !== undefined
+      ? Boolean(options.coarticulate)
+      : Boolean(this.currentClip && (this.playbackState === 'playing' || this.isTransitioning));
+
+    if (shouldCoarticulate && this.model) {
+      this.captureCurrentPoseSnapshot();
+      this.coartActive = true;
+      this.coartDuration = typeof options.blendDuration === 'number' ? Math.max(0.02, options.blendDuration) : 0.12;
+    } else {
+      this.coartActive = false;
+      this.coartBoneSnapshots.clear();
+    }
+
+    if (options.returnToNeutralOnEnd !== undefined) {
+      this.returnToNeutralOnEnd = Boolean(options.returnToNeutralOnEnd);
+    } else {
+      this.returnToNeutralOnEnd = true;
+    }
+
+    this.isTransitioning = false;
     this.currentClip = clip;
     this.currentTime = 0.0;
     this.processClipData(clip);
+
+    // Si no estamos coarticulando, limpiar huesos ausentes a su pose de reposo natural
+    if (!this.coartActive && this.model) {
+      this.resetUntrackedBonesToNeutral();
+    }
+
     return true;
+  }
+
+  resetUntrackedBonesToNeutral() {
+    if (!this.model) return;
+    for (const bName of HUMAN_BONE_NAMES) {
+      if (!this.processedTrackMap.has(bName)) {
+        const node = this.getBoneNode(bName);
+        if (node) {
+          node.quaternion.copy(this.getNeutralPoseForBone(bName));
+        }
+      }
+    }
   }
 
   processClipData(clip) {
     this.processedTracks = [];
+    this.processedTrackMap.clear();
     this.processedExpressions = [];
 
     // Pre-procesar pistas esqueléticas
@@ -89,10 +158,12 @@ export class SignPlayer {
           keyframes.push({ time: t, quat: q });
         }
 
-        this.processedTracks.push({
+        const trackObj = {
           boneName: bt.boneName,
           keyframes
-        });
+        };
+        this.processedTracks.push(trackObj);
+        this.processedTrackMap.set(bt.boneName, trackObj);
       });
     }
 
@@ -118,16 +189,21 @@ export class SignPlayer {
   /**
    * Inicia la reproducción del clip especificado (o del actual).
    * @param {Object} [clip]
+   * @param {Object} [options]
    */
-  play(clip = null) {
+  play(clip = null, options = {}) {
     if (clip) {
-      const loaded = this.loadClip(clip);
+      const loaded = this.loadClip(clip, options);
       if (!loaded) return;
     }
 
     if (!this.currentClip) {
       console.warn('[SignPlayer] Ningún clip asignado para reproducir.');
       return;
+    }
+
+    if (typeof options.speed === 'number' && options.speed > 0) {
+      this.setSpeed(options.speed);
     }
 
     this.setState('playing');
@@ -145,15 +221,35 @@ export class SignPlayer {
     }
   }
 
-  stop() {
+  stop(smooth = true) {
     this.setState('stopped');
     this.currentTime = 0.0;
-    this.restoreNeutralPose();
+    this.coartActive = false;
+    if (smooth) {
+      this.easeOutToNeutral(0.25);
+    } else {
+      this.isTransitioning = false;
+      this.restoreNeutralPose();
+    }
     this.emitProgress();
   }
 
   reset() {
-    this.stop();
+    this.stop(false);
+  }
+
+  /**
+   * Salto temporal a un offset en segundos dentro del clip activo.
+   * @param {number} timeSec
+   */
+  seek(timeSec) {
+    if (!this.model || !this.currentClip) return;
+    const duration = this.getDuration();
+    this.currentTime = Math.max(0, Math.min(duration, Number(timeSec) || 0));
+    this.isTransitioning = false;
+    this.applyBonesAtTime(this.currentTime);
+    this.applyExpressionsAtTime(this.currentTime);
+    this.emitProgress();
   }
 
   setSpeed(rate) {
@@ -182,11 +278,113 @@ export class SignPlayer {
   }
 
   /**
+   * Búsqueda binaria O(log N) del índice del keyframe derecho j tal que kf[j-1].time <= time <= kf[j].time.
+   * @param {Array<{time: number}>} kf 
+   * @param {number} time 
+   * @returns {number}
+   */
+  findKeyframeIndex(kf, time) {
+    let low = 1;
+    let high = kf.length - 1;
+    let result = kf.length - 1;
+
+    while (low <= high) {
+      const mid = (low + high) >> 1;
+      if (kf[mid].time >= time) {
+        result = mid;
+        high = mid - 1;
+      } else {
+        low = mid + 1;
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Transición suave con curva cúbica ease-out desde la postura actual a la postura neutral.
+   * @param {number} [durationSec=0.25]
+   * @param {Function} [onComplete]
+   */
+  easeOutToNeutral(durationSec = 0.25, onComplete = null) {
+    if (!this.model) {
+      this.isTransitioning = false;
+      if (typeof onComplete === 'function') onComplete();
+      return;
+    }
+
+    this.transitionBoneSnapshots.clear();
+    for (const bName of HUMAN_BONE_NAMES) {
+      const node = this.getBoneNode(bName);
+      if (node) {
+        this.transitionBoneSnapshots.set(bName, node.quaternion.clone());
+      }
+    }
+
+    this.transitionTime = 0.0;
+    this.transitionDuration = Math.max(0.01, durationSec);
+    this.transitionOnComplete = onComplete;
+    this.isTransitioning = true;
+  }
+
+  updateTransition(delta) {
+    if (!this.isTransitioning || !this.model) return;
+
+    this.transitionTime += delta;
+    const rawProgress = this.transitionDuration > 0 ? this.transitionTime / this.transitionDuration : 1.0;
+    const progress = Math.min(1.0, Math.max(0.0, rawProgress));
+    // Curva cúbica ease-out: 1 - (1 - progress)^3
+    const t = 1.0 - Math.pow(1.0 - progress, 3);
+
+    for (const [boneName, startQuat] of this.transitionBoneSnapshots.entries()) {
+      const node = this.getBoneNode(boneName);
+      if (node) {
+        const targetQuat = this.getNeutralPoseForBone(boneName);
+        this.tempQuat0.copy(startQuat);
+        this.tempQuat1.copy(targetQuat);
+        this.tempQuatResult.copy(this.tempQuat0).slerp(this.tempQuat1, t);
+        node.quaternion.copy(this.tempQuatResult);
+      }
+    }
+
+    // Suavizar expresiones faciales
+    if (this.isVRM && this.model.expressionManager && typeof this.model.expressionManager.resetValues === 'function') {
+      if (progress >= 1.0) {
+        this.model.expressionManager.resetValues();
+      }
+    }
+
+    if (progress >= 1.0) {
+      this.isTransitioning = false;
+      this.restoreNeutralPose();
+      if (typeof this.transitionOnComplete === 'function') {
+        const cb = this.transitionOnComplete;
+        this.transitionOnComplete = null;
+        cb();
+      }
+    }
+  }
+
+  getNeutralPoseForBone(boneName) {
+    if (REST_POSE && REST_POSE[boneName]) {
+      const q = REST_POSE[boneName];
+      return new THREE.Quaternion(q[0], q[1], q[2], q[3]);
+    }
+    return new THREE.Quaternion(0, 0, 0, 1);
+  }
+
+  /**
    * Actualiza el frame de animación según el tiempo transcurrido (delta en segundos).
    * @param {number} delta 
    */
   update(delta) {
-    if (this.playbackState !== 'playing' || !this.currentClip || !this.model) {
+    if (!this.model) return;
+
+    if (this.isTransitioning) {
+      this.updateTransition(delta);
+      return;
+    }
+
+    if (this.playbackState !== 'playing' || !this.currentClip) {
       return;
     }
 
@@ -210,10 +408,16 @@ export class SignPlayer {
       } else {
         this.currentTime = durationSec;
         this.setState('stopped');
-        this.restoreNeutralPose();
-
-        if (typeof this.onEnded === 'function') {
-          this.onEnded(this.currentClip);
+        if (this.returnToNeutralOnEnd === false) {
+          if (typeof this.onEnded === 'function') {
+            this.onEnded(this.currentClip);
+          }
+        } else {
+          this.easeOutToNeutral(0.25, () => {
+            if (typeof this.onEnded === 'function') {
+              this.onEnded(this.currentClip);
+            }
+          });
         }
       }
     }
@@ -221,6 +425,15 @@ export class SignPlayer {
 
   applyBonesAtTime(time) {
     if (!this.model) return;
+
+    const isCoartBlending = this.coartActive && this.coartDuration > 0 && time < this.coartDuration;
+    const rawCoart = isCoartBlending ? Math.max(0, Math.min(1, time / this.coartDuration)) : 1.0;
+    const coartT = rawCoart * rawCoart * (3.0 - 2.0 * rawCoart);
+
+    if (this.coartActive && !isCoartBlending) {
+      this.coartActive = false;
+      this.resetUntrackedBonesToNeutral();
+    }
 
     for (let i = 0; i < this.processedTracks.length; i++) {
       const track = this.processedTracks[i];
@@ -231,32 +444,43 @@ export class SignPlayer {
       if (kf.length === 0) continue;
 
       if (time <= kf[0].time) {
-        node.quaternion.copy(kf[0].quat);
-        continue;
+        this.tempQuatResult.copy(kf[0].quat);
+      } else if (time >= kf[kf.length - 1].time) {
+        this.tempQuatResult.copy(kf[kf.length - 1].quat);
+      } else {
+        // Búsqueda binaria O(log N) del segmento temporal [kf[j-1], kf[j]]
+        const j = this.findKeyframeIndex(kf, time);
+        const prev = kf[j - 1];
+        const next = kf[j];
+        const span = next.time - prev.time;
+        const alpha = span > 0.0001 ? (time - prev.time) / span : 0.0;
+
+        // Slerp suave de cuaterniones
+        this.tempQuat0.copy(prev.quat);
+        this.tempQuat1.copy(next.quat);
+        this.tempQuatResult.copy(this.tempQuat0).slerp(this.tempQuat1, Math.max(0, Math.min(1, alpha)));
       }
 
-      if (time >= kf[kf.length - 1].time) {
-        node.quaternion.copy(kf[kf.length - 1].quat);
-        continue;
+      if (isCoartBlending && this.coartBoneSnapshots.has(track.boneName)) {
+        const snapQuat = this.coartBoneSnapshots.get(track.boneName);
+        this.tempQuat0.copy(snapQuat).slerp(this.tempQuatResult, coartT);
+        node.quaternion.copy(this.tempQuat0);
+      } else {
+        node.quaternion.copy(this.tempQuatResult);
       }
+    }
 
-      // Buscar segmento temporal [kf[j-1], kf[j]]
-      let j = 1;
-      while (j < kf.length && kf[j].time < time) {
-        j++;
+    if (isCoartBlending) {
+      for (const [bName, snapQuat] of this.coartBoneSnapshots.entries()) {
+        if (!this.processedTrackMap.has(bName)) {
+          const node = this.getBoneNode(bName);
+          if (node) {
+            const neutralQuat = this.getNeutralPoseForBone(bName);
+            this.tempQuat0.copy(snapQuat).slerp(neutralQuat, coartT);
+            node.quaternion.copy(this.tempQuat0);
+          }
+        }
       }
-
-      const prev = kf[j - 1];
-      const next = kf[j];
-      const span = next.time - prev.time;
-      const alpha = span > 0.0001 ? (time - prev.time) / span : 0.0;
-
-      // Slerp suave de cuaterniones
-      this.tempQuat0.copy(prev.quat);
-      this.tempQuat1.copy(next.quat);
-      this.tempQuatResult.copy(this.tempQuat0).slerp(this.tempQuat1, Math.max(0, Math.min(1, alpha)));
-
-      node.quaternion.copy(this.tempQuatResult);
     }
   }
 
@@ -274,10 +498,8 @@ export class SignPlayer {
       } else if (time >= kf[kf.length - 1].time) {
         value = kf[kf.length - 1].value;
       } else {
-        let j = 1;
-        while (j < kf.length && kf[j].time < time) {
-          j++;
-        }
+        // Búsqueda binaria O(log N) del segmento temporal [kf[j-1], kf[j]]
+        const j = this.findKeyframeIndex(kf, time);
         const prev = kf[j - 1];
         const next = kf[j];
         const span = next.time - prev.time;
@@ -322,18 +544,8 @@ export class SignPlayer {
       for (const bName of HUMAN_BONE_NAMES) {
         const node = this.model.humanoid.getNormalizedBoneNode(bName);
         if (node) {
-          node.quaternion.identity();
+          node.quaternion.copy(this.getNeutralPoseForBone(bName));
         }
-      }
-
-      // Postura natural de reposo biomecánico para brazos (caídos junto al torso)
-      const lArm = this.model.humanoid.getNormalizedBoneNode('leftUpperArm');
-      if (lArm) {
-        lArm.quaternion.set(0.0435, 0.0028, -0.6087, 0.7921);
-      }
-      const rArm = this.model.humanoid.getNormalizedBoneNode('rightUpperArm');
-      if (rArm) {
-        rArm.quaternion.set(0.0435, -0.0028, 0.6087, 0.7921);
       }
 
       if (this.model.expressionManager) {

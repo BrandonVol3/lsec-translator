@@ -335,12 +335,14 @@ class DiscourseSegmenter:
             second_part = not_only_match.group(2).strip().rstrip(".!?")
 
             context_info = {}
+            first_unit_text = f"no solo {first_part}"
             if prefix:
                 if prefix.lower().startswith("en ") or not any(v in prefix.lower() for v in ("es", "son", "tiene", "ofrece", "educa")):
                     context_info = {
                         "raw_context": prefix,
                         "institution": "upec" if ("politécnica" in prefix.lower() or "carchi" in prefix.lower() or "upec" in prefix.lower()) else prefix,
                     }
+                    first_unit_text = f"{prefix} no solo {first_part}"
                 else:
                     propositions.append(
                         DiscourseUnit(
@@ -354,7 +356,7 @@ class DiscourseSegmenter:
             propositions.append(
                 DiscourseUnit(
                     id=base_id,
-                    text=f"no solo {first_part}",
+                    text=first_unit_text,
                     unit_type="contrast",
                     discourse_relation="not_only",
                     has_negation_scope=False,

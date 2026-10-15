@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>LSEC · Reproductor 3D de Señas (Pipeline Directo 1:1)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 0; font: 14px system-ui, -apple-system, sans-serif; background: #121316; color: #e5e7eb; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+  
+  header {
+    padding: 10px 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    background: #1a1c23;
+    border-bottom: 1px solid #2d3139;
+    z-index: 10;
+  }
+  
+  .brand {
+    font-weight: 700;
+    font-size: 15px;
+    color: #a5b4fc;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-right: 6px;
+  }
+  .brand-badge {
+    background: #312e81;
+    color: #c7d2fe;
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-weight: 600;
+  }
+
+  .file-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #2b303c;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 13px;
+    transition: background 0.2s;
+  }
+  .file-btn:hover { background: #373e4d; }
+  .file-btn input { display: none; }
+  
+  .opt-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  select, button, input[type="text"] {
+    background: #2b303c;
+    color: #e5e7eb;
+    border: 1px solid #3d4452;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+  }
+  input[type="text"]:focus, select:focus, button:focus { outline: none; border-color: #6366f1; }
+  button { cursor: pointer; font-weight: 500; transition: background 0.2s, border-color 0.2s; }
+  button:hover { background: #373e4d; }
+  button.active { background: #4f46e5; border-color: #6366f1; }
+  button.primary { background: #4338ca; border-color: #6366f1; color: #fff; }
+  button.primary:hover { background: #4f46e5; }
+
+  .quick-pill {
+    padding: 3px 8px;
+    font-size: 12px;
+    background: #1f242f;
+    border: 1px solid #374151;
+    border-radius: 12px;
+    cursor: pointer;
+  }
+  .quick-pill:hover { background: #374151; border-color: #6366f1; }
+
+  #stage {
+    flex: 1;
+    position: relative;
+    width: 100%;
+    background: radial-gradient(circle at 50% 40%, #1e222d 0%, #0e1015 100%);
+  }
+  canvas { width: 100%; height: 100%; display: block; }
+  
+  footer {
+    padding: 10px 18px;
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    background: #1a1c23;
+    border-top: 1px solid #2d3139;
+  }
+  
+  #scrub {
+    flex: 1;
+    accent-color: #6366f1;
+    cursor: pointer;
+  }
+  
+  #info {
+    font-variant-numeric: tabular-nums;
+    font-family: monospace;
+    font-size: 13px;
+    color: #9ca3af;
+    min-width: 240px;
+    text-align: right;
+  }
+  
+  #status-banner {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(17, 24, 39, 0.88);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(99, 102, 241, 0.4);
+    padding: 8px 18px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    pointer-events: none;
+    color: #e0e7ff;
+    transition: opacity 0.3s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+
+  .nav-links {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .nav-link {
+    color: #9ca3af;
+    text-decoration: none;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: color 0.2s;
+  }
+  .nav-link:hover { color: #fff; background: #262b35; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/",
+  "@pixiv/three-vrm": "https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.3.3/lib/three-vrm.module.min.js"
+} }
+</script>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span>🖐️ LSEC Avatar 3D</span>
+    <span class="brand-badge">Pipeline 1:1 Puro</span>
+  </div>
+
+  <!-- Buscador y Selector de Señas -->
+  <div class="opt-group" style="position: relative;">
+    <input id="signSearch" type="text" placeholder="🔍 Buscar seña (ej. Hola, Separar, Yo...)" list="signsList" style="width: 260px;">
+    <datalist id="signsList"></datalist>
+    <button id="btnLoadSign" class="primary">Reproducir Seña</button>
+  </div>
+
+  <div class="opt-group" style="display: flex; gap: 4px; align-items: center;">
+    <span style="font-size: 11px; color: #6b7280;">Ejemplos:</span>
+    <button class="quick-pill" onclick="loadSignByName('Hola')">Hola</button>
+    <button class="quick-pill" onclick="loadSignByName('Separar')">Separar</button>
+    <button class="quick-pill" onclick="loadSignByName('Yo')">Yo</button>
+    <button class="quick-pill" onclick="loadSignByName('Ayudar, Ayuda')">Ayuda</button>
+    <button class="quick-pill" onclick="loadSignByName('Saber')">Saber</button>
+    <button class="quick-pill" onclick="loadSignByName('Ver')">Ver</button>
+  </div>
+
+  <div class="opt-group">
+    <label>Velocidad:
+      <select id="rate">
+        <option value="0.25">0.25x</option>
+        <option value="0.5">0.5x</option>
+        <option value="1" selected>1.0x (Normal)</option>
+        <option value="1.5">1.5x</option>
+      </select>
+    </label>
+    
+    <label><input id="loop" type="checkbox" checked> Bucle</label>
+    <label><input id="wireframe" type="checkbox"> Malla</label>
+  </div>
+
+  <div class="nav-links">
+    <label class="file-btn" title="Cargar archivo VRM personalizado">
+      👤 Avatar
+      <input id="fVrm" type="file" accept=".vrm">
+    </label>
+    <label class="file-btn" title="Cargar archivo JSON personalizado">
+      🎬 JSON
+      <input id="fAnim" type="file" accept=".json">
+    </label>
+    <a href="/studio" class="nav-link" target="_blank">LSEC Studio ↗</a>
+  </div>
+</header>
+
+<div id="stage">
+  <div id="status-banner">Iniciando Avatar 3D y catálogo de 4.143 señas directas 1:1...</div>
+</div>
+
+<footer>
+  <button id="play" class="active">⏸ Pausar</button>
+  <button id="stop">⏹ Detener</button>
+  <button id="prev">◀ Cuadro</button>
+  <button id="next">Cuadro ▶</button>
+  <button id="reset-cam">Restablecer Vista</button>
+  <input id="scrub" type="range" min="0" max="1000" value="0">
+  <span id="info">00:00 / 00:00 (F: 0/0)</span>
+</footer>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
+
+const $ = id => document.getElementById(id);
+const stage = $('stage');
+
+// 1. Escena & Renderizador Three.js
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+
+// 2. Iluminación de estudio
+const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444455, 1.3);
+scene.add(hemiLight);
+
+const dirLight = new THREE.DirectionalLight(0xffffff, 1.8);
+dirLight.position.set(1.5, 3, 2.5);
+dirLight.castShadow = true;
+scene.add(dirLight);
+
+const fillLight = new THREE.DirectionalLight(0xa5b4fc, 0.9);
+fillLight.position.set(-2, 1, 1.5);
+scene.add(fillLight);
+
+// Suelo tenue
+const grid = new THREE.GridHelper(4, 20, 0x4f46e5, 0x27272a);
+grid.position.y = 0;
+scene.add(grid);
+
+// 3. Cámara y Controles Orbitales
+const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 20);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+
+function setDefaultCamera() {
+  camera.position.set(0, 1.35, 2.1);
+  controls.target.set(0, 1.25, 0);
+  controls.update();
+}
+setDefaultCamera();
+$('reset-cam').onclick = setDefaultCamera;
+
+const resize = () => {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+};
+window.addEventListener('resize', resize);
+resize();
+
+// 4. Variables de Animación y Reloj Autónomo
+let vrm = null;
+let anim = null;
+let isPlaying = true;
+let currentTime = 0;
+let duration = 0;
+let fps = 60;
+let totalFrames = 0;
+
+const LSEC_REST_ROTATIONS = {
+  hips: [0.0, 0.0, 0.0, 1.0],
+  spine: [0.0, 0.0, 0.0, 1.0],
+  chest: [0.0, 0.0, 0.0, 1.0],
+  neck: [0.0, 0.0, 0.0, 1.0],
+  head: [0.0, 0.0, 0.0, 1.0],
+  leftShoulder: [0.0, 0.0, 0.0, 1.0],
+  leftUpperArm: [0.004336, -0.049058, -0.641077, 0.765895],
+  leftLowerArm: [0.065695, -0.087499, -0.029961, 0.993544],
+  leftHand: [0.0, 0.0, 0.0, 1.0],
+  rightShoulder: [0.0, 0.0, 0.0, 1.0],
+  rightUpperArm: [0.004336, 0.049058, 0.641077, 0.765895],
+  rightLowerArm: [0.065695, 0.087499, 0.029961, 0.993544],
+  rightHand: [0.0, 0.0, 0.0, 1.0],
+  leftThumbMetacarpal: [-0.00911, -0.086678, -0.104131, 0.990737],
+  leftThumbProximal: [0.0, 0.0, -0.121869, 0.992546],
+  leftThumbDistal: [0.0, 0.0, -0.104528, 0.994522],
+  leftIndexProximal: [0.0, 0.0, -0.173648, 0.984808],
+  leftIndexIntermediate: [0.0, 0.0, -0.241922, 0.970296],
+  leftIndexDistal: [0.0, 0.0, -0.121869, 0.992546],
+  leftMiddleProximal: [0.0, 0.0, -0.207912, 0.978148],
+  leftMiddleIntermediate: [0.0, 0.0, -0.275637, 0.961262],
+  leftMiddleDistal: [0.0, 0.0, -0.139173, 0.990268],
+  leftRingProximal: [0.0, 0.0, -0.241922, 0.970296],
+  leftRingIntermediate: [0.0, 0.0, -0.309017, 0.951057],
+  leftRingDistal: [0.0, 0.0, -0.156434, 0.987688],
+  leftLittleProximal: [0.0, 0.0, -0.275637, 0.961262],
+  leftLittleIntermediate: [0.0, 0.0, -0.34202, 0.939693],
+  leftLittleDistal: [0.0, 0.0, -0.173648, 0.984808],
+  rightThumbMetacarpal: [-0.00911, 0.086678, 0.104131, 0.990737],
+  rightThumbProximal: [0.0, 0.0, 0.121869, 0.992546],
+  rightThumbDistal: [0.0, 0.0, 0.104528, 0.994522],
+  rightIndexProximal: [0.0, 0.0, 0.173648, 0.984808],
+  rightIndexIntermediate: [0.0, 0.0, 0.241922, 0.970296],
+  rightIndexDistal: [0.0, 0.0, 0.121869, 0.992546],
+  rightMiddleProximal: [0.0, 0.0, 0.207912, 0.978148],
+  rightMiddleIntermediate: [0.0, 0.0, 0.275637, 0.961262],
+  rightMiddleDistal: [0.0, 0.0, 0.139173, 0.990268],
+  rightRingProximal: [0.0, 0.0, 0.241922, 0.970296],
+  rightRingIntermediate: [0.0, 0.0, 0.309017, 0.951057],
+  rightRingDistal: [0.0, 0.0, 0.156434, 0.987688],
+  rightLittleProximal: [0.0, 0.0, 0.275637, 0.961262],
+  rightLittleIntermediate: [0.0, 0.0, 0.34202, 0.939693],
+  rightLittleDistal: [0.0, 0.0, 0.173648, 0.984808],
+};
+
+function applyLSECDefaultRestPose(targetVrm) {
+  if (!targetVrm?.humanoid) return;
+  const humanoid = targetVrm.humanoid;
+  for (const [boneName, q] of Object.entries(LSEC_REST_ROTATIONS)) {
+    const boneNode = humanoid.getNormalizedBoneNode(boneName);
+    if (boneNode) {
+      boneNode.quaternion.set(q[0], q[1], q[2], q[3]);
+    }
+  }
+}
+
+async function loadVrmBuffer(buffer, name = 'Avatar') {
+  $('status-banner').textContent = `Cargando ${name}...`;
+  const loader = new GLTFLoader();
+  loader.register(parser => new VRMLoaderPlugin(parser));
+  try {
+    const gltf = await loader.parseAsync(buffer, '');
+    if (vrm) scene.remove(vrm.scene);
+    vrm = gltf.userData.vrm;
+    VRMUtils.rotateVRM0(vrm);
+    scene.add(vrm.scene);
+    applyLSECDefaultRestPose(vrm);
+    const chestNode = vrm.humanoid?.getNormalizedBoneNode('chest');
+    if (chestNode) {
+      const pos = new THREE.Vector3();
+      chestNode.getWorldPosition(pos);
+      controls.target.copy(pos);
+      controls.update();
+    }
+    updateStatus();
+  } catch (err) {
+    console.error('Error cargando VRM:', err);
+    $('status-banner').textContent = 'Error cargando avatar VRM: ' + err.message;
+  }
+}
+
+function loadAnimationJson(jsonText, signTitle = '') {
+  try {
+    anim = typeof jsonText === 'string' ? JSON.parse(jsonText) : jsonText;
+    fps = anim.metadata?.fps || 60;
+    totalFrames = anim.frames.length;
+    duration = anim.metadata?.duration || (totalFrames / fps);
+    currentTime = 0;
+    isPlaying = true;
+    $('play').textContent = '⏸ Pausar';
+    $('play').classList.add('active');
+    updateStatus(signTitle);
+    applyFrameAtTime(0);
+  } catch (err) {
+    console.error('Error leyendo animation.json:', err);
+    $('status-banner').textContent = 'Error en archivo de animación: ' + err.message;
+  }
+}
+
+async function loadSignByName(signName) {
+  if (!signName || !signName.trim()) return;
+  const name = signName.trim();
+  $('status-banner').textContent = `Cargando seña: ${name}...`;
+  try {
+    const res = await fetch(`/api/v1/animations/${encodeURIComponent(name)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}: Seña no encontrada`);
+    const data = await res.json();
+    loadAnimationJson(data, name);
+  } catch (err) {
+    console.error(err);
+    $('status-banner').textContent = `⚠️ No se pudo cargar '${name}': ${err.message}`;
+  }
+}
+window.loadSignByName = loadSignByName;
+
+$('btnLoadSign').onclick = () => {
+  const val = $('signSearch').value;
+  if (val) loadSignByName(val);
+};
+$('signSearch').onkeydown = e => {
+  if (e.key === 'Enter') {
+    const val = $('signSearch').value;
+    if (val) loadSignByName(val);
+  }
+};
+
+// Cargar catálogo de señas disponibles para autocompletado
+async function initCatalog() {
+  try {
+    const res = await fetch('/api/v1/animations/list?limit=5000');
+    if (res.ok) {
+      const data = await res.json();
+      const list = $('signsList');
+      list.innerHTML = '';
+      (data.signs || []).forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s;
+        list.appendChild(opt);
+      });
+      console.log(`✓ Catálogo indexado: ${data.total} señas`);
+    }
+  } catch (e) {
+    console.warn('No se pudo precargar catálogo:', e);
+  }
+}
+
+// Cargar Avatar por defecto desde el servidor
+async function initDefaultAvatar() {
+  const candidates = [
+    '/avatar/LSEC-Interpreter-Female.vrm',
+    '/avatar/LSEC-Interpreter-Female-2.vrm',
+    'Avatar/LSEC-Interpreter-Female.vrm'
+  ];
+  for (const path of candidates) {
+    try {
+      const res = await fetch(path);
+      if (res.ok) {
+        const buf = await res.arrayBuffer();
+        await loadVrmBuffer(buf, 'LSEC-Interpreter-Female.vrm');
+        return true;
+      }
+    } catch (_) {}
+  }
+  return false;
+}
+
+// Selectores manuales
+$('fVrm').onchange = async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  await loadVrmBuffer(await file.arrayBuffer(), file.name);
+};
+$('fAnim').onchange = async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  loadAnimationJson(await file.text(), file.name);
+};
+
+// Drag & Drop
+window.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); });
+window.addEventListener('drop', async e => {
+  e.preventDefault();
+  e.stopPropagation();
+  for (const file of e.dataTransfer.files) {
+    if (file.name.toLowerCase().endsWith('.vrm')) {
+      await loadVrmBuffer(await file.arrayBuffer(), file.name);
+    } else if (file.name.toLowerCase().endsWith('.json')) {
+      loadAnimationJson(await file.text(), file.name);
+    }
+  }
+});
+
+function updateStatus(title = '') {
+  if (vrm && anim) {
+    const sName = title || anim.metadata?.sign || 'LSEC';
+    const cov = anim.metadata?.coverage ? ` · Cobertura: ${(anim.metadata.coverage*100).toFixed(0)}%` : '';
+    $('status-banner').textContent = `Seña: ${sName} | ${totalFrames} fotogramas (${duration.toFixed(2)}s @ ${fps} FPS) | Directo 1:1${cov}`;
+  } else if (vrm) {
+    $('status-banner').textContent = 'Avatar listo (Pose de Descanso LSEC). Selecciona una seña en el buscador superior.';
+  } else if (anim) {
+    $('status-banner').textContent = 'Animación cargada. Cargando modelo VRM...';
+  }
+}
+
+function applyFrameAtTime(timeSec) {
+  if (!vrm || !anim || anim.frames.length === 0) return;
+  
+  const frameIdx = Math.max(0, Math.min(anim.frames.length - 1, Math.round(timeSec * fps)));
+  const frame = anim.frames[frameIdx];
+  if (!frame) return;
+  
+  const humanoid = vrm.humanoid;
+  if (frame.hipsPosition) {
+    const hipsNode = humanoid.getNormalizedBoneNode('hips');
+    if (hipsNode) hipsNode.position.fromArray(frame.hipsPosition);
+  }
+  
+  if (frame.rotations) {
+    for (const [boneName, q] of Object.entries(frame.rotations)) {
+      const boneNode = humanoid.getNormalizedBoneNode(boneName);
+      if (boneNode) {
+        boneNode.quaternion.set(q[0], q[1], q[2], q[3]);
+      }
+    }
+  }
+  
+  if (vrm.expressionManager && frame.expressions) {
+    for (const [expr, weight] of Object.entries(frame.expressions)) {
+      vrm.expressionManager.setValue(expr, weight);
+    }
+  }
+  
+  $('scrub').value = duration > 0 ? Math.round((timeSec / duration) * 1000) : 0;
+  const currentStr = timeSec.toFixed(2).padStart(5, '0');
+  const totalStr = duration.toFixed(2).padStart(5, '0');
+  $('info').textContent = `${currentStr}s / ${totalStr}s (F: ${frameIdx}/${totalFrames - 1})`;
+}
+
+$('play').onclick = () => {
+  if (!anim) return;
+  isPlaying = !isPlaying;
+  $('play').textContent = isPlaying ? '⏸ Pausar' : '▶ Reproducir';
+  $('play').classList.toggle('active', isPlaying);
+};
+
+$('stop').onclick = () => {
+  isPlaying = false;
+  $('play').textContent = '▶ Reproducir';
+  $('play').classList.remove('active');
+  currentTime = 0;
+  if (vrm) applyLSECDefaultRestPose(vrm);
+};
+
+$('prev').onclick = () => {
+  isPlaying = false;
+  $('play').textContent = '▶ Reproducir';
+  $('play').classList.remove('active');
+  currentTime = Math.max(0, currentTime - (1 / fps));
+  applyFrameAtTime(currentTime);
+};
+
+$('next').onclick = () => {
+  isPlaying = false;
+  $('play').textContent = '▶ Reproducir';
+  $('play').classList.remove('active');
+  currentTime = Math.min(duration, currentTime + (1 / fps));
+  applyFrameAtTime(currentTime);
+};
+
+$('scrub').oninput = e => {
+  if (!duration) return;
+  currentTime = (parseFloat(e.target.value) / 1000) * duration;
+  applyFrameAtTime(currentTime);
+};
+
+$('wireframe').onchange = e => {
+  if (!vrm) return;
+  vrm.scene.traverse(obj => {
+    if (obj.isMesh && obj.material) {
+      obj.material.wireframe = e.target.checked;
+    }
+  });
+};
+
+let lastTimestamp = performance.now();
+
+function animate(now) {
+  const deltaSec = (now - lastTimestamp) / 1000;
+  lastTimestamp = now;
+  
+  if (isPlaying && anim && duration > 0) {
+    const rate = parseFloat($('rate').value) || 1.0;
+    currentTime += deltaSec * rate;
+    
+    if (currentTime >= duration) {
+      if ($('loop').checked) {
+        currentTime = currentTime % duration;
+      } else {
+        currentTime = duration;
+        isPlaying = false;
+        $('play').textContent = '▶ Reproducir';
+        $('play').classList.remove('active');
+        if (vrm) applyLSECDefaultRestPose(vrm);
+      }
+    }
+    applyFrameAtTime(currentTime);
+  }
+  
+  controls.update();
+  if (vrm) vrm.update(deltaSec);
+  renderer.render(scene, camera);
+  requestAnimationFrame(animate);
+}
+
+requestAnimationFrame(animate);
+
+// Secuencia de Inicialización Automática
+(async () => {
+  await initCatalog();
+  const avatarLoaded = await initDefaultAvatar();
+  if (avatarLoaded) {
+    // Reproducir seña de bienvenida inicial
+    await loadSignByName('Hola');
+  }
+})();
+</script>
+</body>
+</html>

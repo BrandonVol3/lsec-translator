@@ -74,6 +74,14 @@ class ContextualInspectorController {
         this.switchTab('avatar');
       });
     }
+
+    const btnTopAvatar = document.getElementById('btn-top-avatar-config');
+    if (btnTopAvatar) {
+      btnTopAvatar.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.switchTab('avatar');
+      });
+    }
   }
 
   switchTab(tabName) {
@@ -96,8 +104,17 @@ class ContextualInspectorController {
       this.badgeEl.style.display = (tabName === 'inspector' && this.badgeEl.innerHTML.trim() !== '') ? 'inline-flex' : 'none';
     }
 
-    if (tabName === 'avatar' && window.avatarController) {
-      window.avatarController.onTabActivated();
+    if (tabName === 'avatar') {
+      if (window.studioAvatarBridge) {
+        window.studioAvatarBridge.dockToSidebar();
+      }
+      if (window.avatarController) {
+        window.avatarController.onTabActivated();
+      }
+    } else {
+      if (window.studioAvatarBridge && window.studioAvatarBridge.currentLocation === 'sidebar') {
+        window.studioAvatarBridge.dockToPip();
+      }
     }
   }
 
@@ -134,6 +151,28 @@ class ContextualInspectorController {
     appState.subscribe('projectCleared', () => {
       this.renderFullTranscript();
       this.renderEmptyInspector();
+    });
+
+    // 2.1. Sincronización ante edición, validación, división o unión de segmentos
+    appState.subscribe('segmentsChanged', () => {
+      this.renderFullTranscript();
+      if (this.searchInputEl && this.searchInputEl.value.trim()) {
+        this.filterTranscript(this.searchInputEl.value.trim().toLowerCase());
+      }
+    });
+
+    appState.subscribe('segmentUpdated', () => {
+      this.renderFullTranscript();
+      if (this.searchInputEl && this.searchInputEl.value.trim()) {
+        this.filterTranscript(this.searchInputEl.value.trim().toLowerCase());
+      }
+    });
+
+    appState.subscribe('projectUpdated', () => {
+      this.renderFullTranscript();
+      if (this.searchInputEl && this.searchInputEl.value.trim()) {
+        this.filterTranscript(this.searchInputEl.value.trim().toLowerCase());
+      }
     });
 
     // 3. Selección de elemento (segmento, glosa, locus)
@@ -689,22 +728,22 @@ class ContextualInspectorController {
 
       <!-- 1. Texto y Lema de la Glosa -->
       <div class="inspector-section">
-        <div class="inspector-label">Texto de Glosa (Lema LSEC)</div>
-        <input type="text" class="inspector-input" id="insp-gloss-text-input" value="${this.escapeHTML(gloss.gloss || gloss.lemma || '')}" style="font-weight:700; font-family:var(--font-mono); text-transform:uppercase;">
+        <label class="inspector-label" for="insp-gloss-text-input">Texto de Glosa (Lema LSEC)</label>
+        <input type="text" class="inspector-input" id="insp-gloss-text-input" aria-label="Texto de Glosa (Lema LSEC)" value="${this.escapeHTML(gloss.gloss || gloss.lemma || '')}" style="font-weight:700; font-family:var(--font-mono); text-transform:uppercase;">
         <span style="font-size:0.68rem; color:var(--text-muted); margin-top:2px; display:block;">El ID permanente se conserva: <code>${gloss.id}</code></span>
       </div>
 
       <!-- 2. Tipo y Rol Sintáctico -->
       <div class="inspector-section" style="display:flex; gap:8px;">
         <div style="flex:1;">
-          <div class="inspector-label">Tipo de Seña</div>
-          <select class="inspector-select" id="insp-gloss-type-select">
+          <label class="inspector-label" for="insp-gloss-type-select">Tipo de Seña</label>
+          <select class="inspector-select" id="insp-gloss-type-select" aria-label="Tipo de Seña">
             ${typeOptions.map(t => `<option value="${t}" ${t === currentType ? 'selected' : ''}>${t}</option>`).join('')}
           </select>
         </div>
         <div style="flex:1;">
-          <div class="inspector-label">Locus Espacial</div>
-          <select class="inspector-select" id="insp-gloss-locus-select">
+          <label class="inspector-label" for="insp-gloss-locus-select">Locus Espacial</label>
+          <select class="inspector-select" id="insp-gloss-locus-select" aria-label="Locus Espacial">
             ${lociOptions.map(l => `<option value="${l}" ${l === currentLocus ? 'selected' : ''}>${l}</option>`).join('')}
           </select>
         </div>
@@ -712,11 +751,11 @@ class ContextualInspectorController {
 
       <!-- 3. Duración y Temporización -->
       <div class="inspector-section">
-        <div class="inspector-label">Duración y Tiempos</div>
+        <label class="inspector-label" for="insp-gloss-dur-input">Duración y Tiempos</label>
         <div style="display:flex; align-items:center; gap:6px; margin-top:2px;">
-          <button class="btn btn-secondary btn-sm" id="btn-gloss-dur-minus">-0.1s</button>
-          <input type="number" step="0.05" min="0.1" max="10" id="insp-gloss-dur-input" value="${dur.toFixed(2)}" class="inspector-input" style="width:70px; text-align:center; font-family:var(--font-mono);">
-          <button class="btn btn-secondary btn-sm" id="btn-gloss-dur-plus">+0.1s</button>
+          <button class="btn btn-secondary btn-sm" id="btn-gloss-dur-minus" aria-label="Disminuir duración 0.1 segundos">-0.1s</button>
+          <input type="number" step="0.05" min="0.1" max="10" id="insp-gloss-dur-input" aria-label="Duración de glosa en segundos" value="${dur.toFixed(2)}" class="inspector-input" style="width:70px; text-align:center; font-family:var(--font-mono);">
+          <button class="btn btn-secondary btn-sm" id="btn-gloss-dur-plus" aria-label="Aumentar duración 0.1 segundos">+0.1s</button>
           <span style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-muted); margin-left:auto;">
             [${st.toFixed(2)}s - ${et.toFixed(2)}s]
           </span>
@@ -725,8 +764,8 @@ class ContextualInspectorController {
 
       <!-- 4. Rasgos No Manuales -->
       <div class="inspector-section">
-        <div class="inspector-label">Rasgos No Manuales (Expresiones Faciales)</div>
-        <select class="inspector-select" id="insp-gloss-nmf-select">
+        <label class="inspector-label" for="insp-gloss-nmf-select">Rasgos No Manuales (Expresiones Faciales)</label>
+        <select class="inspector-select" id="insp-gloss-nmf-select" aria-label="Rasgos No Manuales (Expresiones Faciales)">
           ${nonManualOptions.map(opt => `<option value="${opt}" ${currentNMF.includes(opt) ? 'selected' : ''}>${opt}</option>`).join('')}
         </select>
       </div>

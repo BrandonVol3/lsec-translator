@@ -24,6 +24,10 @@ set HF_HUB_OFFLINE=1
 set TRANSFORMERS_OFFLINE=1
 set PYTHONIOENCODING=utf-8
 
+REM Forzar uso exclusivo de almacenamiento fisico en disco local (C:)
+set "LSEC_UHD_DIR=%~dp0..\Diccionario LSEC\senas_ultra_hd"
+set "LSEC_ANIMATIONS_DIR=%~dp0..\Diccionario LSEC\senas_vrm_direct"
+
 if "%LSEC_PORT%"=="" set LSEC_PORT=8000
 
 echo Iniciando LSEC Studio en http://127.0.0.1:%LSEC_PORT%/studio

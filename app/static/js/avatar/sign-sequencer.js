@@ -78,9 +78,20 @@ export class SignSequencer {
     this.currentIndex = 0;
     this.isTransitioning = false;
 
-    this.notifyGlossChanged(this.sequence[0]);
-    this.player.setSpeed(this.speed);
-    this.player.play(this.sequence[0]);
+    const firstClip = this.sequence[0];
+    const hasMore = this.sequence.length > 1;
+    const clipSpeed = typeof firstClip.recommendedSpeed === 'number' && firstClip.recommendedSpeed > 0
+      ? firstClip.recommendedSpeed
+      : this.speed;
+
+    this.notifyGlossChanged(firstClip);
+    this.player.setSpeed(clipSpeed);
+    this.player.play(firstClip, {
+      coarticulate: true,
+      blendDuration: this.transitionDuration,
+      returnToNeutralOnEnd: !hasMore,
+      speed: clipSpeed
+    });
 
     if (typeof this.onStateChange === 'function') {
       this.onStateChange('playing');
@@ -96,7 +107,7 @@ export class SignSequencer {
       const nextIndex = this.currentIndex + 1;
       const nextClip = this.sequence[nextIndex];
 
-      // Iniciar transición suave hacia la pose inicial del siguiente clip
+      // Transición coarticulada directa SLERP hacia la siguiente seña sin pasar por neutral
       this.beginTransition(nextClip, nextIndex);
     } else {
       // Secuencia finalizada con éxito
@@ -115,42 +126,28 @@ export class SignSequencer {
   }
 
   beginTransition(nextClip, nextIndex) {
-    this.isTransitioning = true;
+    this.isTransitioning = false;
     this.transitionTime = 0.0;
-
-    // Capturar pose final del avatar actual
-    this.transitionFromPose.clear();
-    this.transitionToPose.clear();
-
-    HUMAN_BONE_NAMES.forEach((boneName) => {
-      const node = this.player.getBoneNode(boneName);
-      if (node) {
-        this.transitionFromPose.set(boneName, node.quaternion.clone());
-      }
-    });
-
-    // Obtener pose inicial (t=0) del siguiente clip
-    if (Array.isArray(nextClip.boneTracks)) {
-      nextClip.boneTracks.forEach((track) => {
-        if (track.rotations && track.rotations.length >= 4) {
-          const q = new THREE.Quaternion(
-            track.rotations[0],
-            track.rotations[1],
-            track.rotations[2],
-            track.rotations[3]
-          ).normalize();
-          this.transitionToPose.set(track.boneName, q);
-        }
-      });
-    }
-
     this.currentIndex = nextIndex;
+
+    const hasMore = nextIndex < this.sequence.length - 1;
+    const clipSpeed = typeof nextClip.recommendedSpeed === 'number' && nextClip.recommendedSpeed > 0
+      ? nextClip.recommendedSpeed
+      : this.speed;
+
     this.notifyGlossChanged(nextClip);
+    this.player.setSpeed(clipSpeed);
+    this.player.play(nextClip, {
+      coarticulate: true,
+      blendDuration: this.transitionDuration,
+      returnToNeutralOnEnd: !hasMore,
+      speed: clipSpeed
+    });
   }
 
   /**
    * Actualización del secuenciador en cada fotograma.
-   * Si está en transición, interpola entre poses; si no, delega a SignPlayer.
+   * Si está en transición manual, interpola entre poses; si no, delega a SignPlayer.
    * @param {number} delta 
    */
   update(delta) {
@@ -160,7 +157,7 @@ export class SignSequencer {
 
       // Aplicar slerp de transición a los huesos
       this.transitionFromPose.forEach((qFrom, boneName) => {
-        const qTo = this.transitionToPose.get(boneName) || qFrom;
+        const qTo = this.transitionToPose.get(boneName) || this.player.getNeutralPoseForBone(boneName);
         const node = this.player.getBoneNode(boneName);
         if (node) {
           node.quaternion.copy(qFrom).slerp(qTo, alpha);
@@ -168,10 +165,14 @@ export class SignSequencer {
       });
 
       if (alpha >= 1.0) {
-        // Fin de transición: arrancar reproducción del clip siguiente
         this.isTransitioning = false;
         const currentClip = this.sequence[this.currentIndex];
-        this.player.play(currentClip);
+        const hasMore = this.currentIndex < this.sequence.length - 1;
+        this.player.play(currentClip, {
+          coarticulate: true,
+          blendDuration: 0.08,
+          returnToNeutralOnEnd: !hasMore
+        });
       }
     } else {
       this.player.update(delta);

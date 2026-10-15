@@ -29,7 +29,7 @@ WORKSPACE_ROOT = os.path.dirname(PROJECT_ROOT)
 VRM_PATH = os.path.join(WORKSPACE_ROOT, "Avatar", "LSEC-Interpreter-Female.vrm")
 if not os.path.exists(VRM_PATH):
     VRM_PATH = os.path.join(PROJECT_ROOT, "app", "static", "assets", "LSEC-Interpreter-Female.vrm")
-STUDIO_URL = "http://127.0.0.1:8000/avatarconfig"
+STUDIO_URL = "http://127.0.0.1:8000/studio"
 
 
 
@@ -99,8 +99,8 @@ def test_2_hand_visual_clips_and_deformation():
         )
         page = browser.new_page(viewport={"width": 1440, "height": 900})
         page.goto(STUDIO_URL, wait_until="domcontentloaded")
-        if page.locator("#tab-btn-side-avatar").is_visible():
-            page.click("#tab-btn-side-avatar")
+        page.wait_for_selector("#tab-btn-side-avatar", timeout=15000)
+        page.click("#tab-btn-side-avatar")
         page.wait_for_selector("#avatar-model-source-info:has-text('VRM 1.0')", timeout=30000)
 
         hand_clips = [
@@ -163,8 +163,8 @@ def test_3_orientation_clips():
         )
         page = browser.new_page(viewport={"width": 1440, "height": 900})
         page.goto(STUDIO_URL, wait_until="domcontentloaded")
-        if page.locator("#tab-btn-side-avatar").is_visible():
-            page.click("#tab-btn-side-avatar")
+        page.wait_for_selector("#tab-btn-side-avatar", timeout=15000)
+        page.click("#tab-btn-side-avatar")
         page.wait_for_selector("#avatar-model-source-info:has-text('VRM 1.0')", timeout=30000)
 
         orient_clips = [
@@ -209,8 +209,8 @@ def test_4_non_manual_clips():
         )
         page = browser.new_page(viewport={"width": 1440, "height": 900})
         page.goto(STUDIO_URL, wait_until="domcontentloaded")
-        if page.locator("#tab-btn-side-avatar").is_visible():
-            page.click("#tab-btn-side-avatar")
+        page.wait_for_selector("#tab-btn-side-avatar", timeout=15000)
+        page.click("#tab-btn-side-avatar")
         page.wait_for_selector("#avatar-model-source-info:has-text('VRM 1.0')", timeout=30000)
 
         cnm_clips = [
@@ -263,8 +263,8 @@ def test_5_simultaneous_clips():
         )
         page = browser.new_page(viewport={"width": 1440, "height": 900})
         page.goto(STUDIO_URL, wait_until="domcontentloaded")
-        if page.locator("#tab-btn-side-avatar").is_visible():
-            page.click("#tab-btn-side-avatar")
+        page.wait_for_selector("#tab-btn-side-avatar", timeout=15000)
+        page.click("#tab-btn-side-avatar")
         page.wait_for_selector("#avatar-model-source-info:has-text('VRM 1.0')", timeout=30000)
 
         sim_clips = [
@@ -314,8 +314,8 @@ def test_6_performance_and_continuous_sequence():
         )
         page = browser.new_page(viewport={"width": 1440, "height": 900})
         page.goto(STUDIO_URL, wait_until="domcontentloaded")
-        if page.locator("#tab-btn-side-avatar").is_visible():
-            page.click("#tab-btn-side-avatar")
+        page.wait_for_selector("#tab-btn-side-avatar", timeout=15000)
+        page.click("#tab-btn-side-avatar")
         page.wait_for_selector("#avatar-model-source-info:has-text('VRM 1.0')", timeout=30000)
 
         # 6.1 Reporte inicial de carga

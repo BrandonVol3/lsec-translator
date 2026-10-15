@@ -40,12 +40,21 @@ class WhisperASRService:
         self._device = device or settings.whisper_device
         self._compute_type = compute_type or settings.whisper_compute_type
         self._model = None
-        logger.info(
-            "WhisperASRService configurado: modelo=%s, device=%s, compute=%s",
-            self._model_size,
-            self._device,
-            self._compute_type,
-        )
+        self._fallback_occurred: bool = False
+        self._fallback_reason: str | None = None
+
+        if self._device.lower() == "cpu":
+            logger.warning(
+                "[SISTEMA LSEC] WhisperASRService configurado en modo CPU (sin aceleración GPU). "
+                "Para mayor rendimiento, configure WHISPER_DEVICE=cuda si cuenta con GPU NVIDIA."
+            )
+        else:
+            logger.info(
+                "WhisperASRService configurado: modelo=%s, device=%s, compute=%s",
+                self._model_size,
+                self._device,
+                self._compute_type,
+            )
 
     def _load_model(self) -> None:
         """Carga el modelo Whisper de forma lazy (primera invocación)."""
@@ -77,13 +86,43 @@ class WhisperASRService:
             model_ref, local_only = self._resolve_model_reference()
             logger.info("Cargando modelo Whisper '%s'%s...", model_ref, " (local)" if local_only else "")
             kwargs = {"local_files_only": True} if local_only else {}
-            self._model = WhisperModel(
-                model_ref,
-                device=self._device,
-                compute_type=self._compute_type,
-                **kwargs,
+            try:
+                self._model = WhisperModel(
+                    model_ref,
+                    device=self._device,
+                    compute_type=self._compute_type,
+                    **kwargs,
+                )
+                if self._device.lower() == "cuda":
+                    logger.info("✓ [SISTEMA LSEC] Whisper cargado exitosamente en GPU (CUDA, %s).", self._compute_type)
+            except Exception as cuda_exc:
+                if self._device.lower() in ("cuda", "auto"):
+                    logger.warning(
+                        "[SISTEMA LSEC - AVISO DE HARDWARE] No se pudo inicializar Whisper en GPU CUDA (%s). "
+                        "Activando fallback automático a CPU (int8)...",
+                        cuda_exc,
+                    )
+                    self._device = "cpu"
+                    self._compute_type = "int8"
+                    self._fallback_occurred = True
+                    self._fallback_reason = str(cuda_exc)
+                    self._model = WhisperModel(
+                        model_ref,
+                        device="cpu",
+                        compute_type="int8",
+                        **kwargs,
+                    )
+                    logger.warning(
+                        "[SISTEMA LSEC] Whisper funcionando en CPU. "
+                        "El sistema indicará que la transcripción se ejecuta sin aceleración GPU."
+                    )
+                else:
+                    raise
+            logger.info(
+                "Modelo Whisper listo (device=%s, compute=%s).",
+                self._device,
+                self._compute_type,
             )
-            logger.info("Modelo Whisper cargado exitosamente.")
         except ImportError:
             logger.error(
                 "faster-whisper no está instalado. "
@@ -168,19 +207,31 @@ class WhisperASRService:
             full_text = " ".join(text_parts)
             avg_confidence = total_confidence / max(word_count, 1)
 
+            hw_status = self.get_hardware_status()
             result = TranscriptionResult(
                 text=full_text,
                 language=info.language,
                 confidence=round(avg_confidence, 4),
                 duration_seconds=round(info.duration, 2),
                 word_timestamps=words,
+                device_used=self._device,
+                device_warning=hw_status["notice"] if not hw_status["is_gpu"] else None,
             )
 
-            logger.info(
-                "Transcripción completada: %d caracteres, confianza=%.2f",
-                len(full_text),
-                avg_confidence,
-            )
+            if not hw_status["is_gpu"]:
+                logger.warning(
+                    "[SISTEMA LSEC] Transcripción completada en CPU (%s): %d caracteres, confianza=%.2f. (Aviso: Sin aceleración GPU)",
+                    self._compute_type,
+                    len(full_text),
+                    avg_confidence,
+                )
+            else:
+                logger.info(
+                    "✓ [SISTEMA LSEC] Transcripción completada en GPU CUDA (%s): %d caracteres, confianza=%.2f",
+                    self._compute_type,
+                    len(full_text),
+                    avg_confidence,
+                )
             return result
 
         except Exception as exc:
@@ -232,6 +283,41 @@ class WhisperASRService:
                 except OSError:
                     pass
 
+    def get_hardware_status(self) -> dict:
+        """
+        Retorna el estado de aceleración por hardware del motor Whisper ASR.
+        Indica claramente si se está usando GPU (CUDA) o únicamente CPU.
+        """
+        is_gpu = (self._device.lower() == "cuda")
+
+        cuda_available = False
+        try:
+            import ctranslate2
+            cuda_available = ctranslate2.get_cuda_device_count() > 0
+        except Exception:
+            cuda_available = False
+
+        if is_gpu:
+            notice = None
+            status_text = "GPU Activa (CUDA)"
+        elif self._fallback_occurred:
+            status_text = "Modo CPU (Fallback por error en GPU)"
+            notice = f"Aviso del sistema: La GPU falló ({self._fallback_reason}). Se está utilizando la CPU para la transcripción."
+        else:
+            status_text = "Modo CPU (Sin aceleración GPU)"
+            notice = "Aviso del sistema: Whisper está ejecutándose en CPU. No se está utilizando aceleración por GPU."
+
+        return {
+            "device": self._device,
+            "compute_type": self._compute_type,
+            "is_gpu": is_gpu,
+            "cuda_available": cuda_available,
+            "fallback_occurred": self._fallback_occurred,
+            "fallback_reason": self._fallback_reason,
+            "status_text": status_text,
+            "notice": notice,
+        }
+
     def is_ready(self) -> bool:
         """Verifica si el servicio está listo (modelo cargado)."""
         return self._model is not None
@@ -239,3 +325,4 @@ class WhisperASRService:
     def warmup(self) -> None:
         """Pre-carga el modelo para reducir latencia en la primera solicitud."""
         self._load_model()
+

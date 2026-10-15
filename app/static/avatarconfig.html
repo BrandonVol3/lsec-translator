@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LSEC Studio — Configuración y Calibración del Avatar 3D</title>
-  <meta name="description" content="Entorno dedicado para la calibración biomecánica, configuración cinemática, pruebas de rasgos no manuales y carga de modelos VRM 1.0 del Avatar LSEC.">
+  <title>LSEC Studio — Configuración y Verificación del Avatar 3D</title>
+  <meta name="description" content="Entorno dedicado para la calibración biomecánica, configuración cinemática, pruebas de rasgos no manuales y verificación comparativa con videos originales Ultra HD del Diccionario LSEC.">
 
   <!-- Estilos del Sistema de Diseño -->
   <link rel="stylesheet" href="/static/css/app.css?v=2.2.0">
@@ -20,6 +20,420 @@
     }
   }
   </script>
+
+  <style>
+    /* Estilos para la Ilustración Oficial y Vista Comparativa */
+    .illustration-preview-box {
+      position: relative;
+      background: #0b0d0c;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-sm, 6px);
+      overflow: hidden;
+      min-height: 110px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: border-color 0.2s ease;
+    }
+    .illustration-preview-box:hover {
+      border-color: #3b82f6;
+    }
+    .illustration-preview-box:hover .illustration-zoom-tag {
+      opacity: 1 !important;
+    }
+    .illustration-preview-img {
+      max-height: 130px;
+      max-width: 100%;
+      object-fit: contain;
+      border-radius: 4px;
+      display: none;
+      transition: transform 0.2s ease;
+    }
+    .illustration-preview-box:hover .illustration-preview-img {
+      transform: scale(1.03);
+    }
+    .uhd-illustration-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(10, 13, 11, 0.94);
+      z-index: 10;
+      display: none;
+      flex-direction: column;
+      backdrop-filter: blur(8px);
+    }
+    .illustration-lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.88);
+      backdrop-filter: blur(10px);
+      z-index: 99999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    /* Estilos dedicados para la vista comparativa de Video Ultra HD */
+    .avatar-comparison-layout {
+      display: flex;
+      flex: 1;
+      gap: 12px;
+      overflow: hidden;
+      position: relative;
+      width: 100%;
+      height: 100%;
+      max-height: calc(100vh - 160px);
+      min-height: 420px;
+    }
+
+    .avatar-comparison-layout .avatar-viewport-container {
+      flex: 1 1 50%;
+      min-width: 0;
+      height: 100% !important;
+      position: relative;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid var(--border-medium);
+      background: #0d0f0c;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .avatar-comparison-layout.single-view .avatar-viewport-container {
+      flex: 1 1 100%;
+    }
+
+    .avatar-comparison-layout.single-view .avatar-uhd-panel {
+      display: none !important;
+    }
+
+    /* Panel de Video Ultra HD */
+    .avatar-uhd-panel {
+      flex: 1 1 50%;
+      min-width: 0;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: #0f120e;
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .avatar-uhd-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: var(--bg-surface, rgba(25, 27, 24, 0.95));
+      border-bottom: 1px solid var(--border-subtle);
+      z-index: 2;
+    }
+
+    .avatar-uhd-header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .avatar-uhd-badge-live {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 7px;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .avatar-uhd-badge-live::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+    }
+
+    .avatar-uhd-player-wrap {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      overflow: hidden;
+    }
+
+    .avatar-uhd-video-element {
+      width: 100%;
+      height: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      background: #000;
+    }
+
+    .avatar-uhd-fallback {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      text-align: center;
+      background: rgba(15, 18, 14, 0.95);
+      z-index: 3;
+    }
+
+    .avatar-uhd-footer-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: var(--bg-surface, #191b18);
+      border-top: 1px solid var(--border-subtle);
+      gap: 8px;
+      z-index: 2;
+    }
+
+    .btn-verify-active {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+      border-color: #059669 !important;
+      color: #fff !important;
+      font-weight: 700 !important;
+    }
+
+    .nav-sign-stepper {
+      display: flex;
+      gap: 4px;
+      margin-top: 6px;
+    }
+
+    .nav-sign-stepper .btn {
+      flex: 1;
+      padding: 5px 6px;
+      font-size: 0.75rem;
+      justify-content: center;
+      font-weight: 600;
+    }
+
+    .sync-toggle-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+      font-size: 0.72rem;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .sync-toggle-pill:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    /* --- Controles y Badges de Versión Cinemática (v2.6 Corregida vs v2.5 Directo) --- */
+    .version-pill-group {
+      display: inline-flex;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid var(--border-medium);
+      border-radius: 8px;
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .version-nav-btn {
+      padding: 3px 9px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.18s ease;
+      user-select: none;
+    }
+
+    .version-nav-btn:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .version-nav-btn.active.v26 {
+      background: #064e3b;
+      color: #6ee7b7;
+      border-color: #059669;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.25);
+    }
+
+    .version-nav-btn.active.v25 {
+      background: #1e293b;
+      color: #93c5fd;
+      border-color: #3b82f6;
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.25);
+    }
+
+    .version-nav-toggle-btn {
+      padding: 3px 8px;
+      font-size: 0.70rem;
+      font-weight: 700;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.04);
+      color: #fbbf24;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      transition: all 0.18s ease;
+    }
+
+    .version-nav-toggle-btn:hover {
+      background: rgba(251, 191, 36, 0.12);
+      border-color: rgba(251, 191, 36, 0.35);
+    }
+
+    /* Switcher en Tarjeta 2 */
+    .version-card-switcher {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .version-card-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      padding: 7px 9px;
+      border-radius: 7px;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-subtle, rgba(255, 255, 255, 0.03));
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .version-card-btn:hover {
+      border-color: var(--border-medium);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .version-card-btn.active.v26 {
+      background: rgba(6, 78, 59, 0.35);
+      border-color: #059669;
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.18);
+    }
+
+    .version-card-btn.active.v25 {
+      background: rgba(30, 41, 59, 0.45);
+      border-color: #3b82f6;
+      box-shadow: 0 0 12px rgba(59, 130, 246, 0.18);
+    }
+
+    .version-card-btn-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      margin-bottom: 2px;
+    }
+
+    .version-card-btn-title {
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .version-card-btn.active.v26 .version-card-btn-title {
+      color: #6ee7b7;
+    }
+
+    .version-card-btn.active.v25 .version-card-btn-title {
+      color: #93c5fd;
+    }
+
+    .version-card-btn-badge {
+      font-size: 0.62rem;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+
+    .version-card-btn.active.v26 .version-card-btn-badge {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+
+    .version-card-btn.active.v25 .version-card-btn-badge {
+      background: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.4);
+    }
+
+    .version-card-btn-desc {
+      font-size: 0.64rem;
+      color: var(--text-muted);
+      line-height: 1.25;
+    }
+
+    /* Banner informativo de versión y seña re-extraída */
+    .version-status-banner {
+      padding: 7px 9px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      font-size: 0.70rem;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      transition: all 0.2s ease;
+    }
+
+    .version-status-banner.v26 {
+      background: rgba(6, 78, 59, 0.25);
+      border: 1px solid rgba(5, 150, 105, 0.4);
+      color: #a7f3d0;
+    }
+
+    .version-status-banner.v25 {
+      background: rgba(30, 41, 59, 0.3);
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      color: #cbd5e1;
+    }
+
+    .reextracted-sign-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px;
+      border-radius: 5px;
+      background: rgba(245, 158, 11, 0.18);
+      border: 1px solid rgba(245, 158, 11, 0.45);
+      color: #fbbf24;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+  </style>
 </head>
 <body class="avatar-config-page">
 
@@ -38,18 +452,32 @@
       <div style="width: 1px; height: 16px; background: var(--border-subtle); margin: 0 4px;"></div>
 
       <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
-        <span style="color: var(--action-primary);">⚙</span> Configuración del Avatar 3D
+        <span style="color: var(--action-primary);">⚙</span> Verificación y Calibración 3D
       </span>
 
       <span class="avatar-model-pill avatar-pill-vrm" id="avatar-model-source-info">Cargando modelo...</span>
     </div>
 
     <div class="avatar-config-nav-right">
-      <span class="unvalidated-warning-badge" id="avatar-unvalidated-notice" title="Las animaciones son demostraciones técnicas no validadas lingüísticamente por la comunidad sorda">
-        DEMO NO VALIDADA
+      <!-- Conmutador Rápido de Versión de Pipeline -->
+      <div class="version-pill-group" id="navbar-version-group" title="Seleccionar versión del pipeline cinemático">
+        <button type="button" class="version-nav-btn active v26" id="nav-btn-v26" title="Versión 2.6 Corregida (Suavizado de muñecas, IK despeje ~1cm, expresiones 52 ARKit y cabeza)">
+          <span>v2.6 Corregida</span>
+        </button>
+        <button type="button" class="version-nav-btn" id="nav-btn-v25" title="Versión 2.5 Directo (1:1 Original sin postproceso)">
+          <span>v2.5 Directo</span>
+        </button>
+        <button type="button" class="version-nav-toggle-btn" id="nav-btn-toggle-version" title="Alternar versión inmediatamente (Tecla V)">
+          <span>⚡ (V)</span>
+        </button>
+      </div>
+
+      <!-- Indicador de Señas Verificadas -->
+      <span class="avatar-model-pill" id="verification-progress-pill" style="background:#0f291e; color:#6ee7b7; border:1px solid #059669; font-weight:700; font-size:0.75rem;">
+        ✓ 0 / 5.052 VERIFICADAS
       </span>
 
-      <span class="avatar-status-badge" id="avatar-playback-status-badge">Inactivo</span>
+      <span class="avatar-status-badge" id="avatar-playback-status-badge">Listo</span>
 
       <span class="avatar-perf-badge" id="avatar-hud-perf-badge" title="Rendimiento en tiempo real (FPS)">60 FPS</span>
 
@@ -62,128 +490,205 @@
     </div>
   </header>
 
-  <!-- CONTENEDOR PRINCIPAL DE LA ESTACIÓN AVATAR (COMPATIBLE CON SELECTORES EXISTENTES) -->
+  <!-- CONTENEDOR PRINCIPAL DE LA ESTACIÓN AVATAR -->
   <main class="avatar-config-main-grid" id="avatar-config-workspace" role="main">
     
-    <!-- WRAPPER COMPATIBLE CON SELECTORES E2E (#view-side-avatar) -->
     <div id="view-side-avatar" style="display:contents;">
       <button id="tab-btn-side-avatar" style="display:none;" aria-hidden="true"></button>
 
-      <!-- ZONA IZQUIERDA: VISUALIZADOR 3D WEBGL Y TRANSPORTE -->
-      <section class="avatar-config-viewport-zone" aria-label="Visualizador WebGL del Avatar">
+      <!-- ZONA IZQUIERDA: VISTA COMPARATIVA (AVATAR 3D + VIDEO ULTRA HD ORIGINAL) -->
+      <section class="avatar-config-viewport-zone" aria-label="Visualizador Comparativo de Señas">
         
-        <!-- Viewport 3D Principal con HUD Reactivo -->
-        <div class="avatar-viewport-container" id="avatar-viewport-wrap">
-          <canvas id="avatar-webgl-canvas" class="avatar-canvas"></canvas>
+        <!-- LAYOUT COMPARATIVO LADO A LADO -->
+        <div class="avatar-comparison-layout" id="comparison-layout-wrap">
+          
+          <!-- SUB-VIEWPORT 1: AVATAR 3D WEBGL -->
+          <div class="avatar-viewport-container" id="avatar-viewport-wrap">
+            <canvas id="avatar-webgl-canvas" class="avatar-canvas"></canvas>
 
-          <!-- Overlay de Carga -->
-          <div class="avatar-overlay-loading" id="avatar-loading-indicator" style="display:none;">
-            <div class="avatar-spinner"></div>
-            <span id="avatar-loading-text">Cargando modelo VRM 1.0...</span>
-          </div>
-
-          <!-- Overlay de Error -->
-          <div class="avatar-overlay-error" id="avatar-error-banner" style="display:none;">
-            <div class="avatar-error-content">
-              <span class="avatar-error-icon">⚠️</span>
-              <span class="avatar-error-msg" id="avatar-error-message">Error de inicialización.</span>
-              <button class="btn btn-secondary btn-sm" id="btn-avatar-error-retry">Reintentar</button>
+            <!-- Overlay de Carga -->
+            <div class="avatar-overlay-loading" id="avatar-loading-indicator" style="display:none;">
+              <div class="avatar-spinner"></div>
+              <span id="avatar-loading-text">Cargando modelo VRM 1.0...</span>
             </div>
-          </div>
 
-          <!-- HUD Superior Reactivo: Glosa Activa, Tiempo y Estado -->
-          <div class="avatar-hud-top" id="avatar-hud-bar">
-            <div class="avatar-hud-gloss">
-              <span class="avatar-hud-label">PRUEBA ACTIVA:</span>
-              <span class="avatar-hud-value" id="avatar-active-gloss-hud">—</span>
-            </div>
-            <div class="avatar-hud-time">
-              <span id="avatar-hud-time-current">0.00s</span>
-              <span style="opacity:0.4;">/</span>
-              <span id="avatar-hud-time-total">0.00s</span>
-            </div>
-          </div>
-
-          <!-- Barra de Progreso Temporal del Clip -->
-          <div class="avatar-viewport-progress-track">
-            <div class="avatar-viewport-progress-fill" id="avatar-clip-progress-fill"></div>
-          </div>
-
-          <!-- Botón de Recentrado Rápido de Cámara -->
-          <button class="btn-avatar-hud-action" id="btn-avatar-reset-camera" title="Recentrar cámara frontal (Espacio de señas)">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
-          </button>
-
-          <!-- DOCK FLOTANTE DE CONTROLES DE CÁMARA (Girar, Mover, Deslizar) -->
-          <div class="avatar-cam-floating-dock" id="avatar-cam-dock" aria-label="Controles de Cámara 3D">
-            <div class="avatar-cam-dock-header">
-              <span class="avatar-cam-dock-title">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
-                Controles 3D
-              </span>
-              <button class="avatar-cam-dock-toggle" id="btn-cam-dock-toggle" title="Minimizar / Expandir panel de cámara">▾</button>
-            </div>
-            
-            <div class="avatar-cam-dock-body" id="avatar-cam-dock-body">
-              <!-- Girar (Órbita 360°) -->
-              <div class="avatar-cam-tool-section">
-                <div class="avatar-cam-section-label">Girar (Órbita)</div>
-                <div class="avatar-cam-dpad-row">
-                  <button class="avatar-cam-btn" id="btn-cam-rot-left" title="Girar a la izquierda">↺ Izq</button>
-                  <button class="avatar-cam-btn" id="btn-cam-rot-up" title="Inclinar arriba">▲ Arr</button>
-                  <button class="avatar-cam-btn" id="btn-cam-rot-down" title="Inclinar abajo">▼ Aba</button>
-                  <button class="avatar-cam-btn" id="btn-cam-rot-right" title="Girar a la derecha">Der ↻</button>
-                </div>
+            <!-- Overlay de Error -->
+            <div class="avatar-overlay-error" id="avatar-error-banner" style="display:none;">
+              <div class="avatar-error-content">
+                <span class="avatar-error-icon">⚠️</span>
+                <span class="avatar-error-msg" id="avatar-error-message">Error de inicialización.</span>
+                <button class="btn btn-secondary btn-sm" id="btn-avatar-error-retry">Reintentar</button>
               </div>
+            </div>
 
-              <!-- Mover (Desplazamiento / Pan) -->
-              <div class="avatar-cam-tool-section">
-                <div class="avatar-cam-section-label">Mover (Desplazamiento)</div>
-                <div class="avatar-cam-grid-dpad">
-                  <button class="avatar-cam-btn avatar-cam-btn-up" id="btn-cam-pan-up" title="Mover hacia arriba">▲</button>
-                  <div class="avatar-cam-dpad-mid">
-                    <button class="avatar-cam-btn" id="btn-cam-pan-left" title="Mover a la izquierda">◄</button>
-                    <button class="avatar-cam-btn avatar-cam-btn-center" id="btn-cam-pan-center" title="Recentrar vista">●</button>
-                    <button class="avatar-cam-btn" id="btn-cam-pan-right" title="Mover a la derecha">►</button>
+            <!-- HUD Superior: Glosa Activa, Tiempo y Estado -->
+            <div class="avatar-hud-top" id="avatar-hud-bar">
+              <div class="avatar-hud-gloss">
+                <span class="avatar-hud-label">AVATAR 3D:</span>
+                <span class="avatar-hud-value" id="avatar-active-gloss-hud">—</span>
+                <button type="button" id="hud-pipeline-badge" style="font-size:0.65rem; padding:1px 6px; border-radius:4px; font-weight:700; margin-left:6px; background:#064e3b; color:#6ee7b7; border:1px solid #059669; cursor:pointer; display:inline-flex; align-items:center;" title="Clic para alternar versión de animación (v2.6 / v2.5)">v2.6</button>
+                <span id="hud-expressions-badge" style="font-size:0.65rem; padding:1px 6px; border-radius:4px; font-weight:600; margin-left:4px; background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3); display:inline-flex; align-items:center;" title="Expresiones faciales y orientación cefálica">🎭 52 ARKit</span>
+              </div>
+              <div class="avatar-hud-time">
+                <span id="avatar-hud-time-current">0.00s</span>
+                <span style="opacity:0.4;">/</span>
+                <span id="avatar-hud-time-total">0.00s</span>
+              </div>
+            </div>
+
+            <!-- Barra de Progreso Temporal del Clip -->
+            <div class="avatar-viewport-progress-track">
+              <div class="avatar-viewport-progress-fill" id="avatar-clip-progress-fill"></div>
+            </div>
+
+            <!-- Botón de Recentrado Rápido de Cámara -->
+            <button class="btn-avatar-hud-action" id="btn-avatar-reset-camera" title="Recentrar cámara frontal (Espacio de señas)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+            </button>
+
+            <!-- DOCK FLOTANTE DE CONTROLES DE CÁMARA (Girar, Mover, Deslizar) -->
+            <div class="avatar-cam-floating-dock" id="avatar-cam-dock" aria-label="Controles de Cámara 3D">
+              <div class="avatar-cam-dock-header">
+                <span class="avatar-cam-dock-title">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                  Controles 3D
+                </span>
+                <button class="avatar-cam-dock-toggle" id="btn-cam-dock-toggle" title="Minimizar / Expandir panel de cámara">▾</button>
+              </div>
+              
+              <div class="avatar-cam-dock-body" id="avatar-cam-dock-body">
+                <div class="avatar-cam-tool-section">
+                  <div class="avatar-cam-section-label">Girar (Órbita)</div>
+                  <div class="avatar-cam-dpad-row">
+                    <button class="avatar-cam-btn" id="btn-cam-rot-left" title="Girar a la izquierda">↺ Izq</button>
+                    <button class="avatar-cam-btn" id="btn-cam-rot-up" title="Inclinar arriba">▲ Arr</button>
+                    <button class="avatar-cam-btn" id="btn-cam-rot-down" title="Inclinar abajo">▼ Aba</button>
+                    <button class="avatar-cam-btn" id="btn-cam-rot-right" title="Girar a la derecha">Der ↻</button>
                   </div>
-                  <button class="avatar-cam-btn avatar-cam-btn-down" id="btn-cam-pan-down" title="Mover hacia abajo">▼</button>
+                </div>
+
+                <div class="avatar-cam-tool-section">
+                  <div class="avatar-cam-section-label">Mover (Desplazamiento)</div>
+                  <div class="avatar-cam-grid-dpad">
+                    <button class="avatar-cam-btn avatar-cam-btn-up" id="btn-cam-pan-up" title="Mover hacia arriba">▲</button>
+                    <div class="avatar-cam-dpad-mid">
+                      <button class="avatar-cam-btn" id="btn-cam-pan-left" title="Mover a la izquierda">◄</button>
+                      <button class="avatar-cam-btn avatar-cam-btn-center" id="btn-cam-pan-center" title="Recentrar vista">●</button>
+                      <button class="avatar-cam-btn" id="btn-cam-pan-right" title="Mover a la derecha">►</button>
+                    </div>
+                    <button class="avatar-cam-btn avatar-cam-btn-down" id="btn-cam-pan-down" title="Mover hacia abajo">▼</button>
+                  </div>
+                </div>
+
+                <div class="avatar-cam-tool-section">
+                  <div class="avatar-cam-section-label">Deslizar (Zoom)</div>
+                  <div class="avatar-cam-dpad-row">
+                    <button class="avatar-cam-btn" id="btn-cam-zoom-in" title="Acercar cámara (Dolly In)">
+                      <span>＋ Acercar</span>
+                    </button>
+                    <button class="avatar-cam-btn" id="btn-cam-zoom-out" title="Alejar cámara (Dolly Out)">
+                      <span>－ Alejar</span>
+                    </button>
+                  </div>
                 </div>
               </div>
+            </div>
 
-              <!-- Deslizar (Dolly / Zoom) -->
-              <div class="avatar-cam-tool-section">
-                <div class="avatar-cam-section-label">Deslizar (Zoom)</div>
-                <div class="avatar-cam-dpad-row">
-                  <button class="avatar-cam-btn" id="btn-cam-zoom-in" title="Acercar cámara (Dolly In)">
-                    <span>＋ Acercar</span>
-                  </button>
-                  <button class="avatar-cam-btn" id="btn-cam-zoom-out" title="Alejar cámara (Dolly Out)">
-                    <span>－ Alejar</span>
-                  </button>
-                </div>
-              </div>
-
-              <!-- Hint Badge -->
-              <div class="avatar-cam-hint-badge">
-                <span class="avatar-cam-hint-icon">💡</span>
-                <span>Arrastrar: Girar<br>Clic Der / Shift: Mover<br>Rueda: Deslizar Zoom</span>
-              </div>
+            <!-- Indicador flotante en la base del visor 3D -->
+            <div class="avatar-viewport-cam-hint" id="avatar-viewport-cam-hint">
+              <span>🖱️ Arrastrar: Girar</span>
+              <span>•</span>
+              <span>Clic Der: Mover</span>
+              <span>•</span>
+              <span>Rueda: Zoom</span>
             </div>
           </div>
 
-          <!-- Indicador flotante en la base del visor -->
-          <div class="avatar-viewport-cam-hint" id="avatar-viewport-cam-hint">
-            <span>🖱️ Arrastrar: Girar</span>
-            <span>•</span>
-            <span>Clic Der: Mover</span>
-            <span>•</span>
-            <span>Rueda: Deslizar</span>
+          <!-- SUB-VIEWPORT 2: PANEL DE VIDEO ORIGINAL ULTRA HD (PARA COMPARACIÓN DIRECTA) -->
+          <div class="avatar-uhd-panel" id="avatar-uhd-panel-wrap">
+            <div class="avatar-uhd-header">
+              <div class="avatar-uhd-header-left">
+                <span class="avatar-uhd-badge-live">Original UHD</span>
+                <span style="font-size:0.8rem; font-weight:700; color:var(--text-primary);" id="uhd-header-sign-name">Cargando seña...</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <button class="btn btn-secondary btn-sm" id="btn-toggle-uhd-illustration" title="Ver Ilustración oficial de la seña (Tecla I)" style="padding:2px 8px; font-size:0.7rem; border-color:#6366f1; color:#c7d2fe; display:none;">
+                  🖼️ Ilustración
+                </button>
+                <span class="avatar-model-pill" id="uhd-catalog-pos-pill" style="background:#1e3a8a; color:#bfdbfe; border:1px solid #3b82f6; font-size:0.7rem; font-weight:700;">#—</span>
+                <span class="avatar-model-pill" id="uhd-quality-badge" style="background:#064e3b; color:#a7f3d0; border:1px solid #059669; font-size:0.7rem; font-weight:700;">60 FPS</span>
+              </div>
+            </div>
+
+            <!-- Reproductor de Video con fallback automático y capa de ilustración -->
+            <div class="avatar-uhd-player-wrap">
+              <video id="avatar-uhd-video" class="avatar-uhd-video-element" playsinline loop preload="auto"></video>
+              
+              <!-- Capa emergente de Ilustración Oficial dentro del panel de video -->
+              <div id="uhd-illustration-overlay" class="uhd-illustration-overlay">
+                <div style="display:flex; justify-content:space-between; align-items:center; width:100%; padding:8px 12px; border-bottom:1px solid rgba(255,255,255,0.1); background:rgba(18,22,19,0.85);">
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <span style="font-size:0.85rem;">🖼️</span>
+                    <span style="font-size:0.8rem; font-weight:700; color:#e2e8f0;" id="uhd-illustration-overlay-title">Ilustración Oficial</span>
+                  </div>
+                  <div style="display:flex; gap:6px;">
+                    <button class="btn btn-secondary btn-sm" id="btn-expand-uhd-illustration" style="padding:2px 8px; font-size:0.7rem;" title="Ver en pantalla completa">🔍 Ampliar</button>
+                    <button class="btn btn-secondary btn-sm" id="btn-close-uhd-illustration" style="padding:2px 8px; font-size:0.7rem;">✕ Cerrar (Esc)</button>
+                  </div>
+                </div>
+                <div style="flex:1; width:100%; display:flex; align-items:center; justify-content:center; padding:16px; overflow:hidden;">
+                  <img id="uhd-illustration-overlay-img" src="" alt="Ilustración oficial LSEC" style="max-height:100%; max-width:100%; object-fit:contain; border-radius:6px; filter:drop-shadow(0 10px 25px rgba(0,0,0,0.7)); cursor:pointer;" title="Clic para ver en pantalla completa">
+                </div>
+              </div>
+
+              <div id="avatar-uhd-fallback" class="avatar-uhd-fallback" style="display:none;">
+                <span style="font-size:2.2rem; margin-bottom:6px;">📺</span>
+                <span style="font-weight:700; font-size:0.9rem; color:var(--text-primary); margin-bottom:4px;" id="uhd-fallback-title">Video MP4 Local no encontrado</span>
+                <p style="font-size:0.75rem; color:var(--text-secondary); max-width:280px; margin-bottom:12px;" id="uhd-fallback-desc">
+                  Esta seña está registrada en el catálogo oficial de CONADIS con enlace de referencia externo.
+                </p>
+                <a id="btn-uhd-open-remote" href="#" target="_blank" class="btn btn-primary btn-sm" style="display:none;">
+                  <span>Abrir Video en YouTube Oficial ↗</span>
+                </a>
+              </div>
+            </div>
+
+            <!-- Barra de Controles Dedicados del Video -->
+            <div class="avatar-uhd-footer-bar">
+              <div style="display:flex; gap:4px; align-items:center;">
+                <button class="btn btn-secondary btn-sm" id="btn-uhd-toggle-play" title="Reproducir / Pausar Video (K)">
+                  <span id="uhd-play-btn-text">▶ Play</span>
+                </button>
+                <button class="btn btn-secondary btn-sm" id="btn-uhd-step-prev" title="Retroceder 1 frame (,)">
+                  <span>⏮ Frame</span>
+                </button>
+                <button class="btn btn-secondary btn-sm" id="btn-uhd-step-next" title="Avanzar 1 frame (.)">
+                  <span>Frame ⏭</span>
+                </button>
+              </div>
+
+              <div style="font-size:0.72rem; color:var(--text-muted); font-variant-numeric:tabular-nums; font-weight:600;">
+                <span id="uhd-time-display">0.00s / 0.00s</span>
+              </div>
+
+              <div style="display:flex; align-items:center; gap:6px;">
+                <button class="btn btn-secondary btn-sm" id="btn-uhd-mute" title="Silenciar / Activar audio">
+                  <span id="uhd-mute-label">🔇</span>
+                </button>
+                <button class="btn btn-secondary btn-sm" id="btn-uhd-fullscreen" title="Pantalla completa del video">
+                  <span>⛶</span>
+                </button>
+              </div>
+            </div>
+
           </div>
+
         </div>
 
-        <!-- Barra de Controles de Cámara y Transporte de Reproducción -->
+        <!-- BARRA UNIFICADA DE TRANSPORTE Y SINCRONIZACIÓN -->
         <div class="avatar-cam-presets-bar">
-          <!-- Presets de Cámara -->
+          
+          <!-- Presets de Cámara 3D -->
           <div class="avatar-cam-presets-group">
             <span style="font-size:0.72rem; color:var(--text-muted); font-weight:600; margin-right:4px;">Cámara:</span>
             <button class="avatar-cam-preset-btn active" id="btn-cam-medium" title="Vista plano medio (pecho y manos)">Plano Medio</button>
@@ -191,7 +696,6 @@
             <button class="avatar-cam-preset-btn" id="btn-cam-face" title="Vista primer plano de rostro y mirada">Rostro</button>
             <button class="avatar-cam-preset-btn" id="btn-cam-hands" title="Vista focalizada en manos y sien para señas">Manos / Sien</button>
             
-            <!-- Herramientas Rápidas de Cámara -->
             <div class="avatar-cam-tools-compact">
               <button class="avatar-cam-icon-btn" id="btn-quick-rot-left" title="Girar izquierda ↺">↺</button>
               <button class="avatar-cam-icon-btn" id="btn-quick-rot-right" title="Girar derecha ↻">↻</button>
@@ -201,18 +705,33 @@
             </div>
           </div>
 
-          <!-- Controles de Reproducción y Velocidad -->
+          <!-- Controles de Transporte Sincronizado y Modo Comparativo -->
           <div style="display:flex; align-items:center; gap:8px;">
+            
+            <!-- Toggle Modo Comparación Lado a Lado -->
+            <button class="btn btn-secondary btn-sm" id="btn-toggle-comparison-mode" title="Alternar Vista Comparativa Lado a Lado con Video Ultra HD (Tecla V)" style="border-color:#3b82f6; color:#93c5fd;">
+              <span>🎥 Modo Comparación</span>
+            </button>
+
+            <!-- Checkbox de Reproducción Sincronizada -->
+            <label class="sync-toggle-pill" title="Reproduce simultáneamente el avatar 3D y el video original en sincronía temporal">
+              <input type="checkbox" id="chk-sync-playback" checked style="accent-color:#10b981; cursor:pointer;">
+              <span style="font-weight:700; color:#34d399;">🔗 Sincronizado</span>
+            </label>
+
+            <div style="width:1px; height:16px; background:var(--border-subtle); margin:0 2px;"></div>
+
+            <!-- Botones Principales de Reproducción -->
             <div style="display:flex; gap:6px;">
-              <button class="btn btn-primary btn-sm" id="btn-avatar-play" title="Reproducir prueba seleccionada">
+              <button class="btn btn-primary btn-sm" id="btn-avatar-play" title="Reproducir seña activa (Espacio)" style="background:linear-gradient(135deg, #10b981 0%, #059669 100%);">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                 <span>Reproducir</span>
               </button>
-              <button class="btn btn-secondary btn-sm" id="btn-avatar-pause" title="Pausar animación">
+              <button class="btn btn-secondary btn-sm" id="btn-avatar-pause" title="Pausar animación y video">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
                 <span>Pausar</span>
               </button>
-              <button class="btn btn-secondary btn-sm" id="btn-avatar-reset" title="Reiniciar a postura neutral">
+              <button class="btn btn-secondary btn-sm" id="btn-avatar-reset" title="Reiniciar a postura neutral y frame 0 (Tecla R)">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
                 <span>Reiniciar</span>
               </button>
@@ -220,7 +739,8 @@
 
             <div style="width:1px; height:16px; background:var(--border-subtle); margin:0 2px;"></div>
 
-            <select id="select-avatar-speed" class="avatar-select" title="Velocidad de reproducción">
+            <!-- Selector de Velocidad Sincronizada -->
+            <select id="select-avatar-speed" class="avatar-select" title="Velocidad de reproducción conjunta">
               <option value="0.25">0.25x</option>
               <option value="0.5">0.5x</option>
               <option value="0.75">0.75x</option>
@@ -234,160 +754,174 @@
 
       </section>
 
-      <!-- ZONA DERECHA: PANELES DE CONFIGURACIÓN Y CALIBRACIÓN -->
-      <aside class="avatar-config-sidebar-zone" aria-label="Paneles de Configuración del Avatar">
+      <!-- ZONA DERECHA: CATÁLOGO OFICIAL, VERIFICACIÓN Y MODELO VRM -->
+      <aside class="avatar-config-sidebar-zone" aria-label="Catálogo de Señas y Verificación">
         
-        <!-- PANEL 1: SELECCIÓN DE CLIP TÉCNICO Y PRUEBAS -->
+        <!-- CARD 1: BUSCADOR Y NAVEGACIÓN EN ORDEN OFICIAL DEL CATÁLOGO -->
         <div class="avatar-config-card">
           <div class="avatar-config-card-header">
             <span class="avatar-config-card-title">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z"/></svg>
-              Catálogo de Gestos y Clips
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z"/></svg>
+              Catálogo Oficial Diccionario LSEC
             </span>
-            <span class="avatar-config-card-subtitle">22 Pruebas</span>
+            <span class="avatar-config-card-subtitle" id="sign-count-badge" style="color:var(--action-primary); font-weight:700;">5.052 Señas</span>
           </div>
 
+
+          <!-- Buscador en tiempo real -->
+          <div style="position:relative; margin-bottom:8px;">
+            <input type="text" id="input-search-sign" class="avatar-select" style="width:100%; padding-left:28px;" placeholder="Buscar por palabra, slug o # (ej. Quieto, Allá, Champú)..." autocomplete="off">
+            <svg style="position:absolute; left:9px; top:50%; transform:translateY(-50%); opacity:0.5; pointer-events:none;" width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+            </svg>
+          </div>
+
+          <!-- Selector desplegable de señas ordenadas según catalogo_lsec.json -->
           <div>
-            <label for="select-avatar-clip" class="avatar-control-label" style="display:block; margin-bottom:4px;">Clip / Prueba Biomecánica:</label>
-            <select id="select-avatar-clip" class="avatar-select" style="width:100%;">
-              <!-- Poblado dinámicamente por AvatarPanelController -->
+            <label for="select-avatar-clip" class="avatar-control-label" style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <span>Seña en orden de catálogo:</span>
+              <span id="select-sign-index-hint" style="color:var(--text-muted); font-size:0.7rem;">Cargando catálogo...</span>
+            </label>
+            <select id="select-avatar-clip" class="avatar-select" style="width:100%; font-size:0.82rem;">
+              <option value="">Cargando catálogo ordenado...</option>
             </select>
           </div>
 
-          <div style="display:flex; gap:6px; margin-top:2px;">
-            <button class="btn btn-secondary btn-sm" id="btn-avatar-play-sequence" style="flex:1; justify-content:center;" title="Secuencia encadenada de saludo y negación">
-              <span>▶ Básica</span>
+          <!-- Botones de Navegación Secuencial para Verificación Rápida -->
+          <div class="nav-sign-stepper">
+            <button class="btn btn-secondary btn-sm" id="btn-sign-prev" title="Seña Anterior en el catálogo (Tecla Flecha Izquierda ←)">
+              <span>⬅ Anterior</span>
             </button>
-            <button class="btn btn-secondary btn-sm" id="btn-avatar-play-all-tests" style="flex:1; justify-content:center;" title="Ejecutar batería continua de las 22 pruebas biomecánicas">
-              <span>⚡ 22 Pruebas</span>
+            <button class="btn btn-secondary btn-sm" id="btn-sign-next" title="Seña Siguiente en el catálogo (Tecla Flecha Derecha →)">
+              <span>Siguiente ➡</span>
             </button>
-          </div>
-
-          <div style="margin-top:6px;">
-            <button class="btn btn-primary btn-sm" id="btn-avatar-play-week" style="width:100%; justify-content:center; background:linear-gradient(135deg, #059669 0%, #047857 100%); border-color:#059669; font-weight:600;" title="Reproducir secuencia de los 7 días de la semana (Lunes a Domingo)">
-              <span>📅 Días de la Semana (7 Días LSEC)</span>
+            <button class="btn btn-secondary btn-sm" id="btn-sign-random" title="Ir a una seña aleatoria del catálogo">
+              <span>🎲 Azar</span>
             </button>
           </div>
 
-          <!-- Edición Manual y Carga de Señas Corregidas -->
-          <div style="margin-top:10px; padding-top:8px; border-top:1px dashed var(--border-subtle); display:flex; flex-direction:column; gap:6px;">
-            <div style="font-size:0.73rem; font-weight:600; color:var(--text-secondary); display:flex; align-items:center; gap:5px;">
-              <span>✏️ Edición Manual de Señas (Blender / JSON)</span>
-            </div>
-            <div style="display:flex; gap:6px;">
-              <button class="btn btn-secondary btn-sm" id="btn-avatar-export-clip" style="flex:1; justify-content:center;" title="Exportar la seña actualmente seleccionada (ej. Lunes) a formato JSON para inspeccionar o editar">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-                <span>Exportar Seña</span>
-              </button>
-              <input type="file" id="avatar-clip-file-input" accept=".json" style="display:none;">
-              <button class="btn btn-primary btn-sm" id="btn-avatar-import-clip" style="flex:1; justify-content:center; background:linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%); border-color:#2563EB; font-weight:600;" title="Cargar seña corregida (.json) y reproducirla directamente en el avatar">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
-                <span>Cargar Seña Corregida</span>
-              </button>
-            </div>
+          <!-- Botón de Verificación y Control de Calidad -->
+          <div style="margin-top:10px;">
+            <button class="btn btn-secondary btn-sm" id="btn-verify-sign" style="width:100%; justify-content:center; padding:7px 0; font-size:0.78rem;" title="Marcar esta seña como verificada y conforme con el video original">
+              <span id="verify-sign-label">✓ Marcar como Verificada</span>
+            </button>
           </div>
+
+
         </div>
 
-        <!-- PANEL 2: MODELO Y RIG VRM 1.0 -->
+        <!-- CARD 2: FICHA TÉCNICA, LINGÜÍSTICA Y QA BIOMECÁNICO -->
+        <div class="avatar-config-card" id="card-sign-qa">
+          <div class="avatar-config-card-header">
+            <span class="avatar-config-card-title">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/></svg>
+              Ficha Lingüística y Técnica
+            </span>
+            <span class="avatar-config-card-subtitle" id="qa-status-pill" style="color:#10b981; font-weight:700;">✓ Aprobada</span>
+          </div>
+
+          <!-- Selector de Versión Cinemática Destacado -->
+          <div class="version-card-switcher" id="card-version-switcher">
+            <button type="button" class="version-card-btn active v26" id="card-btn-v26" title="Seleccionar versión corregida v2.6">
+              <div class="version-card-btn-header">
+                <span class="version-card-btn-title">v2.6 Corregida</span>
+                <span class="version-card-btn-badge">Activa</span>
+              </div>
+              <div class="version-card-btn-desc">Muñecas sin giros bruscos, IK anti-penetración (~1cm) y 52 ARKit faciales.</div>
+            </button>
+            <button type="button" class="version-card-btn" id="card-btn-v25" title="Seleccionar versión 1:1 original v2.5">
+              <div class="version-card-btn-header">
+                <span class="version-card-btn-title">v2.5 Directo</span>
+                <span class="version-card-btn-badge" style="display:none;">Original</span>
+              </div>
+              <div class="version-card-btn-desc">Captura directa 1:1 original sin postproceso cinemático de despeje.</div>
+            </button>
+          </div>
+
+          <!-- Banner de Estado de Versión y Detección de Seña Re-extraída -->
+          <div class="version-status-banner v26" id="version-status-banner">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px;">
+              <span id="version-status-text" style="font-weight:600;">✓ Versión 2.6 Corregida: Cinemática optimizada + 52 Blendshapes.</span>
+              <span id="reextracted-sign-tag" class="reextracted-sign-tag" style="display:none;" title="Seña re-extraída en GPU en Google Colab con 64+ cuadros">✨ RE-EXTRAÍDA GPU</span>
+            </div>
+          </div>
+
+          <!-- Metadatos de Catálogo Oficial (info.json) -->
+          <div style="background:var(--bg-subtle, rgba(255,255,255,0.03)); padding:8px; border-radius:6px; border:1px solid var(--border-subtle); margin-bottom:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; padding-bottom:4px; border-bottom:1px solid rgba(255,255,255,0.05);">
+              <span style="color:var(--text-muted); font-size:0.68rem;">Versión Cinemática:</span>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span id="info-pipeline-version" style="font-weight:700; color:#a7f3d0; font-size:0.72rem;">v2.6 Corregida</span>
+                <button class="btn btn-secondary btn-sm" id="btn-toggle-pipeline-version" style="font-size:0.65rem; padding:1px 6px; height:20px;" title="Alternar entre versión v2.6 (corregida) y v2.5 (original)">Ver v2.5</button>
+              </div>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <span style="color:var(--text-muted); font-size:0.68rem;">Posición en Catálogo:</span>
+              <span id="info-catalog-pos" style="font-weight:700; color:#60a5fa; font-size:0.75rem;">#— de 4.252</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <span style="color:var(--text-muted); font-size:0.68rem;">Palabra Oficial:</span>
+              <span id="info-catalog-palabra" style="font-weight:700; color:var(--text-primary); font-size:0.75rem;">—</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <span style="color:var(--text-muted); font-size:0.68rem;">Slug Oficial:</span>
+              <span id="info-catalog-slug" style="color:var(--text-secondary); font-family:monospace; font-size:0.72rem;">—</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="color:var(--text-muted); font-size:0.68rem;">Categorías:</span>
+              <span id="info-catalog-categories" style="color:var(--action-primary); font-size:0.7rem; font-weight:600; text-align:right;">—</span>
+            </div>
+          </div>
+
+          <!-- Ilustración Oficial del Diccionario LSEC -->
+          <div id="sign-illustration-container" style="background:var(--bg-subtle, rgba(255,255,255,0.03)); padding:8px; border-radius:6px; border:1px solid var(--border-subtle); margin-bottom:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <span style="color:var(--text-muted); font-size:0.68rem; font-weight:600; text-transform:uppercase; letter-spacing:0.04em;">
+                🖼️ Ilustración Oficial
+              </span>
+              <span id="illustration-status-badge" style="font-size:0.68rem; font-weight:700; color:#10b981;">
+                Cargando...
+              </span>
+            </div>
+            
+            <div id="illustration-img-box" class="illustration-preview-box" title="Clic para ampliar ilustración en pantalla completa">
+              <img id="sign-illustration-img" class="illustration-preview-img" src="" alt="Ilustración oficial LSEC">
+              
+              <div id="sign-illustration-fallback" style="display:none; flex-direction:column; align-items:center; justify-content:center; padding:14px 8px; color:var(--text-muted); font-size:0.75rem; text-align:center;">
+                <span style="font-size:1.6rem; margin-bottom:4px; opacity:0.6;">🖼️</span>
+                <span style="font-size:0.72rem; color:var(--text-secondary);">Ilustración local no disponible</span>
+                <a id="illustration-remote-link" href="#" target="_blank" style="display:none; color:#60a5fa; margin-top:5px; text-decoration:underline; font-size:0.7rem;">Ver en catálogo CONADIS ↗</a>
+              </div>
+
+              <div id="illustration-zoom-tag" class="illustration-zoom-tag" style="position:absolute; bottom:5px; right:6px; font-size:0.65rem; background:rgba(0,0,0,0.7); padding:2px 6px; border-radius:4px; color:#cbd5e1; pointer-events:none; opacity:0.8; transition:opacity 0.2s;">
+                🔍 Ampliar
+              </div>
+            </div>
+          </div>
+
+
+        </div>
+
+        <!-- CARD 3: MODELO HUMANOIDE VRM 1.0 -->
         <div class="avatar-config-card">
           <div class="avatar-config-card-header">
             <span class="avatar-config-card-title">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/></svg>
               Modelo Humanoide VRM 1.0
             </span>
+            <span class="avatar-config-card-subtitle" style="color:var(--text-muted);">LSEC-Female</span>
           </div>
 
-          <div style="display:flex; flex-direction:column; gap:8px;">
+          <div style="display:flex; flex-direction:column; gap:6px;">
             <input type="file" id="avatar-vrm-file-input" accept=".vrm,.glb" style="display:none;">
-            <button class="btn btn-primary btn-sm" id="btn-avatar-load-vrm" style="width:100%; justify-content:center;">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
+            <button class="btn btn-secondary btn-sm" id="btn-avatar-load-vrm" style="width:100%; justify-content:center; font-size:0.75rem;">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
               <span>Cargar Avatar VRM Local (.vrm)</span>
             </button>
-
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
-              <button class="btn btn-secondary btn-sm" id="btn-toggle-model-source" title="Alternar entre VRM 1.0 y Rig Técnico de Reserva">
-                <span>Alternar Rig Técnico</span>
-              </button>
-              <button class="btn btn-secondary btn-sm" id="btn-reload-default-vrm" title="Recargar modelo original del proyecto">
-                <span>Restaurar Prototipo</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- PANEL 3: PRUEBAS DE RASGOS NO MANUALES (CNM) -->
-        <div class="avatar-config-card">
-          <div class="avatar-config-card-header">
-            <span class="avatar-config-card-title">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
-              Rasgos No Manuales (CNM)
-            </span>
-            <span class="avatar-config-card-subtitle">Facial y Cabeza</span>
-          </div>
-
-          <div class="avatar-cnm-grid">
-            <button class="avatar-tool-btn" data-cnm-test="EYEBROW_RAISE">
-              <span>Cejas Elevadas</span>
-              <small style="opacity:0.6;">Sí/No</small>
-            </button>
-            <button class="avatar-tool-btn" data-cnm-test="EYEBROW_FURROW">
-              <span>Ceño Fruncido</span>
-              <small style="opacity:0.6;">Qu-</small>
-            </button>
-            <button class="avatar-tool-btn" data-cnm-test="HEAD_SHAKE">
-              <span>Negación Cabeza</span>
-              <small style="opacity:0.6;">NO</small>
-            </button>
-            <button class="avatar-tool-btn" data-cnm-test="HEAD_NOD">
-              <span>Asentimiento</span>
-              <small style="opacity:0.6;">SÍ</small>
-            </button>
-            <button class="avatar-tool-btn" data-cnm-test="BLINK" style="grid-column: span 2;">
-              <span>Parpadeo Natural (Blink)</span>
-              <small style="opacity:0.6;">60ms</small>
+            <button class="btn btn-secondary btn-sm" id="btn-reload-default-vrm" style="width:100%; justify-content:center; font-size:0.75rem;" title="Restaurar modelo VRM oficial LSEC-Interpreter-Female.vrm">
+              <span>Restaurar Modelo Oficial</span>
             </button>
           </div>
-        </div>
-
-        <!-- PANEL 4: ESPACIO DE ARTICULACIÓN Y LOCI ESPACIALES -->
-        <div class="avatar-config-card">
-          <div class="avatar-config-card-header">
-            <span class="avatar-config-card-title">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>
-              Espacio y Loci Espaciales
-            </span>
-          </div>
-
-          <div class="avatar-loci-grid">
-            <button class="avatar-tool-btn" data-locus-test="CENTRO">
-              <span>Locus Centro</span>
-              <small style="opacity:0.6;">[0, 1.2, 0]</small>
-            </button>
-            <button class="avatar-tool-btn" data-locus-test="DERECHA">
-              <span>Locus Derecha</span>
-              <small style="opacity:0.6;">[+0.35]</small>
-            </button>
-            <button class="avatar-tool-btn" data-locus-test="IZQUIERDA">
-              <span>Locus Izquierda</span>
-              <small style="opacity:0.6;">[-0.35]</small>
-            </button>
-            <button class="avatar-tool-btn" data-locus-test="ARRIBA">
-              <span>Locus Superior</span>
-              <small style="opacity:0.6;">[+0.25 Y]</small>
-            </button>
-          </div>
-        </div>
-
-        <!-- PANEL 5: ADVERTENCIA ÉTICA Y LINGÜÍSTICA -->
-        <div class="avatar-disclaimer-card">
-          <div class="avatar-disclaimer-header">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-            <strong>Verificación Técnica — No son señas LSEC validadas</strong>
-          </div>
-          <p class="avatar-disclaimer-text">
-            Este entorno ejecuta pruebas de cinemática esquelética, rigidez biomecánica y rendimiento a 60fps.
-            Toda seña definitiva de la Lengua de Señas Ecuatoriana (LSEC) requiere validación obligatoria con señantes sordos nativos.
-          </p>
         </div>
 
       </aside>
@@ -396,59 +930,911 @@
 
   </main>
 
-  <!-- MÓDULO ES6 DE INICIALIZACIÓN DEL AVATAR -->
+  <!-- MODAL LIGHTBOX PARA INSPECCIÓN DETALLADA DE LA ILUSTRACIÓN -->
+  <div id="illustration-lightbox" class="illustration-lightbox">
+    <div style="position:relative; max-width:90vw; max-height:90vh; background:#121614; border:1px solid var(--border-medium); border-radius:8px; box-shadow:0 24px 60px rgba(0,0,0,0.85); display:flex; flex-direction:column; overflow:hidden;">
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 16px; border-bottom:1px solid var(--border-subtle); background:#181c19;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:1.1rem;">🖼️</span>
+          <span id="lightbox-title" style="font-weight:700; font-size:0.88rem; color:var(--text-primary);">Ilustración Oficial LSEC</span>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btn-close-lightbox" style="padding:3px 10px; font-size:0.8rem;" title="Cerrar (Esc)">✕ Cerrar (Esc)</button>
+      </div>
+      <div style="flex:1; display:flex; align-items:center; justify-content:center; padding:20px; background:#0b0d0c; overflow:auto;">
+        <img id="lightbox-img" src="" alt="Ilustración oficial LSEC ampliada" style="max-width:100%; max-height:75vh; object-fit:contain; border-radius:4px; filter:drop-shadow(0 10px 25px rgba(0,0,0,0.8));">
+      </div>
+    </div>
+  </div>
+
+  <!-- MÓDULO ES6 DE INICIALIZACIÓN DEL AVATAR Y REPRODUCTOR ULTRA HD SINCRONIZADO -->
   <script type="module">
     import * as THREE from 'three';
     window.THREE = THREE;
-    import { AvatarPanelController } from '/static/js/avatar/avatar-controller.js';
+    import { AvatarPanelController } from '/static/js/avatar/avatar-controller.js?v=2.3.0';
     window.AvatarPanelController = AvatarPanelController;
 
-    const initAvatarConfig = () => {
+    let allSigns = [];
+    let allItems = [];
+    let displayedSigns = [];
+    let displayedItems = [];
+    let currentSignName = null;
+    let currentSignIndex = -1;
+    let isComparisonMode = true;
+    let verifiedSigns = new Set();
+    let currentIllustrationUrl = null;
+    let isUhdIllustrationOpen = false;
+    let preferredVersion = '2.6';
+
+    // Lista de las 56 señas re-extraídas en GPU en Google Colab (antes truncadas <= 30 frames)
+    const TRUNCATED_REEXTRACTED_SIGNS = new Set([
+      "Allá",
+      "Alucinar, Alucinación",
+      "Bailable, Bailar, Baile, Bailarín(a)",
+      "Caña",
+      "Caparazón",
+      "Castañuela",
+      "Condón",
+      "Corbatín",
+      "Evolución, Evolucionar",
+      "Bahía",
+      "Disimular, Encubrir intención",
+      "Barbón",
+      "Calificar, Calificación",
+      "Conmoción",
+      "Cólera",
+      "Cóndor",
+      "Ecovía, Metrobús",
+      "Español",
+      "Baño",
+      "Barman, Cóctel, Coctelera",
+      "Biología",
+      "Cajón",
+      "Cardiólogo",
+      "Cáncer, Del zodiaco",
+      "Champú",
+      "Desesperación, Desesperado",
+      "Extrañar",
+      "Democracia, Democrático(a)",
+      "Carísimo(a), Caro",
+      "Asociación De Tungurahua",
+      "Azúcar",
+      "Cómoda",
+      "Alternativa, Opción",
+      "Bicicrós",
+      "Brujería",
+      "Clase, Comisión, Comité",
+      "Colchón",
+      "Cucharón",
+      "Currículum vitae, Hoja de vida",
+      "Escorpión",
+      "Amonestación, Amonestar",
+      "Azadón",
+      "Babear, De atracción",
+      "Buzón",
+      "Charla, Exponer, Exposición",
+      "Compás",
+      "Confesar, Confesión",
+      "Definir  Definición",
+      "Armario, Closét",
+      "Caballero, Señor",
+      "Camarón",
+      "Chichón",
+      "Concluir, Conclusión",
+      "Dinámico(a), Simpático",
+      "Corazón acelerado",
+      "Evangélico(a)",
+    ]);
+
+    function isReextractedSign(signName) {
+      if (!signName) return false;
+      const sNfc = signName.normalize('NFC').toLowerCase();
+      const sNfd = signName.normalize('NFD').toLowerCase();
+      for (const t of TRUNCATED_REEXTRACTED_SIGNS) {
+        if (t.normalize('NFC').toLowerCase() === sNfc || t.normalize('NFD').toLowerCase() === sNfd) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function setPreferredVersion(newVer) {
+      if (newVer !== '2.6' && newVer !== '2.5') return;
+      preferredVersion = newVer;
+      const isV26 = preferredVersion === '2.6';
+
+      // 1. Botones de Navbar
+      const navV26 = document.getElementById('nav-btn-v26');
+      const navV25 = document.getElementById('nav-btn-v25');
+      if (navV26 && navV25) {
+        if (isV26) {
+          navV26.className = 'version-nav-btn active v26';
+          navV25.className = 'version-nav-btn';
+        } else {
+          navV26.className = 'version-nav-btn';
+          navV25.className = 'version-nav-btn active v25';
+        }
+      }
+
+      // 2. Botones de Card 2 Switcher
+      const cardV26 = document.getElementById('card-btn-v26');
+      const cardV25 = document.getElementById('card-btn-v25');
+      if (cardV26 && cardV25) {
+        if (isV26) {
+          cardV26.className = 'version-card-btn active v26';
+          cardV25.className = 'version-card-btn';
+          const b26 = cardV26.querySelector('.version-card-btn-badge');
+          const b25 = cardV25.querySelector('.version-card-btn-badge');
+          if (b26) { b26.style.display = 'inline-block'; b26.textContent = 'Activa'; }
+          if (b25) { b25.style.display = 'none'; }
+        } else {
+          cardV26.className = 'version-card-btn';
+          cardV25.className = 'version-card-btn active v25';
+          const b26 = cardV26.querySelector('.version-card-btn-badge');
+          const b25 = cardV25.querySelector('.version-card-btn-badge');
+          if (b25) { b25.style.display = 'inline-block'; b25.textContent = 'Activa'; }
+          if (b26) { b26.style.display = 'none'; }
+        }
+      }
+
+      // 3. Banner Informativo de Versión
+      const banner = document.getElementById('version-status-banner');
+      const bannerText = document.getElementById('version-status-text');
+      if (banner && bannerText) {
+        if (isV26) {
+          banner.className = 'version-status-banner v26';
+          bannerText.textContent = '✓ Versión 2.6 Corregida: Cinemática optimizada, IK anti-penetración (~1cm) y 52 Blendshapes.';
+        } else {
+          banner.className = 'version-status-banner v25';
+          bannerText.textContent = 'ℹ️ Versión 2.5 Directo: Captura directa 1:1 original sin postproceso cinemático de despeje.';
+        }
+      }
+
+      // 4. HUD 3D Badges
+      const hudBadge = document.getElementById('hud-pipeline-badge');
+      const hudExpr = document.getElementById('hud-expressions-badge');
+      if (hudBadge) {
+        if (isV26) {
+          hudBadge.textContent = 'v2.6';
+          hudBadge.style.background = '#064e3b';
+          hudBadge.style.color = '#6ee7b7';
+          hudBadge.style.borderColor = '#059669';
+        } else {
+          hudBadge.textContent = 'v2.5';
+          hudBadge.style.background = '#1e293b';
+          hudBadge.style.color = '#93c5fd';
+          hudBadge.style.borderColor = '#3b82f6';
+        }
+      }
+      if (hudExpr) {
+        if (isV26) {
+          hudExpr.textContent = '🎭 52 ARKit';
+          hudExpr.style.background = 'rgba(16,185,129,0.15)';
+          hudExpr.style.color = '#34d399';
+          hudExpr.style.borderColor = 'rgba(16,185,129,0.3)';
+        } else {
+          hudExpr.textContent = '🎭 Sin ARKit';
+          hudExpr.style.background = 'rgba(148,163,184,0.15)';
+          hudExpr.style.color = '#94a3b8';
+          hudExpr.style.borderColor = 'rgba(148,163,184,0.3)';
+        }
+      }
+
+      // 5. Metadata de catálogo
+      const infoPipe = document.getElementById('info-pipeline-version');
+      const toggleBtn = document.getElementById('btn-toggle-pipeline-version');
+      if (infoPipe) {
+        infoPipe.textContent = isV26 ? 'v2.6 Corregida' : 'v2.5 Directo';
+        infoPipe.style.color = isV26 ? '#a7f3d0' : '#94a3b8';
+      }
+      if (toggleBtn) {
+        toggleBtn.textContent = isV26 ? 'Ver v2.5' : 'Ver v2.6';
+        toggleBtn.title = isV26 ? 'Alternar a versión original v2.5' : 'Alternar a versión corregida v2.6';
+      }
+
+      // 6. Recargar seña activa en el avatar con la versión elegida
+      if (currentSignName) {
+        playSign(currentSignName);
+      }
+    }
+
+    // Cargar señas verificadas desde LocalStorage
+    try {
+      const stored = localStorage.getItem('lsec_verified_signs_set');
+      if (stored) verifiedSigns = new Set(JSON.parse(stored));
+    } catch (e) {
+      console.warn('No se pudo leer localStorage:', e);
+    }
+
+    function updateVerificationBadge() {
+      const badge = document.getElementById('verification-progress-pill');
+      if (badge && allSigns.length > 0) {
+        badge.textContent = `✓ ${verifiedSigns.size.toLocaleString()} / ${allSigns.length.toLocaleString()} VERIFICADAS`;
+      }
+    }
+
+    function updateVerifyButtonState(signName) {
+      const btn = document.getElementById('btn-verify-sign');
+      const label = document.getElementById('verify-sign-label');
+      if (!btn || !label) return;
+
+      if (verifiedSigns.has(signName)) {
+        btn.classList.add('btn-verify-active');
+        label.textContent = '✓ Verificada (Conforme)';
+      } else {
+        btn.classList.remove('btn-verify-active');
+        label.textContent = 'Marcar como Verificada';
+      }
+    }
+
+    async function fetchSignQA(signName, version = preferredVersion) {
+      try {
+        const vParam = version ? `?version=${version}` : '';
+        const res = await fetch(`/api/v1/animations/${encodeURIComponent(signName)}/qa${vParam}`);
+        if (!res.ok) return null;
+        return await res.json();
+      } catch {
+        return null;
+      }
+    }
+
+    async function fetchSignInfo(signName) {
+      try {
+        const res = await fetch(`/api/v1/animations/${encodeURIComponent(signName)}/info`);
+        if (!res.ok) return null;
+        return await res.json();
+      } catch {
+        return null;
+      }
+    }
+
+    // Actualiza el reproductor de video Ultra HD
+    function updateUHDVideoPlayer(signName, meta) {
+      const videoEl = document.getElementById('avatar-uhd-video');
+      const fallbackEl = document.getElementById('avatar-uhd-fallback');
+      const fallbackLink = document.getElementById('btn-uhd-open-remote');
+      const headerTitle = document.getElementById('uhd-header-sign-name');
+      const catalogPosPill = document.getElementById('uhd-catalog-pos-pill');
+      const videoTimeDisplay = document.getElementById('uhd-time-display');
+
+      if (headerTitle) headerTitle.textContent = signName;
+      if (catalogPosPill && meta) {
+        catalogPosPill.textContent = `#${meta.catalog_index || '—'} Catálogo`;
+      }
+
+      if (!videoEl) return;
+
+      const videoUrl = `/api/v1/animations/${encodeURIComponent(signName)}/video`;
+      fallbackEl.style.display = 'none';
+      videoEl.style.display = 'block';
+
+      videoEl.src = videoUrl;
+      videoEl.load();
+
+      // Control de velocidad sincronizada
+      const speedSelect = document.getElementById('select-avatar-speed');
+      if (speedSelect) videoEl.playbackRate = parseFloat(speedSelect.value);
+
+      videoEl.onerror = () => {
+        videoEl.style.display = 'none';
+        fallbackEl.style.display = 'flex';
+        const ytUrl = meta?.video_url || (meta?.video_id ? `https://www.youtube.com/watch?v=${meta.video_id}` : null);
+        if (ytUrl && fallbackLink) {
+          fallbackLink.href = ytUrl;
+          fallbackLink.style.display = 'inline-flex';
+        } else if (fallbackLink) {
+          fallbackLink.style.display = 'none';
+        }
+      };
+
+      videoEl.ontimeupdate = () => {
+        if (videoTimeDisplay && videoEl.duration) {
+          videoTimeDisplay.textContent = `${videoEl.currentTime.toFixed(2)}s / ${videoEl.duration.toFixed(2)}s`;
+        }
+      };
+    }
+
+    function openLightbox(src, title) {
+      const modal = document.getElementById('illustration-lightbox');
+      const img = document.getElementById('lightbox-img');
+      const titleEl = document.getElementById('lightbox-title');
+      if (!modal || !img) return;
+
+      const targetSrc = src || currentIllustrationUrl;
+      if (!targetSrc) return;
+
+      img.src = targetSrc;
+      if (titleEl && title) {
+        titleEl.textContent = title;
+      } else if (titleEl && currentSignName) {
+        titleEl.textContent = `Ilustración Oficial LSEC: ${currentSignName}`;
+      }
+
+      modal.style.display = 'flex';
+    }
+
+    function closeLightbox() {
+      const modal = document.getElementById('illustration-lightbox');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function toggleUhdIllustration() {
+      const overlay = document.getElementById('uhd-illustration-overlay');
+      if (!overlay) return;
+      isUhdIllustrationOpen = !isUhdIllustrationOpen;
+      overlay.style.display = isUhdIllustrationOpen ? 'flex' : 'none';
+    }
+
+    function hideUhdIllustration() {
+      const overlay = document.getElementById('uhd-illustration-overlay');
+      if (overlay) {
+        overlay.style.display = 'none';
+        isUhdIllustrationOpen = false;
+      }
+    }
+
+    // Actualiza la ilustración oficial LSEC desde el disco local
+    function updateSignIllustration(signName, meta) {
+      const illImg = document.getElementById('sign-illustration-img');
+      const illFallback = document.getElementById('sign-illustration-fallback');
+      const illStatus = document.getElementById('illustration-status-badge');
+      const illRemoteLink = document.getElementById('illustration-remote-link');
+      const overlayImg = document.getElementById('uhd-illustration-overlay-img');
+      const overlayTitle = document.getElementById('uhd-illustration-overlay-title');
+      const btnToggleUhdIll = document.getElementById('btn-toggle-uhd-illustration');
+      const zoomTag = document.getElementById('illustration-zoom-tag');
+
+      if (!illImg) return;
+
+      const illUrl = `/api/v1/animations/${encodeURIComponent(signName)}/illustration`;
+      currentIllustrationUrl = null;
+
+      if (illStatus) {
+        illStatus.textContent = 'Buscando...';
+        illStatus.style.color = 'var(--text-muted)';
+      }
+
+      // Probar si la ilustración existe en disco local
+      const testImg = new Image();
+      testImg.onload = () => {
+        currentIllustrationUrl = illUrl;
+        illImg.src = illUrl;
+        illImg.style.display = 'block';
+        if (illFallback) illFallback.style.display = 'none';
+        if (zoomTag) zoomTag.style.display = 'block';
+        if (illStatus) {
+          illStatus.textContent = '✓ Disponible';
+          illStatus.style.color = '#10b981';
+        }
+        if (overlayImg) overlayImg.src = illUrl;
+        if (overlayTitle) {
+          const catNum = meta?.catalog_index ? `#${meta.catalog_index} ` : '';
+          overlayTitle.textContent = `Ilustración Oficial: ${catNum}${signName}`;
+        }
+        if (btnToggleUhdIll) {
+          btnToggleUhdIll.style.display = 'inline-flex';
+        }
+      };
+
+      testImg.onerror = () => {
+        currentIllustrationUrl = null;
+        illImg.style.display = 'none';
+        if (zoomTag) zoomTag.style.display = 'none';
+        if (illFallback) illFallback.style.display = 'flex';
+        if (illStatus) {
+          illStatus.textContent = 'No disponible';
+          illStatus.style.color = 'var(--text-muted)';
+        }
+        if (btnToggleUhdIll) {
+          btnToggleUhdIll.style.display = 'none';
+        }
+        hideUhdIllustration();
+
+        const remoteUrl = meta?.imagen_url;
+        if (remoteUrl && illRemoteLink) {
+          illRemoteLink.href = remoteUrl;
+          illRemoteLink.style.display = 'inline-block';
+        } else if (illRemoteLink) {
+          illRemoteLink.style.display = 'none';
+        }
+      };
+
+      testImg.src = illUrl;
+    }
+
+    async function playSign(signName) {
+      if (!signName || !window.avatarController) return;
+      currentSignName = signName;
+      currentSignIndex = allSigns.findIndex(s => s === signName);
+
+      const hudSign = document.getElementById('avatar-active-gloss-hud');
+      if (hudSign) hudSign.textContent = signName.toUpperCase();
+
+      const statusBadge = document.getElementById('avatar-playback-status-badge');
+      if (statusBadge) statusBadge.textContent = 'Cargando...';
+
+      updateVerifyButtonState(signName);
+
+      // Tag de seña re-extraída en GPU en Colab
+      const reTag = document.getElementById('reextracted-sign-tag');
+      const isRe = isReextractedSign(signName);
+      if (reTag) {
+        reTag.style.display = isRe ? 'inline-flex' : 'none';
+      }
+
+      // Cargar información lingüística e info.json de catálogo
+      fetchSignInfo(signName).then(info => {
+        if (info) {
+          const posEl = document.getElementById('info-catalog-pos');
+          const palEl = document.getElementById('info-catalog-palabra');
+          const slugEl = document.getElementById('info-catalog-slug');
+          const catEl = document.getElementById('info-catalog-categories');
+
+          if (posEl) posEl.textContent = `#${info.catalog_index || '—'} de 4.252`;
+          if (palEl) palEl.textContent = info.palabra || signName;
+          if (slugEl) slugEl.textContent = info.slug || '—';
+          if (catEl) {
+            const cats = Array.isArray(info.categorias) ? info.categorias.join(', ') : (info.categorias || '—');
+            catEl.textContent = cats;
+          }
+        }
+        updateUHDVideoPlayer(signName, info);
+        updateSignIllustration(signName, info);
+      });
+
+      // Actualizar estado general QA en el badge de la ficha
+      fetchSignQA(signName, preferredVersion).then(qa => {
+        if (qa) {
+          const statusPill = document.getElementById('qa-status-pill');
+          if (statusPill) {
+            if (qa.needs_review === true || qa.needs_review === 'True') {
+              const reasons = Array.isArray(qa.review_reasons) && qa.review_reasons.length > 0
+                ? ` (${qa.review_reasons[0]})`
+                : '';
+              statusPill.textContent = `⚠️ Revisión${reasons}`;
+              statusPill.style.color = '#f59e0b';
+            } else {
+              statusPill.textContent = '✓ Aprobada';
+              statusPill.style.color = '#10b981';
+            }
+          }
+        }
+      });
+
+      // Cargar archivo animation.json y reproducir en el avatar 3D
+      try {
+        const vParam = preferredVersion ? `?version=${preferredVersion}` : '';
+        const res = await fetch(`/api/v1/animations/${encodeURIComponent(signName)}${vParam}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const animData = await res.json();
+        await window.avatarController.importCustomClip(animData);
+        
+        // Sincronizar badges e indicadores de versión según la animación servida
+        const pipeVer = animData?.metadata?.pipelineVersion || (preferredVersion === '2.6' ? '2.6_Directo_1a1_corregido' : '2.5_Directo_1a1');
+        const isV26 = pipeVer.startsWith('2.6');
+
+        // Actualizar badges
+        const hudBadge = document.getElementById('hud-pipeline-badge');
+        const hudExpr = document.getElementById('hud-expressions-badge');
+        const infoPipe = document.getElementById('info-pipeline-version');
+        const toggleBtn = document.getElementById('btn-toggle-pipeline-version');
+
+        if (isV26) {
+          if (hudBadge) {
+            hudBadge.textContent = 'v2.6';
+            hudBadge.style.background = '#064e3b';
+            hudBadge.style.color = '#6ee7b7';
+            hudBadge.style.borderColor = '#059669';
+          }
+          if (hudExpr) {
+            hudExpr.textContent = '🎭 52 ARKit';
+            hudExpr.style.background = 'rgba(16,185,129,0.15)';
+            hudExpr.style.color = '#34d399';
+            hudExpr.style.borderColor = 'rgba(16,185,129,0.3)';
+          }
+          if (infoPipe) {
+            infoPipe.textContent = 'v2.6 Corregida';
+            infoPipe.style.color = '#a7f3d0';
+          }
+          if (toggleBtn) {
+            toggleBtn.textContent = 'Ver v2.5';
+            toggleBtn.title = 'Alternar a versión original v2.5';
+          }
+        } else {
+          if (hudBadge) {
+            hudBadge.textContent = 'v2.5';
+            hudBadge.style.background = '#1e293b';
+            hudBadge.style.color = '#94a3b8';
+            hudBadge.style.borderColor = '#475569';
+          }
+          if (hudExpr) {
+            hudExpr.textContent = '🎭 Sin ARKit';
+            hudExpr.style.background = 'rgba(148,163,184,0.15)';
+            hudExpr.style.color = '#94a3b8';
+            hudExpr.style.borderColor = 'rgba(148,163,184,0.3)';
+          }
+          if (infoPipe) {
+            infoPipe.textContent = 'v2.5 Directo';
+            infoPipe.style.color = '#94a3b8';
+          }
+          if (toggleBtn) {
+            toggleBtn.textContent = 'Ver v2.6';
+            toggleBtn.title = 'Alternar a versión corregida v2.6';
+          }
+        }
+
+        const selectEl = document.getElementById('select-avatar-clip');
+        if (selectEl && selectEl.value !== signName) selectEl.value = signName;
+        
+        if (statusBadge) statusBadge.textContent = 'Reproduciendo';
+
+        // Sincronizar reproducción del video Ultra HD si está activado
+        const syncChk = document.getElementById('chk-sync-playback');
+        const videoEl = document.getElementById('avatar-uhd-video');
+        if (syncChk && syncChk.checked && videoEl && videoEl.src) {
+          videoEl.currentTime = 0;
+          const speedSelect = document.getElementById('select-avatar-speed');
+          if (speedSelect) videoEl.playbackRate = parseFloat(speedSelect.value);
+          videoEl.play().catch(() => {});
+        }
+      } catch (err) {
+        console.error(`Error reproduciendo seña "${signName}":`, err);
+        if (statusBadge) statusBadge.textContent = 'Error';
+      }
+    }
+
+    function renderSignOptions(signsList, itemsList = []) {
+      const selectEl = document.getElementById('select-avatar-clip');
+      const hintEl = document.getElementById('select-sign-index-hint');
+      if (!selectEl) return;
+
+      selectEl.innerHTML = '';
+      if (!signsList || signsList.length === 0) {
+        selectEl.innerHTML = '<option value="">No se encontraron señas</option>';
+        if (hintEl) hintEl.textContent = '0 encontradas';
+        return;
+      }
+
+      const frag = document.createDocumentFragment();
+      signsList.forEach((sign, idx) => {
+        const opt = document.createElement('option');
+        opt.value = sign;
+        const itemMeta = itemsList[idx];
+        const catIdx = itemMeta && itemMeta.catalog_index ? `#${itemMeta.catalog_index}` : `#${idx + 1}`;
+        const isVerif = verifiedSigns.has(sign) ? '✓ ' : '';
+        const isRe = isReextractedSign(sign) ? '✨ ' : '';
+        opt.textContent = `${isVerif}${isRe}${catIdx}: ${sign}`;
+        if (sign === currentSignName) opt.selected = true;
+        frag.appendChild(opt);
+      });
+      selectEl.appendChild(frag);
+
+      if (hintEl) {
+        hintEl.textContent = `${signsList.length.toLocaleString()} disponibles (Orden Catálogo)`;
+      }
+    }
+
+    function navigateSign(delta) {
+      const activeList = (displayedSigns && displayedSigns.length > 0) ? displayedSigns : allSigns;
+      if (activeList.length === 0) return;
+      let idx = activeList.indexOf(currentSignName);
+      if (idx === -1) idx = 0;
+      let nextIndex = idx + delta;
+      if (nextIndex < 0) nextIndex = activeList.length - 1;
+      if (nextIndex >= activeList.length) nextIndex = 0;
+      const targetSign = activeList[nextIndex];
+      const selectEl = document.getElementById('select-avatar-clip');
+      if (selectEl) selectEl.value = targetSign;
+      playSign(targetSign);
+    }
+
+    async function initAvatarConfig() {
       try {
         if (!window.avatarController) {
           window.avatarController = new AvatarPanelController('avatar-config-workspace');
           console.info('✓ AvatarPanelController activo en /avatarconfig');
         }
 
-        // 1. Presets de Cámara
+        window.avatarController.renderClipOptions = () => {};
+        window.avatarController.categories = [];
+
+        // 1. Alternar Modo Comparación Lado a Lado (Avatar 3D + Video Ultra HD)
+        const toggleCompBtn = document.getElementById('btn-toggle-comparison-mode');
+        const compLayout = document.getElementById('comparison-layout-wrap');
+        toggleCompBtn?.addEventListener('click', () => {
+          isComparisonMode = !isComparisonMode;
+          if (isComparisonMode) {
+            compLayout?.classList.remove('single-view');
+            toggleCompBtn.style.color = '#93c5fd';
+            toggleCompBtn.textContent = '🎥 Modo Comparación: ON';
+          } else {
+            compLayout?.classList.add('single-view');
+            toggleCompBtn.style.color = 'var(--text-muted)';
+            toggleCompBtn.textContent = '🎥 Modo Comparación: OFF';
+          }
+        });
+
+        // 2. Presets de Cámara
         document.getElementById('btn-cam-face')?.addEventListener('click', () => {
-          if (window.avatarController) window.avatarController.setCameraPreset('face');
+          window.avatarController?.setCameraPreset('face');
         });
         document.getElementById('btn-cam-medium')?.addEventListener('click', () => {
-          if (window.avatarController) window.avatarController.setCameraPreset('medium');
+          window.avatarController?.setCameraPreset('medium');
         });
         document.getElementById('btn-cam-full')?.addEventListener('click', () => {
-          if (window.avatarController) window.avatarController.setCameraPreset('full');
+          window.avatarController?.setCameraPreset('full');
+        });
+        document.getElementById('btn-cam-hands')?.addEventListener('click', () => {
+          window.avatarController?.setCameraPreset('hands');
         });
 
-        // 2. Pruebas de Rasgos No Manuales (CNM)
-        document.querySelectorAll('[data-cnm-test]').forEach(btn => {
-          btn.addEventListener('click', () => {
-            const marker = btn.getAttribute('data-cnm-test');
-            if (window.avatarController) {
-              window.avatarController.testExpression(marker);
+        // 3. Restaurar Modelo VRM Oficial
+        document.getElementById('btn-reload-default-vrm')?.addEventListener('click', () => {
+          window.avatarController?.loadVRMFromUrl('/avatar/LSEC-Interpreter-Female.vrm');
+        });
+
+        // 5. Selector de señas (change)
+        const selectEl = document.getElementById('select-avatar-clip');
+        selectEl?.addEventListener('change', (e) => {
+          const sign = e.target.value;
+          if (sign) playSign(sign);
+        });
+
+        // 6. Botones de Navegación Secuencial (Anterior / Siguiente / Aleatoria)
+        document.getElementById('btn-sign-prev')?.addEventListener('click', () => navigateSign(-1));
+        document.getElementById('btn-sign-next')?.addEventListener('click', () => navigateSign(1));
+        document.getElementById('btn-sign-random')?.addEventListener('click', () => {
+          if (allSigns.length === 0) return;
+          const randIdx = Math.floor(Math.random() * allSigns.length);
+          const targetSign = allSigns[randIdx];
+          if (selectEl) selectEl.value = targetSign;
+          playSign(targetSign);
+        });
+
+        // 7. Botón de Verificación y Control de Calidad
+        document.getElementById('btn-verify-sign')?.addEventListener('click', () => {
+          if (!currentSignName) return;
+          if (verifiedSigns.has(currentSignName)) {
+            verifiedSigns.delete(currentSignName);
+          } else {
+            verifiedSigns.add(currentSignName);
+          }
+          try {
+            localStorage.setItem('lsec_verified_signs_set', JSON.stringify(Array.from(verifiedSigns)));
+          } catch (e) {
+            console.warn(e);
+          }
+          updateVerifyButtonState(currentSignName);
+          updateVerificationBadge();
+          renderSignOptions(allSigns, allItems);
+        });
+
+        // 7b. Control y Conmutadores de Versión Cinemática (Navbar, Card y HUD)
+        document.getElementById('nav-btn-v26')?.addEventListener('click', () => setPreferredVersion('2.6'));
+        document.getElementById('nav-btn-v25')?.addEventListener('click', () => setPreferredVersion('2.5'));
+        document.getElementById('nav-btn-toggle-version')?.addEventListener('click', () => {
+          setPreferredVersion(preferredVersion === '2.6' ? '2.5' : '2.6');
+        });
+
+        document.getElementById('card-btn-v26')?.addEventListener('click', () => setPreferredVersion('2.6'));
+        document.getElementById('card-btn-v25')?.addEventListener('click', () => setPreferredVersion('2.5'));
+        document.getElementById('btn-toggle-pipeline-version')?.addEventListener('click', () => {
+          setPreferredVersion(preferredVersion === '2.6' ? '2.5' : '2.6');
+        });
+
+        document.getElementById('hud-pipeline-badge')?.addEventListener('click', () => {
+          setPreferredVersion(preferredVersion === '2.6' ? '2.5' : '2.6');
+        });
+
+
+        // 8. Controles del Video Ultra HD
+        const videoEl = document.getElementById('avatar-uhd-video');
+        const btnUhdPlay = document.getElementById('btn-uhd-toggle-play');
+        const playBtnText = document.getElementById('uhd-play-btn-text');
+
+        btnUhdPlay?.addEventListener('click', () => {
+          if (!videoEl) return;
+          if (videoEl.paused) {
+            videoEl.play();
+            if (playBtnText) playBtnText.textContent = '⏸ Pausa';
+          } else {
+            videoEl.pause();
+            if (playBtnText) playBtnText.textContent = '▶ Play';
+          }
+        });
+
+        document.getElementById('btn-uhd-step-prev')?.addEventListener('click', () => {
+          if (videoEl) videoEl.currentTime = Math.max(0, videoEl.currentTime - (1 / 60));
+        });
+
+        document.getElementById('btn-uhd-step-next')?.addEventListener('click', () => {
+          if (videoEl) videoEl.currentTime = Math.min(videoEl.duration || 10, videoEl.currentTime + (1 / 60));
+        });
+
+        document.getElementById('btn-uhd-mute')?.addEventListener('click', () => {
+          if (!videoEl) return;
+          videoEl.muted = !videoEl.muted;
+          const lbl = document.getElementById('uhd-mute-label');
+          if (lbl) lbl.textContent = videoEl.muted ? '🔇' : '🔊';
+        });
+
+        document.getElementById('btn-uhd-fullscreen')?.addEventListener('click', () => {
+          if (!videoEl) return;
+          if (videoEl.requestFullscreen) videoEl.requestFullscreen();
+        });
+
+        // 8.1 Controles e Interacciones de la Ilustración Oficial
+        const illBox = document.getElementById('illustration-img-box');
+        const overlayImg = document.getElementById('uhd-illustration-overlay-img');
+        const btnToggleUhdIll = document.getElementById('btn-toggle-uhd-illustration');
+        const btnCloseUhdIll = document.getElementById('btn-close-uhd-illustration');
+        const btnExpandUhdIll = document.getElementById('btn-expand-uhd-illustration');
+        const btnCloseLightbox = document.getElementById('btn-close-lightbox');
+        const lightboxModal = document.getElementById('illustration-lightbox');
+
+        illBox?.addEventListener('click', () => {
+          if (currentIllustrationUrl) openLightbox(currentIllustrationUrl);
+        });
+
+        overlayImg?.addEventListener('click', () => {
+          if (currentIllustrationUrl) openLightbox(currentIllustrationUrl);
+        });
+
+        btnExpandUhdIll?.addEventListener('click', () => {
+          if (currentIllustrationUrl) openLightbox(currentIllustrationUrl);
+        });
+
+        btnToggleUhdIll?.addEventListener('click', () => {
+          toggleUhdIllustration();
+        });
+
+        btnCloseUhdIll?.addEventListener('click', () => {
+          hideUhdIllustration();
+        });
+
+        btnCloseLightbox?.addEventListener('click', () => {
+          closeLightbox();
+        });
+
+        lightboxModal?.addEventListener('click', (e) => {
+          if (e.target === lightboxModal) closeLightbox();
+        });
+
+        // 9. Sincronización de Controles de Transporte (Avatar + Video)
+        const btnPlay = document.getElementById('btn-avatar-play');
+        const btnPause = document.getElementById('btn-avatar-pause');
+        const btnReset = document.getElementById('btn-avatar-reset');
+        const speedSelect = document.getElementById('select-avatar-speed');
+        const syncChk = document.getElementById('chk-sync-playback');
+
+        btnPlay?.addEventListener('click', () => {
+          if (syncChk?.checked && videoEl && videoEl.src) {
+            videoEl.currentTime = 0;
+            videoEl.playbackRate = parseFloat(speedSelect?.value || '1');
+            videoEl.play().catch(() => {});
+          }
+        });
+
+        btnPause?.addEventListener('click', () => {
+          if (syncChk?.checked && videoEl) {
+            videoEl.pause();
+          }
+        });
+
+        btnReset?.addEventListener('click', () => {
+          if (syncChk?.checked && videoEl) {
+            videoEl.pause();
+            videoEl.currentTime = 0;
+          }
+        });
+
+        speedSelect?.addEventListener('change', (e) => {
+          const rate = parseFloat(e.target.value);
+          if (videoEl) videoEl.playbackRate = rate;
+        });
+
+        // 10. Atajos de Teclado Profesionales para Verificación Rápida
+        window.addEventListener('keydown', (e) => {
+          const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+          if (activeTag === 'input' || activeTag === 'textarea') return;
+
+          if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            navigateSign(1);
+          } else if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            navigateSign(-1);
+          } else if (e.key === ' ' || e.code === 'Space') {
+            e.preventDefault();
+            if (videoEl && !videoEl.paused) {
+              btnPause?.click();
+            } else {
+              btnPlay?.click();
+            }
+          } else if (e.key === 'r' || e.key === 'R') {
+            e.preventDefault();
+            btnReset?.click();
+          } else if (e.key === 'v' || e.key === 'V') {
+            e.preventDefault();
+            setPreferredVersion(preferredVersion === '2.6' ? '2.5' : '2.6');
+          } else if (e.key === 'c' || e.key === 'C') {
+            e.preventDefault();
+            toggleCompBtn?.click();
+          } else if (e.key === 'i' || e.key === 'I') {
+            e.preventDefault();
+            toggleUhdIllustration();
+          } else if (e.key === 'Escape') {
+            closeLightbox();
+            hideUhdIllustration();
+          }
+        });
+
+        // 11. Buscador en tiempo real
+        const searchInput = document.getElementById('input-search-sign');
+        searchInput?.addEventListener('input', (e) => {
+          const term = e.target.value.trim().toLowerCase();
+          if (!term) {
+            displayedSigns = [...allSigns];
+            displayedItems = [...allItems];
+            renderSignOptions(allSigns, allItems);
+            return;
+          }
+          const filteredSigns = [];
+          const filteredItems = [];
+          allSigns.forEach((s, idx) => {
+            const it = allItems[idx] || {};
+            const matchesSign = s.toLowerCase().includes(term);
+            const matchesPalabra = (it.palabra || '').toLowerCase().includes(term);
+            const matchesSlug = (it.slug || '').toLowerCase().includes(term);
+            const matchesIdx = String(it.catalog_index || (idx + 1)) === term;
+
+            if (matchesSign || matchesPalabra || matchesSlug || matchesIdx) {
+              filteredSigns.push(s);
+              filteredItems.push(it);
             }
           });
-        });
-
-        // 3. Alternar Rig Técnico / VRM
-        document.getElementById('btn-toggle-model-source')?.addEventListener('click', () => {
-          if (window.avatarController) {
-            window.avatarController.toggleModelSource();
+          displayedSigns = filteredSigns;
+          displayedItems = filteredItems;
+          renderSignOptions(filteredSigns, filteredItems);
+          if (filteredSigns.length > 0 && selectEl) {
+            selectEl.value = filteredSigns[0];
           }
         });
 
-        // 4. Restaurar Prototipo Original
-        document.getElementById('btn-reload-default-vrm')?.addEventListener('click', () => {
-          if (window.avatarController) {
-            window.avatarController.loadVRMFromUrl('/avatar/LSEC-Interpreter-Female.vrm');
+        // 13. Cargar Catálogo Ordenado desde la API
+        try {
+          const res = await fetch('/api/v1/animations/list?limit=6000');
+          if (res.ok) {
+            const data = await res.json();
+            allSigns = data.signs || [];
+            allItems = data.items || [];
+            displayedSigns = [...allSigns];
+            displayedItems = [...allItems];
+            
+            const badge = document.getElementById('sign-count-badge');
+            if (badge) badge.textContent = `${allSigns.length.toLocaleString()} Señas`;
+            
+            updateVerificationBadge();
+            renderSignOptions(allSigns, allItems);
+
+            // Iniciar por defecto con '¡Quieto!' o primera seña del catálogo
+            const defaultSign = allSigns.find(s => s === '¡Quieto!') ||
+                                allSigns.find(s => s.toLowerCase() === '¡quieto!') ||
+                                allSigns[0];
+            if (defaultSign) {
+              if (selectEl) selectEl.value = defaultSign;
+              setTimeout(() => {
+                playSign(defaultSign);
+              }, 1000);
+            }
           }
-        });
+        } catch (err) {
+          console.error('Error al obtener lista de animaciones:', err);
+        }
 
       } catch (err) {
-        console.error('Error inicializando AvatarPanelController en /avatarconfig:', err);
+        console.error('Error inicializando /avatarconfig:', err);
       }
-    };
+    }
 
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', initAvatarConfig);

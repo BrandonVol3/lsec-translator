@@ -30,10 +30,15 @@ class ModalsAndExportController {
       });
     }
 
-    // Botones de la barra superior
+    // Botones de la barra superior (respetando estado de flujo en app.js)
     const exportBtn = document.getElementById('btn-top-export');
     if (exportBtn) {
-      exportBtn.addEventListener('click', () => this.openExportDialog());
+      exportBtn.addEventListener('click', () => {
+        if (window.appState && typeof window.appState.canExport === 'function' && !window.appState.canExport()) {
+          return;
+        }
+        this.openExportDialog();
+      });
     }
 
     const settingsBtn = document.getElementById('btn-top-settings');
@@ -42,9 +47,20 @@ class ModalsAndExportController {
     }
   }
 
+  openBackdrop() {
+    if (this.modalBackdrop) {
+      this.modalBackdrop.classList.add('open');
+      this.modalBackdrop.setAttribute('aria-hidden', 'false');
+    }
+  }
+
   close() {
     if (this.modalBackdrop) {
+      if (document.activeElement && this.modalBackdrop.contains(document.activeElement) && typeof document.activeElement.blur === 'function') {
+        document.activeElement.blur();
+      }
       this.modalBackdrop.classList.remove('open');
+      this.modalBackdrop.setAttribute('aria-hidden', 'true');
     }
   }
 
@@ -102,7 +118,7 @@ class ModalsAndExportController {
         </div>
 
         <div>
-          <label style="font-weight:600; font-size:0.85rem; margin-bottom:6px; display:block;">Palabras candidatas recomendadas:</label>
+          <span style="font-weight:600; font-size:0.85rem; margin-bottom:6px; display:block;">Palabras candidatas recomendadas:</span>
           <div class="candidate-chips-grid">
             ${candidates.map((cand, i) => `
               <button class="candidate-chip-btn ${i === 0 ? 'selected' : ''}" data-word="${cand}">
@@ -113,12 +129,12 @@ class ModalsAndExportController {
         </div>
 
         <div>
-          <label style="font-size:0.78rem; color:var(--text-muted);">O introduce otra palabra escuchada:</label>
+          <label for="modal-custom-word" style="font-size:0.78rem; color:var(--text-muted);">O introduce otra palabra escuchada:</label>
           <input type="text" id="modal-custom-word" placeholder="Escribe aquí si escuchas otra palabra..." style="width:100%; padding:6px 10px; background:var(--bg-surface-2); border:1px solid var(--border-medium); border-radius:4px; margin-top:4px;">
         </div>
 
         <div>
-          <label style="font-size:0.78rem; color:var(--text-muted);">Observaciones del revisor:</label>
+          <label for="modal-audio-comment" style="font-size:0.78rem; color:var(--text-muted);">Observaciones del revisor:</label>
           <textarea id="modal-audio-comment" rows="2" placeholder="Notas sobre acústica, acento regional o ruido de fondo..." style="width:100%; padding:6px 10px; background:var(--bg-surface-2); border:1px solid var(--border-medium); border-radius:4px; resize:vertical;"></textarea>
         </div>
 
@@ -172,7 +188,7 @@ class ModalsAndExportController {
       alert(`Revisión auditiva confirmada: '${finalWord}'`);
     });
 
-    this.modalBackdrop.classList.add('open');
+    this.openBackdrop();
   }
 
   // ============================================================
@@ -203,7 +219,7 @@ class ModalsAndExportController {
         </div>
 
         <div>
-          <label style="font-weight:600; font-size:0.82rem;">Variante Regional Evaluada:</label>
+          <label for="modal-native-variant" style="font-weight:600; font-size:0.82rem;">Variante Regional Evaluada:</label>
           <select id="modal-native-variant" class="speed-select" style="width:100%; padding:6px 10px; margin-top:4px;">
             <option value="Sierra / Carchi" selected>Sierra Norte (Carchi / Tulcán)</option>
             <option value="Sierra Centro">Sierra Centro (Quito / Pichincha)</option>
@@ -213,12 +229,12 @@ class ModalsAndExportController {
         </div>
 
         <div>
-          <label style="font-weight:600; font-size:0.82rem;">Alternativa o Paráfrasis sugerida por signante:</label>
+          <label for="modal-native-suggested" style="font-weight:600; font-size:0.82rem;">Alternativa o Paráfrasis sugerida por signante:</label>
           <input type="text" id="modal-native-suggested" placeholder="Ej: U-P-E-C PRO2 CARRERA ELEGIR FUERTE AVANZAR CONTINUAR" style="width:100%; padding:6px 10px; background:var(--bg-surface-2); border:1px solid var(--border-medium); border-radius:4px; font-weight:700; text-transform:uppercase;">
         </div>
 
         <div>
-          <label style="font-size:0.78rem; color:var(--text-muted);">Comentarios lingüísticos o expresión facial requerida:</label>
+          <label for="modal-native-comment" style="font-size:0.78rem; color:var(--text-muted);">Comentarios lingüísticos o expresión facial requerida:</label>
           <textarea id="modal-native-comment" rows="2" placeholder="Indicar si la paráfrasis es natural o requiere ajuste de clasificadores..." style="width:100%; padding:6px 10px; background:var(--bg-surface-2); border:1px solid var(--border-medium); border-radius:4px;"></textarea>
         </div>
       </div>
@@ -249,12 +265,16 @@ class ModalsAndExportController {
       alert('Paráfrasis modificada con la propuesta del signante.');
     });
 
-    this.modalBackdrop.classList.add('open');
+    this.openBackdrop();
   }
 
   // ============================================================
   // 3. MODAL DE EXPORTACIÓN MULTIFORMATO
   // ============================================================
+
+  openExportModal() {
+    return this.openExportDialog();
+  }
 
   openExportDialog() {
     if (!this.modalBackdrop || !this.modalTitle || !this.modalBody) return;
@@ -349,8 +369,10 @@ class ModalsAndExportController {
     `;
 
     this.modalFooter.innerHTML = `
-      <button class="btn btn-secondary" onclick="document.getElementById('generic-modal-backdrop').classList.remove('open')">Cerrar</button>
+      <button class="btn btn-secondary" id="btn-modal-export-close">Cerrar</button>
     `;
+    const btnCloseExport = this.modalFooter.querySelector('#btn-modal-export-close');
+    if (btnCloseExport) btnCloseExport.addEventListener('click', () => this.close());
 
     // Bindings de Descargas
     this.modalBody.querySelector('#btn-exp-composite-video').addEventListener('click', () => this.openCompositeVideoExportDialog());
@@ -364,7 +386,7 @@ class ModalsAndExportController {
     this.modalBody.querySelector('#btn-exp-elan').addEventListener('click', () => this.downloadELAN());
     this.modalBody.querySelector('#btn-exp-bundle').addEventListener('click', () => this.downloadProjectBundle());
 
-    this.modalBackdrop.classList.add('open');
+    this.openBackdrop();
   }
 
   // ============================================================
@@ -423,9 +445,9 @@ class ModalsAndExportController {
           </div>
 
           <div class="export-config-row">
-            <label class="export-config-label">
+            <span class="export-config-label">
               <span>Elementos Incrustados:</span>
-            </label>
+            </span>
             <div style="display:flex; gap:12px;">
               <label style="display:flex; align-items:center; gap:4px; font-size:0.78rem; cursor:pointer;">
                 <input type="checkbox" id="cfg-include-avatar" checked style="accent-color:var(--action-primary);">
@@ -800,17 +822,17 @@ ${(p.audit_history || []).map(h => `- [${h.timestamp}] **${h.author}**: ${h.acti
     this.modalBody.innerHTML = `
       <div style="display:flex; flex-direction:column; gap:14px;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
-          <label style="font-weight:600;">Tema Visual de la Interfaz:</label>
-          <select id="set-theme-select" class="speed-select" style="padding:6px 10px;">
+          <label for="set-theme-select" style="font-weight:600;">Tema Visual de la Interfaz:</label>
+          <select id="set-theme-select" class="speed-select" style="padding:6px 10px;" aria-label="Tema Visual de la Interfaz">
             <option value="dark" ${ws.theme === 'dark' ? 'selected' : ''}>Oscuro Tecnológico (Por Defecto)</option>
             <option value="light" ${ws.theme === 'light' ? 'selected' : ''}>Claro Profesional</option>
-            <option value="high_contrast" ${ws.theme === 'high_contrast' ? 'selected' : ''}>Alto Contraste (WCAG AAA)</option>
+            <option value="high-contrast" ${(ws.theme === 'high-contrast' || ws.theme === 'high_contrast') ? 'selected' : ''}>Alto Contraste (WCAG AAA)</option>
           </select>
         </div>
 
         <div style="display:flex; justify-content:space-between; align-items:center;">
-          <label style="font-weight:600;">Escala Tipográfica de la Interfaz:</label>
-          <select id="set-fontscale-select" class="speed-select" style="padding:6px 10px;">
+          <label for="set-fontscale-select" style="font-weight:600;">Escala Tipográfica de la Interfaz:</label>
+          <select id="set-fontscale-select" class="speed-select" style="padding:6px 10px;" aria-label="Escala Tipográfica de la Interfaz">
             <option value="normal" ${ws.fontSizeScale === 'normal' ? 'selected' : ''}>Estándar (100%)</option>
             <option value="large" ${ws.fontSizeScale === 'large' ? 'selected' : ''}>Grande (110%)</option>
             <option value="xlarge" ${ws.fontSizeScale === 'xlarge' ? 'selected' : ''}>Extra Grande (125%)</option>
@@ -818,8 +840,8 @@ ${(p.audit_history || []).map(h => `- [${h.timestamp}] **${h.author}**: ${h.acti
         </div>
 
         <div style="display:flex; justify-content:space-between; align-items:center;">
-          <label style="font-weight:600;">Reducción de Movimiento (Reduced Motion):</label>
-          <input type="checkbox" id="set-motion-reduce" ${ws.reducedMotion ? 'checked' : ''} style="width:18px; height:18px;">
+          <label for="set-motion-reduce" style="font-weight:600;">Reducción de Movimiento (Reduced Motion):</label>
+          <input type="checkbox" id="set-motion-reduce" ${ws.reducedMotion ? 'checked' : ''} style="width:18px; height:18px;" aria-label="Reducción de Movimiento">
         </div>
 
         <hr style="border:none; border-top:1px solid var(--border-subtle); margin:4px 0;">
@@ -846,8 +868,10 @@ ${(p.audit_history || []).map(h => `- [${h.timestamp}] **${h.author}**: ${h.acti
     `;
 
     this.modalFooter.innerHTML = `
-      <button class="btn btn-primary" onclick="document.getElementById('generic-modal-backdrop').classList.remove('open')">Listo</button>
+      <button class="btn btn-primary" id="btn-modal-settings-done">Listo</button>
     `;
+    const btnDone = this.modalFooter.querySelector('#btn-modal-settings-done');
+    if (btnDone) btnDone.addEventListener('click', () => this.close());
 
     // Eventos
     const themeSelect = this.modalBody.querySelector('#set-theme-select');
@@ -874,7 +898,7 @@ ${(p.audit_history || []).map(h => `- [${h.timestamp}] **${h.author}**: ${h.acti
       }
     });
 
-    this.modalBackdrop.classList.add('open');
+    this.openBackdrop();
   }
 }
 

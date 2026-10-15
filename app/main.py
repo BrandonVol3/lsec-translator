@@ -37,6 +37,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.annotation_endpoints import annotation_router
 from app.api.dictionary_endpoints import dictionary_router
+from app.api.animation_direct_endpoints import animation_router, animation_direct_alias_router
 from app.api.endpoints import router as api_router, set_services
 from app.api.websocket import ws_router, set_ws_services
 from app.config import settings
@@ -159,6 +160,8 @@ app.add_middleware(
 app.include_router(api_router)
 app.include_router(annotation_router)
 app.include_router(dictionary_router)
+app.include_router(animation_router)
+app.include_router(animation_direct_alias_router)
 app.include_router(ws_router)
 
 
@@ -239,6 +242,16 @@ async def avatar_config_ui():
     return {"status": "avatar_config_interface_not_found"}
 
 
+@app.get("/viewer", tags=["Avatar"])
+@app.get("/reproductor", tags=["Avatar"])
+async def viewer_ui():
+    """Sirve el reproductor 3D interactivo autónomo con acceso a las 4.143 señas directas 1:1."""
+    viewer_path = os.path.join(static_dir, "viewer.html")
+    if os.path.exists(viewer_path):
+        return FileResponse(viewer_path)
+    return {"status": "viewer_interface_not_found"}
+
+
 @app.get("/api/info", tags=["Root"])
 async def api_info() -> dict:
     """Endpoint de información del sistema en formato JSON."""
@@ -255,6 +268,7 @@ async def api_info() -> dict:
             "pipeline": "/api/v1/pipeline",
             "studio": "/studio",
             "avatar_config": "/avatarconfig",
+            "viewer": "/viewer",
         },
     }
 

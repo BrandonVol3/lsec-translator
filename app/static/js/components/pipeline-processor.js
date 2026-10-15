@@ -43,7 +43,12 @@ class PipelineProcessor {
       this.updateStep(1, 'completed', `Metadatos listos: ${mediaInfo.width}x${mediaInfo.height}, ${(mediaInfo.duration).toFixed(2)}s`);
 
       // Paso 2: Transcripción Automática Whisper ASR (60%)
-      this.updateStep(2, 'active', 'Ejecutando transcripción acústica con marcas de tiempo...');
+      const curHw = window.systemHardwareStatus;
+      const isGpu = curHw && curHw.is_gpu;
+      const step2Text = isGpu
+        ? 'Ejecutando transcripción acústica con marcas de tiempo (GPU CUDA activa)...'
+        : 'Ejecutando transcripción acústica con marcas de tiempo (Modo CPU)...';
+      this.updateStep(2, 'active', step2Text);
       this.setProgress(60);
 
       let apiResponse = null;
@@ -56,7 +61,13 @@ class PipelineProcessor {
 
       await this.sleep(500);
       this.setProgress(85);
-      this.updateStep(2, 'completed', 'Transcripción ASR y marcas de tiempo por palabra generadas.');
+
+      const usedDevice = apiResponse?.transcription?.device_used;
+      const isActuallyGpu = (usedDevice === 'cuda');
+      const step2DoneText = isActuallyGpu
+        ? 'Transcripción ASR generada exitosamente con GPU (CUDA).'
+        : 'Transcripción ASR generada en CPU (sin aceleración GPU).';
+      this.updateStep(2, 'completed', step2DoneText);
 
       // Paso 3: Normalización y Segmentación de Subtítulos (100%)
       this.updateStep(3, 'active', 'Generando subtítulos y segmentos para revisión lingüística...');
@@ -75,6 +86,20 @@ class PipelineProcessor {
       // Cargar en el State Store y marcar Fase 1 lista
       appState.loadProject(projectData, videoFile.name);
       appState.markTranscriptionReady();
+
+      // Notificar al usuario sobre el dispositivo utilizado
+      if (apiResponse && apiResponse.transcription) {
+        const tx = apiResponse.transcription;
+        if (tx.device_warning) {
+          if (window.showToast) {
+            window.showToast(tx.device_warning, 'warning');
+          }
+        } else if (tx.device_used === 'cuda') {
+          if (window.showToast) {
+            window.showToast('Transcripción procesada con GPU (CUDA) acelerada.', 'success');
+          }
+        }
+      }
 
       await this.sleep(300);
 
@@ -167,7 +192,18 @@ class PipelineProcessor {
       if (translationResult.non_manual_spans) project.non_manual_spans = translationResult.non_manual_spans;
       if (translationResult.spatial_operations) project.spatial_operations = translationResult.spatial_operations;
       if (translationResult.validation_metadata) project.validation_metadata = translationResult.validation_metadata;
+      if (translationResult.unresolved_items) project.unresolved_items = translationResult.unresolved_items;
+      if (translationResult.validation_warnings) project.validation_warnings = translationResult.validation_warnings;
       project.execution_status = 'REVIEW_REQUIRED';
+
+      // Garantizar intervalos secuenciales en orden gramatical LSEC (SOV) para el Timeline y tarjetas
+      appState.resolveOverlappingGlossIntervals(project.glosses, project.segments);
+      for (const seg of project.segments) {
+        seg.glosses = project.glosses.filter(
+          g => g.proposition_id === seg.id || g.origin_proposition_id === seg.id
+        );
+        seg.gloss_sequence = seg.glosses.map(g => g.gloss || g.lemma);
+      }
 
       // Desbloquear y activar Etapa 2: Traducir
       appState.markTranslationReady();
@@ -187,26 +223,98 @@ class PipelineProcessor {
   }
 
   /**
+   * Traduce un segmento de texto editado mediante el motor lingüístico del backend (/api/v1/translate)
+   */
+  async translateSegmentViaBackend(text, startTime, endTime, segId) {
+    if (!text) return [];
+    try {
+      const res = await fetch('/api/v1/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, mode: 'detailed', paraphrase_budget: 'compact' })
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const glossOut = await res.json();
+      const rawGlosses = glossOut.glosses || [];
+      if (rawGlosses.length === 0) {
+        return this.generateGlossesFromText(text, startTime, endTime, segId);
+      }
+      const duration = Math.max(0.6, (endTime || (startTime + 2.5)) - (startTime || 0));
+      const glossDur = duration / Math.max(1, rawGlosses.length);
+      return rawGlosses.map((g, idx) => {
+        const start = parseFloat(((startTime || 0) + idx * glossDur).toFixed(3));
+        const end = parseFloat((start + Math.min(glossDur, 0.55)).toFixed(3));
+        const gText = String(g.gloss || g.lemma || '').trim();
+        const isSingleLetterHyphenated = gText.includes('-') && gText.split('-').filter(Boolean).every(p => p.trim().length === 1);
+        const isFs = Boolean(g.is_fingerspelling || (g.gloss_type === 'DACTILOLOGÍA') || (g.gloss_type === 'FINGERSPELLING') || isSingleLetterHyphenated);
+        const isUnverifiedLex = g.dictionary_metadata && g.dictionary_metadata.status === 'NO_VERIFICADO';
+        const needsRev = Boolean(g.requires_native_review || g.requires_review || isUnverifiedLex);
+        const gStatus = g.requires_audio_review ? 'AUDIO_REVIEW' : (needsRev ? 'REVIEW_REQUIRED' : (g.status || 'VALIDATED'));
+        return {
+          ...g,
+          id: g.id || `g_${segId}_${idx + 1}`,
+          order: g.order !== undefined ? g.order : idx,
+          gloss: g.gloss || g.lemma || 'GLOSA',
+          lemma: g.lemma || g.gloss || 'GLOSA',
+          source_word: g.source_word || null,
+          normalized_word: g.normalized_word || null,
+          alignment_type: g.alignment_type || 'DIRECT',
+          dictionary_metadata: g.dictionary_metadata || null,
+          requires_review: needsRev,
+          requires_native_review: needsRev,
+          requires_audio_review: Boolean(g.requires_audio_review),
+          review_reasons: g.review_reasons || [],
+          start_seconds: start,
+          end_seconds: end,
+          start_time: start,
+          end_time: end,
+          start: start,
+          end: end,
+          proposition_id: segId,
+          origin_proposition_id: segId,
+          duration_ms: g.duration_ms || Math.round((end - start) * 1000),
+          gloss_type: isFs ? 'DACTILOLOGÍA' : (g.gloss_type || 'SEÑA'),
+          syntactic_role: g.syntactic_role || 'ARGUMENT',
+          color: g.color || (isFs ? 'fingerspelling' : (needsRev ? 'review' : 'validated')),
+          confidence: g.confidence !== undefined ? g.confidence : 0.94,
+          status: gStatus,
+          manual_code: g.manual_code || 'STD_SIGN',
+          non_manual: g.non_manual || null
+        };
+      });
+    } catch (err) {
+      console.warn('Fallback a generador local por error en /api/v1/translate:', err);
+      return this.generateGlossesFromText(text, startTime, endTime, segId);
+    }
+  }
+
+  /**
    * Genera o mapea las glosas LSEC correspondientes a los segmentos actuales
    */
   async performGlossesTranslation(project) {
     // Caso 1: Backend API response previa
     if (this.cachedApiResponse && this.cachedApiResponse.gloss_output) {
       const fullProj = this.transformBackendResponse(this.cachedVideoFile, this.cachedMediaInfo, this.cachedApiResponse);
-      // Preservar estrictamente ediciones del usuario en project.segments
-      const updatedSegments = (project.segments || []).map((seg, idx) => {
+      // Preservar estrictamente ediciones del usuario en project.segments e invocar /api/v1/translate si hubo cambios
+      const updatedSegments = [];
+      for (let idx = 0; idx < (project.segments || []).length; idx++) {
+        const seg = project.segments[idx];
         const fullSeg = (fullProj.segments || [])[idx] || {};
         const isModified = seg.status === 'CORRECTED' || ((seg.normalized_text || seg.original_text) !== (fullSeg.normalized_text || fullSeg.original_text));
         const segGlosses = isModified
-          ? this.generateGlossesFromText(seg.normalized_text || seg.original_text, seg.start_seconds, seg.end_seconds, seg.id)
+          ? await this.translateSegmentViaBackend(seg.normalized_text || seg.original_text, seg.start_seconds, seg.end_seconds, seg.id)
           : (fullSeg.glosses || []);
-        return {
+        const effectiveGlosses = segGlosses.length > 0 ? segGlosses : (fullSeg.glosses || []);
+        const hasRevGloss = effectiveGlosses.some(g => g.status === 'REVIEW_REQUIRED' || g.requires_review || g.requires_native_review);
+        updatedSegments.push({
           ...fullSeg,
           ...seg,
-          glosses: segGlosses.length > 0 ? segGlosses : (fullSeg.glosses || []),
-          gloss_sequence: segGlosses.map(g => g.gloss || g.lemma)
-        };
-      });
+          status: seg.status === 'CORRECTED' ? 'CORRECTED' : (fullSeg.requires_audio_review ? 'AUDIO_REVIEW' : ((fullSeg.requires_native_review || hasRevGloss) ? 'REVIEW_REQUIRED' : (fullSeg.status || 'VALIDATED'))),
+          requires_native_review: Boolean(fullSeg.requires_native_review || hasRevGloss),
+          glosses: effectiveGlosses,
+          gloss_sequence: effectiveGlosses.map(g => g.gloss || g.lemma)
+        });
+      }
 
       return {
         glosses: updatedSegments.flatMap(s => s.glosses),
@@ -214,27 +322,30 @@ class PipelineProcessor {
         discourse_blocks: fullProj.discourse_blocks,
         non_manual_spans: fullProj.non_manual_spans,
         spatial_operations: fullProj.spatial_operations,
-        validation_metadata: fullProj.validation_metadata
+        validation_metadata: fullProj.validation_metadata,
+        unresolved_items: fullProj.unresolved_items,
+        validation_warnings: fullProj.validation_warnings
       };
     }
 
-    // Caso 3: Generación lingüística autónoma
+    // Caso 2: Generación lingüística consultando al backend por segmento (con fallback local)
     const allGlosses = [];
-    const updatedSegments = project.segments.map((seg) => {
-      const segGlosses = this.generateGlossesFromText(seg.normalized_text, seg.start_seconds, seg.end_seconds, seg.id);
-      allGlosses.push(...segGlosses);
+    const updatedSegments = [];
+    for (const seg of (project.segments || [])) {
       const sStart = seg.start_seconds !== undefined ? seg.start_seconds : (seg.start_time || 0);
       const sEnd = seg.end_seconds !== undefined ? seg.end_seconds : (seg.end_time || (sStart + 3.0));
       const sDur = parseFloat(Math.max(0, sEnd - sStart).toFixed(3));
-      return {
+      const segGlosses = await this.translateSegmentViaBackend(seg.normalized_text || seg.original_text, sStart, sEnd, seg.id);
+      allGlosses.push(...segGlosses);
+      updatedSegments.push({
         ...seg,
         start_seconds: sStart,
         end_seconds: sEnd,
         duration: sDur,
         glosses: segGlosses,
         gloss_sequence: segGlosses.map(g => g.gloss || g.lemma)
-      };
-    });
+      });
+    }
 
     return {
       glosses: allGlosses,
@@ -245,7 +356,9 @@ class PipelineProcessor {
       ],
       non_manual_spans: [],
       spatial_operations: [],
-      validation_metadata: null
+      validation_metadata: null,
+      unresolved_items: [],
+      validation_warnings: []
     };
   }
 
@@ -371,6 +484,9 @@ class PipelineProcessor {
     const rawProps = glossOut.semantic_propositions || glossOut.propositions || [];
     const wordTimestamps = tx.word_timestamps || [];
 
+    const pendingSemIds = (glossOut.validation_metadata && glossOut.validation_metadata.pending_semantic_review_ids) || [];
+    const pendingAudIds = (glossOut.validation_metadata && glossOut.validation_metadata.pending_audio_review_ids) || [];
+
     // Formatear glosas con soporte completo de timestamps reales de Whisper y tipos
     const glosses = rawGlosses.map((g, idx) => {
       const start = g.source_start_seconds !== undefined ? g.source_start_seconds :
@@ -382,11 +498,28 @@ class PipelineProcessor {
                   (g.end_time !== undefined ? g.end_time :
                   (g.end_seconds !== undefined ? g.end_seconds :
                   (g.end !== undefined ? g.end : start + durationSec)));
-      const isFs = g.is_fingerspelling || (g.gloss_type === 'DACTILOLOGÍA') || (g.gloss && g.gloss.includes('-'));
+      const gText = String(g.gloss || g.lemma || '').trim();
+      const isSingleLetterHyphenated = gText.includes('-') && gText.split('-').filter(Boolean).every(p => p.trim().length === 1);
+      const isFs = Boolean(g.is_fingerspelling || (g.gloss_type === 'DACTILOLOGÍA') || (g.gloss_type === 'FINGERSPELLING') || isSingleLetterHyphenated);
+      const isUnverifiedLex = g.dictionary_metadata && g.dictionary_metadata.status === 'NO_VERIFICADO';
+      const needsRev = Boolean(g.requires_native_review || g.requires_review || isUnverifiedLex);
+      const gStatus = g.requires_audio_review ? 'AUDIO_REVIEW' : (needsRev ? 'REVIEW_REQUIRED' : (g.status || 'VALIDATED'));
       return {
+        ...g,
         id: g.id || `g_${idx + 1}`,
+        order: g.order !== undefined ? g.order : idx,
         gloss: g.gloss || g.lemma || 'GLOSA',
         lemma: g.lemma || g.gloss || 'GLOSA',
+        source_word: g.source_word || null,
+        normalized_word: g.normalized_word || null,
+        alignment_type: g.alignment_type || 'DIRECT',
+        dictionary_metadata: g.dictionary_metadata || null,
+        requires_review: needsRev,
+        requires_native_review: needsRev,
+        requires_audio_review: Boolean(g.requires_audio_review),
+        review_reasons: g.review_reasons || [],
+        source_start_seconds: start,
+        source_end_seconds: end,
         start_seconds: start,
         end_seconds: end,
         start_time: start,
@@ -398,9 +531,9 @@ class PipelineProcessor {
         duration_ms: g.duration_ms || Math.round((end - start) * 1000),
         gloss_type: isFs ? 'DACTILOLOGÍA' : (g.gloss_type || 'SEÑA'),
         syntactic_role: g.syntactic_role || 'ARGUMENT',
-        color: g.color || (isFs ? 'fingerspelling' : 'validated'),
+        color: g.color || (isFs ? 'fingerspelling' : (needsRev ? 'review' : 'validated')),
         confidence: g.confidence !== undefined ? g.confidence : 0.94,
-        status: g.status || 'VALIDATED',
+        status: gStatus,
         manual_code: g.manual_code || 'STD_SIGN',
         non_manual: g.non_manual || null
       };
@@ -432,8 +565,24 @@ class PipelineProcessor {
           g.proposition_id === segId ||
           g.origin_proposition_id === segId ||
           (p.gloss_ids && p.gloss_ids.includes(g.id)) ||
-          (g.start_seconds >= start - 0.15 && g.end_seconds <= end + 0.15)
+          (!g.proposition_id && g.start_seconds >= start - 0.15 && g.end_seconds <= end + 0.15)
         );
+
+        const reqAudio = Boolean(p.requires_audio_review || pendingAudIds.includes(segId) || segGlosses.some(g => g.requires_audio_review));
+        const reqNative = Boolean(
+          p.requires_native_review ||
+          p.requires_review ||
+          pendingSemIds.includes(segId) ||
+          segGlosses.some(g => g.requires_review || g.requires_native_review)
+        );
+        const segStatus = reqAudio ? 'AUDIO_REVIEW' : (reqNative ? 'REVIEW_REQUIRED' : 'VALIDATED');
+        const segStatusLabel = reqAudio ? 'Revisión Auditiva' : (reqNative ? 'Requiere Revisión' : 'Validado');
+
+        // Calcular confianza acústica real a partir de las palabras alineadas si están disponibles
+        const wordConfs = segWords.map(w => w.confidence).filter(c => typeof c === 'number');
+        const avgWordConf = wordConfs.length > 0
+          ? Number((wordConfs.reduce((a, b) => a + b, 0) / wordConfs.length).toFixed(3))
+          : (p.confidence || 0.93);
 
         return {
           id: segId,
@@ -444,11 +593,12 @@ class PipelineProcessor {
           end_time: end,
           original_text: text,
           normalized_text: norm,
-          confidence: p.confidence || 0.93,
-          status: p.requires_native_review ? 'NATIVE_REVIEW' : (p.requires_audio_review ? 'AUDIO_REVIEW' : 'VALIDATED'),
-          status_label: p.requires_native_review ? 'Requiere Revisión Nativa' : (p.requires_audio_review ? 'Revisión Auditiva' : 'Validado'),
-          requires_audio_review: !!p.requires_audio_review,
-          requires_native_review: !!p.requires_native_review,
+          confidence: avgWordConf,
+          status: segStatus,
+          status_label: segStatusLabel,
+          requires_audio_review: reqAudio,
+          requires_native_review: reqNative,
+          review_reasons: p.review_reasons || [],
           words: segWords.length > 0 ? segWords : norm.split(' ').filter(Boolean).map((w, wIdx, arr) => ({
             word: w,
             start: start + (wIdx * (end - start)) / Math.max(1, arr.length),
@@ -486,6 +636,36 @@ class PipelineProcessor {
       });
     }
 
+    // Normalizar intervalos de glosas en orden gramatical LSEC (SOV) dentro de cada proposición
+    appState.resolveOverlappingGlossIntervals(glosses, segments);
+    for (const seg of segments) {
+      seg.glosses = glosses.filter(g => g.proposition_id === seg.id || g.origin_proposition_id === seg.id);
+      seg.gloss_sequence = seg.glosses.map(g => g.gloss || g.lemma);
+    }
+
+    // Construir lista de incidencias (unresolved_items) para la pista 8 del Timeline
+    const rawUnresolved = (glossOut.unresolved_items && glossOut.unresolved_items.length > 0)
+      ? glossOut.unresolved_items
+      : ((glossOut.validation_metadata && glossOut.validation_metadata.unresolved_items) || []);
+    const warningItems = (glossOut.validation_warnings || [])
+      .filter(w => w && (w.severity === 'WARNING' || w.severity === 'ERROR'))
+      .map((w, idx) => {
+        const targetSeg = segments.find(s => s.id === w.target_id) || null;
+        const targetGloss = glosses.find(g => String(g.id) === String(w.target_id)) || null;
+        const st = targetGloss ? targetGloss.start_seconds : (targetSeg ? targetSeg.start_seconds : idx * 2.0);
+        const et = targetGloss ? targetGloss.end_seconds : (targetSeg ? targetSeg.end_seconds : st + 1.2);
+        return {
+          id: `warn_${idx + 1}`,
+          code: w.code || 'WARNING',
+          word: targetGloss ? targetGloss.gloss : (targetSeg ? targetSeg.id : (w.code || 'Incidencia')),
+          type: w.code || 'WARNING',
+          reason: w.message || '',
+          start_seconds: st,
+          end_seconds: et
+        };
+      });
+    const unresolvedItems = [...rawUnresolved, ...warningItems];
+
     const validationMeta = glossOut.validation_metadata || glossOut.confidence || {
       overall_linguistic_confidence: tx.confidence || 0.92,
       execution_status: glossOut.execution_status || 'READY',
@@ -496,8 +676,11 @@ class PipelineProcessor {
         non_manual_synchrony: 0.85,
         timing_feasibility: 0.92
       },
-      unresolved_items: []
+      unresolved_items: unresolvedItems
     };
+    if (!validationMeta.unresolved_items || validationMeta.unresolved_items.length === 0) {
+      validationMeta.unresolved_items = unresolvedItems;
+    }
 
     const discourseBlocks = (glossOut.discourse_blocks || []).map((b, idx) => {
       const blockGlosses = glosses.filter(g => (b.gloss_ids || []).includes(g.id));
@@ -595,6 +778,8 @@ class PipelineProcessor {
       spatial_operations: spatialOps,
       corrections: glossOut.corrections_applied || [],
       corrections_applied: glossOut.corrections_applied || [],
+      unresolved_items: unresolvedItems,
+      validation_warnings: glossOut.validation_warnings || [],
       validation_metadata: validationMeta
     };
   }

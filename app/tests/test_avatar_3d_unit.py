@@ -22,6 +22,7 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(_
 SCHEMA_JS_PATH = os.path.join(PROJECT_ROOT, "app", "static", "js", "avatar", "sign-animation-schema.js")
 FACTORY_JS_PATH = os.path.join(PROJECT_ROOT, "app", "static", "js", "avatar", "sign-clip-factory.js")
 ADAPTER_JS_PATH = os.path.join(PROJECT_ROOT, "app", "static", "js", "avatar", "avatar-sync-controller.js")
+CONTROLLER_JS_PATH = os.path.join(PROJECT_ROOT, "app", "static", "js", "avatar", "avatar-controller.js")
 DEMO_DATA_PATH = os.path.join(PROJECT_ROOT, "app", "static", "js", "demo-data.js")
 
 
@@ -284,5 +285,80 @@ def test_10_weekdays_batch_clips_and_manifest():
         assert len(clip_data["boneTracks"]) >= 15
         assert clip_data.get("dominantHand") == "RIGHT"
         assert clip_data.get("validationStatus") == "REQUIRES_LSEC_VALIDATION"
+
+
+def test_11_avatar_controller_imports_and_clip_import_pipeline():
+    """Verifica que avatar-controller.js importe validateSignClip y defina los métodos de importación."""
+    assert os.path.exists(CONTROLLER_JS_PATH), f"avatar-controller.js no existe en {CONTROLLER_JS_PATH}"
+
+    with open(CONTROLLER_JS_PATH, "r", encoding="utf-8") as f:
+        controller_content = f.read()
+
+    assert "import { validateSignClip } from './sign-animation-schema.js';" in controller_content, (
+        "validateSignClip debe ser importado explícitamente desde ./sign-animation-schema.js en avatar-controller.js"
+    )
+    assert "import { HUMAN_BONE_NAMES } from './sign-animation-schema.js';" in controller_content
+    assert "convertHamerAnimationToSignClip" in controller_content
+    assert "detectDatasetQuaternionLayout" in controller_content
+    assert "normalizeBoneName" in controller_content
+    assert "importCustomClip" in controller_content
+    assert "validateSignClip(customClip)" in controller_content
+
+
+def test_12_run_js_validation_suite():
+    """Ejecuta la suite de verificación automatizada Node.js para importCustomClip y validación de esquema."""
+    import subprocess
+    import shutil
+
+    node_bin = shutil.which("node")
+    if not node_bin:
+        pytest.skip("Node.js no está instalado en este entorno.")
+
+    test_script = os.path.join(PROJECT_ROOT, "app", "tests", "test_avatar_import_validation.mjs")
+    assert os.path.exists(test_script), f"Script de test {test_script} no existe"
+
+    result = subprocess.run([node_bin, test_script], capture_output=True, text=True, encoding="utf-8", cwd=PROJECT_ROOT)
+    assert result.returncode == 0, f"Error en la suite Node.js:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+    assert "TODOS LOS TESTS DE VALIDACIÓN JS PASARON SATISFACTORIAMENTE" in result.stdout
+
+
+def test_13_animation_endpoints_v25_integration():
+    """Verifica que el sistema LSEC esté integrado con las animaciones directas v2.5."""
+    from fastapi.testclient import TestClient
+    from app.main import app
+
+    client = TestClient(app)
+
+    # 1. Endpoint /stats reporta versión v2.5 y al menos 5.052 señas
+    stats_res = client.get("/api/v1/animations/stats")
+    assert stats_res.status_code == 200
+    stats = stats_res.json()
+    assert stats.get("pipeline_version") == "2.5_Directo_1a1"
+    assert stats.get("total_signs") >= 5052
+
+    # 2. Endpoint /{sign_name} sirve animaciones directas v2.6 corregidas por defecto con fallback a v2.5
+    anim_res = client.get("/api/v1/animations/A diario, Cotidiano(a)")
+    assert anim_res.status_code == 200
+    anim_data = anim_res.json()
+    assert anim_data["metadata"]["pipelineVersion"] in ["2.5_Directo_1a1", "2.6_Directo_1a1_corregido"]
+    assert anim_data["metadata"]["pure1to1Copy"] is True
+    assert "frames" in anim_data and len(anim_data["frames"]) > 0
+
+    anim_v25_res = client.get("/api/v1/animations/A diario, Cotidiano(a)?version=2.5")
+    assert anim_v25_res.status_code == 200
+    assert anim_v25_res.json()["metadata"]["pipelineVersion"] == "2.5_Directo_1a1"
+
+    # 3. AvatarSyncController y sign-animation-schema contienen las funciones v2.5
+    with open(ADAPTER_JS_PATH, "r", encoding="utf-8") as f:
+        adapter_code = f.read()
+    assert "fetchDirectV25Clip" in adapter_code
+    assert "convertDirectAnimationToSignClip" in adapter_code
+    assert "2.5_Directo_1a1" in adapter_code
+
+    with open(SCHEMA_JS_PATH, "r", encoding="utf-8") as f:
+        schema_code = f.read()
+    assert "convertDirectAnimationToSignClip" in schema_code
+
+
 
 

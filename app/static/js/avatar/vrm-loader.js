@@ -62,8 +62,14 @@ export class VRMLoaderService {
             // Optimizaciones de malla VRM oficiales si están disponibles
             if (VRMUtils) {
               try {
-                VRMUtils.removeUnnecessaryVertices(gltf.scene);
-                VRMUtils.removeUnnecessaryJoints(gltf.scene);
+                if (typeof VRMUtils.removeUnnecessaryVertices === 'function') {
+                  VRMUtils.removeUnnecessaryVertices(gltf.scene);
+                }
+                if (typeof VRMUtils.combineSkeletons === 'function') {
+                  VRMUtils.combineSkeletons(gltf.scene);
+                } else if (typeof VRMUtils.removeUnnecessaryJoints === 'function') {
+                  VRMUtils.removeUnnecessaryJoints(gltf.scene);
+                }
               } catch (optErr) {
                 console.warn('[VRMLoaderService] Aviso en optimización de vértices VRM:', optErr);
               }
@@ -72,12 +78,12 @@ export class VRMLoaderService {
             // En VRM 1.0, el modelo ya viene orientado hacia el frente (+Z)
             vrm.scene.rotation.y = 0;
 
-            // Desactivar frustum culling para evitar que partes desaparezcan en movimientos extremos
+            // Desactivar frustum culling y activar sombras suaves en la malla del avatar
             vrm.scene.traverse((obj) => {
               if (obj.isMesh) {
                 obj.frustumCulled = false;
-                obj.castShadow = false;
-                obj.receiveShadow = false;
+                obj.castShadow = true;
+                obj.receiveShadow = true;
               }
             });
 

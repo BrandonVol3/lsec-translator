@@ -317,6 +317,8 @@ class TranscriptionResult(BaseModel):
     confidence: float = Field(default=0.0, ge=0.0, le=1.0, description="Confianza promedio")
     duration_seconds: float = Field(default=0.0, description="Duración del audio procesado")
     word_timestamps: List[WordTimestamp] = Field(default_factory=list)
+    device_used: Optional[str] = Field(default=None, description="Dispositivo de cómputo utilizado (cuda o cpu)")
+    device_warning: Optional[str] = Field(default=None, description="Aviso del sistema si se ejecutó en CPU sin GPU")
 
     @property
     def asr_confidence(self) -> float:

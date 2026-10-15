@@ -252,7 +252,7 @@ class TranscriptWindowController {
         <div class="text-row-spanish">
           ${isEditing ? `
             <div style="margin:4px 0; width:100%;">
-              <input type="text" id="edit-text-${seg.id}" value="${this.escapeHTML(seg.normalized_text || seg.original_text || '')}" class="inspector-input" style="font-weight:600; width:100%; box-sizing:border-box; font-size:0.86rem;" placeholder="Escribe el texto del subtítulo...">
+              <input type="text" id="edit-text-${seg.id}" aria-label="Editar texto del subtítulo #${seg.index}" value="${this.escapeHTML(seg.normalized_text || seg.original_text || '')}" class="inspector-input" style="font-weight:600; width:100%; box-sizing:border-box; font-size:0.86rem;" placeholder="Escribe el texto del subtítulo...">
             </div>
           ` : `
             <div><strong>${this.escapeHTML(seg.normalized_text || seg.original_text || '')}</strong></div>
@@ -284,8 +284,8 @@ class TranscriptWindowController {
         <!-- Fila de Atribución y Acciones -->
         <div class="unit-footer-actions">
           <div class="attribution-text">
-            ${seg.human_reviewed ? `
-              <span style="color:var(--status-validated);">Validado por: ${seg.validated_by || 'Juan Pérez'} (${seg.validated_at || '14:20'})</span>
+            ${(seg.human_reviewed || seg.status === 'VALIDATED') ? `
+              <span style="color:var(--status-validated);">Validado por: ${seg.validated_by || appState.state.currentUser?.name || 'Revisor LSEC'}${seg.validated_at ? ` (${seg.validated_at})` : ''}</span>
             ` : `
               <span>Propuesta generada automáticamente, aún no validada</span>
             `}

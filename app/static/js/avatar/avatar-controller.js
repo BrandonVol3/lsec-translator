@@ -27,6 +27,125 @@ import {
   createNegacionDemoClip
 } from './sign-clip-factory.js';
 import { defaultAnimationCache } from './animation-cache.js';
+import { validateSignClip } from './sign-animation-schema.js';
+import { HUMAN_BONE_NAMES } from './sign-animation-schema.js';
+import { trimSignClipStroke } from './sign-animation-schema.js';
+
+const BONE_LOWER_MAP = new Map((HUMAN_BONE_NAMES || []).map(b => [b.toLowerCase(), b]));
+
+const BONE_ALIASES = {
+  'j_bip_c_hips': 'hips',
+  'j_bip_c_spine': 'spine',
+  'j_bip_c_chest': 'chest',
+  'j_bip_c_upperchest': 'upperChest',
+  'j_bip_c_neck': 'neck',
+  'j_bip_c_head': 'head',
+  'j_bip_l_eye': 'leftEye',
+  'j_bip_r_eye': 'rightEye',
+  'j_bip_l_shoulder': 'leftShoulder',
+  'j_bip_l_upperarm': 'leftUpperArm',
+  'j_bip_l_lowerarm': 'leftLowerArm',
+  'j_bip_l_hand': 'leftHand',
+  'j_bip_l_thumb1': 'leftThumbMetacarpal',
+  'j_bip_l_thumb2': 'leftThumbProximal',
+  'j_bip_l_thumb3': 'leftThumbDistal',
+  'j_bip_l_index1': 'leftIndexProximal',
+  'j_bip_l_index2': 'leftIndexIntermediate',
+  'j_bip_l_index3': 'leftIndexDistal',
+  'j_bip_l_middle1': 'leftMiddleProximal',
+  'j_bip_l_middle2': 'leftMiddleIntermediate',
+  'j_bip_l_middle3': 'leftMiddleDistal',
+  'j_bip_l_ring1': 'leftRingProximal',
+  'j_bip_l_ring2': 'leftRingIntermediate',
+  'j_bip_l_ring3': 'leftRingDistal',
+  'j_bip_l_little1': 'leftLittleProximal',
+  'j_bip_l_little2': 'leftLittleIntermediate',
+  'j_bip_l_little3': 'leftLittleDistal',
+  'j_bip_r_shoulder': 'rightShoulder',
+  'j_bip_r_upperarm': 'rightUpperArm',
+  'j_bip_r_lowerarm': 'rightLowerArm',
+  'j_bip_r_hand': 'rightHand',
+  'j_bip_r_thumb1': 'rightThumbMetacarpal',
+  'j_bip_r_thumb2': 'rightThumbProximal',
+  'j_bip_r_thumb3': 'rightThumbDistal',
+  'j_bip_r_index1': 'rightIndexProximal',
+  'j_bip_r_index2': 'rightIndexIntermediate',
+  'j_bip_r_index3': 'rightIndexDistal',
+  'j_bip_r_middle1': 'rightMiddleProximal',
+  'j_bip_r_middle2': 'rightMiddleIntermediate',
+  'j_bip_r_middle3': 'rightMiddleDistal',
+  'j_bip_r_ring1': 'rightRingProximal',
+  'j_bip_r_ring2': 'rightRingIntermediate',
+  'j_bip_r_ring3': 'rightRingDistal',
+  'j_bip_r_little1': 'rightLittleProximal',
+  'j_bip_r_little2': 'rightLittleIntermediate',
+  'j_bip_r_little3': 'rightLittleDistal',
+  'wrist': 'rightHand',
+  'r_wrist': 'rightHand',
+  'l_wrist': 'leftHand',
+  'righthandthumb1': 'rightThumbMetacarpal',
+  'righthandthumb2': 'rightThumbProximal',
+  'righthandthumb3': 'rightThumbDistal',
+  'righthandindex1': 'rightIndexProximal',
+  'righthandindex2': 'rightIndexIntermediate',
+  'righthandindex3': 'rightIndexDistal',
+  'righthandmiddle1': 'rightMiddleProximal',
+  'righthandmiddle2': 'rightMiddleIntermediate',
+  'righthandmiddle3': 'rightMiddleDistal',
+  'righthandring1': 'rightRingProximal',
+  'righthandring2': 'rightRingIntermediate',
+  'righthandring3': 'rightRingDistal',
+  'righthandpinky1': 'rightLittleProximal',
+  'righthandpinky2': 'rightLittleIntermediate',
+  'righthandpinky3': 'rightLittleDistal'
+};
+
+function normalizeBoneName(name) {
+  if (typeof name !== 'string') return name;
+  const clean = name.replace(/^mixamorig:?/i, '').trim();
+  const lower = clean.toLowerCase();
+  if (BONE_ALIASES[lower]) return BONE_ALIASES[lower];
+  if (BONE_LOWER_MAP.has(lower)) return BONE_LOWER_MAP.get(lower);
+  return clean;
+}
+
+function detectDatasetQuaternionLayout(data) {
+  const meta = (data && data.metadata) || {};
+  const explicit = (meta.quaternionOrder || meta.quaternionFormat || data.quaternionOrder || data.quaternionFormat || '').toLowerCase();
+  if (explicit.includes('wxyz') || explicit.includes('[w, x, y, z]') || explicit.includes('[w,x,y,z]')) return 'wxyz';
+  if (explicit.includes('xyzw') || explicit.includes('[x, y, z, w]') || explicit.includes('[x,y,z,w]')) return 'xyzw';
+
+  let wxyzVotes = 0;
+  let xyzwVotes = 0;
+
+  const voteQuat = (q) => {
+    if (!Array.isArray(q) || q.length < 4) return;
+    const a = Number(q[0]) || 0;
+    const d = Number(q[3]) || 0;
+    if (Math.abs(a) > 0.7 && Math.abs(d) < 0.35) wxyzVotes++;
+    else if (Math.abs(d) > 0.7 && Math.abs(a) < 0.35) xyzwVotes++;
+  };
+
+  if (Array.isArray(data.frames)) {
+    for (const f of data.frames.slice(0, 10)) {
+      if (f && f.rotations && typeof f.rotations === 'object') {
+        for (const q of Object.values(f.rotations)) {
+          voteQuat(q);
+        }
+      }
+    }
+  } else if (data.extractedTracks && typeof data.extractedTracks === 'object') {
+    for (const track of Object.values(data.extractedTracks)) {
+      if (track && Array.isArray(track.quaternions)) {
+        for (const q of track.quaternions.slice(0, 10)) {
+          voteQuat(q);
+        }
+      }
+    }
+  }
+
+  return (wxyzVotes > xyzwVotes) ? 'wxyz' : 'xyzw';
+}
 
 export class AvatarPanelController {
   constructor(panelContainerId = 'view-side-avatar') {
@@ -108,12 +227,13 @@ export class AvatarPanelController {
 
   async loadManifestClips() {
     try {
-      const res = await fetch('/static/assets/clips/manifest.json');
+      const res = await fetch(`/static/assets/clips/manifest.json?t=${Date.now()}`);
       if (!res.ok) return;
       const manifest = await res.json();
       if (manifest && manifest.clips) {
         const weekClips = [];
         const numberClips = [];
+        const vocabClips = [];
         const labelMap = {
           'LUNES': '📅 Lunes (LSEC — Queirema L, Vaivén)',
           'MARTES': '📅 Martes (LSEC — Queirema M, Doble Descenso)',
@@ -125,25 +245,75 @@ export class AvatarPanelController {
         };
 
         const weekDayKeys = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'];
+        const numeralRegex = /^(CERO|UNO|DOS|TRES|CUATRO|CINCO|SEIS|SIETE|OCHO|NUEVE|DIEZ|ONCE|DOCE|VEINTE|TREINTA|CUARENTA|CINCUENTA|CIEN|MIL|MILLON)(_\d+)?$/i;
+        const seenNormalizedKeys = new Set();
 
         for (const [glossKey, clipMeta] of Object.entries(manifest.clips)) {
-          const isWeekDay = weekDayKeys.includes(glossKey);
-          const label = labelMap[glossKey] || (isWeekDay ? `📅 ${glossKey} (LSEC)` : `🔢 ${glossKey} (LSEC)`);
-          
-          if (isWeekDay) {
-            weekClips.push({ id: glossKey, label });
-          } else {
-            numberClips.push({ id: glossKey, label });
-          }
+          const normKey = String(glossKey).toUpperCase().trim();
+          const loaderFn = async () => {
+            // 1. Intentar resolver versión 2.6 directa desde la API REST
+            if (typeof fetch === 'function') {
+              const endpoints = [
+                `/api/animations-direct/resolve/${encodeURIComponent(normKey)}`,
+                `/api/v1/animations/resolve/${encodeURIComponent(normKey)}`
+              ];
+              for (const url of endpoints) {
+                try {
+                  const directRes = await fetch(url);
+                  if (directRes && directRes.ok) {
+                    const payload = await directRes.json();
+                    const directData = (payload && typeof payload === 'object' && 'animation' in payload)
+                      ? payload.animation
+                      : payload;
+                    if (directData && !directData.boneTracks && (Array.isArray(directData.frames) || directData.extractedTracks)) {
+                      let clip = this.convertHamerAnimationToSignClip(directData, clipMeta.clipId || normKey);
+                      clip = trimSignClipStroke(clip);
+                      defaultAnimationCache.setClip(clip.clipId, clip);
+                      return clip;
+                    }
+                  }
+                } catch (e) {
+                  // Fallback silencioso ante modo offline
+                }
+              }
+            }
 
-          // Registrar cargador bajo demanda en this.clips (manifest tiene prioridad)
-          this.clips[glossKey] = async () => {
+            // 2. Fallback estático desde /static/assets/clips/
             const clipRes = await fetch(`/static/assets/clips/${clipMeta.file}?t=${Date.now()}`);
-            const clipData = await clipRes.json();
+            let clipData = await clipRes.json();
+            if (clipData && !clipData.boneTracks && (Array.isArray(clipData.frames) || clipData.extractedTracks)) {
+              clipData = this.convertHamerAnimationToSignClip(clipData, clipMeta.clipId || normKey);
+              clipData = trimSignClipStroke(clipData);
+            }
+            if (clipData && !clipData.clipId) {
+              clipData.clipId = clipMeta.clipId || normKey;
+            }
             defaultAnimationCache.setClip(clipData.clipId, clipData);
             return clipData;
           };
+
+          // Registrar cargador tanto en clave original como normalizada en mayúsculas
+          this.clips[glossKey] = loaderFn;
+          this.clips[normKey] = loaderFn;
+
+          // Evitar duplicados por diferencias de mayúsculas/minúsculas en el selector UI
+          if (seenNormalizedKeys.has(normKey)) continue;
+          seenNormalizedKeys.add(normKey);
+
+          const isWeekDay = weekDayKeys.includes(normKey);
+          const isNumeral = !isWeekDay && numeralRegex.test(normKey);
+
+          if (isWeekDay) {
+            const label = labelMap[normKey] || `📅 ${normKey} (LSEC)`;
+            weekClips.push({ id: normKey, label });
+          } else if (isNumeral) {
+            numberClips.push({ id: normKey, label: `🔢 ${normKey} (LSEC)` });
+          } else {
+            vocabClips.push({ id: normKey, label: `🤟 ${normKey} (LSEC)` });
+          }
         }
+
+        vocabClips.sort((a, b) => a.id.localeCompare(b.id, 'es'));
 
         // Categoría de Días de la Semana
         const weekCategory = {
@@ -151,22 +321,34 @@ export class AvatarPanelController {
           clips: weekClips
         };
 
-        // Categoría de Numerales y Léxico
+        // Categoría de Numerales
         const numberCategory = {
-          groupName: '🔢 Numerales y Léxico Adicional (LSEC)',
+          groupName: '🔢 Números y Cantidades (LSEC)',
           clips: numberClips
         };
+
+        // Categoría de Vocabulario General LSEC
+        const vocabCategory = {
+          groupName: '🤟 Vocabulario y Léxico LSEC',
+          clips: vocabClips
+        };
+
+        const dynamicGroups = [
+          weekCategory,
+          ...(numberClips.length > 0 ? [numberCategory] : []),
+          ...(vocabClips.length > 0 ? [vocabCategory] : [])
+        ];
 
         // Reemplazar o anteponer categorías
         const existingWeekIdx = this.categories.findIndex(c => c.groupName.includes('Léxico LSEC') || c.groupName.includes('Días de la Semana'));
         if (existingWeekIdx >= 0) {
-          this.categories.splice(existingWeekIdx, 1, weekCategory, ...(numberClips.length > 0 ? [numberCategory] : []));
+          this.categories.splice(existingWeekIdx, 1, ...dynamicGroups);
         } else {
-          this.categories.unshift(weekCategory, ...(numberClips.length > 0 ? [numberCategory] : []));
+          this.categories.unshift(...dynamicGroups);
         }
 
         this.renderClipOptions();
-        console.info(`[AvatarPanelController] ${weekClips.length} días de la semana y ${numberClips.length} señas adicionales cargadas desde manifest.json`);
+        console.info(`[AvatarPanelController] ${weekClips.length} días, ${numberClips.length} numerales y ${vocabClips.length} señas léxicas cargadas desde manifest.json`);
       }
     } catch (err) {
       console.warn('[AvatarPanelController] No se pudo cargar manifest.json:', err);
@@ -201,6 +383,9 @@ export class AvatarPanelController {
         </div>
 
         <div class="avatar-header-badges">
+          <a href="/avatarconfig" class="btn btn-secondary btn-sm" id="btn-open-avatar-config-page" title="Abrir entorno dedicado de calibración (/avatarconfig)" style="text-decoration:none; font-size:0.65rem; padding:2px 6px; display:inline-flex; align-items:center; gap:3px;">
+            <span>Calibración ↗</span>
+          </a>
           <span class="unvalidated-warning-badge" id="avatar-unvalidated-notice" title="Las animaciones actuales son demostraciones técnicas no validadas lingüísticamente por la comunidad sorda">
             DEMO NO VALIDADA
           </span>
@@ -249,21 +434,21 @@ export class AvatarPanelController {
         </div>
 
         <!-- Botón flotante para recentrar cámara -->
-        <button class="btn-avatar-hud-action" id="btn-avatar-reset-camera" title="Recentrar cámara frontal">
+        <button class="btn-avatar-hud-action" id="btn-avatar-reset-camera" title="Recentrar cámara frontal" aria-label="Recentrar cámara frontal">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
         </button>
 
         <!-- DOCK FLOTANTE DE CONTROLES DE CÁMARA (Girar, Mover, Deslizar) -->
-        <div class="avatar-cam-floating-dock" id="avatar-cam-dock" aria-label="Controles de Cámara 3D">
+        <div class="avatar-cam-floating-dock dock-collapsed" id="avatar-cam-dock" aria-label="Controles de Cámara 3D">
           <div class="avatar-cam-dock-header">
             <span class="avatar-cam-dock-title">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
               Controles 3D
             </span>
-            <button class="avatar-cam-dock-toggle" id="btn-cam-dock-toggle" title="Minimizar / Expandir panel de cámara">▾</button>
+            <button class="avatar-cam-dock-toggle" id="btn-cam-dock-toggle" title="Minimizar / Expandir panel de cámara" aria-label="Alternar panel de cámara 3D">▸</button>
           </div>
           
-          <div class="avatar-cam-dock-body" id="avatar-cam-dock-body">
+          <div class="avatar-cam-dock-body" id="avatar-cam-dock-body" style="display:none;">
             <!-- Girar (Órbita 360°) -->
             <div class="avatar-cam-tool-section">
               <div class="avatar-cam-section-label">Girar (Órbita)</div>
@@ -279,13 +464,13 @@ export class AvatarPanelController {
             <div class="avatar-cam-tool-section">
               <div class="avatar-cam-section-label">Mover (Desplazamiento)</div>
               <div class="avatar-cam-grid-dpad">
-                <button class="avatar-cam-btn avatar-cam-btn-up" id="btn-cam-pan-up" title="Mover hacia arriba">▲</button>
+                <button class="avatar-cam-btn avatar-cam-btn-up" id="btn-cam-pan-up" title="Mover hacia arriba" aria-label="Mover cámara arriba">▲</button>
                 <div class="avatar-cam-dpad-mid">
-                  <button class="avatar-cam-btn" id="btn-cam-pan-left" title="Mover a la izquierda">◄</button>
-                  <button class="avatar-cam-btn avatar-cam-btn-center" id="btn-cam-pan-center" title="Recentrar vista">●</button>
-                  <button class="avatar-cam-btn" id="btn-cam-pan-right" title="Mover a la derecha">►</button>
+                  <button class="avatar-cam-btn" id="btn-cam-pan-left" title="Mover a la izquierda" aria-label="Mover cámara izquierda">◄</button>
+                  <button class="avatar-cam-btn avatar-cam-btn-center" id="btn-cam-pan-center" title="Recentrar vista" aria-label="Recentrar vista">●</button>
+                  <button class="avatar-cam-btn" id="btn-cam-pan-right" title="Mover a la derecha" aria-label="Mover cámara derecha">►</button>
                 </div>
-                <button class="avatar-cam-btn avatar-cam-btn-down" id="btn-cam-pan-down" title="Mover hacia abajo">▼</button>
+                <button class="avatar-cam-btn avatar-cam-btn-down" id="btn-cam-pan-down" title="Mover hacia abajo" aria-label="Mover cámara abajo">▼</button>
               </div>
             </div>
 
@@ -325,16 +510,16 @@ export class AvatarPanelController {
         
         <!-- Fila 1: Selección de Clip / Prueba y Velocidad -->
         <div class="avatar-controls-row">
-          <div class="avatar-control-group" style="flex:1;">
+          <div class="avatar-control-group" style="flex:1; min-width: 150px;">
             <label for="select-avatar-clip" class="avatar-control-label">Prueba / Clip:</label>
-            <select id="select-avatar-clip" class="avatar-select">
+            <select id="select-avatar-clip" class="avatar-select" style="flex:1;">
               ${optionsHtml}
             </select>
           </div>
 
           <div class="avatar-control-group">
             <label for="select-avatar-speed" class="avatar-control-label">Velocidad:</label>
-            <select id="select-avatar-speed" class="avatar-select" style="min-width:70px;">
+            <select id="select-avatar-speed" class="avatar-select" style="min-width:64px;">
               <option value="0.25">0.25x</option>
               <option value="0.5">0.5x</option>
               <option value="0.75">0.75x</option>
@@ -348,7 +533,7 @@ export class AvatarPanelController {
 
         <!-- Fila 2: Botones de Acción Individual y Secuenciación -->
         <div class="avatar-controls-row avatar-buttons-row">
-          <div style="display:flex; gap:6px;">
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
             <button class="btn btn-primary btn-sm" id="btn-avatar-play" title="Reproducir prueba seleccionada (Espacio)">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
               <span>Reproducir</span>
@@ -364,7 +549,7 @@ export class AvatarPanelController {
           </div>
 
           <div style="display:flex; gap:6px; flex-wrap:wrap;">
-            <button class="btn btn-action-step btn-sm" id="btn-avatar-play-sequence" title="Reproducir secuencia de demostración básica">
+            <button class="btn btn-action-step btn-action-primary btn-sm" id="btn-avatar-play-sequence" title="Reproducir secuencia de demostración básica">
               <span>▶ Secuencia Básica</span>
             </button>
             <button class="btn btn-secondary btn-sm" id="btn-avatar-play-week" style="background:linear-gradient(135deg, #059669 0%, #047857 100%); border-color:#059669; color:#fff;" title="Reproducir secuencia completa de los 7 días de la semana (Lunes a Domingo)">
@@ -386,18 +571,18 @@ export class AvatarPanelController {
             <button class="avatar-cam-preset-btn" id="btn-cam-hands" title="Vista manos y señas">Manos / Sien</button>
 
             <div class="avatar-cam-tools-compact">
-              <button class="avatar-cam-icon-btn" id="btn-quick-rot-left" title="Girar izquierda ↺">↺</button>
-              <button class="avatar-cam-icon-btn" id="btn-quick-rot-right" title="Girar derecha ↻">↻</button>
-              <button class="avatar-cam-icon-btn" id="btn-quick-zoom-in" title="Acercar ＋">＋</button>
-              <button class="avatar-cam-icon-btn" id="btn-quick-zoom-out" title="Alejar －">－</button>
-              <button class="avatar-cam-icon-btn" id="btn-quick-cam-dock-toggle" title="Dock de controles 3D">🎮</button>
+              <button class="avatar-cam-icon-btn" id="btn-quick-rot-left" title="Girar izquierda ↺" aria-label="Girar izquierda">↺</button>
+              <button class="avatar-cam-icon-btn" id="btn-quick-rot-right" title="Girar derecha ↻" aria-label="Girar derecha">↻</button>
+              <button class="avatar-cam-icon-btn" id="btn-quick-zoom-in" title="Acercar ＋" aria-label="Acercar cámara">＋</button>
+              <button class="avatar-cam-icon-btn" id="btn-quick-zoom-out" title="Alejar －" aria-label="Alejar cámara">－</button>
+              <button class="avatar-cam-icon-btn" id="btn-quick-cam-dock-toggle" title="Dock de controles 3D" aria-label="Alternar controles de cámara 3D">🎮</button>
             </div>
           </div>
         </div>
 
         <!-- Fila 3: Carga de Archivo VRM Local -->
         <div class="avatar-vrm-load-row">
-          <input type="file" id="avatar-vrm-file-input" accept=".vrm,.glb" style="display:none;">
+          <input type="file" id="avatar-vrm-file-input" accept=".vrm,.glb" style="display:none;" aria-label="Cargar modelo de avatar VRM o GLB">
           <button class="btn btn-secondary btn-sm" id="btn-avatar-load-vrm" style="width:100%; justify-content:center;">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
             <span>Cargar Avatar VRM 1.0 (.vrm local)</span>
@@ -409,12 +594,12 @@ export class AvatarPanelController {
           <div style="font-size:0.75rem; font-weight:600; color:var(--text-secondary); display:flex; align-items:center; gap:5px;">
             <span>✏️ Edición Manual de Señas (Blender / JSON)</span>
           </div>
-          <div style="display:flex; gap:6px;">
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
             <button class="btn btn-secondary btn-sm" id="btn-avatar-export-clip" style="flex:1; justify-content:center;" title="Exportar la seña actualmente seleccionada (ej. LUNES) como archivo JSON para referencia o edición">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
               <span>Exportar Seña</span>
             </button>
-            <input type="file" id="avatar-clip-file-input" accept=".json" style="display:none;">
+            <input type="file" id="avatar-clip-file-input" accept=".json" style="display:none;" aria-label="Cargar animación de seña corregida JSON">
             <button class="btn btn-primary btn-sm" id="btn-avatar-import-clip" style="flex:1; justify-content:center; background:linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%); border-color:#2563EB;" title="Cargar seña corregida o personalizada (.json) y visualizar en el avatar">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
               <span>Cargar Seña Corregida</span>
@@ -562,6 +747,7 @@ export class AvatarPanelController {
     });
 
     // Toggle de Dock Flotante de Cámara
+    const camDock = findEl('#avatar-cam-dock');
     const dockBody = findEl('#avatar-cam-dock-body');
     const dockToggle = findEl('#btn-cam-dock-toggle');
     const quickDockToggle = findEl('#btn-quick-cam-dock-toggle');
@@ -570,6 +756,7 @@ export class AvatarPanelController {
       if (!dockBody) return;
       const isHidden = dockBody.style.display === 'none';
       dockBody.style.display = isHidden ? 'flex' : 'none';
+      if (camDock) camDock.classList.toggle('dock-collapsed', !isHidden);
       if (dockToggle) dockToggle.textContent = isHidden ? '▾' : '▸';
     };
 
@@ -615,12 +802,15 @@ export class AvatarPanelController {
         this.fileInputClip.click();
       });
 
-      this.fileInputClip.addEventListener('change', (e) => {
+      this.fileInputClip.addEventListener('change', async (e) => {
         const file = e.target.files && e.target.files[0];
         if (file) {
-          this.importCustomClip(file);
-          // Limpiar valor para permitir recargar el mismo archivo si se edita de nuevo
-          this.fileInputClip.value = '';
+          try {
+            await this.importCustomClip(file);
+          } finally {
+            // Limpiar valor en finally para permitir recargar el mismo archivo si se edita de nuevo
+            this.fileInputClip.value = '';
+          }
         }
       });
     }
@@ -629,6 +819,31 @@ export class AvatarPanelController {
       this.btnRetry.addEventListener('click', () => {
         this.hideError();
         this.loadInitialAvatar();
+      });
+    }
+
+    // Drag & Drop directo de archivos (.json o .vrm) sobre el viewport 3D
+    const viewportWrap = findEl('#avatar-viewport-wrap') || this.canvas;
+    if (viewportWrap) {
+      viewportWrap.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.dataTransfer) {
+          e.dataTransfer.dropEffect = 'copy';
+        }
+      });
+      viewportWrap.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!e.dataTransfer || !e.dataTransfer.files || e.dataTransfer.files.length === 0) return;
+        for (const file of e.dataTransfer.files) {
+          const name = file.name.toLowerCase();
+          if (name.endsWith('.json')) {
+            await this.importCustomClip(file);
+          } else if (name.endsWith('.vrm') || name.endsWith('.glb')) {
+            await this.loadVRMFromFile(file);
+          }
+        }
       });
     }
   }
@@ -655,6 +870,12 @@ export class AvatarPanelController {
 
       // 7. No manuales
       this.nonManual = new NonManualController();
+
+      // 8. Fachada de mixer determinista (para exportación offline cuadro por cuadro a 30 FPS)
+      this.mixer = {
+        update: (dt) => this.stepDeterministic(dt)
+      };
+      this.lastPlayedResolutionMeta = null;
 
       // Conectar loop de renderizado del motor con el secuenciador y perfilador de rendimiento
       this.engine.setUpdateCallback((delta) => {
@@ -849,6 +1070,9 @@ export class AvatarPanelController {
     this.isVRMActive = true;
     this.currentModelSource = 'VRM_LOCAL';
 
+    // Aplicar mejoras visuales: sombreado Toon, sombras suaves y realce de silueta de dedos
+    this.applyToonVisualShading(vrm);
+
     this.engine.setModel(vrm, true);
     this.player.setModel(vrm, true);
     this.nonManual.setModel(vrm, true);
@@ -859,6 +1083,43 @@ export class AvatarPanelController {
     }
 
     this.prepareSelectedClip();
+  }
+
+  /**
+   * Configura sombras suaves y ajusta los materiales Toon (MToon) del avatar VRM
+   * para destacar la silueta de los dedos y brindar volumen tridimensional.
+   */
+  applyToonVisualShading(vrm) {
+    if (!vrm || !vrm.scene) return;
+    if (this.engine && this.engine.renderer) {
+      this.engine.renderer.shadowMap.enabled = true;
+      if (typeof THREE !== 'undefined' && THREE.PCFSoftShadowMap) {
+        this.engine.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      }
+    }
+    vrm.scene.traverse((obj) => {
+      if (obj.isMesh) {
+        obj.castShadow = true;
+        obj.receiveShadow = true;
+        if (obj.material) {
+          const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+          for (const mat of mats) {
+            // Ajuste fino para materiales MToon de VRM
+            if (mat.isMToonMaterial || mat.type === 'MToonMaterial' || mat.userData?.vrmMaterial) {
+              if (mat.shadeShift !== undefined) mat.shadeShift = -0.10;
+              if (mat.shadeToony !== undefined) mat.shadeToony = 0.85;
+              if (mat.rimLightingMixFactor !== undefined) mat.rimLightingMixFactor = 0.80;
+              if (mat.rimMultiply !== undefined) mat.rimMultiply = 1.25;
+              if (mat.outlineWidthFactor !== undefined && mat.outlineWidthFactor > 0) {
+                mat.outlineWidthFactor = Math.max(mat.outlineWidthFactor, 0.0035);
+              }
+            } else if (mat.isMeshStandardMaterial) {
+              mat.roughness = Math.min(mat.roughness, 0.65);
+            }
+          }
+        }
+      }
+    });
   }
 
   async prepareSelectedClip() {
@@ -872,13 +1133,16 @@ export class AvatarPanelController {
       }
     }
     if (!clip) clip = this.clips.NEUTRAL;
-    this.player.loadClip(clip);
-
-    if (this.activeGlossHud) {
-      this.activeGlossHud.textContent = clip.gloss;
+    if (this.player) {
+      this.player.loadClip(clip);
     }
 
-    this.updateTimeDisplay(0, this.player.getDuration());
+    if (this.activeGlossHud && clip) {
+      this.activeGlossHud.textContent = clip.gloss || '';
+    }
+
+    const duration = this.player ? this.player.getDuration() : ((clip && clip.durationMs ? clip.durationMs / 1000 : 0));
+    this.updateTimeDisplay(0, duration);
     if (this.progressBarFill) {
       this.progressBarFill.style.width = '0%';
     }
@@ -1056,6 +1320,7 @@ export class AvatarPanelController {
   syncPresetButtons(preset) {
     const findEl = (sel) => (this.container ? this.container.querySelector(sel) : null) || document.querySelector(sel);
     const presetMap = {
+      pip_bust: findEl('#btn-cam-pip-bust'),
       medium: findEl('#btn-cam-medium'),
       full: findEl('#btn-cam-full'),
       face: findEl('#btn-cam-face'),
@@ -1067,6 +1332,176 @@ export class AvatarPanelController {
         else btn.classList.remove('active');
       }
     });
+  }
+
+  /**
+   * Reproduce una glosa lingüística por nombre en el avatar.
+   * Maneja glosas léxicas (v2.6 oficial preferida -> v2.5 -> local) y dactilología pendiente.
+   * @param {string} glossName
+   * @param {Object} [options]
+   * @param {boolean} [options.isFingerspelling=false]
+   * @returns {Promise<boolean>}
+   */
+  async playGloss(glossName, options = {}) {
+    if (!glossName) {
+      this.reset();
+      return false;
+    }
+
+    const clean = glossName.trim();
+    const isSingleLetterHyphenated = clean.includes('-')
+      && clean.split('-').filter(Boolean).every(p => p.trim().length === 1);
+    const isFingerspelling = Boolean(
+      options.isFingerspelling || isSingleLetterHyphenated || options.gloss_type === 'DACTILOLOGÍA'
+    );
+
+    // Directriz: Dactilología / Glosas letra por letra quedan pendientes por el momento.
+    // El avatar permanece en pose neutra/reposo con manos abajo sin trabar la interfaz.
+    if (isFingerspelling) {
+      if (this.activeGlossHud) {
+        this.activeGlossHud.textContent = clean;
+      }
+      this.lastPlayedResolutionMeta = {
+        found: false,
+        matchType: 'fingerspelling',
+        needsReview: false,
+        warning: null,
+        resolvedGloss: clean,
+        isFingerspelling: true
+      };
+      if (this.clips && this.clips.NEUTRAL) {
+        this.player?.play(this.clips.NEUTRAL, { coarticulate: true, returnToNeutralOnEnd: false });
+      } else {
+        this.player?.reset();
+      }
+      return true;
+    }
+
+    if (this.activeGlossHud) {
+      this.activeGlossHud.textContent = clean;
+    }
+
+    let clip = null;
+    if (this.syncController) {
+      clip = await this.syncController.loadClipAsync(clean);
+      const resMeta = typeof this.syncController.getResolutionMeta === 'function'
+        ? this.syncController.getResolutionMeta(clean)
+        : (typeof this.syncController.getResolutionMetadata === 'function' ? this.syncController.getResolutionMetadata(clean) : null);
+      if (resMeta) {
+        this.lastPlayedResolutionMeta = resMeta;
+        if (resMeta.isFingerspelling) {
+          if (this.clips && this.clips.NEUTRAL) {
+            this.player?.play(this.clips.NEUTRAL, { coarticulate: true, returnToNeutralOnEnd: false });
+          } else {
+            this.player?.reset();
+          }
+          return true;
+        }
+      }
+    }
+
+    if (!clip && this.clips) {
+      clip = this.clips[clean.toUpperCase()] || this.clips[clean];
+      if (typeof clip === 'function') {
+        try {
+          clip = await clip();
+        } catch {
+          clip = null;
+        }
+      }
+    }
+
+    if (clip && this.player) {
+      let targetSpeed = 1.0;
+      if (typeof options.slotDurationSec === 'number' && options.slotDurationSec > 0 && clip.durationMs > 0) {
+        const clipSec = clip.durationMs / 1000.0;
+        const fitRatio = clipSec / Math.max(0.24, options.slotDurationSec);
+        const baseRate = (typeof options.basePlaybackRate === 'number' && options.basePlaybackRate > 0)
+          ? options.basePlaybackRate
+          : 1.0;
+        targetSpeed = Math.max(1.0, Math.min(2.6, fitRatio)) * baseRate;
+      } else if (typeof options.speed === 'number' && options.speed > 0) {
+        targetSpeed = options.speed;
+      } else if (clip.metadata && typeof clip.metadata.recommendedSpeed === 'number') {
+        targetSpeed = clip.metadata.recommendedSpeed;
+      }
+      this.player.setSpeed(targetSpeed);
+      this.player.play(clip, {
+        coarticulate: options.coarticulate !== undefined ? options.coarticulate : true,
+        blendDuration: options.coarticulationDurationSec || options.blendDuration || 0.12,
+        returnToNeutralOnEnd: options.returnToNeutralOnEnd !== undefined ? options.returnToNeutralOnEnd : false,
+        speed: targetSpeed
+      });
+      return true;
+    } else {
+      // Seña sin animación registrada: mantener reposo sin interrumpir
+      if (this.clips && this.clips.NEUTRAL) {
+        this.player?.play(this.clips.NEUTRAL, { coarticulate: true, returnToNeutralOnEnd: false });
+      }
+      return false;
+    }
+  }
+
+  /**
+   * Avanza el estado del avatar de forma determinista un paso de tiempo dt (segundos)
+   * y fuerza un renderizado síncrono del viewport 3D.
+   * @param {number} dt
+   */
+  stepDeterministic(dt = 1 / 30) {
+    if (this.sequencer) {
+      this.sequencer.update(dt);
+    } else if (this.player) {
+      this.player.update(dt);
+    }
+    if (this.engine && typeof this.engine.stepDeterministic === 'function') {
+      this.engine.stepDeterministic(dt);
+    }
+  }
+
+  /**
+   * Detiene la reproducción y regresa al avatar a postura neutra de reposo.
+   */
+  stop() {
+    this.reset();
+  }
+
+  /**
+   * Reanuda la reproducción del clip o secuencia actual si estaba en pausa.
+   */
+  resume() {
+    if (this.sequencer && this.sequencer.sequence && this.sequencer.sequence.length > 0) {
+      this.sequencer.resume();
+    } else if (this.player && typeof this.player.resume === 'function') {
+      this.player.resume();
+    }
+  }
+
+  /**
+   * Salto temporal a un offset en segundos.
+   * @param {number} timeSec
+   */
+  seek(timeSec) {
+    if (this.player && typeof this.player.seek === 'function') {
+      this.player.seek(timeSec);
+    }
+  }
+
+  /**
+   * Establece dinámicamente el color de fondo contrastante.
+   * @param {string|number} color
+   */
+  setClearColor(color) {
+    if (this.engine) {
+      this.engine.setClearColor(color);
+    }
+  }
+
+  /**
+   * Captura frame actual para exportador de video.
+   * @returns {HTMLCanvasElement|null}
+   */
+  captureFrame() {
+    return this.engine ? this.engine.captureFrame() : null;
   }
 
   rotateCamera(deltaAzimuthDeg, deltaPolarDeg = 0) {
@@ -1142,19 +1577,213 @@ export class AvatarPanelController {
   }
 
   /**
+   * Adapta automáticamente un archivo animation.json proveniente del pipeline HaMeR / Colab
+   * al esquema estandarizado SignClip de LSEC Studio.
+   * Soporta tanto cuaterniones [w, x, y, z] (PyTorch / SMPL-X / HaMeR / Scipy)
+   * como [x, y, z, w] (Three.js / Blender / VRM), normaliza nombres de huesos a nomenclatura
+   * VRM humanoide y ajusta la duración con base en el tiempo máximo real de las pistas.
+   * @param {Object} data - Objeto JSON con frames y metadata de HaMeR
+   * @param {string} defaultName - Nombre base derivado del archivo
+   * @returns {Object} Clip compatible con validateSignClip y SignPlayer
+   */
+  convertHamerAnimationToSignClip(data, defaultName = 'SEÑA_LSEC') {
+    if (!data || typeof data !== 'object') return data;
+
+    const meta = data.metadata || {};
+    const signName = (meta.sign && typeof meta.sign === 'string' && meta.sign.trim())
+      || (data.sign && typeof data.sign === 'string' && data.sign.trim())
+      || (typeof defaultName === 'string' && defaultName.trim() ? defaultName.trim() : 'SEÑA_LSEC');
+    const fps = Number(meta.fps || data.fps || data.FPS) || 60;
+    const totalFrames = Array.isArray(data.frames)
+      ? data.frames.length
+      : (Number(data.totalFrames) || 0);
+    const durationSec = Number(meta.duration || data.duration)
+      || (totalFrames > 0 ? (totalFrames - 1) / fps : 1.0);
+
+    const detectedLayout = detectDatasetQuaternionLayout(data);
+    const isWxyz = (detectedLayout === 'wxyz');
+
+    const boneMap = new Map();
+    const exprMap = new Map();
+    let maxTimeFound = 0;
+
+    // Helper para procesar cuaternión individual según layout detectado
+    const sanitizeQuat = (raw) => {
+      if (!Array.isArray(raw) || raw.length < 4) return [0, 0, 0, 1];
+      const vals = raw.slice(0, 4).map(v => (typeof v === 'number' && Number.isFinite(v) ? v : 0));
+      // Reordenar a [x, y, z, w] si el origen viene en [w, x, y, z]
+      const [x, y, z, w] = isWxyz ? [vals[1], vals[2], vals[3], vals[0]] : [vals[0], vals[1], vals[2], vals[3]];
+      const norm = Math.hypot(x, y, z, w);
+      if (!Number.isFinite(norm) || norm < 0.0001) {
+        return [0, 0, 0, 1];
+      }
+      return [x / norm, y / norm, z / norm, w / norm];
+    };
+
+    if (Array.isArray(data.frames)) {
+      for (let i = 0; i < data.frames.length; i++) {
+        const f = data.frames[i];
+        if (!f || typeof f !== 'object') continue;
+        const t = (typeof f.time === 'number' && Number.isFinite(f.time)) ? f.time : (i / fps);
+        if (t > maxTimeFound) maxTimeFound = t;
+
+        if (f.rotations && typeof f.rotations === 'object') {
+          for (let [rawBone, q] of Object.entries(f.rotations)) {
+            if (!Array.isArray(q) || q.length < 4) continue;
+            const bone = normalizeBoneName(rawBone);
+            if (!boneMap.has(bone)) {
+              boneMap.set(bone, { boneName: bone, times: [], rotations: [] });
+            }
+            const bEntry = boneMap.get(bone);
+            bEntry.times.push(t);
+            const [qx, qy, qz, qw] = sanitizeQuat(q);
+            bEntry.rotations.push(qx, qy, qz, qw);
+          }
+        }
+
+        const exprSources = [f.expressions, f.blendshapes];
+        for (const exprSource of exprSources) {
+          if (exprSource && typeof exprSource === 'object') {
+            for (const [expr, val] of Object.entries(exprSource)) {
+              if (typeof val !== 'number' || !Number.isFinite(val)) continue;
+              let exprName = expr;
+              if (expr === 'blink_l') exprName = 'blinkLeft';
+              else if (expr === 'blink_r') exprName = 'blinkRight';
+
+              if (!exprMap.has(exprName)) {
+                exprMap.set(exprName, { expressionName: exprName, times: [], values: [] });
+              }
+              const eEntry = exprMap.get(exprName);
+              eEntry.times.push(t);
+              eEntry.values.push(Math.max(0, Math.min(1, val)));
+            }
+          }
+        }
+      }
+    } else if (data.extractedTracks && typeof data.extractedTracks === 'object') {
+      for (let [rawBone, track] of Object.entries(data.extractedTracks)) {
+        if (!track || typeof track !== 'object') continue;
+        const bone = normalizeBoneName(rawBone);
+        const times = Array.isArray(track.times) ? track.times : [];
+        if (times.length > 0) {
+          const lastT = times[times.length - 1];
+          if (typeof lastT === 'number' && lastT > maxTimeFound) maxTimeFound = lastT;
+        }
+
+        const rotations = [];
+        if (Array.isArray(track.rotations)) {
+          for (let k = 0; k < track.rotations.length; k += 4) {
+            const rawSlice = [track.rotations[k], track.rotations[k + 1], track.rotations[k + 2], track.rotations[k + 3]];
+            const [qx, qy, qz, qw] = sanitizeQuat(rawSlice);
+            rotations.push(qx, qy, qz, qw);
+          }
+        } else if (Array.isArray(track.quaternions)) {
+          for (let k = 0; k < track.quaternions.length; k++) {
+            const item = track.quaternions[k];
+            const [qx, qy, qz, qw] = sanitizeQuat(item);
+            rotations.push(qx, qy, qz, qw);
+          }
+        }
+        if (times.length > 0 && rotations.length === times.length * 4) {
+          boneMap.set(bone, { boneName: bone, times, rotations });
+        }
+      }
+    }
+
+    const finalDurationSec = Math.max(durationSec, maxTimeFound);
+    const durationMs = Math.max(100, Math.round((finalDurationSec + 0.15) * 1000));
+
+    const rawSlug = meta.slug || data.slug || signName.toLowerCase().replace(/[^a-z0-9_-]/gi, '_').replace(/^_+|_+$/g, '');
+    const clipId = (rawSlug && rawSlug.length > 0) ? rawSlug : 'custom_clip';
+
+    const boneTracks = Array.from(boneMap.values());
+    const expressionTracks = Array.from(exprMap.values());
+
+    const pipelineVer = meta.pipelineVersion || '2.5_Directo_1a1';
+    const isDirectV25 = String(pipelineVer).startsWith('2.5');
+
+    return {
+      clipId: clipId,
+      gloss: signName,
+      durationMs: durationMs,
+      status: isDirectV25 ? 'MACHINE_PROPOSED' : 'DEMO_ONLY',
+      validationStatus: 'REQUIRES_LSEC_VALIDATION',
+      metadata: {
+        isValidatedLSEC: false,
+        source: isDirectV25 ? 'Pipeline LSEC v2.5 Directo 1:1' : 'HaMeR Pipeline',
+        quaternionOrder: 'xyzw',
+        pipelineVersion: pipelineVer,
+        pure1to1Copy: meta.pure1to1Copy !== undefined ? meta.pure1to1Copy : true,
+        ...meta
+      },
+      boneTracks,
+      expressionTracks
+    };
+  }
+
+  /**
    * Importa y valida un archivo JSON de seña corregida o personalizada.
-   * @param {File} file 
+   * Admite tanto el formato SignClip de LSEC Studio como el formato animation.json de HaMeR / Colab.
+   * @param {File|Object|string} file 
    */
   async importCustomClip(file) {
-    if (!file) return;
+    if (!file) return null;
 
     try {
-      const text = await file.text();
       let customClip;
-      try {
-        customClip = JSON.parse(text);
-      } catch (jsonErr) {
-        throw new Error('El archivo no contiene un formato JSON válido.');
+      const fileName = (file && typeof file === 'object' && file.name) ? file.name : 'custom_clip.json';
+
+      if (typeof file === 'string') {
+        try {
+          customClip = JSON.parse(file);
+        } catch (jsonErr) {
+          throw new Error('El archivo no contiene un formato JSON válido.');
+        }
+      } else if (file && typeof file.text === 'function') {
+        const text = await file.text();
+        try {
+          customClip = JSON.parse(text);
+        } catch (jsonErr) {
+          throw new Error('El archivo no contiene un formato JSON válido.');
+        }
+      } else if (file && typeof file === 'object') {
+        customClip = JSON.parse(JSON.stringify(file));
+      } else {
+        throw new Error('El archivo o dato proporcionado no es válido.');
+      }
+
+      // Si el archivo proviene del pipeline HaMeR / Colab (frames o extractedTracks)
+      if (customClip && !customClip.boneTracks && (Array.isArray(customClip.frames) || customClip.extractedTracks)) {
+        console.info('[AvatarPanelController] Detectado formato animation.json de HaMeR Pipeline. Adaptando a SignClip...');
+        customClip = this.convertHamerAnimationToSignClip(customClip, fileName.replace(/\.[^/.]+$/, ''));
+      }
+
+      // Garantizar campos mínimos obligatorios para clips personalizados antes de validar
+      if (customClip && typeof customClip === 'object') {
+        if (!customClip.clipId && customClip.gloss) {
+          customClip.clipId = customClip.gloss.toLowerCase().replace(/[^a-z0-9_-]/gi, '_');
+        } else if (!customClip.clipId) {
+          customClip.clipId = `CUSTOM_${Date.now()}`;
+        }
+        if (!customClip.gloss && customClip.clipId) {
+          customClip.gloss = customClip.clipId.toUpperCase();
+        } else if (!customClip.gloss) {
+          customClip.gloss = 'PERSONALIZADA';
+        }
+        if (typeof customClip.durationMs !== 'number' || customClip.durationMs <= 0) {
+          if (Array.isArray(customClip.boneTracks) && customClip.boneTracks.length > 0) {
+            let maxT = 0;
+            customClip.boneTracks.forEach(tr => {
+              if (Array.isArray(tr.times) && tr.times.length > 0) {
+                const tLast = tr.times[tr.times.length - 1];
+                if (typeof tLast === 'number' && tLast > maxT) maxT = tLast;
+              }
+            });
+            if (maxT > 0) {
+              customClip.durationMs = Math.round((maxT + 0.15) * 1000);
+            }
+          }
+        }
       }
 
       // Validar esquema
@@ -1164,8 +1793,8 @@ export class AvatarPanelController {
         throw new Error(`Estructura de seña incompatible:\n- ${errorList}`);
       }
 
-      const clipId = customClip.clipId || customClip.gloss || `CUSTOM_${Date.now()}`;
-      const gloss = customClip.gloss || customClip.clipId || 'PERSONALIZADA';
+      const clipId = customClip.clipId || `CUSTOM_${Date.now()}`;
+      const gloss = customClip.gloss || 'PERSONALIZADA';
 
       // Registrar en el catálogo de clips
       this.clips[clipId] = customClip;
@@ -1203,12 +1832,18 @@ export class AvatarPanelController {
 
       // Cargar en el reproductor y reproducir de inmediato para verificación visual
       await this.prepareSelectedClip();
-      this.player.play(customClip);
+      if (this.player) {
+        this.player.play(customClip);
+      }
 
       console.info(`[AvatarPanelController] Seña personalizada "${gloss}" importada y cargada con éxito.`);
+      return customClip;
     } catch (err) {
       console.error('[AvatarPanelController] Error al importar seña:', err);
-      alert('Error al importar la seña: ' + err.message);
+      if (typeof alert === 'function') {
+        alert('Error al importar la seña: ' + err.message);
+      }
+      return null;
     }
   }
 

@@ -27,6 +27,10 @@ class GlossOverlayController {
       });
     }
 
+    if (window.studioAvatarBridge) {
+      window.studioAvatarBridge.dockToPip();
+    }
+
     this.updateVisibility(appState.state.overlays.glossesEnabled);
     this.render(0);
   }
@@ -35,23 +39,13 @@ class GlossOverlayController {
     if (!this.container) return;
     this.container.innerHTML = `
       <div class="avatar-pip-card">
-        <div class="avatar-pip-header">
-          <div class="avatar-pip-title">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style="color:var(--action-primary);"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
-            <span>Avatar 3D (LSEC)</span>
-          </div>
-          <span class="avatar-pip-tag">Ilustración</span>
+        <div class="avatar-pip-canvas-host" id="avatar-pip-canvas-host">
+          <!-- Canvas 3D WebGL acoplado dinámicamente por studio-avatar-bridge.js -->
         </div>
-
-        <div class="avatar-pip-image-wrap">
-          <img src="/static/assets/avatar_ilustracion.png" class="avatar-pip-illustration-img" id="avatar-pip-img-el" alt="Avatar LSEC Intérprete Ilustración">
-          <div class="avatar-pip-watermark-note">Espacio para Avatar 3D</div>
-          <div class="avatar-pip-gradient-overlay"></div>
-          <div class="avatar-pip-gloss-container" id="avatar-pip-gloss-host">
-            <div class="avatar-pip-gloss-idle">
-              <span class="avatar-pip-idle-dot"></span>
-              <span>LSEC</span>
-            </div>
+        <div class="avatar-pip-gloss-container" id="avatar-pip-gloss-host">
+          <div class="avatar-pip-gloss-idle">
+            <span class="avatar-pip-idle-dot"></span>
+            <span>LSEC</span>
           </div>
         </div>
       </div>
@@ -95,7 +89,9 @@ class GlossOverlayController {
 
   updateVisibility(enabled) {
     if (!this.container) return;
-    this.container.style.display = enabled ? 'flex' : 'none';
+    const isHiddenBySidebar = this.container.dataset.hiddenBySidebar === 'true' ||
+      (window.studioAvatarBridge && window.studioAvatarBridge.currentLocation === 'sidebar');
+    this.container.style.display = (enabled && !isHiddenBySidebar) ? 'flex' : 'none';
     if (this.toggleBtn) {
       if (enabled) {
         this.toggleBtn.classList.add('active');
@@ -113,6 +109,11 @@ class GlossOverlayController {
 
     const project = appState.state.project;
     const allGlosses = (project && project.glosses) ? project.glosses : [];
+
+    if (allGlosses.length > 1 && project && !project.__sequentialGlossesNormalized && appState.resolveOverlappingGlossIntervals) {
+      appState.resolveOverlappingGlossIntervals(allGlosses, project.segments || []);
+      project.__sequentialGlossesNormalized = true;
+    }
 
     // 1. Encontrar la glosa activa una por una para este instante exacto
     let activeGloss = allGlosses.find(g => {
@@ -145,18 +146,22 @@ class GlossOverlayController {
     this.lastRenderedKey = currentKey;
 
     if (activeGloss) {
-      const glossName = (activeGloss.gloss || activeGloss.lemma || '').toUpperCase();
-      const isFingerspelling = activeGloss.is_fingerspelling || glossName.includes('-') || (activeGloss.gloss_type === 'DACTILOLOGÍA');
+      const glossName = (activeGloss.gloss || activeGloss.lemma || '').toUpperCase().trim();
+      const isSingleLetterHyphenated = glossName.includes('-') && glossName.split('-').filter(Boolean).every(p => p.trim().length === 1);
+      const isFingerspelling = Boolean(activeGloss.is_fingerspelling || isSingleLetterHyphenated || (activeGloss.gloss_type === 'DACTILOLOGÍA'));
       const isParaphrase = activeGloss.is_paraphrase || (activeGloss.type_badge === 'paráfrasis');
       
       let typeLabel = activeGloss.gloss_type || 'SEÑA LÉXICA';
-      if (isFingerspelling) typeLabel = 'DACTILOLOGÍA';
+      if (isFingerspelling) typeLabel = 'DACTILOLOGÍA (PENDIENTE)';
       if (isParaphrase) typeLabel = 'PARÁFRASIS LSEC';
 
+      const warningHtml = this.buildWarningSublabelHtml(glossName, isFingerspelling);
+
       this.glossHost.innerHTML = `
-        <div class="avatar-pip-gloss-badge ${isFingerspelling ? 'fs' : ''}">
+        <div class="avatar-pip-gloss-badge ${isFingerspelling ? 'fs' : ''}" data-gloss-name="${glossName}">
           <span class="avatar-pip-gloss-type">${typeLabel}</span>
           <span class="avatar-pip-gloss-text">${glossName}</span>
+          ${warningHtml}
         </div>
       `;
     } else if (project) {
@@ -172,6 +177,37 @@ class GlossOverlayController {
           <span>Esperando video</span>
         </div>
       `;
+    }
+  }
+
+  buildWarningSublabelHtml(glossName, isFingerspelling = false) {
+    if (isFingerspelling || !window.studioAvatarBridge) return '';
+    const meta = window.studioAvatarBridge.getResolutionMetaForGloss(glossName);
+    if (!meta) return '';
+
+    const matchType = meta.matchType || meta.match_type;
+    const isApprox = matchType && !['exact', 'compound', 'fingerspelling', 'none'].includes(matchType);
+    const needsRev = Boolean(meta.needsReview !== undefined ? meta.needsReview : meta.needs_review);
+    if (!isApprox && !needsRev) return '';
+
+    const resolvedGloss = meta.resolvedGloss || meta.resolved_gloss;
+    let badgeText = '⚠ Revisión';
+    if (isApprox && resolvedGloss) {
+      badgeText = `⚠ Aprox: ${resolvedGloss}`;
+    }
+    const titleText = (meta.warning || 'Seña resuelta por aproximación o marcada para revisión QA').replace(/"/g, '&quot;');
+    return `<span class="avatar-pip-gloss-warn" title="${titleText}" style="font-size:0.60rem; color:#f6ad55; display:block; margin-top:1px; line-height:1.1;">${badgeText}</span>`;
+  }
+
+  refreshBadgeWarning(glossName) {
+    if (!this.glossHost || !glossName) return;
+    const badgeEl = this.glossHost.querySelector('.avatar-pip-gloss-badge');
+    if (!badgeEl || badgeEl.getAttribute('data-gloss-name') !== glossName.toUpperCase().trim()) return;
+    const existingWarn = badgeEl.querySelector('.avatar-pip-gloss-warn');
+    if (existingWarn) existingWarn.remove();
+    const html = this.buildWarningSublabelHtml(glossName, badgeEl.classList.contains('fs'));
+    if (html) {
+      badgeEl.insertAdjacentHTML('beforeend', html);
     }
   }
 }
