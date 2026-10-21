@@ -23,19 +23,31 @@ from app.core.dataset_schemas import (
 from app.services.active_learning_service import ActiveLearningPriority, ActiveLearningService
 from app.services.dataset_validator import DatasetValidator
 from app.services.mlops_pipeline import BenchmarkMetrics, MLOpsPipeline
-from app.services.nlp_service import LSECTranslatorService
+from app.services.nlp_service import LSECTranslatorService, get_nlp_service
 from app.services.storage_service import LocalStorageService
 
 annotation_router = APIRouter(prefix="/api/v1", tags=["LSEC Dataset & Annotation Platform"])
 
 CORPUS_PATH = Path("data/corpus/pilot_corpus_lsec.json")
 _storage_service: Optional[LocalStorageService] = None
+_nlp_service: Optional[LSECTranslatorService] = None
 
 
 def set_annotation_storage(storage: Optional[LocalStorageService]) -> None:
     """Inyecta la persistencia local para conservar anotaciones entre reinicios."""
     global _storage_service
     _storage_service = storage
+
+
+def set_annotation_nlp_service(service: Optional[LSECTranslatorService]) -> None:
+    """Inyecta el servicio NLP compartido por la aplicación."""
+    global _nlp_service
+    _nlp_service = service
+
+
+def _get_annotation_nlp_service() -> LSECTranslatorService:
+    """Obtiene el NLP inyectado o el singleton para uso aislado del router."""
+    return _nlp_service or get_nlp_service()
 
 
 def _load_corpus_items() -> List[LSECDatasetItem]:
@@ -171,7 +183,7 @@ async def get_active_learning_queue(top_k: int = Query(default=20, ge=1, le=100)
     if not items:
         return []
 
-    service = LSECTranslatorService()
+    service = _get_annotation_nlp_service()
     outputs = []
     for it in items:
         out = await service.translate_to_gloss(it.source_text, mode="detailed")
@@ -185,7 +197,7 @@ async def get_active_learning_queue(top_k: int = Query(default=20, ge=1, le=100)
 @annotation_router.post("/mlops/benchmark")
 async def run_frozen_test_benchmark() -> BenchmarkMetrics:
     """Ejecuta la evaluación del pipeline contra el Frozen Test Set y emite el dictamen de la compuerta MLOps."""
-    service = LSECTranslatorService()
+    service = _get_annotation_nlp_service()
     items = _load_corpus_items()
     frozen_items = [it for it in items if it.dataset_split == DatasetSplit.FROZEN_TEST]
     if not frozen_items:

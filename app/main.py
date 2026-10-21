@@ -35,7 +35,11 @@ from typing import AsyncGenerator
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.annotation_endpoints import annotation_router, set_annotation_storage
+from app.api.annotation_endpoints import (
+    annotation_router,
+    set_annotation_nlp_service,
+    set_annotation_storage,
+)
 from app.api.dictionary_endpoints import dictionary_router
 from app.api.animation_direct_endpoints import animation_router, animation_direct_alias_router
 from app.api.endpoints import router as api_router, set_services
@@ -110,6 +114,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         set_services(asr_service, nlp_service, storage_service)
         set_ws_services(asr_service, nlp_service)
     set_annotation_storage(storage_service)
+    set_annotation_nlp_service(nlp_service)
 
     logger.info("=" * 60)
     logger.info("Servicios inicializados. Servidor listo.")
