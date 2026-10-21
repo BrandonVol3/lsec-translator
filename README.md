@@ -85,7 +85,8 @@ versionados en este repositorio. El entorno virtual, los secretos, los pesos de
 modelos, el avatar VRM y los catálogos multimedia grandes se mantienen fuera de
 Git. Consulta [Repositorio y activos externos](docs/REPOSITORIO_Y_ASSETS.md)
 para conocer los perfiles mínimo, ASR y completo, las rutas esperadas y la
-política de publicación.
+política de publicación. Puedes comprobar los perfiles sin escanear assets con
+`python tools\verify_external_assets.py`.
 
 La instalación completa requiere activos externos en `..\Avatar\` y
 `..\Diccionario LSEC\`. Sin ellos, el backend y la traducción de texto pueden

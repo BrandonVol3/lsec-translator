@@ -39,3 +39,14 @@ $RECYCLE.BIN/
 # Archivos temporales y de scratch
 scratch/
 *.log
+
+# Assets grandes externos (no versionar catálogos, modelos ni multimedia)
+Avatar/
+Diccionario LSEC/
+Videos de Prueba/
+senas_vrm_standardized_v2.7/
+senas_vrm_direct_v2.6/
+senas_vrm_direct/
+senas_ultra_hd/
+senas/
+data/models/

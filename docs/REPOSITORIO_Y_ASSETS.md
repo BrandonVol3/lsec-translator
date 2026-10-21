@@ -128,6 +128,16 @@ Invoke-WebRequest http://127.0.0.1:8000/api/v1/health
 Invoke-WebRequest http://127.0.0.1:8000/studio
 ```
 
+Para verificar los perfiles sin escanear los catálogos multimedia:
+
+```powershell
+python tools\verify_external_assets.py
+```
+
+La utilidad solo comprueba la existencia de las rutas configuradas o
+autodetectadas; no calcula hashes ni carga videos, animaciones o pesos de
+modelos.
+
 La respuesta de `/api/v1/health` debe utilizarse para distinguir una
 instalación mínima de una instalación completa. La disponibilidad del backend
 no implica que el catálogo VRM o los pesos ASR estén instalados.
