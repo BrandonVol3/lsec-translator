@@ -93,6 +93,23 @@ La instalación completa requiere activos externos en `..\Avatar\` y
 funcionar, pero la reproducción VRM, las referencias Ultra HD y algunas rutas
 de exportación no estarán disponibles.
 
+### Ejecución selectiva de pruebas
+
+La suite usa marcadores automáticos por tipo de prueba:
+
+```powershell
+pytest -m unit
+pytest -m integration
+pytest -m "assets and not e2e"
+pytest -m e2e
+pytest -m live_server
+```
+
+Las pruebas `unit` e `integration` no requieren un servidor externo. Las
+pruebas `assets` necesitan los recursos locales descritos en
+[`REPOSITORIO_Y_ASSETS.md`](docs/REPOSITORIO_Y_ASSETS.md), y las `e2e` pueden
+requerir Playwright y un servidor en `127.0.0.1:8000`.
+
 ---
 
 ## 🏗️ Arquitectura Integral del Pipeline LSEC

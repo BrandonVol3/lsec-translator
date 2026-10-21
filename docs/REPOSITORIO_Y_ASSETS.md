@@ -112,6 +112,12 @@ y v2.5.
 
 ## Comprobación de una instalación
 
+La suite de pruebas está clasificada con marcadores pytest: `unit`,
+`integration`, `assets`, `e2e` y `live_server`. Para validar una instalación
+mínima se puede ejecutar `pytest -m "unit or integration"`; los perfiles
+audiovisual y de navegador deben ejecutar además `pytest -m assets` y
+`pytest -m e2e`, respectivamente.
+
 Desde la raíz del proyecto:
 
 ```powershell
