@@ -1035,6 +1035,47 @@ async def animation_stats(version: Optional[str] = Query(None, description="Vers
     }
 
 
+@animation_router.get(
+    "/catalog",
+    summary="Contrato de versiones y disponibilidad del catálogo VRM",
+)
+async def animation_catalog() -> Dict[str, Any]:
+    """Expone un manifiesto estable de las versiones de animación disponibles."""
+    index = _build_v26_lexical_index()
+    version_specs = (
+        ("2.7", get_v27_dir(), "2.7_Estandarizado", "total_v27"),
+        ("2.6", get_v26_dir(), "2.6_Directo_1a1_corregido", "total_v26"),
+        ("2.5", get_v25_dir(), "2.5_Directo_1a1", "total_v25"),
+    )
+    versions = []
+    for version, directory, pipeline_version, total_key in version_specs:
+        versions.append(
+            {
+                "version": version,
+                "pipeline_version": pipeline_version,
+                "available": directory is not None and directory.is_dir(),
+                "directory": str(directory) if directory else None,
+                "total_signs": int(index.get(total_key, 0)),
+                "selection": "default" if version == settings.default_animation_version else "fallback",
+            }
+        )
+
+    default_version = settings.default_animation_version
+    default_entry = next(item for item in versions if item["version"] == default_version)
+    return {
+        "catalog_version": "1.0.0",
+        "default_version": default_version,
+        "default_available": default_entry["available"],
+        "versions": versions,
+        "resolution_order": ["2.7", "2.6", "2.5"],
+        "contract": {
+            "animation_file": "animation.json",
+            "version_field": "metadata.version_served",
+            "pipeline_field": "metadata.pipelineVersion",
+        },
+    }
+
+
 # ==============================================================================
 # RESOLUTOR LÉXICO V2.7 / V2.6 SOBRE LAS CARPETAS REALES EN DISCO
 # ==============================================================================

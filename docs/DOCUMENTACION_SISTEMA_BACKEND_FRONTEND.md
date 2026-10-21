@@ -72,6 +72,7 @@ graph TD
 Utiliza `pydantic_settings.BaseSettings` para cargar variables de entorno con validación automática:
 - **Whisper ASR:** `whisper_model_size` (`small` / `base`), `whisper_device` (`cuda` / `cpu`), `whisper_compute_type` (`float16` / `int8`), `whisper_model_path` (`data/models/whisper`).
 - **Persistencia y Diccionario CONADIS:** `lsec_database_path` (`data/lsec_database.sqlite`), `lsec_dictionary_catalog_path`, `lsec_dictionary_enabled`, `lsec_dictionary_flag_unverified`, `lsec_dictionary_phrase_matching`.
+- **Catálogo VRM:** `GET /api/v1/animations/catalog` expone el contrato de versiones v2.7/v2.6/v2.5, disponibilidad de assets, conteos y orden de fallback.
 - **Servidor y CORS:** `app_host` (`0.0.0.0`), `app_port` (`8000`), `cors_origins`, `app_debug`. Los orígenes se declaran explícitamente; no se permite `*` con credenciales. Las cargas de audio/video aceptan formatos conocidos y tienen un límite configurable mediante `MAX_UPLOAD_SIZE_MB` (100 MB por defecto).
 
 ### `app/main.py` — Punto de Entrada y Lifespan

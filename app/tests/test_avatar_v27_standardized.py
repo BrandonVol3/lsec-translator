@@ -109,6 +109,18 @@ def test_list_animations_version_switching():
     assert d_25["total"] > 4000
 
 
+def test_animation_catalog_exposes_version_contract():
+    response = client.get("/api/v1/animations/catalog")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["catalog_version"] == "1.0.0"
+    assert data["default_version"] == "2.7"
+    assert data["resolution_order"] == ["2.7", "2.6", "2.5"]
+    assert [item["version"] for item in data["versions"]] == ["2.7", "2.6", "2.5"]
+    assert data["contract"]["animation_file"] == "animation.json"
+    assert data["contract"]["version_field"] == "metadata.version_served"
+
+
 def test_get_sign_animation_version_switching_and_headers():
     """
     Verifica que GET /api/v1/animations/{sign_name} sirva v2.7 por defecto,
@@ -333,4 +345,3 @@ def test_fluid_sequence_compiler_frontend_wiring():
     assert "getSequenceEndTime" in bridge_js
     assert "getSequenceEndTime" in exporter_js
     assert "lastSampleResult" in overlay_js
-

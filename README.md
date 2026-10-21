@@ -191,7 +191,8 @@ Todos bajo el prefijo `/api/v1` (más el alias `/api/animations-direct` para el 
 2. **Transcripción y Pipeline completo:** `POST /api/v1/transcribe` y `POST /api/v1/pipeline` (mp4, mov, avi, mkv, webm, wav, mp3, ogg, flac). Las cargas tienen validación de extensión/cabecera y un límite de `MAX_UPLOAD_SIZE_MB` (100 MB por defecto). Las operaciones bloqueantes de Whisper se ejecutan fuera del event loop.
 3. **Traducción Español → LSEC:** `POST /api/v1/translate` (`mode=detailed|legacy|debug`, `budget=compact|medium|expanded`).
 4. **Animaciones VRM estandarizadas v2.7 (compatibilidad v2.6/v2.5) y Exportación MP4:**
-   - `GET /api/v1/animations/list?q=&limit=` y `GET /api/v1/animations/stats`: Catálogo de 4.143 señas VRM ordenadas según `catalogo_lsec.json`.
+   - `GET /api/v1/animations/catalog`: contrato de versiones VRM, disponibilidad, rutas, conteos y orden de resolución.
+   - `GET /api/v1/animations/list?q=&limit=` y `GET /api/v1/animations/stats`: Catálogo de señas VRM ordenado según `catalogo_lsec.json`.
    - `GET /api/v1/animations/resolve/{gloss}` y `POST /api/v1/animations/resolve`: Resolución de glosas a animaciones 3D.
    - `GET /api/v1/animations/{sign_name}`, `/{sign_name}/qa`, `/{sign_name}/info`, `/{sign_name}/video`, `/{sign_name}/illustration`: Datos cinemáticos, video MP4 Ultra HD e ilustración oficial.
    - `POST /api/v1/animations/finalize-export-mp4`: Remuxeado/codificación determinista a **MP4 (`H.264 + AAC` a 30.0 FPS constantes)** con `PyAV`.
