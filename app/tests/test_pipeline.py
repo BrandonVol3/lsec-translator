@@ -674,8 +674,9 @@ class TestAPIEndpoints:
             response = await client.get("/api/v1/health")
         assert response.status_code == 200
         data = response.json()
-        assert data["status"] == "ok"
+        assert data["status"] in ("ok", "degraded")
         assert "services" in data
+        assert "checks" in data
 
     @pytest.mark.asyncio
     async def test_translate_endpoint(self, app) -> None:
@@ -1184,5 +1185,4 @@ class TestUPECComprehensiveIntegration:
         assert len(result.translation_plans) > 0
         assert len(result.spatial_operations) > 0
         assert result.timing_plan is not None
-
 

@@ -208,7 +208,7 @@ El validador estructural ([`StructuralValidator`](file:///c:/Users/brana/Desktop
 ## 7. Catálogo de Endpoints de la API y Protocolos
 
 ### 7.1 Endpoints REST Principales ([`app/api/endpoints.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/api/endpoints.py))
-- **`GET /api/v1/health`**: Estado de operatividad de los servicios `asr`, `nlp` y `storage` (SQLite).
+- **`GET /api/v1/health`**: Endpoint liveness de la API. Devuelve `status=ok` o `status=degraded`, informa la disponibilidad de `asr`, `nlp` y `storage` en `services`, y detalla `asr_model_loaded` y `storage_persistent` en `checks`.
 - **`POST /api/v1/transcribe`**: Transcripción de audio/video con `Faster-Whisper` y retorno de `WordTimestamp`.
 - **`POST /api/v1/translate`**: Traducción Español → `GlossOutput` con modos `detailed`, `legacy` o `debug`.
 - **`POST /api/v1/pipeline`**: Ejecución extremo a extremo (Audio/Video → ASR → 7 Etapas PLN → Glosas LSEC).

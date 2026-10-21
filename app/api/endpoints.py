@@ -120,6 +120,7 @@ class HealthResponse(BaseModel):
     """Respuesta del health check."""
     status: str
     services: Dict[str, bool]
+    checks: Dict[str, bool] = Field(default_factory=dict)
     version: str = settings.system_version
     api_version: str = settings.api_version
     engine_version: str = settings.engine_version
@@ -161,14 +162,20 @@ class ReviewRecordResponse(BaseModel):
 )
 async def health_check() -> HealthResponse:
     """Endpoint de verificación de salud del sistema."""
+    services = {
+        "asr": _asr_service is not None,
+        "nlp": _nlp_service is not None,
+        "storage": _storage_service is not None and _storage_service.is_connected,
+    }
+    checks = {
+        "asr_model_loaded": _asr_service is not None and _asr_service.is_ready(),
+        "storage_persistent": _storage_service is not None and _storage_service.is_persistent,
+    }
     hw = _asr_service.get_hardware_status() if _asr_service else None
     return HealthResponse(
-        status="ok",
-        services={
-            "asr": _asr_service is not None and _asr_service.is_ready(),
-            "nlp": _nlp_service is not None,
-            "storage": _storage_service is not None and _storage_service.is_connected,
-        },
+        status="ok" if all(services.values()) else "degraded",
+        services=services,
+        checks=checks,
         version=settings.system_version,
         api_version=settings.api_version,
         engine_version=settings.engine_version,

@@ -24,12 +24,15 @@ def test_health_and_hardware_status(client: TestClient):
     health_resp = client.get("/api/v1/health")
     assert health_resp.status_code == 200, f"Health endpoint falló: {health_resp.status_code}"
     health_data = health_resp.json()
-    assert health_data.get("status") == "ok"
+    assert health_data.get("status") in ("ok", "degraded")
     assert "services" in health_data
     assert isinstance(health_data["services"], dict)
     assert "nlp" in health_data["services"]
     assert "asr" in health_data["services"]
     assert "storage" in health_data["services"]
+    assert "checks" in health_data
+    assert "asr_model_loaded" in health_data["checks"]
+    assert "storage_persistent" in health_data["checks"]
     assert "version" in health_data
 
     hw_resp = client.get("/api/v1/hardware-status")
