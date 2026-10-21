@@ -81,7 +81,7 @@ class LocalStorageService:
             self._conn.commit()
             self._persistent = True
             logger.info("Persistencia local SQLite lista: %s", self._path)
-        except Exception as exc:
+        except (OSError, sqlite3.Error) as exc:
             logger.warning(
                 "No se pudo abrir '%s' (%s). Operando con SQLite en memoria (datos no persistentes).",
                 self._path, exc,

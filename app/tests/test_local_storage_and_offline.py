@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import threading
+
 import pytest
 
 from app.services.storage_service import LocalStorageService
@@ -78,6 +80,21 @@ def test_falls_back_to_memory_when_path_unusable(tmp_path):
     assert svc.is_connected
     assert not svc.is_persistent
     svc.close()
+
+
+def test_storage_rejects_unexpected_schema_error(monkeypatch, tmp_path):
+    svc = LocalStorageService.__new__(LocalStorageService)
+    svc._path = tmp_path / "db.sqlite"
+    svc._lock = threading.Lock()
+    svc._conn = None
+    svc._persistent = False
+
+    def fail_connect(*args, **kwargs):
+        raise TypeError("unexpected test failure")
+
+    monkeypatch.setattr("app.services.storage_service.sqlite3.connect", fail_connect)
+    with pytest.raises(TypeError, match="unexpected test failure"):
+        svc._open()
 
 
 def test_whisper_prefers_local_weights(tmp_path, monkeypatch):

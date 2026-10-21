@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import os
+import sqlite3
 import shutil
 import tempfile
 from datetime import datetime, timezone
@@ -83,7 +84,7 @@ def validate_media_magic_bytes(file_path: str) -> bool:
             return True
 
         return False
-    except Exception:
+    except OSError:
         return False
 
 
@@ -292,14 +293,14 @@ async def translate_text(
                     "session_id": str(result.session_id),
                     "schema_version": result.schema_version,
                 })
-            except Exception:
-                logger.warning("No se pudo guardar el log de traducción en la base local.")
+            except (OSError, sqlite3.Error) as exc:
+                logger.warning("No se pudo guardar el log de traducción en la base local: %s", exc)
 
         return result
 
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
-    except Exception as exc:
+    except (RuntimeError, OSError) as exc:
         logger.error("Error en traducción: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -365,7 +366,7 @@ async def full_pipeline(
 
     except (ValueError, FileNotFoundError) as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
-    except Exception as exc:
+    except (RuntimeError, OSError) as exc:
         logger.error("Error en pipeline: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -412,8 +413,8 @@ async def submit_linguistic_review(review: ReviewSubmission) -> ReviewRecordResp
     if _storage_service is not None:
         try:
             await _storage_service.save_review(record)
-        except Exception:
-            logger.warning("No se pudo persistir la revisión en la base local.")
+        except (OSError, sqlite3.Error) as exc:
+            logger.warning("No se pudo persistir la revisión en la base local: %s", exc)
 
     logger.info(
         "Revisión registrada [%s]: revisor=%s (nativo=%s), decisión=%s",
@@ -437,6 +438,6 @@ async def get_review_history() -> List[Dict[str, Any]]:
     if _storage_service is not None:
         try:
             return await _storage_service.get_reviews(_MAX_REVIEW_LOG_SIZE)
-        except Exception:
-            logger.warning("No se pudo leer el historial desde la base local; se usa la memoria.")
+        except (OSError, sqlite3.Error) as exc:
+            logger.warning("No se pudo leer el historial desde la base local; se usa la memoria: %s", exc)
     return list(_REVIEW_LOG)
