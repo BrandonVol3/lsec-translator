@@ -52,6 +52,25 @@ async def test_data_survives_reopen(tmp_path):
     second.close()
 
 
+@pytest.mark.asyncio
+async def test_annotation_snapshot_survives_reopen(tmp_path):
+    path = tmp_path / "annotations.sqlite"
+    item = {
+        "example_id": "pilot_ex_001",
+        "annotation_status": "NATIVE_VALIDATED",
+        "validated_glosses": ["COMER", "MANZANA"],
+        "audit_history": [{"audit_id": "audit_1"}],
+        "updated_at": "2026-10-21T20:00:00+00:00",
+    }
+    first = LocalStorageService(path)
+    await first.save_annotation_snapshot(item)
+    first.close()
+
+    second = LocalStorageService(path)
+    assert await second.get_annotation_snapshot("pilot_ex_001") == item
+    second.close()
+
+
 def test_falls_back_to_memory_when_path_unusable(tmp_path):
     blocker = tmp_path / "file.txt"
     blocker.write_text("x")

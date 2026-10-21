@@ -9,6 +9,7 @@ guarda el archivo en ``data/lsec_database.sqlite`` (configurable con
 Tablas:
 - ``translations``: log de cada traducción solicitada.
 - ``reviews``: revisiones lingüísticas / nativas (registro de solo adición).
+- ``annotation_snapshots``: último estado persistido de cada anotación.
 """
 
 from __future__ import annotations
@@ -43,6 +44,11 @@ CREATE TABLE IF NOT EXISTS reviews (
     session_id TEXT,
     reviewer_id TEXT,
     decision TEXT,
+    payload_json TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS annotation_snapshots (
+    example_id TEXT PRIMARY KEY,
+    updated_at TEXT NOT NULL,
     payload_json TEXT NOT NULL
 );
 """
@@ -168,3 +174,35 @@ class LocalStorageService:
 
     async def get_reviews(self, limit: int = 500) -> List[Dict[str, Any]]:
         return await asyncio.to_thread(self._select, "reviews", limit)
+
+    def _upsert_annotation_snapshot(self, item: Dict[str, Any]) -> None:
+        with self._lock:
+            assert self._conn is not None
+            self._conn.execute(
+                "INSERT INTO annotation_snapshots (example_id, updated_at, payload_json) "
+                "VALUES (?, ?, ?) ON CONFLICT(example_id) DO UPDATE SET "
+                "updated_at=excluded.updated_at, payload_json=excluded.payload_json",
+                (
+                    item["example_id"],
+                    item.get("updated_at") or datetime.now(timezone.utc).isoformat(),
+                    json.dumps(item, ensure_ascii=False, default=str),
+                ),
+            )
+            self._conn.commit()
+
+    def _select_annotation_snapshot(self, example_id: str) -> Optional[Dict[str, Any]]:
+        with self._lock:
+            assert self._conn is not None
+            row = self._conn.execute(
+                "SELECT payload_json FROM annotation_snapshots WHERE example_id = ?",
+                (example_id,),
+            ).fetchone()
+        return json.loads(row[0]) if row else None
+
+    async def save_annotation_snapshot(self, item: Dict[str, Any]) -> None:
+        """Persiste el estado completo de una anotación sin modificar el corpus base."""
+        await asyncio.to_thread(self._upsert_annotation_snapshot, item)
+
+    async def get_annotation_snapshot(self, example_id: str) -> Optional[Dict[str, Any]]:
+        """Recupera el último estado persistido de una anotación."""
+        return await asyncio.to_thread(self._select_annotation_snapshot, example_id)

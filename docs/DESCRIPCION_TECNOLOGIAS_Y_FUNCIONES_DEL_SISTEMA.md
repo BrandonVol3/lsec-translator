@@ -226,7 +226,7 @@ Disponibles bajo `/api/v1/animations` y el alias `/api/animations-direct`:
 
 ### 7.4 Endpoints de Anotación y MLOps ([`app/api/annotation_endpoints.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/api/annotation_endpoints.py))
 - **`GET /api/v1/dataset/manifest`**, **`POST /api/v1/dataset/validate-item`**, **`GET /api/v1/dataset/export`**: Estado del corpus particionado y auditoría SHA-256.
-- **`POST /api/v1/annotations/submit`** y **`GET /api/v1/annotations/queue?top_k=20`**: Registro inmutable de revisiones nativas y cola de aprendizaje activo.
+- **`POST /api/v1/annotations/submit`** y **`GET /api/v1/annotations/queue?top_k=20`**: Registro inmutable de revisiones nativas y cola de aprendizaje activo. El estado completo de cada anotación se persiste en snapshots SQLite para sobrevivir al reinicio sin alterar el corpus base versionado.
 - **`POST /api/v1/mlops/benchmark`**: Evaluación automatizada sobre el *Frozen Test Set* (`PASS` / `FAIL`).
 
 ### 7.5 Canal de Comunicación en Tiempo Real ([`app/api/websocket.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/api/websocket.py))

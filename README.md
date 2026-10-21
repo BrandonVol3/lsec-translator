@@ -196,7 +196,7 @@ Todos bajo el prefijo `/api/v1` (más el alias `/api/animations-direct` para el 
    - `GET /api/v1/animations/{sign_name}`, `/{sign_name}/qa`, `/{sign_name}/info`, `/{sign_name}/video`, `/{sign_name}/illustration`: Datos cinemáticos, video MP4 Ultra HD e ilustración oficial.
    - `POST /api/v1/animations/finalize-export-mp4`: Remuxeado/codificación determinista a **MP4 (`H.264 + AAC` a 30.0 FPS constantes)** con `PyAV`.
 5. **Diccionario Oficial CONADIS:** `GET /api/v1/dictionary/search`, `GET /api/v1/dictionary/{slug}`, `GET /api/v1/dictionary/stats`.
-6. **Revisión, Anotaciones y MLOps:** `POST /api/v1/review/validate`, `GET /api/v1/review/history`, `GET /api/v1/dataset/manifest`, `POST /api/v1/annotations/submit`, `GET /api/v1/annotations/queue`, `POST /api/v1/mlops/benchmark`.
+6. **Revisión, Anotaciones y MLOps:** `POST /api/v1/review/validate`, `GET /api/v1/review/history`, `GET /api/v1/dataset/manifest`, `POST /api/v1/annotations/submit`, `GET /api/v1/annotations/queue`, `POST /api/v1/mlops/benchmark`. Las anotaciones se guardan en snapshots SQLite y sobreviven al reinicio sin modificar el corpus base versionado.
 7. **Tiempo real e interfaces web:** `WS /ws/pipeline`, `GET /studio`, `GET /viewer` (`/reproductor`), `GET /avatarconfig`.
 
 ---

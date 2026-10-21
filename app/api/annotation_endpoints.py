@@ -24,10 +24,18 @@ from app.services.active_learning_service import ActiveLearningPriority, ActiveL
 from app.services.dataset_validator import DatasetValidator
 from app.services.mlops_pipeline import BenchmarkMetrics, MLOpsPipeline
 from app.services.nlp_service import LSECTranslatorService
+from app.services.storage_service import LocalStorageService
 
 annotation_router = APIRouter(prefix="/api/v1", tags=["LSEC Dataset & Annotation Platform"])
 
 CORPUS_PATH = Path("data/corpus/pilot_corpus_lsec.json")
+_storage_service: Optional[LocalStorageService] = None
+
+
+def set_annotation_storage(storage: Optional[LocalStorageService]) -> None:
+    """Inyecta la persistencia local para conservar anotaciones entre reinicios."""
+    global _storage_service
+    _storage_service = storage
 
 
 def _load_corpus_items() -> List[LSECDatasetItem]:
@@ -76,7 +84,7 @@ async def validate_dataset_item(item: LSECDatasetItem) -> Dict[str, Any]:
 @annotation_router.get("/dataset/export")
 async def export_validated_dataset(split: Optional[DatasetSplit] = None) -> List[Dict[str, Any]]:
     """Exporta exclusivamente ejemplos en estado NATIVE_VALIDATED para entrenamiento o evaluación."""
-    items = _load_corpus_items()
+    items = await _load_persisted_corpus_items()
     filtered = [
         it for it in items
         if it.annotation_status == AnnotationStatus.NATIVE_VALIDATED
@@ -90,7 +98,7 @@ async def export_validated_dataset(split: Optional[DatasetSplit] = None) -> List
 @annotation_router.post("/annotations/submit")
 async def submit_annotation_review(sub: AnnotationSubmissionRequest) -> Dict[str, Any]:
     """Registra una revisión humana con auditoría append-only sin sobrescritura destructiva."""
-    items = _load_corpus_items()
+    items = await _load_persisted_corpus_items()
     target = next((it for it in items if it.example_id == sub.example_id), None)
     if not target:
         raise HTTPException(
@@ -133,6 +141,8 @@ async def submit_annotation_review(sub: AnnotationSubmissionRequest) -> Dict[str
     )
     target.audit_history.append(audit_entry)
     target.updated_at = timestamp_str
+    if _storage_service is not None:
+        await _storage_service.save_annotation_snapshot(target.model_dump(mode="json"))
 
     return {
         "status": "SUCCESS",
@@ -142,10 +152,22 @@ async def submit_annotation_review(sub: AnnotationSubmissionRequest) -> Dict[str
     }
 
 
+async def _load_persisted_corpus_items() -> List[LSECDatasetItem]:
+    """Carga el corpus base y aplica snapshots locales de anotaciones, si existen."""
+    items = _load_corpus_items()
+    if _storage_service is None:
+        return items
+    persisted_items = []
+    for item in items:
+        snapshot = await _storage_service.get_annotation_snapshot(item.example_id)
+        persisted_items.append(LSECDatasetItem(**snapshot) if snapshot else item)
+    return persisted_items
+
+
 @annotation_router.get("/annotations/queue")
 async def get_active_learning_queue(top_k: int = Query(default=20, ge=1, le=100)) -> List[ActiveLearningPriority]:
     """Retorna la cola de revisión priorizada por el motor de aprendizaje activo a partir de las muestras del corpus."""
-    items = _load_corpus_items()
+    items = await _load_persisted_corpus_items()
     if not items:
         return []
 
