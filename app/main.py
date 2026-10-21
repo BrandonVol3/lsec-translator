@@ -40,7 +40,7 @@ from app.api.dictionary_endpoints import dictionary_router
 from app.api.animation_direct_endpoints import animation_router, animation_direct_alias_router
 from app.api.endpoints import router as api_router, set_services
 from app.api.websocket import ws_router, set_ws_services
-from app.config import settings
+from app.config import external_path, settings
 from app.services.asr_service import WhisperASRService
 from app.services.nlp_service import LSECTranslatorService
 from app.services.storage_service import LocalStorageService
@@ -178,26 +178,20 @@ if os.path.exists(static_dir):
 
 # Montar carpeta de modelos VRM desde la carpeta Avatar del proyecto
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-avatar_dir = os.path.join(project_root, "Avatar")
-if not os.path.exists(avatar_dir):
-    avatar_dir = os.path.join(os.path.dirname(project_root), "Avatar")
+avatar_dir = external_path(settings.lsec_avatar_dir, "Avatar")
 if os.path.exists(avatar_dir):
     logger.info("✓ Montando /avatar desde: %s", avatar_dir)
     app.mount("/avatar", StaticFiles(directory=avatar_dir), name="avatar")
 
 # Montar carpeta de láminas y variantes de Configuración Manual LSEC (I a IX)
-cm_dir = os.path.join(project_root, "Diccionario LSEC", "configuracion_manual")
-if not os.path.exists(cm_dir):
-    cm_dir = os.path.join(os.path.dirname(project_root), "Diccionario LSEC", "configuracion_manual")
+cm_dir = external_path(settings.lsec_manual_config_dir, os.path.join("Diccionario LSEC", "configuracion_manual"))
 if os.path.exists(cm_dir):
     logger.info("✓ Montando /configuracion-manual desde: %s", cm_dir)
     app.mount("/configuracion-manual", StaticFiles(directory=cm_dir), name="configuracion_manual")
 
 # Montar carpeta de videos de prueba únicamente si app_debug está activo
 if settings.app_debug:
-    videos_dir = os.path.join(project_root, "Videos de Prueba")
-    if not os.path.exists(videos_dir):
-        videos_dir = os.path.join(os.path.dirname(project_root), "Videos de Prueba")
+    videos_dir = external_path(settings.lsec_videos_dir, "Videos de Prueba")
     if os.path.exists(videos_dir):
         logger.info("✓ Montando /media (modo debug) desde: %s", videos_dir)
         app.mount("/media", StaticFiles(directory=videos_dir), name="media")
@@ -287,4 +281,3 @@ async def api_info() -> dict:
             "viewer": "/viewer",
         },
     }
-

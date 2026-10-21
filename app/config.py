@@ -14,6 +14,18 @@ from typing import List
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+WORKSPACE_ROOT = PROJECT_ROOT.parent
+
+
+def resolve_path(value: str, default: Path) -> Path:
+    """Resuelve una ruta configurada, relativa al proyecto cuando corresponde."""
+    configured = (value or "").strip()
+    if not configured:
+        return default
+    path = Path(configured)
+    return path if path.is_absolute() else PROJECT_ROOT / path
+
 
 class Settings(BaseSettings):
     """Configuración global del sistema LSEC Translator."""
@@ -36,6 +48,18 @@ class Settings(BaseSettings):
 
     # --- Persistencia local (SQLite, 100% offline) ---
     lsec_database_path: str = "data/lsec_database.sqlite"
+
+    # --- Activos externos ---
+    # Las rutas vacías usan la estructura recomendada junto al proyecto.
+    lsec_dictionary_root: str = ""
+    lsec_avatar_dir: str = ""
+    lsec_manual_config_dir: str = ""
+    lsec_videos_dir: str = ""
+    lsec_animations_v27_dir: str = ""
+    lsec_animations_v26_dir: str = ""
+    lsec_animations_dir: str = ""
+    lsec_uhd_dir: str = ""
+    lsec_senas_dir: str = ""
 
     # --- Servidor ---
     app_host: str = "0.0.0.0"
@@ -74,6 +98,15 @@ class Settings(BaseSettings):
             except (json.JSONDecodeError, TypeError):
                 return [origin.strip() for origin in v.split(",") if origin.strip()]
         return v  # type: ignore[return-value]
+
+
+def external_path(value: str, relative_default: str) -> Path:
+    """Resuelve un activo externo desde configuración o desde el workspace."""
+    configured = (value or "").strip()
+    if configured:
+        path = Path(configured)
+        return path if path.is_absolute() else PROJECT_ROOT / path
+    return WORKSPACE_ROOT / relative_default
 
 
 # Instancia singleton de configuración

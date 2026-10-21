@@ -106,10 +106,9 @@ Las rutas deben usar la ubicación real del equipo. El servidor intenta resolver
 la v2.7 como versión predeterminada y conserva fallbacks explícitos para v2.6
 y v2.5.
 
-> Nota: [`run_studio.bat`](../run_studio.bat) todavía establece
-> `LSEC_ANIMATIONS_DIR` con la ruta histórica `senas_vrm_direct`. En una
-> instalación completa, verificar la versión servida en las respuestas de
-> animación o configurar `LSEC_ANIMATIONS_V27_DIR` antes de iniciar.
+> Nota: [`run_studio.bat`](../run_studio.bat) establece explícitamente las
+> rutas v2.7, v2.6 y v2.5. La v2.7 tiene prioridad para la resolución
+> predeterminada.
 
 ## Comprobación de una instalación
 

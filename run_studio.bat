@@ -26,6 +26,8 @@ set PYTHONIOENCODING=utf-8
 
 REM Forzar uso exclusivo de almacenamiento fisico en disco local (C:)
 set "LSEC_UHD_DIR=%~dp0..\Diccionario LSEC\senas_ultra_hd"
+set "LSEC_ANIMATIONS_V27_DIR=%~dp0..\Diccionario LSEC\senas_vrm_standardized_v2.7"
+set "LSEC_ANIMATIONS_V26_DIR=%~dp0..\Diccionario LSEC\senas_vrm_direct_v2.6"
 set "LSEC_ANIMATIONS_DIR=%~dp0..\Diccionario LSEC\senas_vrm_direct"
 
 if "%LSEC_PORT%"=="" set LSEC_PORT=8000

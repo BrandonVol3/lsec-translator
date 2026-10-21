@@ -27,7 +27,9 @@ from typing import Any, Dict, List, Optional, Tuple
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
 
-_DICCIONARIO_LSEC_DIR = Path(r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC")
+from app.config import external_path, settings
+
+_DICCIONARIO_LSEC_DIR = external_path(settings.lsec_dictionary_root, "Diccionario LSEC")
 if _DICCIONARIO_LSEC_DIR.is_dir() and str(_DICCIONARIO_LSEC_DIR) not in sys.path:
     sys.path.insert(0, str(_DICCIONARIO_LSEC_DIR))
 
@@ -43,47 +45,41 @@ animation_router = APIRouter(prefix="/api/v1/animations", tags=["Animaciones Dir
 # Directorios candidatos para localizar las animaciones generadas (100% disco local)
 # Versión 2.7 estandarizada preferida, con fallback a versión 2.6 corregida y versión 2.5
 CANDIDATE_PATHS = [
-    Path(os.environ.get("LSEC_ANIMATIONS_DIR", "")) if os.environ.get("LSEC_ANIMATIONS_DIR") else None,
-    Path(r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC\senas_vrm_standardized_v2.7"),
-    Path(r"c:\Users\brana\Desktop\TIC Software\senas_vrm_standardized_v2.7"),
-    Path(r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC\senas_vrm_direct_v2.6"),
-    Path(r"c:\Users\brana\Desktop\TIC Software\senas_vrm_direct_v2.6"),
-    Path(r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC\senas_vrm_direct"),
-    Path(r"c:\Users\brana\Desktop\TIC Software\senas_vrm_direct"),
-    Path(r"c:\Users\brana\Desktop\TIC Software\_archive\Diccionario LSEC\senas_vrm_direct"),
+    external_path(settings.lsec_animations_v27_dir, "Diccionario LSEC/senas_vrm_standardized_v2.7"),
+    external_path("", "senas_vrm_standardized_v2.7"),
+    external_path(settings.lsec_animations_v26_dir, "Diccionario LSEC/senas_vrm_direct_v2.6"),
+    external_path("", "senas_vrm_direct_v2.6"),
+    external_path(settings.lsec_animations_dir, "Diccionario LSEC/senas_vrm_direct"),
+    external_path("", "senas_vrm_direct"),
 ]
 
 V27_CANDIDATE_PATHS = [
-    Path(os.environ.get("LSEC_ANIMATIONS_V27_DIR", "")) if os.environ.get("LSEC_ANIMATIONS_V27_DIR") else None,
-    Path(r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC\senas_vrm_standardized_v2.7"),
-    Path(r"c:\Users\brana\Desktop\TIC Software\senas_vrm_standardized_v2.7"),
+    external_path(settings.lsec_animations_v27_dir, "Diccionario LSEC/senas_vrm_standardized_v2.7"),
+    external_path("", "senas_vrm_standardized_v2.7"),
 ]
 
 V26_CANDIDATE_PATHS = [
-    Path(os.environ.get("LSEC_ANIMATIONS_V26_DIR", "")) if os.environ.get("LSEC_ANIMATIONS_V26_DIR") else None,
-    Path(r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC\senas_vrm_direct_v2.6"),
-    Path(r"c:\Users\brana\Desktop\TIC Software\senas_vrm_direct_v2.6"),
+    external_path(settings.lsec_animations_v26_dir, "Diccionario LSEC/senas_vrm_direct_v2.6"),
+    external_path("", "senas_vrm_direct_v2.6"),
 ]
 
 V25_CANDIDATE_PATHS = [
-    Path(os.environ.get("LSEC_ANIMATIONS_DIR", "")) if os.environ.get("LSEC_ANIMATIONS_DIR") else None,
-    Path(r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC\senas_vrm_direct"),
-    Path(r"c:\Users\brana\Desktop\TIC Software\senas_vrm_direct"),
-    Path(r"c:\Users\brana\Desktop\TIC Software\_archive\Diccionario LSEC\senas_vrm_direct"),
+    external_path(settings.lsec_animations_dir, "Diccionario LSEC/senas_vrm_direct"),
+    external_path("", "senas_vrm_direct"),
+    external_path("", "Diccionario LSEC/senas_vrm_direct"),
+    external_path("", "_archive/Diccionario LSEC/senas_vrm_direct"),
 ]
 
 # Directorios candidatos para videos originales Ultra HD e ilustraciones (100% disco local)
 UHD_CANDIDATE_PATHS = [
-    Path(os.environ.get("LSEC_UHD_DIR", "")) if os.environ.get("LSEC_UHD_DIR") else None,
-    Path(r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC\senas_ultra_hd"),
-    Path(r"c:\Users\brana\Desktop\TIC Software\senas_ultra_hd"),
+    external_path(settings.lsec_uhd_dir, "Diccionario LSEC/senas_ultra_hd"),
+    external_path("", "senas_ultra_hd"),
 ]
 
 # Directorios candidatos de respaldo para videos originales sanos del corpus (100% disco local)
 SENAS_CANDIDATE_PATHS = [
-    Path(os.environ.get("LSEC_SENAS_DIR", "")) if os.environ.get("LSEC_SENAS_DIR") else None,
-    Path(r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC\senas"),
-    Path(r"c:\Users\brana\Desktop\TIC Software\senas"),
+    external_path(settings.lsec_senas_dir, "Diccionario LSEC/senas"),
+    external_path("", "senas"),
 ]
 
 _resolved_dir: Optional[Path] = None
@@ -201,10 +197,10 @@ def get_v25_dir() -> Path:
     for candidate in V25_CANDIDATE_PATHS:
         if candidate and candidate.is_dir():
             return candidate
-    archive_fallback = Path(r"c:\Users\brana\Desktop\TIC Software\_archive\Diccionario LSEC\senas_vrm_direct")
+    archive_fallback = external_path("", "_archive/Diccionario LSEC/senas_vrm_direct")
     if archive_fallback.is_dir():
         return archive_fallback
-    return Path(r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC\senas_vrm_direct")
+    return external_path(settings.lsec_animations_dir, "Diccionario LSEC/senas_vrm_direct")
 
 
 def get_animations_dir() -> Path:
@@ -232,10 +228,10 @@ def get_animations_dir() -> Path:
 
 def get_uhd_dir() -> Optional[Path]:
     """Devuelve el directorio base de señas Ultra HD."""
-    env_dir = os.environ.get("LSEC_UHD_DIR")
-    if env_dir:
-        p = Path(env_dir)
-        return p if p.is_dir() else None
+    configured = os.environ.get("LSEC_UHD_DIR") or settings.lsec_uhd_dir
+    if configured:
+        path = external_path(configured, "Diccionario LSEC/senas_ultra_hd")
+        return path if path.is_dir() else None
     for candidate in UHD_CANDIDATE_PATHS:
         if candidate and candidate.is_dir():
             return candidate
@@ -244,10 +240,10 @@ def get_uhd_dir() -> Optional[Path]:
 
 def get_senas_dir() -> Optional[Path]:
     """Devuelve el directorio base del corpus original de señas (fallback sano)."""
-    env_dir = os.environ.get("LSEC_SENAS_DIR")
-    if env_dir:
-        p = Path(env_dir)
-        return p if p.is_dir() else None
+    configured = os.environ.get("LSEC_SENAS_DIR") or settings.lsec_senas_dir
+    if configured:
+        path = external_path(configured, "Diccionario LSEC/senas")
+        return path if path.is_dir() else None
     for candidate in SENAS_CANDIDATE_PATHS:
         if candidate and candidate.is_dir():
             return candidate
@@ -395,8 +391,8 @@ _MAIN_CM_IDS = {
 def get_configuracion_manual_dir() -> Optional[Path]:
     """Devuelve el directorio local de láminas y variantes de Configuración Manual (I a IX, Rostro y *)."""
     candidates = [
-        Path(r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC\configuracion_manual"),
-        Path(__file__).resolve().parent.parent.parent.parent / "Diccionario LSEC" / "configuracion_manual",
+        external_path(settings.lsec_manual_config_dir, "Diccionario LSEC/configuracion_manual"),
+        external_path("", "configuracion_manual"),
     ]
     for c in candidates:
         if c.is_dir():
@@ -2128,33 +2124,8 @@ async def get_sign_video(sign_name: str, request: Request):
         if rg_base and rg_base not in candidates:
             candidates.append(rg_base)
 
-    uhd_dirs: List[Path] = []
-    if os.environ.get("LSEC_UHD_DIR"):
-        env_uhd = get_uhd_dir()
-        if env_uhd:
-            uhd_dirs.append(env_uhd)
-    else:
-        for p in [
-            get_uhd_dir(),
-            Path(r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC\senas_ultra_hd"),
-            Path(r"c:\Users\brana\Desktop\TIC Software\senas_ultra_hd"),
-        ]:
-            if p is not None and p not in uhd_dirs:
-                uhd_dirs.append(p)
-
-    fallback_dirs: List[Path] = []
-    if os.environ.get("LSEC_SENAS_DIR"):
-        env_senas = get_senas_dir()
-        if env_senas:
-            fallback_dirs.append(env_senas)
-    else:
-        for p in [
-            get_senas_dir(),
-            Path(r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC\senas"),
-            Path(r"c:\Users\brana\Desktop\TIC Software\senas"),
-        ]:
-            if p is not None and p not in fallback_dirs:
-                fallback_dirs.append(p)
+    uhd_dirs = [p for p in [get_uhd_dir()] if p is not None]
+    fallback_dirs = [p for p in [get_senas_dir()] if p is not None]
 
     def _find_healthy_video_in_dirs(dirs: List[Path], filenames: Tuple[str, ...]) -> Optional[Path]:
         expanded_cands: List[str] = []
@@ -2271,11 +2242,9 @@ async def get_sign_illustration(sign_name: str):
         get_uhd_dir(),
         get_senas_dir(),
         get_v26_dir(),
-        Path(r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC\senas_vrm_direct"),
-        Path(r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC\senas_ultra_hd"),
-        Path(r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC\senas"),
-        Path(r"c:\Users\brana\Desktop\TIC Software\senas_ultra_hd"),
-        Path(r"c:\Users\brana\Desktop\TIC Software\senas"),
+        *CANDIDATE_PATHS,
+        *UHD_CANDIDATE_PATHS,
+        *SENAS_CANDIDATE_PATHS,
     ]
     search_dirs: List[Path] = []
     for p in raw_search_dirs:
@@ -2486,5 +2455,3 @@ animation_direct_alias_router.add_api_route("/{sign_name}/info", get_sign_info, 
 animation_direct_alias_router.add_api_route("/{sign_name}/video", get_sign_video, methods=["GET"])
 animation_direct_alias_router.add_api_route("/{sign_name}/illustration", get_sign_illustration, methods=["GET"])
 animation_direct_alias_router.add_api_route("/{sign_name}/ilustracion", get_sign_illustration, methods=["GET"])
-
-
