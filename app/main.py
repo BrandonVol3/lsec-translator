@@ -185,6 +185,14 @@ if os.path.exists(avatar_dir):
     logger.info("✓ Montando /avatar desde: %s", avatar_dir)
     app.mount("/avatar", StaticFiles(directory=avatar_dir), name="avatar")
 
+# Montar carpeta de láminas y variantes de Configuración Manual LSEC (I a IX)
+cm_dir = os.path.join(project_root, "Diccionario LSEC", "configuracion_manual")
+if not os.path.exists(cm_dir):
+    cm_dir = os.path.join(os.path.dirname(project_root), "Diccionario LSEC", "configuracion_manual")
+if os.path.exists(cm_dir):
+    logger.info("✓ Montando /configuracion-manual desde: %s", cm_dir)
+    app.mount("/configuracion-manual", StaticFiles(directory=cm_dir), name="configuracion_manual")
+
 # Montar carpeta de videos de prueba únicamente si app_debug está activo
 if settings.app_debug:
     videos_dir = os.path.join(project_root, "Videos de Prueba")

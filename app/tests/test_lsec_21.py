@@ -179,7 +179,8 @@ class TestLSEC21Generalization:
         assert "CARRERA" in gloss_names
         assert "GRADO" in gloss_names
         assert "CAMPUS" in gloss_names
-        assert "DOS" in gloss_names
+        # El numeral no aparece en el texto fuente: no debe inventarse (auditoría P0/D2).
+        assert "DOS" not in gloss_names
         # Debe haber dactilología o glosa para Quito y Ambato
         assert any("Q-U-I-T-O" in g or "QUITO" in g for g in gloss_names)
         assert any("A-M-B-A-T-O" in g or "AMBATO" in g for g in gloss_names)
@@ -226,7 +227,9 @@ class TestLSEC21Generalization:
 
         # 3. Preservación de oferta académica, sostenibilidad y orgullo
         gloss_names = [g.gloss for g in result.glosses]
-        assert "CARRERA" in gloss_names and "GRADO" in gloss_names and "OFRECER" in gloss_names
+        # La fuente no contiene el verbo "ofrecer": no se agrega una glosa inventada.
+        assert "CARRERA" in gloss_names and "GRADO" in gloss_names
+        assert "OFRECER" not in gloss_names
         assert "SOSTENIBILIDAD" in gloss_names and "MÁS" in gloss_names
         assert "ORGULLO" in gloss_names
 

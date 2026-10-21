@@ -67,6 +67,9 @@ class CorrectionRecord:
             "normalization_id": self.normalization_id or self.id,
             "asr_text": self.asr_text,
             "normalized_text": self.normalized_text,
+            "original": self.asr_text,
+            "corrected": self.normalized_text,
+            "type": self.reason,
             "source_char_start": self.source_char_start,
             "source_char_end": self.source_char_end,
             "source_token_indexes": self.source_token_indexes,
@@ -302,7 +305,7 @@ def gerund_to_infinitive(gerund: str) -> Optional[str]:
 
 
 _DAME_GERUND_RE = (
-    r"\b(?:d[aá]me|d[eé]me|d[aá]nos|d[eé]nos)\s+"
+    r"\b(?:d[aá]me|d[eé]me|d[aá]nos|d[eé]nos|dar[aá]s|dar[aá]|dar[aá]n|dar[eé]|daremos)\s+"
     r"([a-záéíóúñ]+(?:ando|iendo|yendo))\b"
 )
 
@@ -998,4 +1001,15 @@ class PunctuationAnalyzer:
         while res and res[-1] in "?!\"'«»,.;: ":
             res = res[:-1]
         return res.strip()
+
+
+_NEGATION_RE = re.compile(
+    r"(?<![\wáéíóúñü])(no|nadie|nunca|jamás|tampoco|ni)(?![\wáéíóúñü])",
+    re.IGNORECASE,
+)
+
+
+def contains_negation(text: str) -> bool:
+    return bool(_NEGATION_RE.search(text or ""))
+
 

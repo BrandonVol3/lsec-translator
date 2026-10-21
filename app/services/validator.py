@@ -17,6 +17,7 @@ from app.core.schemas import (
     DiscourseBlock,
     FacialExpression,
     GlossItem,
+    GlossType,
     NonManualSpan,
     SemanticProposition,
     SpatialOperation,
@@ -746,9 +747,10 @@ class StructuralValidator:
                     )
 
         # 8. MISSING_NEGATION_OPERATOR
+        from app.services.text_normalizer import contains_negation
         for prop in propositions:
             p_text = prop.source_text.lower()
-            if prop.polarity == "negative" or "no " in p_text or p_text.startswith("no ") or "nadie" in p_text or "nunca" in p_text:
+            if prop.polarity == "negative" or contains_negation(p_text):
                 has_neg_op = any(op.get("type") == "NEGATION" or op.get("operator_type") == "NEGATION" for op in prop.operators)
                 if not has_neg_op:
                     errors.append(
@@ -827,6 +829,44 @@ class StructuralValidator:
                         code="TIMING_ARITHMETIC_INCONSISTENCY",
                         message=f"Inconsistencia aritmética en TimingPlan: total_duration_ms={timing_plan.total_duration_ms} != suma({expected_total}).",
                         blocking=True,
+                    )
+                )
+
+        # 14. POSSIBLE_CONJUGATED_GLOSS (F-24)
+        conj_gloss_re = re.compile(
+            r"^[A-ZÁÉÍÓÚÑÜ]{3,}(?:ARÁS|ERÁS|IRÁS|ARÁN|ERÁN|IRÁN|AREMOS|EREMOS|IREMOS|ASTE|ISTE|ARON|IERON|ÁBAMOS|ARER|ASTAR|ALIR|ÁME|ÉME|ÍME|LLEGUES|ANDO|IENDO)$"
+        )
+        conj_norm_re = re.compile(
+            r"^[a-záéíóúñü]{3,}(?:arás|erás|irás|arán|erán|irán|aremos|eremos|iremos|aste|iste|aron|ieron|ábamos|arer|astar|alir|áme|éme|íme|llegues|ando|iendo|amos)$",
+            re.IGNORECASE,
+        )
+        for g in glosses:
+            g_base = re.sub(r"(\+\+|\[.*\])$", "", (g.gloss or "").strip())
+            g_norm = (g.normalized_word or "").strip().lower()
+            lex_status = (
+                g.dictionary_metadata.status
+                if g.dictionary_metadata is not None
+                else str(getattr(g, "lexical_status", None) or (g.validation or {}).get("lexical_source", "NO_VERIFICADO"))
+            )
+            if (
+                g.gloss_type == GlossType.SIGN
+                and lex_status not in ("VERIFICADO_CONADIS", "LEXICON_LOCAL", "EXENTO_GRAMATICAL", "DACTILOLOGIA")
+                and (
+                    conj_gloss_re.match(g_base)
+                    or (
+                        g_norm
+                        and g_norm not in ("vamos", "ramo", "ramos", "tramo", "tramos", "bando", "mando", "blando", "cuando", "cuándo")
+                        and conj_norm_re.match(g_norm)
+                    )
+                )
+            ):
+                errors.append(
+                    StructuralValidationError(
+                        severity=ValidationSeverity.WARNING,
+                        code="POSSIBLE_CONJUGATED_GLOSS",
+                        message=f"Posible forma verbal flexionada o corrupta en glosa '{g.gloss}' (fuente: '{g.source_word}').",
+                        affected_ids=[str(g.id)],
+                        blocking=False,
                     )
                 )
 

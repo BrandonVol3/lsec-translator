@@ -1,88 +1,116 @@
 # Documento de Arquitectura, Tecnologías, Funciones y Características del Sistema LSEC Translator
 
-> **Versión del Sistema:** LSEC Translator Architecture 2.2 / LSEC Studio 2.1.1  
-> **Área:** Tecnologías de la Información y Comunicación (TIC) — Procesamiento de Lenguaje Natural y Accesibilidad  
-> **Fecha:** Septiembre 2026  
-> **Entorno:** Backend (Python 3.10+, FastAPI, CTranslate2) & Frontend (Vanilla Web Standards ES6+, HTML5 Canvas, MediaRecorder)
+> **Versión del Sistema:** LSEC Translator Architecture 2.2 / LSEC Studio 2.1.1 / Pipeline Cinemático VRM v2.5–v2.6  
+> **Área:** Tecnologías de la Información y Comunicación (TIC) — Procesamiento de Lenguaje Natural, Visión por Computadora, Animación 3D y Accesibilidad  
+> **Fecha:** Octubre 2026  
+> **Entorno:** Backend (Python 3.10+, FastAPI, Faster-Whisper/CTranslate2, spaCy, PyAV, SQLite) · Pipeline 3D (PyTorch, HaMeR, MANO, DWPose/RTMW3D, MediaPipe, SciPy/NumPy) · Frontend (Vanilla Web Standards ES6+, Three.js, `@pixiv/three-vrm`, HTML5 Canvas 2D, MediaRecorder)
 
 ---
 
 ## 1. Resumen Ejecutivo y Visión General del Sistema
 
-El sistema **LSEC Translator** es una plataforma tecnológica integral y modular diseñada para la **traducción asistida, representación semántica, generación de glosas, edición audiovisual bilingüe y entrenamiento continuo en la Lengua de Señas Ecuatoriana (LSEC)**.
+El sistema **LSEC Translator** es una plataforma tecnológica integral, modular y **100 % offline** diseñada para la **traducción asistida de español hablado o escrito a Lengua de Señas Ecuatoriana (LSEC), síntesis de animación 3D 1:1 en un avatar humanoide VRM, edición audiovisual bilingüe y entrenamiento continuo (MLOps)**.
 
-A diferencia de aproximaciones tradicionales basadas en mapeos ingenuos palabra por palabra (que resultan agramaticales y carecen de valor comunicativo en lenguas visoespaciales), este sistema implementa una **arquitectura híbrida de 4 capas**:
-1. **Ingesta Acústica y Normalización:** Transcripción de voz en español con marcas de tiempo a nivel de palabra mediante modelos neuronales ASR optimizados para ejecución en GPU/CPU local.
-2. **Comprensión Semántica y Planificación Discursiva:** Extracción de proposiciones, roles temáticos nucleares (*Agent*, *Patient*, *Theme*), resolución de sujeto implícito (*pro-drop*) y ordenamiento sintáctico conforme a la gramática LSEC (Tópico-Comentario, SOV/OSV, negación final, preguntas abiertas y sí/no).
-3. **Validación Estructural Rigurosa:** Auditoría algorítmica obligatoria de **13 invariantes lingüísticas formales** para certificar la integridad de las glosas y componentes no manuales.
-4. **Estación de Trabajo Audiovisual y MLOps:** Interfaz de usuario profesional tipo editor no lineal (NLE) que permite la revisión humana por personas sordas nativas, exportación multiformato (incluyendo renderizado de video en cliente) y un pipeline de aprendizaje activo sin contaminación de datos.
+A diferencia de aproximaciones tradicionales basadas en mapeos ingenuos palabra por palabra (que resultan agramaticales y carecen de valor comunicativo en lenguas visoespaciales), este sistema implementa una **arquitectura integrada en 5 pilares tecnológicos**:
+1. **Backend Web Asíncrono y Persistencia Local:** API REST y WebSockets de baja latencia sobre `FastAPI` y `Uvicorn`, con contratos de datos en `Pydantic v2` y almacenamiento local en `SQLite3`.
+2. **Ingesta Acústica y Codificación Multimedia:** Transcripción neuronal con marcas de tiempo por palabra mediante `Faster-Whisper` (`CTranslate2`) y codificación determinista de video MP4 (`H.264 + AAC` a 30.0 FPS constantes) mediante `PyAV` (`FFmpeg`).
+3. **Motor Híbrido de PLN y Gramática LSEC de 7 Etapas:** Limpieza del español oral, normalización de modismos ecuatorianos/quichuismos, detección de locuciones multipalabra (MWE), segmentación proposicional, análisis morfosintáctico con `spaCy`, motor de 22 reglas gramaticales formales (`TIEMPO + TÓPICO + SOV`), 4 reglas post-planificación de la **FENASEC**, cascada léxica sobre las **4.252 señas del Diccionario Oficial CONADIS "Gabriel Román"** y auditoría de **13 invariantes estructurales**.
+4. **Pipeline de Visión por Computadora y Cinemática 3D (`Diccionario LSEC` v2.5–v2.6):** Super-resolución e interpolación temporal 15→60 FPS (`video_enhancer.py`), extracción multimodal en GPU con **HaMeR** (matrices de rotación 3D $\text{SO}(3)$ del modelo **MANO** para las 15 falanges y muñeca), **DWPose / RTMW3D** (133 puntos de cuerpo completo) y **MediaPipe Face Landmarker** (52 blendshapes ARKit), seguido de retargeting directo 1:1 (`v2.5`) y post-procesamiento biomecánico con cinemática inversa (IK) analítica de 2 huesos anti-penetración (`v2.6`) para **4.143 señas VRM**.
+5. **Estación de Trabajo Audiovisual (*LSEC Studio*) y Motor 3D WebGL:** Interfaz de usuario profesional tipo editor no lineal (NLE) y reproductor 3D autónomo (`/viewer`) construidos con **Vanilla ES6+**, **HTML5 Canvas 2D** y **Three.js + `@pixiv/three-vrm`**, acompañados de una plataforma de validación nativa sorda y barrera criptográfica antifugas **SHA-256**.
 
 ---
 
-## 2. Pila Tecnológica Exhaustiva (Technology Stack)
+## 2. Pila Tecnológica Exhaustiva (Los 5 Pilares Tecnológicos)
 
-### 2.1 Backend y Motor de Inteligencia Artificial
+### 2.1 Pilar 1 y 2: Backend, Reconocimiento de Voz (ASR) y Multimedia
 
 | Componente / Librería | Versión | Rol y Justificación Técnica |
 | :--- | :--- | :--- |
-| **Python** | `>=3.10` | Lenguaje de programación principal con soporte estricto de tipado (`typing`, `__future__.annotations`, Dataclasses). |
-| **FastAPI** | `>=0.111.0` | Framework web ASGI asíncrono de alto rendimiento. Gestiona endpoints RESTful y WebSockets bidireccionales con autogeneración de OpenAPI 3.1. |
-| **Uvicorn (Standard)** | `>=0.30.0` | Servidor ASGI con soporte para bucle de eventos `uvloop` y parser HTTP ultra rápido `httptools`. |
-| **Pydantic v2 & Pydantic-Settings** | `>=2.7.0` | Validación de tipos en tiempo de ejecución, serialización/deserialización de alto rendimiento y carga declarativa de variables de entorno `.env`. |
-| **Faster-Whisper (CTranslate2)** | `>=1.0.0` | Motor de Reconocimiento Automático del Habla (ASR) 4 veces más rápido que Whisper original con un tercio del consumo de VRAM (cuantización `int8`/`float16` y timestamps de palabras milimétricos). |
-| **spaCy** | `>=3.7.0` | Procesamiento morfosintáctico en español con modelos `es_core_news_md` / `es_core_news_sm`. Proporciona etiquetado de partes de la oración (POS), análisis de dependencias sintácticas y lematización. |
-| **OpenCV (headless)** | `>=4.10.0` | Manipulación de fotogramas, cálculo de matrices espaciales y operaciones matriciales en video. |
-| **NumPy** | `>=1.26.0` | Computación numérica para vectores espaciales, distancias euclidianas y transformaciones de coordenadas 3D. |
-| **SQLite (stdlib)** | incluido en Python | Persistencia local 100% offline de logs de traducción y revisiones (`data/lsec_database.sqlite`), sin dependencias ni servicios en la nube. |
-| **Pytest & Pytest-asyncio** | `>=8.2.0` | Suite de pruebas unitarias y de integración asíncronas con 358 casos de prueba automatizados (100% de éxito, sin contar las pruebas E2E de navegador). |
-| **HTTPX** | `>=0.27.0` | Cliente HTTP asíncrono para pruebas de integración de la API. |
+| **Python** | `>=3.10` (Probado en `3.11`–`3.13`) | Lenguaje principal con tipado estático (`typing`, `from __future__ import annotations`, `dataclasses`) e inyección dinámica de librerías CUDA en Windows. |
+| **FastAPI** | `>=0.111.0, <1.0.0` | Framework web ASGI asíncrono de alto rendimiento. Gestiona 5 routers RESTful (`/api/v1/*`, `/api/v1/animations/*`, `/api/v1/dictionary/*`, `/api/v1/dataset/*`), WebSockets (`/ws/pipeline`) y autogeneración de OpenAPI 3.1. |
+| **Uvicorn (Standard)** | `>=0.30.0, <1.0.0` | Servidor ASGI multiprotocolo para peticiones HTTP concurrentes, streaming de video con soporte `Accept-Ranges` y WebSockets bidireccionales. |
+| **Pydantic v2 & Pydantic-Settings** | `>=2.7.0` / `>=2.3.0` | Validación de esquemas en tiempo de ejecución (`GlossOutput`, `GlossItem`, `LSECDatasetItem`), serialización rápida en Rust y carga declarativa de `.env`. |
+| **Faster-Whisper (CTranslate2)** | `>=1.0.0, <2.0.0` | Motor de Reconocimiento Automático del Habla (ASR) hasta $4\times$ más rápido que Whisper original y con una fracción del consumo de VRAM (`float16` en GPU CUDA o `int8` en CPU), generando marcas de tiempo por palabra (`WordTimestamp`). |
+| **PyAV (`av` / FFmpeg)** | Incluido con `faster-whisper` | Enlaces Cython hacia `libavcodec`/`libavformat`. Decodifica audio de entrada y ejecuta en `/api/v1/animations/finalize-export-mp4` la codificación determinista a **MP4 (`libx264`, `yuv420p` + `aac` 48 kHz)** a **30.0 FPS constantes**. |
+| **SQLite3 (`sqlite3` stdlib)** | Incluido en Python | Persistencia local 100 % offline de logs de traducción y revisiones humanas (`data/lsec_database.sqlite`), con fallback automático a memoria en medios de solo lectura. |
+| **Pytest, Pytest-asyncio & HTTPX** | `>=8.2.0` / `>=0.23.0` / `>=0.27.0` | Suite de pruebas automatizadas con **358 pruebas aprobadas** en el backend/estudio y cliente HTTP asíncrono para pruebas de integración. |
 
-### 2.2 Frontend (LSEC Studio 2.1.1)
+### 2.2 Pilar 3: Procesamiento de Lenguaje Natural (PLN) y Motor Gramatical LSEC
+
+| Componente / Módulo | Versión / Alcance | Rol y Justificación Técnica |
+| :--- | :--- | :--- |
+| **spaCy (`es_core_news_md` / `es_core_news_sm`)** | `>=3.7.0, <4.0.0` (Modelos `3.8.0`) | Núcleo de análisis morfosintáctico en español: tokenización con offsets, Universal POS (`token.pos_`), lematización (`token.lemma_`), árbol de dependencias (`token.dep_`, `head`, `children`) y morfología flexiva (`MorphAnalysis`: persona, número, tiempo y aspecto). |
+| **Limpiador Oral y Normalizador Ecuatoriano** | Reglas `R1.1–R1.5` y `R2.1–R2.7` | [`spoken_text_cleaner.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/services/spoken_text_cleaner.py) elimina muletillas y tartamudeos; [`text_normalizer.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/services/text_normalizer.py) normaliza el imperativo andino (`dame + gerundio`), quichuismos (`guagua`, `ñaño`, `achachay`), cifras y errores fonéticos del ASR. |
+| **Motor Gramatical Formal LSEC y Reglas FENASEC** | 22 Reglas LSEC + 4 Reglas FENASEC | [`app/lsec_grammar/registry.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/lsec_grammar/registry.py) y [`fenasec_rules.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/services/fenasec_rules.py) aplican el orden `TIEMPO + TÓPICO + SOV`, elisión de cópulas/artículos, transferencia funcional de preposiciones, deixis *pro-drop*, negación incorporada (`NO-SABER`), verbos direccionales (`[1->2]`) e intensidad (`++`). |
+| **Servicio de Diccionario Oficial CONADIS** | **4.252 señas** (`catalogo_lsec.json`) | [`dictionary_service.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/services/dictionary_service.py) indexa el Diccionario Oficial "Gabriel Román", detecta frases multipalabra oficiales y clasifica cada glosa en una cascada de verificación (`VERIFICADO_CONADIS`, `LEXICON_LOCAL`, `DACTILOLOGIA`, `NO_VERIFICADO`). |
+
+### 2.3 Pilar 4: Visión por Computadora, Deep Learning y Cinemática 3D (`Diccionario LSEC` v2.5–v2.6)
+
+| Componente / Librería | Versión | Rol y Justificación Técnica |
+| :--- | :--- | :--- |
+| **PyTorch & PyTorch Lightning** | `>=2.4.0, <2.6.0` | Ejecución en GPU CUDA de los modelos de reconstrucción 3D de manos y super-resolución en Stage A (`lsec_hamer_extract.py`). |
+| **HaMeR (*Hand Mesh Recovery*) & MANO (`smplx`)** | `smplx==0.1.28`, `timm>=0.9.12`, `einops>=0.7.0` | Extrae matrices de rotación 3D exactas en $\text{SO}(3)$ para la muñeca y las 15 falanges de cada mano a partir del video, evitando la necesidad de cinemática inversa aproximada en los dedos. |
+| **DWPose & RTMW3D (`rtmlib` + `onnxruntime-gpu`)** | `rtmlib>=0.1.2`, `onnxruntime-gpu>=1.19.0` | Estimación 2D/3D de 133 keypoints de cuerpo completo (COCO-WholeBody) para posicionar hombros, codos, muñecas y torso con seguimiento temporal de identidad. |
+| **MediaPipe Face Landmarker** | `>=0.10.14` | Extracción de 52 coeficientes de expresión facial **ARKit Blendshapes** y orientación cefálica por fotograma. |
+| **OpenCV (`headless`), FFmpeg, Real-ESRGAN, CodeFormer & RIFE** | `opencv>=4.8.0` | Motor de mejora de video en 4 niveles ([`video_enhancer.py`](file:///c:/Users/brana/Desktop/TIC%20Software/Diccionario%20LSEC/video_enhancer.py)): super-resolución espacial con realce morfológico *Black Top-Hat* en valles interdigitales, restauración facial e interpolación temporal de 15 a 60 FPS. |
+| **NumPy & SciPy (Retargeting 1:1 v2.5 y Stage C v2.6)** | `numpy>=1.26.0`, `scipy>=1.11.0` | Proyección $\text{SO}(3)$ por SVD, conjugación de cambio de base MANO→VRM ([`lsec_retarget_direct.py`](file:///c:/Users/brana/Desktop/TIC%20Software/Diccionario%20LSEC/lsec_retarget_direct.py)), compensación de postura de reposo ([`vrm_rest.py`](file:///c:/Users/brana/Desktop/TIC%20Software/Diccionario%20LSEC/vrm_rest.py)), filtro digital **One-Euro**, **SLERP** de cuaterniones y post-procesador **Stage C v2.6** ([`stage_c_postprocess.py`](file:///c:/Users/brana/Desktop/TIC%20Software/Diccionario%20LSEC/tools/stage_c_postprocess.py)) con reparación de *flips* de muñeca e **IK analítica de 2 huesos** anti-penetración. |
+
+### 2.4 Pilar 5: Frontend (LSEC Studio 2.1.1, Visor 3D y Exportación de Video)
 
 | Tecnología | Tipo | Propósito y Ventajas |
 | :--- | :--- | :--- |
-| **Vanilla HTML5 Semántico** | Estructura | Cero dependencias de librerías externas. Estructura optimizada para accesibilidad WCAG 2.1 (regiones ARIA activas, navegación por teclado). |
-| **Vanilla CSS3 Moderno** | Estilos | Sistema de diseño de alta densidad (*LSEC Design System*), variables CSS nativas, temas oscuros (*deep dark*), efecto translúcido (*glassmorphism* con `backdrop-filter`), CSS Grid y Flexbox. |
-| **JavaScript Modular (ES6+)** | Lógica | Arquitectura orientada a componentes desacoplados mediante módulos ES nativos (`import`/`export`), sin necesidad de empaquetadores como Webpack o Vite en tiempo de ejecución. |
-| **HTML5 Canvas 2D API** | Gráficos | Renderizado de alta frecuencia (60 FPS) para la regla milimétrica, la línea de tiempo multitrack interactiva y el cabezal de reproducción. |
-| **MediaRecorder & Canvas Capture** | Video | Motor de composición y renderizado de video en el cliente que une fotogramas, subtítulos y glosas LSEC directamente en el navegador sin consumir cómputo en el servidor. |
-| **WebSockets API** | Conectividad | Transmisión bidireccional continua de fragmentos de audio y recepción reactiva de glosas en tiempo real. |
-| **LocalStorage API** | Persistencia | Almacenamiento local de preferencias de usuario, estados de sesión y caché de proyectos. |
+| **Vanilla HTML5 Semántico** | Estructura | Cero dependencias de frameworks de UI externos. Optimizado para accesibilidad WCAG 2.1 (regiones ARIA activas, navegación por teclado) en `/studio`, `/viewer` y `/avatarconfig`. |
+| **Vanilla CSS3 Moderno** | Estilos | Sistema de diseño de alta densidad (*LSEC Design System*), variables CSS nativas, temas oscuros (*deep dark*), *glassmorphism* (`backdrop-filter`), CSS Grid y Flexbox. |
+| **JavaScript Modular (ES6+)** | Lógica | Arquitectura orientada a componentes desacoplados con módulos ES nativos (`import`/`export`) y almacén de estado reactivo Pub/Sub (`state.js`) con pila `Undo/Redo`. |
+| **Three.js & `@pixiv/three-vrm`** | Motor 3D WebGL | Renderizado en tiempo real del avatar humanoide **VRM 1.0** (`LSEC-Interpreter-Female.vrm`, 54 huesos) con sombras suaves `PCFSoftShadowMap`, `OrbitControls`, secuenciador de glosas (`sign-sequencer.js`) y reproducción de las **4.143 señas VRM 1:1**. |
+| **HTML5 Canvas 2D API** | Gráficos 60 FPS | Renderizado de la regla milimétrica, línea de tiempo multitrack interactiva y lienzo de composición de video con PiP del avatar 3D. |
+| **MediaRecorder + Canvas Capture + PyAV** | Exportación de Video | Captura determinista a 30 FPS en el navegador (`captureStream(0)` + `requestFrame()`) combinada con remuxeado/codificación en `/finalize-export-mp4` para producir archivos **MP4 (`H.264 + AAC`)** con tasa de cuadros constante y audio original. |
+| **Playwright (Chromium)** | Pruebas E2E | Validación automatizada de extremo a extremo del flujo de interfaz y del renderizado WebGL del avatar VRM. |
 
 ---
 
 ## 3. Arquitectura Global del Sistema
 
-El siguiente diagrama ilustra el flujo de datos integral desde la entrada de audio o texto hasta su renderizado audiovisual o entrega a motores 3D:
+El siguiente diagrama ilustra el flujo de datos integral desde la ingesta multimodal y el pipeline 3D hasta su renderizado en *LSEC Studio* y el visor VRM:
 
 ```mermaid
 graph TD
     subgraph INGESTION["1. Ingesta Multimodal"]
-        AudioIn["Archivo de Audio / Micrófono"] --> WhisperASR["WhisperASRService (Faster-Whisper)"]
-        TextIn["Texto en Español Directo"] --> Normalizer["TextNormalizer & PunctuationAnalyzer"]
-        WhisperASR --> Normalizer
+        AudioIn["Archivo de Audio/Video / Micrófono"] --> WhisperASR["WhisperASRService (Faster-Whisper)"]
+        TextIn["Texto en Español Directo"] --> Cleaner["SpokenTextCleaner (Etapa 1: Disfluencias)"]
+        WhisperASR --> Cleaner
+        Cleaner --> Normalizer["TextNormalizer (Etapa 2: Modismos EC y Reparación ASR)"]
     end
 
-    subgraph SEMANTIC_ANALYSIS["2. Análisis Semántico y Lingüístico"]
-        Normalizer --> MWE["MWEDetector (Expresiones Multipalabra)"]
-        MWE --> Segmenter["DiscourseSegmenter (Segmentación RST)"]
-        Segmenter --> SemanticParser["SemanticParser (Roles Semánticos & Pro-drop)"]
-        SemanticParser --> DiscoursePlanner["DiscoursePlanner (Reglas LSEC & Trazabilidad)"]
+    subgraph SEMANTIC_ANALYSIS["2. Análisis Semántico y Motor Gramatical LSEC"]
+        Normalizer --> MWE["MWEDetector + Frases CONADIS (Etapa 3)"]
+        MWE --> Segmenter["DiscourseSegmenter (Etapa 4: Segmentación Proposicional)"]
+        Segmenter --> SemanticParser["SemanticParser + LinguisticAnalyzer + spaCy (Etapa 5A)"]
+        SemanticParser --> DiscoursePlanner["DiscoursePlanner + 22 Reglas LSEC (Etapa 5B)"]
+        DiscoursePlanner --> Fenasec["Post-Procesador FENASEC (Etapa 6: POR-FAVOR, NO-Verbo, Direccionales, ++)"]
     end
 
-    subgraph METADATA_TIMING["3. Trazabilidad, Temporización y Validación"]
-        DiscoursePlanner --> DupResolver["DuplicatePlanResolver (Limpieza Estructural)"]
-        DupResolver --> MetaLinker["ExecutionMetadataLinker (Enlace de IDs)"]
-        MetaLinker --> Alignment["SourceAlignmentService (Deixis vs. Locus)"]
-        Alignment --> Timing["TimingService (Presupuesto Fonético-Gestual)"]
+    subgraph METADATA_TIMING["3. Diccionario CONADIS, Temporización y Validación (Etapa 7)"]
+        Fenasec --> DictService["DictionaryService (4.252 señas CONADIS + Cascada Léxica)"]
+        DictService --> DupResolver["DuplicatePlanResolver & ExecutionMetadataLinker"]
+        DupResolver --> Alignment["SourceAlignmentService (Deixis vs. Locus)"]
+        Alignment --> Timing["TimingService (Presupuesto Fonético-Gestual SOV)"]
         Timing --> ReviewService["ReviewPropagationService (Marcado de Revisión)"]
-        ReviewService --> Validator["StructuralValidator (13 Invariantes LSEC)"]
+        ReviewService --> Validator["StructuralValidator (13 Invariantes LSEC 2.1.1)"]
     end
 
-    subgraph OUTPUT_MLOPS["4. Consumo, Anotación y MLOps"]
+    subgraph ANIMATION_PIPELINE["4. Catálogo Cinemático 3D 1:1 (v2.5 - v2.6)"]
+        RawVids["Videos CONADIS -> VideoEnhancer 60 FPS"] --> StageA["Stage A: HaMeR + DWPose + RTMW3D + MediaPipe"]
+        StageA --> StageB["Stage B (v2.5): Retargeting 1:1 MANO -> VRM"]
+        StageB --> StageC["Stage C (v2.6): Anti-Flip Muñeca + Two-Bone IK + Rostro"]
+        StageC --> AnimRouter["Router /api/v1/animations/* (4.143 señas VRM)"]
+    end
+
+    subgraph OUTPUT_MLOPS["5. Consumo, Renderizado 3D, Exportación y MLOps"]
         Validator --> REST_WS["API REST & WebSockets (/translate, /ws/pipeline)"]
-        REST_WS --> StudioUI["LSEC Studio (Frontend NLE en Navegador)"]
-        REST_WS --> AvatarOut["Payload por glosa para el visor 3D (Three.js + VRM)"]
+        AnimRouter --> StudioUI["LSEC Studio (/studio) & Visor 3D (/viewer)"]
+        REST_WS --> StudioUI
+        StudioUI --> VideoExport["CompositeVideoExporter + PyAV (/finalize-export-mp4 -> MP4 H.264/AAC 30 FPS)"]
         Validator --> ActiveLearn["ActiveLearningService (Cola por Incertidumbre)"]
         ActiveLearn --> AnnotationPlatform["Plataforma de Validación Sorda Nativa"]
         AnnotationPlatform --> DatasetVal["DatasetValidator (Auditoría SHA-256 sin Fugas)"]
@@ -94,111 +122,82 @@ graph TD
 
 ## 4. Funciones y Servicios del Backend (Módulos de Negocio)
 
-### 4.1 Ingesta y Reconocimiento de Voz (`app/services/asr_service.py`)
-- **Transcripción Acústica Precisa:** Carga dinámica y perezosa (*lazy loading*) del modelo Faster-Whisper para preservar memoria VRAM.
+### 4.1 Ingesta y Reconocimiento de Voz ([`app/services/asr_service.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/services/asr_service.py))
+- **Transcripción Acústica Precisa:** Carga dinámica y perezosa (*lazy loading*) del modelo `Faster-Whisper` con soporte de pesos locales (`data/models/whisper/`) para operación 100 % offline.
 - **Alineación a Nivel de Palabra:** Genera marcas de tiempo exactas (`start`, `end`, `probability`) para cada palabra reconocida.
-- **Métricas de Confianza:** Asigna valores de certeza acústica que activan de forma automática la bandera `requires_audio_review` si la probabilidad cae por debajo del umbral de calidad (0.75).
+- **Métricas de Confianza:** Asigna valores de certeza acústica que activan automáticamente la bandera `requires_audio_review` si la probabilidad cae por debajo del umbral de calidad (`0.75`).
 
-### 4.2 Normalización de Texto y Puntuación (`app/services/text_normalizer.py`)
-- **Limpieza Trazable:** Normaliza caracteres manteniendo un mapa de correspondencia con los índices del texto original.
-- **Expansión de Siglas y Acrónimos:** Convierte siglas institucionales en formas deletreadas normativas (ej. `UPEC` → `U-P-E-C`).
-- **Normalización Numérica:** Convierte números arábigos a formas léxicas reconocibles en el lexicón.
-- **Detección de Palabras Dudosas:** Alerta sobre términos desconocidos, dialectismos no registrados o posibles fallos ortográficos.
+### 4.2 Limpieza del Español Hablado y Normalización Ecuatoriana ([`spoken_text_cleaner.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/services/spoken_text_cleaner.py), [`text_normalizer.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/services/text_normalizer.py))
+- **Filtro de Disfluencias Orales (`SpokenTextCleaner`):** Suprime vacilaciones fonéticas (`eh, em, mm, digamos`), reformuladores (`o sea`) y colapsa tartamudeos de 1 a 3 palabras respetando repeticiones enfáticas.
+- **Modismos Ecuatorianos y Quichuismos (`TextNormalizer`):** Convierte el imperativo andino (`dame/deme + gerundio` → `por favor + infinitivo`), traduce quichuismos (`ñaño → hermano`, `guagua → niño`, `achachay → frío`, `arrarray → calor`, `pana → amigo`) y repara errores fonéticos frecuentes del ASR (`Tulkán → Tulcán`, `Callambe → Cayambe`, `campos → campus`).
+- **Expansión de Siglas y Cifras:** Convierte siglas institucionales en formas deletreadas normativas (`UPEC` → `U-P-E-C`) y normaliza números, teléfonos y correos electrónicos.
 
-### 4.3 Detección de Expresiones Multipalabra (`app/services/mwe_detector.py`)
-- **Agrupamiento Colocacional:** Reconoce unidades multipalabra complejas (ej. *por favor*, *de repente*, *gracias a*) para tratarlas como un único concepto semántico en lugar de traducirlas de manera atomizada.
+### 4.3 Expresiones Multipalabra y Diccionario Oficial CONADIS ([`mwe_detector.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/services/mwe_detector.py), [`dictionary_service.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/services/dictionary_service.py))
+- **Agrupamiento Colocacional (`MWEDetector`):** Reconoce unidades multipalabra complejas con bloqueo de análisis componencial (`"seres humanos" → PERSONA`, `"primer día" → DÍA PRIMERO`, `"haz posible" → REALIDAD HACER`).
+- **Catálogo Oficial CONADIS (`DictionaryService`):** Indexa las **4.252 señas** de `catalogo_lsec.json`, detecta frases multipalabra oficiales (`"buenos días" → BUENOS-DÍAS`, `"a diario" → A-DIARIO`) y clasifica cada glosa generada según su estado de verificación (`VERIFICADO_CONADIS`, `DACTILOLOGIA`, `EXENTO_GRAMATICAL`, `LEXICON_LOCAL`, `PARAFRASIS_REVISION`, `NO_VERIFICADO`).
 
-### 4.4 Segmentación Discursiva Proposicional (`app/services/discourse_segmenter.py`)
-- **Teoría de Estructura Retórica (RST):** Divide oraciones compuestas en cláusulas independientes y subordinadas analizando los árboles de dependencia sintáctica de spaCy.
-- **Preservación del Contexto:** Asigna identificadores únicos a cada unidad discursiva (`DiscourseUnit`), permitiendo estructurar relaciones de causa, condición y temporalidad.
+### 4.4 Segmentación Discursiva Proposicional ([`app/services/discourse_segmenter.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/services/discourse_segmenter.py))
+- **Segmentación Atómica:** Divide oraciones compuestas en cláusulas independientes y subordinadas analizando puntuación mayor, pares correlativos (`no solo... sino`), conectores adversativos (`pero, sin embargo, aunque`), interrogativas indirectas y cambios de marco temporal.
 
-### 4.5 Extracción Semántica y Roles Temáticos (`app/services/semantic_parser.py`)
-- **Identificación de Predicados Nucleares:** Extrae el verbo raíz, polaridad (positiva/negativa), aspecto (perfectivo/imperfectivo/continuo) y modalidad oracional (declarativa, imperativa, interrogativa).
-- **Asignación de Roles Temáticos:** Identifica argumentos nucleares:
-  - `AGENT`: Quien ejecuta la acción.
-  - `PATIENT` / `THEME`: Quien recibe el impacto o sobre quien recae la acción.
-  - `BENEFICIARY`: Destinatario de la acción.
-  - `LOCATION`: Espacio físico de referencia.
-- **Resolución de Sujeto Implícito (*Pro-drop*):** Infiere el pronombre omitido en español a partir de la desinencia verbal, generando los índices pronominales LSEC adecuados (`PRO1` = yo/nosotros, `PRO2` = tú/ustedes, `PRO3` = él/ella/ellos).
-- **Clasificación Tipológica Verbal:** Discrimina entre verbos planos, verbos espaciales y verbos direccionales con concordancia morfológica.
+### 4.5 Extracción Semántica, Análisis Lingüístico y Motor Gramatical LSEC ([`semantic_parser.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/services/semantic_parser.py), [`linguistic_analyzer.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/services/linguistic_analyzer.py), [`discourse_planner.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/services/discourse_planner.py), [`fenasec_rules.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/services/fenasec_rules.py))
+- **Identificación de Predicados y Desambiguación de Homógrafos:** Extrae el verbo raíz usando `spaCy` y aplica filtros sintácticos en el árbol de dependencias para no confundir sustantivos homógrafos (`dibujo`, `taller`, `arte`, `música`) con formas verbales conjugadas, reparando además lemas verbales de 1.ª conjugación (`invitamos → INVITAR`).
+- **Resolución Tipificada de Sujeto Tácito (*Pro-drop*):** Infiere `PRO1`, `PRO2`, `PRO1-PL` o `PRO2-PL` a partir de `token.morph` y desinencias verbales, bloqueando verbos impersonales/meteorológicos (`llover`, `haber` existencial, `se` impersonal).
+- **Transferencia Funcional de Determinantes y Preposiciones:** Elide artículos y preposiciones puramente estructurales (`el, la, de` genitivo, `a` personal), pero transfiere aquellas con valor semántico (`desde → DESDE`, `con → CON`, `para + inf → PROPÓSITO`, `hacia → HACIA`).
+- **22 Reglas Formales LSEC y 4 Reglas Oficiales FENASEC:** Ordena la proposición en `TIEMPO + TÓPICO + SUJETO + OBJETO + MODAL + VERBO + ASPECTO + NEG/WH`, aplica cortesía inicial (`POR-FAVOR`), negación incorporada (`NO-SABER`, `NO-PODER`, `NO-QUERER`, `NO-GUSTAR`, `NO-HABER`), verbos direccionales (`AVISAR[1->2]`) e intensidad (`LLOVER++`).
 
-### 4.6 Planificación Discursiva LSEC (`app/services/discourse_planner.py`)
-- **Reordenamiento Sintáctico:** Aplica las estructuras naturales de la LSEC:
-  - **Tópico-Comentario:** El elemento informativo primario se traslada al inicio de la cláusula.
-  - **SOV / OSV:** Configuración canónica para verbos transitivos.
-  - **Negación Posverbal Obligatoria:** Ubica la partícula `NO` inmediatamente después del predicado o al final de la proposición, vinculando el movimiento de cabeza (*headshake*).
-  - **Interrogativos al Final:** Coloca pronombres interrogativos (*QUÉ*, *QUIÉN*, *DÓNDE*, *CUÁNDO*) en posición final de la proposición.
-- **Trazabilidad Conceptual (*ConceptTraceability*):** Registra cada concepto del texto fuente y calcula la tasa de cobertura conceptual (*concept recall*) asegurando que no existan omisiones en la traducción.
-
-### 4.7 Enlace de Metadatos y Alineación Fuente (`app/services/metadata_linker.py`, `alignment_service.py`)
+### 4.6 Enlace de Metadatos, Alineación y Temporización ([`metadata_linker.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/services/metadata_linker.py), [`alignment_service.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/services/alignment_service.py), [`timing_service.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/services/timing_service.py))
 - **Enlace Relacional Total:** Conecta bidireccionalmente cada `GlossItem` con su proposición semántica, bloque discursivo, locus espacial y marcadores no manuales.
-- **Deixis vs. Locus Abstracto:** Discrimina rigurosamente entre señalamiento deíctico (a interlocutores presentes) y señalamiento a un punto espacial arbitrario (*locus*) para correferencia anafórica de entidades ausentes.
+- **Redistribución Temporal SOV:** Reasigna proporcionalmente las marcas de tiempo de las palabras en español (`SVO`) a la secuencia reordenada de glosas (`SOV`) y asigna presupuestos fonético-gestuales (seña estándar `500 ms`, seña corta `400 ms`, dactilología `300 ms/letra`).
 
-### 4.8 Temporización y Presupuesto Fonético-Gestual (`app/services/timing_service.py`)
-- **Métricas Temporales de la LSEC:** Asigna duraciones reales basadas en la velocidad natural de señación:
-  - Seña estándar: `500 ms`.
-  - Seña corta: `400 ms`.
-  - Dactilología (deletreo): `300 ms` por letra.
-  - Pausa interproposicional: `200–300 ms`.
-- **Cálculo de Pausas de Video:** Determina el tiempo exacto que un video original en español debe detenerse para permitir la finalización de una secuencia de señas sin aceleraciones forzadas.
+### 4.7 Servicio de Animaciones Directas 1:1 y Exportación MP4 ([`app/api/animation_direct_endpoints.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/api/animation_direct_endpoints.py))
+- **Resolución y Entrega de 4.143 Señas VRM:** Sirve las animaciones esqueléticas generadas por el pipeline `Diccionario LSEC` (`senas_vrm_direct_v2.6/` con fallback a `senas_vrm_direct/`), resolviendo glosas individuales o por lotes, sirviendo videos originales Ultra HD, ilustraciones oficiales y telemetría QA.
+- **Codificación Determinista MP4 (`finalize_export_mp4`):** Recibe el video compuesto desde el navegador y utiliza `PyAV` (`libx264` + `aac`) para entregar un archivo MP4 con tasa de cuadros constante de **30.0 FPS exactos** y audio original sincronizado.
 
-### 4.9 Validador Estructural Formal (`app/services/validator.py`)
-Audita matemáticamente las **13 Invariantes Lingüísticas LSEC 2.1.1** (descritas en detalle en la Sección 6), catalogando las infracciones en advertencias o bloqueos críticos (`BLOCKED`).
-
-### 4.10 Aprendizaje Activo y Control MLOps (`app/services/active_learning_service.py`, `dataset_validator.py`, `mlops_pipeline.py`)
-- **Muestreo por Incertidumbre:** Calcula un vector de confianza multidimensional; oraciones con baja confianza o múltiples correcciones automáticas son enviadas prioritariamente a la cola de revisión humana (`GET /api/v1/annotations/queue`).
-- **Auditoría Antifugas SHA-256:** Genera hashes criptográficos de cada texto y glosa para garantizar matemáticamente que ningún ejemplo de entrenamiento contamine los conjuntos de prueba congelados (*Frozen Test Set*).
-- **Compuerta MLOps Automatizada:** Ejecuta pruebas de regresión cuantitativas evaluando métricas estrictas: Exact Match (EM), F1 sintáctico, distancia de edición de Levenshtein y dictamina `PASS` o `FAIL`.
+### 4.8 Validador Estructural Formal, Aprendizaje Activo y MLOps ([`validator.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/services/validator.py), [`active_learning_service.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/services/active_learning_service.py), [`dataset_validator.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/services/dataset_validator.py), [`mlops_pipeline.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/services/mlops_pipeline.py))
+- Audita matemáticamente las **13 Invariantes Lingüísticas LSEC 2.1.1**, prioriza ejemplos con incertidumbre o señas `NO_VERIFICADO` en la cola de revisión humana, verifica la ausencia de fugas de datos mediante hashes **SHA-256** y ejecuta la compuerta de regresión MLOps (*Exact Match*, *F1*, *Distancia de Edición*).
 
 ---
 
-## 5. Funciones y Características del Frontend (LSEC Studio 2.1.1)
+## 5. Funciones y Características del Frontend (LSEC Studio 2.1.1 y Visor 3D)
 
-El frontend es una **estación de trabajo audiovisual profesional integrada en una sola página (SPA)** construida bajo el paradigma de alto rendimiento sin frameworks pesados.
+El frontend ofrece tres interfaces web complementarias servidas localmente sin dependencia de Internet:
 
-### 5.1 Arquitectura del Layout y Zonas Ergonómicas
-1. **Barra Superior de Control (`#top-navbar`):**
-   - Selector de flujo de trabajo en 3 etapas: **Etapa 1: Preparar** (Audio y transcripción), **Etapa 2: Traducir** (Glosado y sintaxis), **Etapa 3: Revisar** (Auditoría e incidencias).
-   - Botones de Deshacer (`Ctrl+Z`) y Rehacer (`Ctrl+Y`) gestionados por una pila inmutable de historial.
-   - Acceso rápido a carga de archivos de video, carga del video institucional UPEC de prueba, importación/guardado de proyectos y exportación final.
-   - Indicador reactivo de guardado automático (*"Guardado"* / *"Guardando..."*).
-2. **Zona Audiovisual (`#left-video-zone`):**
-   - Reproductor de video HTML5 con soporte de aceleración por hardware y renderizador de reserva en Canvas.
-   - Controles avanzados de precisión: avance/retroceso por fotograma individual (*frame-by-frame* a 30 fps), saltos de ±5 segundos, código de tiempo exacto (`MM:SS.mmm`), bucle In/Out para repetición continua y velocidad variable (0.25x a 2.0x).
-3. **Capas Superpuestas Sincronizadas (Overlays):**
-   - **Capa de Subtítulos Fiel 1:1 (`subtitle-overlay.js`):** Muestra el subtítulo en español activo garantizando confinamiento en área segura, partición de líneas equilibrada y ausencia de efectos distractores tipo karaoke.
-   - **Capa de Glosas LSEC (`gloss-overlay.js`):** Despliega las glosas en tipografía monoespaciada de alto contraste, incorporando insignias cromáticas para marcadores no manuales (`? S/N`, `? QU`, `NEG`) y cuadrantes espaciales de señación.
-4. **Dock Inferior Bimodal (`#bottom-dock-zone`):**
-   - **Pestaña 1: Editor de Segmentos (`transcript-window.js`, `subtitle-editor-panel.js`):** Tarjetas bilingües cronológicas con edición in-situ de palabras y glosas, botones de aprobación rápida y filtrado dinámico (*Todos*, *Revisar*, *Audio dudoso*, *Sintaxis LSEC*, *Corregidos*).
-   - **Pestaña 2: Línea de Tiempo Multitrack (`timeline.js`):** Lienzo interactivo en Canvas con regla en milisegundos, visualización de forma de onda acústica, bloques de glosas arrastrables, pistas de expresiones no manuales, loci espaciales y zoom interactivo (30% a 250%).
-5. **Inspector Contextual y Transcripción (`#contextual-inspector-zone`, `sidebar-panels.js`):**
-   - Muestra de forma inmediata los roles semánticos del segmento seleccionado, la correspondencia de cada seña con el lexicón oficial, las expresiones faciales gramaticales requeridas y las reglas de validación activas.
+### 5.1 Estación de Trabajo Principal: LSEC Studio (`/studio` — [`index.html`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/static/index.html))
+1. **Barra Superior de Control (`#top-navbar`):** Flujo guiado en 3 etapas (**1: Preparar**, **2: Traducir**, **3: Revisar**), pila inmutable Deshacer/Rehacer (`Ctrl+Z` / `Ctrl+Y`), selector de videos de prueba locales, importación/guardado de proyectos JSON y botón maestro de exportación.
+2. **Zona Audiovisual y Avatar 3D PiP (`#left-video-zone`):**
+   - Reproductor de video HTML5 con avance/retroceso cuadro a cuadro (30 FPS), bucle In/Out y velocidad variable (`0.25x` a `2.0x`).
+   - **Intérprete 3D VRM Sincronizado (`studio-avatar-bridge.js`, `avatar-engine.js`):** Visor WebGL integrado que carga el modelo `LSEC-Interpreter-Female.vrm` y ejecuta en tiempo real la secuencia de señas 3D correspondiente a las glosas activas del video.
+   - **Capas Superpuestas Sincronizadas:** Subtítulos fieles 1:1 (`subtitle-overlay.js`) y capa de glosas LSEC (`gloss-overlay.js`) con insignias para rasgos no manuales (`? S/N`, `? QU`, `NEG`) y cuadrantes espaciales.
+3. **Dock Inferior Bimodal (`#bottom-dock-zone`):**
+   - **Editor de Segmentos (`transcript-window.js`, `subtitle-editor-panel.js`):** Tarjetas bilingües con edición in-situ, filtros rápidos y aprobación por segmento.
+   - **Línea de Tiempo Multitrack (`timeline.js`):** Lienzo en Canvas a 60 FPS con forma de onda acústica, bloques de glosas arrastrables, pistas de rasgos no manuales, loci espaciales y zoom (`30%` a `250%`).
+4. **Inspector Contextual (`sidebar-panels.js`):** Despliega roles semánticos, ficha del Diccionario Oficial CONADIS, expresiones faciales requeridas e invariantes validadas.
 
-### 5.2 Motor de Exportación y Composición en Cliente (`video-exporter.js`, `modals-and-export.js`)
-- **Compositor de Video Nativo en Navegador:** Utiliza `CanvasRenderingContext2D` y la API `MediaRecorder` para procesar el video fotograma a fotograma en el cliente, quemando los subtítulos estilizados, franjas de glosas y marcas institucionales sin enviar archivos pesados al servidor.
-- **Exportación Multiformato:**
-  - **Subtítulos Estándar:** SubRip (`.srt`) y WebVTT (`.vtt`).
-  - **Anotación Científica:** Archivos de intercambio ELAN (`.eaf`) para lingüistas e investigadores de lenguas de señas.
-  - **Tabular:** Archivos `.csv` estructurados por marcas de tiempo.
-  - **Proyecto Completo:** Archivos `.json` con el estado íntegro de la sesión, historial de validaciones y metadatos LSEC.
+### 5.2 Reproductor 3D Autónomo (`/viewer` — [`viewer.html`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/static/viewer.html)) y Calibrador (`/avatarconfig` — [`avatarconfig.html`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/static/avatarconfig.html))
+- **Explorador 1:1 de 4.143 Señas (`/viewer`):** Permite buscar cualquier seña del Diccionario Oficial CONADIS, reproducir su animación VRM `v2.6`/`v2.5` sincronizada cuadro a cuadro con el video MP4 Ultra HD original, consultar la ilustración oficial y verificar las métricas cinemáticas de calidad (`qa.json`).
+- **Calibrador de Avatar (`/avatarconfig`):** Herramienta de diagnóstico para ajustar encuadre de cámara, iluminación WebGL y poses articulares del modelo VRM.
+
+### 5.3 Motor de Exportación Multiformato y Video Determinista (`video-exporter.js`, `modals-and-export.js`)
+- **Exportación de Video Compuesto MP4 a 30.0 FPS:** Combina el renderizado cuadro a cuadro en `<canvas>` (video original + avatar 3D PiP + glosas LSEC + subtítulos quemados) con el endpoint backend `/api/v1/animations/finalize-export-mp4` (`PyAV` `H.264 + AAC`).
+- **Formatos Estándar y Científicos:** SubRip (`.srt`), WebVTT (`.vtt`), ELAN (`.eaf`), CSV tabular (`.csv`) y Proyecto íntegro (`.json`).
 
 ---
 
 ## 6. Las 13 Invariantes Lingüísticas de LSEC 2.1.1
 
-El validador estructural (`StructuralValidator`) audita automáticamente las siguientes 13 reglas obligatorias:
+El validador estructural ([`StructuralValidator`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/services/validator.py)) audita automáticamente las siguientes 13 reglas obligatorias:
 
 | N.º | Invariante | Descripción y Criterio de Aceptación | Severidad |
 | :---: | :--- | :--- | :--- |
 | **1** | **Mayúsculas Canónicas** | Todas las glosas deben expresarse en mayúsculas estrictas (`A-Z`, `Ñ`). Si es deletreo dactilológico, debe separarse por guiones simples (ej. `U-P-E-C`). | `ERROR` / `BLOQUEO` |
 | **2** | **Lemas Protegidos** | Los verbos principales deben conservar su forma de lema canónico registrado en el lexicón, impidiendo sufijaciones flexivas del español. | `ERROR` |
 | **3** | **No Redundancia Espuria** | Prohíbe la repetición consecutiva de glosas idénticas salvo justificación morfológica de aspecto reiterativo debidamente etiquetada. | `WARNING` |
-| **4** | **Concordancia de Negación** | La partícula negativa `NO` debe posicionarse al final de la proposición o posverbal, acompañada del rasgo no manual `negación` (*headshake*). | `ERROR` |
+| **4** | **Concordancia de Negación** | La partícula negativa `NO` (o verbo con negación incorporada `NO-SABER`) debe posicionarse al final de la proposición o posverbal, acompañada del rasgo no manual `negación` (*headshake*). | `ERROR` |
 | **5** | **Alineación de Interrogativos** | En preguntas abiertas (*qu-questions*), los pronombres interrogativos (*QUÉ*, *QUIÉN*, etc.) deben ubicarse al final de la proposición con el marcador facial `pregunta_qu` (ceño fruncido). | `ERROR` |
 | **6** | **Concordancia Sí/No** | Las proposiciones interrogativas de polaridad sí/no deben portar obligatoriamente la expresión `pregunta_sn` (cejas elevadas) sobre toda la cláusula. | `ERROR` |
 | **7** | **Consistencia de Loci Espaciales** | Un referente indexado en un locus (`Locus A`, `Locus B`, etc.) debe mantener su asignación en el discurso y no saltar a otro punto sin una operación explícita de reasignación. | `ERROR` |
-| **8** | **Cobertura Proposicional** | Todos los roles semánticos nucleares del texto fuente (*Agent*, *Patient*, *Predicate*) deben tener su correspondiente realización en las glosas (*Concept Recall = 100%*). | `ERROR` / `BLOQUEO` |
-| **9** | **No Cruce de Líneas Temporales** | Los marcadores de tiempo absoluto o relativo (`AYER`, `MAÑANA`, `FUTURO`) deben situarse al inicio del enunciado discursivo antes de la acción. | `WARNING` |
+| **8** | **Cobertura Proposicional** | Todos los roles semánticos nucleares del texto fuente (*Agent*, *Patient*, *Predicate*) deben tener su correspondiente realización en las glosas (*Concept Recall = 100 %*). | `ERROR` / `BLOQUEO` |
+| **9** | **No Cruce de Líneas Temporales** | Los marcadores de tiempo absoluto o relativo (`AYER`, `MAÑANA`, `ANTES`, `FUTURO`) deben situarse al inicio del enunciado discursivo antes de la acción. | `WARNING` |
 | **10** | **Alineación Temporal Acústica** | Las marcas de tiempo de las glosas deben circunscribirse dentro del intervalo de habla detectado por el ASR para evitar desfases perceptivos. | `WARNING` |
 | **11** | **Validez del Tipo de Seña** | Cada elemento debe clasificarse estrictamente en uno de los tipos válidos del enum `GlossType`: `SEÑA`, `DACTILOLOGÍA`, `CLASIFICADOR` o `EXPRESIÓN`. | `ERROR` |
 | **12** | **Presupuesto de Paráfrasis** | La longitud total de la secuencia no debe superar el presupuesto asignado (`compact`, `medium`, `expanded`), impidiendo expansiones hiperbólicas. | `WARNING` |
@@ -208,59 +207,39 @@ El validador estructural (`StructuralValidator`) audita automáticamente las sig
 
 ## 7. Catálogo de Endpoints de la API y Protocolos
 
-### 7.1 Endpoints REST Principales (`app/api/endpoints.py`)
+### 7.1 Endpoints REST Principales ([`app/api/endpoints.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/api/endpoints.py))
+- **`GET /api/v1/health`**: Estado de operatividad de los servicios `asr`, `nlp` y `storage` (SQLite).
+- **`POST /api/v1/transcribe`**: Transcripción de audio/video con `Faster-Whisper` y retorno de `WordTimestamp`.
+- **`POST /api/v1/translate`**: Traducción Español → `GlossOutput` con modos `detailed`, `legacy` o `debug`.
+- **`POST /api/v1/pipeline`**: Ejecución extremo a extremo (Audio/Video → ASR → 7 Etapas PLN → Glosas LSEC).
+- **`POST /api/v1/review/validate`** y **`GET /api/v1/review/history`**: Persistencia local de revisiones en SQLite.
 
-- **`GET /api/v1/health`**
-  - Verifica el estado de operatividad de los motores de ASR, NLP y almacenamiento local.
-  - **Respuesta:** estado de cada servicio (`asr`, `nlp`, `storage`) y versión de la API.
+### 7.2 Endpoints de Animaciones 3D VRM 1:1 y Exportación MP4 ([`app/api/animation_direct_endpoints.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/api/animation_direct_endpoints.py))
+Disponibles bajo `/api/v1/animations` y el alias `/api/animations-direct`:
+- **`GET /api/v1/animations/list?q=&limit=`** y **`GET /api/v1/animations/stats`**: Catálogo ordenado y estadísticas de las 4.143 señas VRM (`v2.6` / `v2.5`).
+- **`GET /api/v1/animations/resolve/{gloss}`** y **`POST /api/v1/animations/resolve`**: Resolución de glosas LSEC a clips de animación 3D.
+- **`GET /api/v1/animations/{sign_name}`**, **`/{sign_name}/qa`**, **`/{sign_name}/info`**, **`/{sign_name}/video`**, **`/{sign_name}/illustration`**: Entrega del `animation.json`, métricas QA, ficha lingüística, video MP4 Ultra HD e ilustración oficial.
+- **`POST /api/v1/animations/finalize-export-mp4`**: Codificación determinista a MP4 (`H.264 + AAC` a 30.0 FPS constantes) mediante `PyAV`.
 
-- **`POST /api/v1/transcribe`**
-  - **Entrada:** Archivo de audio multipart (`.wav`, `.mp3`, `.m4a`, etc.).
-  - **Función:** Ejecuta Faster-Whisper, aplica beam search y calcula probabilidades acústicas por palabra.
-  - **Salida:** Texto transcripto y arreglo de `WordTimestamp` (`word`, `start`, `end`, `probability`).
+### 7.3 Endpoints del Diccionario Oficial CONADIS ([`app/api/dictionary_endpoints.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/api/dictionary_endpoints.py))
+- **`GET /api/v1/dictionary/search`**, **`GET /api/v1/dictionary/{slug}`** y **`GET /api/v1/dictionary/stats`**: Búsqueda y consulta sobre las 4.252 fichas oficiales de CONADIS.
 
-- **`POST /api/v1/translate`**
-  - **Entrada:** JSON `{ "text": "¿Tú estudias en la universidad?", "mode": "detailed", "budget": "medium" }`.
-  - **Función:** Ejecuta la cadena semántico-discursiva, planifica glosas LSEC, vincula expresiones no manuales y evalúa las 13 invariantes.
-  - **Salida:** Objeto `GlossOutput` con glosas, roles semánticos, temporización, confianza multidimensional y estado de ejecución (`READY`, `REVIEW_REQUIRED` o `BLOCKED`).
+### 7.4 Endpoints de Anotación y MLOps ([`app/api/annotation_endpoints.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/api/annotation_endpoints.py))
+- **`GET /api/v1/dataset/manifest`**, **`POST /api/v1/dataset/validate-item`**, **`GET /api/v1/dataset/export`**: Estado del corpus particionado y auditoría SHA-256.
+- **`POST /api/v1/annotations/submit`** y **`GET /api/v1/annotations/queue?top_k=20`**: Registro inmutable de revisiones nativas y cola de aprendizaje activo.
+- **`POST /api/v1/mlops/benchmark`**: Evaluación automatizada sobre el *Frozen Test Set* (`PASS` / `FAIL`).
 
-- **`POST /api/v1/pipeline`**
-  - **Entrada:** Archivo de audio binario directo.
-  - **Función:** Ejecución completa extremo a extremo (Audio → ASR → Normalización → Semántica → LSEC → Temporización).
-
-### 7.2 Endpoints de Anotación y MLOps (`app/api/annotation_endpoints.py`)
-
-- **`GET /api/v1/dataset/manifest`**
-  - Entrega el desglose estadístico del corpus LSEC particionado (*Train*, *Validation*, *Test*, *Frozen Test*), variantes dialectales (Sierra vs. Costa) y reporte de auditoría SHA-256 de control de fugas.
-
-- **`POST /api/v1/annotations/submit`**
-  - Registra las revisiones de glosas y componentes no manuales realizadas por personas sordas o lingüistas. Almacena en un registro de solo adición (*append-only*) sin sobrescritura destructiva para trazabilidad ética.
-
-- **`GET /api/v1/annotations/queue?top_k=20`**
-  - Retorna los casos con mayor incertidumbre sintáctica o baja confianza para su priorización inmediata en la cola de validación humana.
-
-- **`POST /api/v1/mlops/benchmark`**
-  - Ejecuta la batería de pruebas de regresión contra el conjunto de datos congelado (*Frozen Test Set*). Evalúa exactitud estricta, similitud semántica y emite el dictamen de paso a producción (`PASS` o `FAIL`).
-
-### 7.3 Canal de Comunicación en Tiempo Real (`app/api/websocket.py`)
-
-- **`WS /ws/pipeline`**
-  - Permite la interacción continua y reactiva con el sistema.
-  - **Mensajes entrantes:** Chunks de audio binarios, fragmentos de texto o comandos de sincronización.
-  - **Mensajes salientes:**
-    - `transcription`: Actualizaciones parciales de la voz transcripta.
-    - `gloss_result`: Secuencia incremental de glosas LSEC a medida que se completan las cláusulas.
-    - `avatar_payload`: una glosa individual con sus marcadores no manuales y metadatos de secuencia (`sequence_index`, texto original, latencia), lista para que el visor 3D reproduzca el clip correspondiente. No incluye puntos clave de visión artificial.
+### 7.5 Canal de Comunicación en Tiempo Real ([`app/api/websocket.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/api/websocket.py))
+- **`WS /ws/pipeline`**: Transmisión bidireccional de audio/texto con respuesta incremental de `transcription`, `gloss_result` y `avatar_payload`.
 
 ---
 
 ## 8. Arquitectura de Datos y Principios Éticos de No-Contaminación
 
-El sistema cuenta con un esquema de datos formal (`app/core/dataset_schemas.py`) que implementa salvaguardas éticas fundamentales para el tratamiento de lenguas minoritarias:
-
-1. **Protección de Datos Nativos:** Toda propuesta generada automáticamente por algoritmos se marca de forma indeleble con el estado `MACHINE_PROPOSED`.
-2. **Barrera contra Contaminación (*Data Leak Barrier*):** Ningún ejemplo generado por máquina o sin consentimiento explícito (`NO_CONSENT`) puede ingresar a los conjuntos de entrenamiento (*Train*) o de prueba (*Ground Truth*). Solo ejemplos en estado `HUMAN_VERIFIED` por usuarios nativos competentes de LSEC son admitidos.
-3. **Auditoría Criptográfica SHA-256:** Cada texto y su respectiva secuencia de glosas se auditan criptográficamente para evitar solapamientos accidentales entre las particiones de entrenamiento y evaluación.
+El esquema de datos formal ([`app/core/dataset_schemas.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/core/dataset_schemas.py)) implementa salvaguardas éticas estrictas:
+1. **Protección de Datos Nativos:** Toda propuesta automática se etiqueta con `MACHINE_PROPOSED`.
+2. **Barrera contra Contaminación (*Data Leak Barrier*):** Ningún ejemplo `MACHINE_PROPOSED` o sin consentimiento (`NO_CONSENT`) puede ingresar a las particiones `TRAIN`, `TEST` o `FROZEN_TEST`. Solo se admiten ejemplos validados por personas sordas nativas (`HUMAN_VERIFIED`).
+3. **Auditoría Criptográfica SHA-256:** Cada par texto-glosa se verifica criptográficamente para impedir fugas entre entrenamiento y evaluación.
 
 ---
 
@@ -268,17 +247,11 @@ El sistema cuenta con un esquema de datos formal (`app/core/dataset_schemas.py`)
 
 | Dominio | Característica Técnica | Beneficio Operativo |
 | :--- | :--- | :--- |
-| **Voz** | Faster-Whisper con CTranslate2 | Transcripción local confidencial, ultrarrápida y con marcas de tiempo a nivel de palabra sin dependencia de APIs en la nube. |
-| **PLN** | spaCy + Roles Temáticos + Pro-Drop | Análisis profundo de la oración en español y resolución precisa de pronombres implícitos. |
-| **Gramática LSEC** | DiscoursePlanner | Generación de oraciones naturales en LSEC (Tópico-Comentario, SOV, negación final y marcadores no manuales de interrogación). |
-| **Control de Calidad** | StructuralValidator (13 Invariantes) | Blindaje algorítmico contra agramaticalidades antes de que el contenido llegue al usuario o al avatar. |
-| **Edición Frontend** | LSEC Studio (Vanilla Web + Canvas) | Interfaz no lineal bilingüe de 60 FPS, accesible, con edición in-situ y navegación precisa por fotogramas. |
-| **Composición Video** | MediaRecorder en Navegador | Exportación de videos con subtítulos y glosas quemadas directamente en el cliente, reduciendo a cero el coste de render en servidor. |
-| **Visor 3D** | Three.js + VRM 1.0 | Reproduce clips JSON de animación generados por un proyecto externo; este sistema no genera señas. |
-| **MLOps y Ética** | Active Learning + Auditoría SHA-256 | Entrenamiento continuo priorizado por incertidumbre garantizando la soberanía lingüística de la comunidad sorda. |
-
----
-
-## 10. Conclusión
-
-El sistema **LSEC Translator** representa una arquitectura de vanguardia que aúna el rigor de la lingüística computacional aplicada a la Lengua de Señas Ecuatoriana con la eficiencia de los estándares web modernos y el aprendizaje automático ético. Al desacoplar la ingesta, el análisis semántico, la validación formal y la estación de trabajo audiovisual, la plataforma garantiza tanto la fidelidad gramatical requerida por la comunidad sorda como la versatilidad técnica necesaria para integraciones en entornos web, educativos, institucionales y motores de renderizado 3D en tiempo real.
+| **Voz (ASR)** | `Faster-Whisper` con `CTranslate2` (`FP16`/`INT8`) | Transcripción local confidencial, ultrarrápida y con marcas de tiempo por palabra sin APIs en la nube. |
+| **PLN y Gramática LSEC** | `spaCy` + 7 Etapas + 22 Reglas LSEC + 4 Reglas FENASEC | Conversión morfosintáctica fiel a la estructura visoespacial de la LSEC (`TIEMPO + TÓPICO + SOV`). |
+| **Lexicón Oficial** | Diccionario CONADIS (4.252 señas) + Cascada Léxica | Trazabilidad oficial con detección de frases multipalabra y alerta de términos no verificados. |
+| **Control de Calidad** | `StructuralValidator` (13 Invariantes) | Blindaje algorítmico contra agramaticalidades antes de su reproducción o exportación. |
+| **Captura y Cinemática 3D** | `HaMeR` (`MANO`) + `DWPose`/`RTMW3D` + `MediaPipe` + `Stage C v2.6` | **4.143 señas VRM 1:1** con manos exactas en $\text{SO}(3)$, filtro One-Euro, IK analítica anti-colisión y expresiones faciales ARKit. |
+| **Edición y Visor 3D** | *LSEC Studio* (`/studio`) + Visor (`/viewer`) con `Three.js` / `three-vrm` | Estación NLE bilingüe a 60 FPS y reproductor 3D interactivo sincronizados con el avatar `LSEC-Interpreter-Female.vrm`. |
+| **Exportación de Video** | `Canvas 2D` (30 FPS) + `MediaRecorder` + `PyAV` (`libx264` + `aac`) | Exportación determinista a MP4 con avatar 3D PiP, glosas LSEC, subtítulos quemados y audio original sincronizado. |
+| **MLOps y Ética** | Active Learning + Auditoría SHA-256 | Mejora continua priorizada por incertidumbre garantizando la soberanía lingüística de la comunidad sorda. |

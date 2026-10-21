@@ -107,6 +107,25 @@ _SLOGAN_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+# Muletillas interrogativas de cierre (F-06)
+_TAG_QUESTION_RE = re.compile(
+    r"\s*[,;]?\s*¿\s*(sí|si|no|verdad|cierto|ya)\s*\?\s*$",
+    re.IGNORECASE,
+)
+
+# Cortesía (F-07)
+_COURTESY_RE = re.compile(r"\s*,?\s*\bpor\s+favor\b\s*,?", re.IGNORECASE)
+
+
+def _hoist_courtesy(s: str) -> str:
+    m = _COURTESY_RE.search(s)
+    if not m:
+        return s
+    rest = (s[: m.start()] + " " + s[m.end() :]).strip()
+    if not rest:
+        return "por favor"
+    return f"por favor {rest}"
+
 
 class DiscourseSegmenter:
     """
@@ -140,11 +159,24 @@ class DiscourseSegmenter:
             if not sent:
                 continue
 
+            tag = _TAG_QUESTION_RE.search(sent)
+            if tag:
+                sent = sent[: tag.start()].strip()
+
             sub_units = self._segment_sentence_into_propositions(sent, unit_id)
+            if tag and sub_units:
+                sub_units[-1].context_info = {
+                    **(sub_units[-1].context_info or {}),
+                    "tag_question": True,
+                }
             for su in sub_units:
+                if "¿" in su.text and "?" not in su.text:
+                    su.text = su.text.rstrip() + "?"
                 su.id = unit_id
                 units.append(su)
                 unit_id += 1
+
+        units = self._merge_orphan_connectors(units)
 
         # Paso 3: Asignar funciones retóricas e intenciones comunicativas
         self._assign_rhetorical_functions(units)
@@ -165,6 +197,9 @@ class DiscourseSegmenter:
         Analiza la estructura sintáctico-semántica de una oración y extrae
         las proposiciones individuales.
         """
+        tag = _TAG_QUESTION_RE.search(sent)
+        if tag:
+            sent = sent[: tag.start()].strip()
         clean_sent = sent.strip().rstrip(".!?")
         propositions: List[DiscourseUnit] = []
 
@@ -214,7 +249,7 @@ class DiscourseSegmenter:
             propositions.append(
                 DiscourseUnit(
                     id=base_id,
-                    text=f"carreras de grado varias ofrecer" if "carrera" in offer_part.lower() else f"{offer_part} ofrecer",
+                    text=offer_part,
                     unit_type="academic_offer",
                     rhetorical_function="academic_offer",
                     fragment_type="COMPLETE_PROPOSITION",
@@ -225,7 +260,7 @@ class DiscourseSegmenter:
             propositions.append(
                 DiscourseUnit(
                     id=base_id,
-                    text=f"campus dos {cleaned_loc}" if "campus" in clean_sent.lower() else f"sedes {cleaned_loc}",
+                    text=f"campus {cleaned_loc}" if "campus" in clean_sent.lower() else f"sedes {cleaned_loc}",
                     unit_type="campus_enumeration",
                     rhetorical_function="campus_enumeration",
                     fragment_type="ENUMERATION_FRAGMENT",
@@ -469,16 +504,53 @@ class DiscourseSegmenter:
             )
             return propositions
 
+        # 3b-semi. División por punto y coma ';' (cuando no aplica 'no solo' ni 'más que')
+        if ";" in clean_sent:
+            semi_parts = [p.strip() for p in clean_sent.split(";") if p.strip()]
+            if len(semi_parts) >= 2:
+                res_units: List[DiscourseUnit] = []
+                for sp in semi_parts:
+                    res_units.extend(self._segment_sentence_into_propositions(sp, base_id))
+                return res_units
+
+        # 3b-paren. Incisos parentéticos con cláusula subordinada (ej. "(si el director ya está presente)")
+        paren_match = re.search(r"\(([^()]{8,})\)", clean_sent)
+        if paren_match:
+            before_p = clean_sent[: paren_match.start()].strip().rstrip(",;:")
+            inside_p = paren_match.group(1).strip()
+            after_p = clean_sent[paren_match.end() :].strip().lstrip(",;:").strip()
+            if len(inside_p.split()) >= 3 and self._clause_has_verb(inside_p) and (before_p or after_p):
+                res_units = []
+                if before_p:
+                    res_units.extend(self._segment_sentence_into_propositions(before_p, base_id))
+                res_units.extend(self._segment_sentence_into_propositions(inside_p, base_id))
+                if after_p:
+                    res_units.extend(self._segment_sentence_into_propositions(after_p, base_id))
+                return res_units
+
+        # Normalizar coma tras conectores/marcadores de inicio ("Primero, cuando..." -> "Primero cuando...", "sin embargo, ..." -> "sin embargo ...")
+        clean_sent = re.sub(
+            r"^(primero|despu[eé]s|luego|adem[aá]s|finalmente)\s*,\s*",
+            r"\1 ",
+            clean_sent,
+            flags=re.IGNORECASE,
+        ).strip()
+
         # 3c. Chequeo de cláusula temporal/presente tras coma ("...ya lo hicieron, hoy crean...")
-        # NOTA CRÍTICA: NO dividir si "hoy" es parte de "haz posible hoy lo que imaginas"
+        # NOTA CRÍTICA: NO dividir si "hoy" es parte de "haz posible hoy lo que imaginas" ni tras conector ("pero hoy...")
         if "hoy" in clean_sent.lower() and "," in clean_sent:
             idx = clean_sent.lower().find("hoy")
             if idx > 3:
                 before = clean_sent[:idx].strip().rstrip(",;:")
                 after = clean_sent[idx:].strip()
-                # Solo dividir si 'before' contiene un predicado completo independiente
-                # y NO es "haz posible" o una construcción dependiente
-                if before and not any(before.lower().endswith(v) for v in ("haz", "haz posible", "hacer", "hace", "convierte")):
+                if (
+                    before
+                    and not any(before.lower().endswith(v) for v in ("haz", "haz posible", "hacer", "hace", "convierte"))
+                    and not any(
+                        before.lower().endswith(c)
+                        for c in ("pero", "embargo", "obstante", "aunque", "y", "o", "porque", "cuando", "mientras", "si")
+                    )
+                ):
                     left_sub = self._segment_sentence_into_propositions(before, base_id)
                     right_sub = self._segment_sentence_into_propositions(after, base_id)
                     return left_sub + right_sub
@@ -527,12 +599,35 @@ class DiscourseSegmenter:
                 right_sub = self._segment_sentence_into_propositions(colon_parts[1], base_id)
                 return left_sub + right_sub
 
-        # 5. Chequeo de conectores adversativos ("pero", "sin embargo")
+        # 5. Chequeo de conectores adversativos ("pero", "sin embargo", "no obstante", "aunque")
         for adv_pat in _ADVERSATIVE_CONNECTORS:
             match = adv_pat.search(clean_sent)
-            if match and match.start() > 5:
-                before = clean_sent[:match.start()].strip().rstrip(",;:")
-                after = clean_sent[match.start():].strip()
+            if match and match.start() == 0:
+                cleaned_adv = re.sub(
+                    r"^(sin\s+embargo|no\s+obstante|pero|aunque)\s*,\s*",
+                    r"\1 ",
+                    clean_sent,
+                    flags=re.IGNORECASE,
+                ).strip()
+                if cleaned_adv != clean_sent:
+                    sub_u = self._segment_sentence_into_propositions(cleaned_adv, base_id)
+                    for u in sub_u:
+                        u.unit_type = "contrast"
+                        u.discourse_relation = "but"
+                        u.has_contrast = True
+                    return sub_u
+                else:
+                    # Ya no tiene coma inmediata tras el conector inicial; marcar relación si es cláusula simple
+                    pass
+            elif match and match.start() > 5:
+                before = clean_sent[: match.start()].strip().rstrip(",;:")
+                after = clean_sent[match.start() :].strip()
+                after = re.sub(
+                    r"^(sin\s+embargo|no\s+obstante|pero|aunque)\s*,\s*",
+                    r"\1 ",
+                    after,
+                    flags=re.IGNORECASE,
+                ).strip()
 
                 before_units = self._segment_sentence_into_propositions(before, base_id)
 
@@ -566,6 +661,27 @@ class DiscourseSegmenter:
                 )
                 return before_units + [after_unit]
 
+        # 5b. Subordinadas causales ("porque") y simultáneas ("mientras")
+        porque_match = re.search(r"\bporque\b", clean_sent, re.IGNORECASE)
+        if porque_match and porque_match.start() > 3:
+            before = clean_sent[: porque_match.start()].strip().rstrip(",;:")
+            after = clean_sent[porque_match.start() :].strip()
+            if self._clause_has_verb(before) and self._clause_has_verb(after):
+                left_u = self._segment_sentence_into_propositions(before, base_id)
+                right_u = self._segment_sentence_into_propositions(after, base_id)
+                if right_u:
+                    right_u[0].discourse_relation = "because"
+                return left_u + right_u
+
+        mientras_match = re.search(r"\bmientras\b", clean_sent, re.IGNORECASE)
+        if mientras_match and mientras_match.start() > 3:
+            before = clean_sent[: mientras_match.start()].strip().rstrip(",;:")
+            after = clean_sent[mientras_match.start() :].strip()
+            if self._clause_has_verb(before) and self._clause_has_verb(after):
+                left_u = self._segment_sentence_into_propositions(before, base_id)
+                right_u = self._segment_sentence_into_propositions(after, base_id)
+                return left_u + right_u
+
         # 6. Chequeo de subordinadas reflexivas / interrogativas indirectas ("libertad para decidir quién quieres ser")
         if _INDIRECT_WH_PATTERN.search(clean_sent) or "decidir quién" in clean_sent.lower():
             propositions.append(
@@ -579,10 +695,10 @@ class DiscourseSegmenter:
             )
             return propositions
 
-        # 7. Chequeo de cláusulas con coma y verbo imperativo independiente ("Decide sobre tu futuro, haz posible hoy lo que imaginas")
+        # 7. Chequeo de cláusulas con coma y verbo independiente ("Decide sobre tu futuro, haz posible hoy lo que imaginas")
         if "," in clean_sent:
             comma_parts = [p.strip() for p in clean_sent.split(",") if p.strip()]
-            if len(comma_parts) > 1:
+            if len(comma_parts) > 1 and not any(p.lower() == "por favor" for p in comma_parts):
                 split_units: List[DiscourseUnit] = []
                 for idx, cp in enumerate(comma_parts):
                     first_word = cp.split()[0].lower() if cp.split() else ""
@@ -597,8 +713,46 @@ class DiscourseSegmenter:
                     )
                 if all(len(u.text.split()) >= 2 for u in split_units):
                     if any(u.unit_type == "imperative" for u in split_units) or len(comma_parts) == 2:
-                        if any(any(v in p.lower() for v in ("decide", "haz", "imagina", "educamos", "preparamos", "crean", "construyen", "enorgullece", "es", "son", "ofrece", "convierte")) for p in comma_parts):
+                        step7_verbs = (
+                            "decide", "haz", "imagina", "educamos", "preparamos",
+                            "crean", "construyen", "enorgullece", "es", "son", "ofrece", "convierte",
+                        )
+                        if any(
+                            any(re.search(rf"\b{re.escape(v)}\b", p.lower()) for v in step7_verbs)
+                            for p in comma_parts
+                        ) or all(self._clause_has_verb(p) for p in comma_parts):
                             return split_units
+
+        # 7b. Coordinación copulativa 'y' entre cláusulas finitas con distinto sujeto, polaridad o marco temporal (F-21 / D5)
+        if (
+            " y " in clean_sent.lower()
+            and "?" not in clean_sent
+            and "¿" not in clean_sent
+            and not any(w in clean_sent.lower() for w in ("cuándo", "dónde", "quién", "cómo", "tulcán", "cayambe"))
+        ):
+            y_match = re.search(r"\s+y\s+", clean_sent, re.IGNORECASE)
+            if y_match:
+                left_y = clean_sent[: y_match.start()].strip().rstrip(",")
+                right_y = clean_sent[y_match.end() :].strip()
+                if (
+                    len(left_y.split()) >= 2
+                    and len(right_y.split()) >= 2
+                    and self._clause_has_verb(left_y)
+                    and self._clause_has_verb(right_y)
+                ):
+                    r_low = right_y.lower()
+                    p_left = self._clause_person(left_y)
+                    p_right = self._clause_person(right_y)
+                    diff_person = bool(p_left and p_right and p_left != p_right)
+                    starts_neg = r_low.startswith(("no ", "nunca ", "jamás ", "tampoco "))
+                    starts_temp = r_low.startswith(("mañana ", "ayer ", "hoy ", "antes ", "ahora ", "después ", "luego ", "hay "))
+                    starts_subj = r_low.startswith(
+                        ("yo ", "tú ", "él ", "ella ", "nosotros ", "ustedes ", "ellos ", "ellas ", "el ", "la ", "los ", "las ", "un ", "una ", "unos ", "unas ")
+                    )
+                    if diff_person or starts_neg or starts_temp or starts_subj:
+                        left_units = self._segment_sentence_into_propositions(left_y, base_id)
+                        right_units = self._segment_sentence_into_propositions(right_y, base_id)
+                        return left_units + right_units
 
         # 8. Cláusula imperativa directa
         first_word = clean_sent.split()[0].lower() if clean_sent.split() else ""
@@ -613,15 +767,57 @@ class DiscourseSegmenter:
             )
             return propositions
 
-        # 9. Cláusula estándar / proposición simple
+        # 9. Cláusula estándar / proposición simple (preservar relación adversativa si inicia con conector)
+        starts_adv = bool(re.match(r"^(sin\s+embargo|no\s+obstante|pero|aunque)\b", clean_sent, re.IGNORECASE))
         propositions.append(
             DiscourseUnit(
                 id=base_id,
                 text=clean_sent,
-                unit_type="statement",
+                unit_type="contrast" if starts_adv else "statement",
+                discourse_relation="but" if starts_adv else None,
+                has_contrast=starts_adv,
             )
         )
         return propositions
+
+    def _clause_has_verb(self, text: str) -> bool:
+        from app.services.semantic_parser import PunctuationAnalyzer, SpanishVerbLexicon
+
+        t_low = text.strip().lower()
+        if not t_low or t_low.startswith("a pesar de"):
+            return False
+        words = [PunctuationAnalyzer.strip_punctuation(w).lower() for w in text.split()]
+        words = [w for w in words if w]
+        for w in words:
+            if w in SpanishVerbLexicon.NOMINAL_HOMOGRAPHS:
+                continue
+            if w in _IMPERATIVE_VERBS or SpanishVerbLexicon.is_verb(w):
+                return True
+        if self._nlp is not None:
+            doc = self._nlp(text)
+            for t in doc:
+                w_c = PunctuationAnalyzer.strip_punctuation(t.text.lower())
+                if w_c in SpanishVerbLexicon.NOMINAL_HOMOGRAPHS:
+                    continue
+                if t.pos_ in ("VERB", "AUX"):
+                    return True
+        return False
+
+    def _clause_person(self, text: str) -> Optional[str]:
+        from app.services.semantic_parser import PunctuationAnalyzer, SpanishVerbLexicon
+
+        words = [PunctuationAnalyzer.strip_punctuation(w).lower() for w in text.split()]
+        for w in words:
+            if not w or w in SpanishVerbLexicon.NOMINAL_HOMOGRAPHS:
+                continue
+            p = SpanishVerbLexicon.get_person(w)
+            if p:
+                return p
+            if w in ("es", "está", "fue", "era", "estaba"):
+                return "3"
+            if w in ("son", "están", "fueron", "eran", "estaban"):
+                return "3-PL"
+        return None
 
     def _assign_rhetorical_functions(self, units: List[DiscourseUnit]) -> None:
         """Asigna funciones retóricas y etiquetas temáticas según contenido discursivo."""
@@ -637,10 +833,18 @@ class DiscourseSegmenter:
             elif any(w in text_lower for w in ("quién quieres ser", "quién eres", "imparable", "identidad", "eliges")):
                 u.rhetorical_function = "identity"
 
-            elif any(w in text_lower for w in ("campus", "tulcán", "cayambe")):
+            elif (
+                u.rhetorical_function == "campus_enumeration"
+                or (
+                    "campus" in text_lower
+                    and "tulcán" in text_lower
+                    and "cayambe" in text_lower
+                    and not self._clause_has_verb(u.text)
+                )
+            ):
                 u.rhetorical_function = "campus_enumeration"
 
-            elif any(w in text_lower for w in ("carrera", "carreras", "grado", "ofrec")):
+            elif u.rhetorical_function == "academic_offer" or ("carrera" in text_lower and "ofrec" in text_lower):
                 u.rhetorical_function = "academic_offer"
 
             elif any(w in text_lower for w in ("sostenible", "sostenibilidad")):
@@ -652,19 +856,23 @@ class DiscourseSegmenter:
             elif any(w in text_lower for w in ("profesional", "seres humanos", "humano", "confianza", "cercanía", "inspir")):
                 if "más que profesionales" in text_lower or u.rhetorical_function == "human_focus_1":
                     u.rhetorical_function = "human_focus_1"
-                elif "seres humanos" in text_lower or u.rhetorical_function == "human_focus_2":
+                elif ("seres humanos" in text_lower and "form" in text_lower) or u.rhetorical_function == "human_focus_2":
                     u.rhetorical_function = "human_focus_2"
-                elif "confianza" in text_lower or u.rhetorical_function == "human_focus_3":
+                elif ("confianza" in text_lower and "inspir" in text_lower) or u.rhetorical_function == "human_focus_3":
                     u.rhetorical_function = "human_focus_3"
-                elif "cercanía" in text_lower or u.rhetorical_function == "human_focus_4":
+                elif text_lower in ("y cercanía", "cercanía") or u.rhetorical_function == "human_focus_4":
                     u.rhetorical_function = "human_focus_4"
                 else:
                     u.rhetorical_function = "human_focus"
 
-            elif any(w in text_lower for w in ("preparar", "preparamos", "primer día")):
+            elif ("preparamos" in text_lower or "preparar" in text_lower) and (
+                "primer día" in text_lower or "aquí" in text_lower
+            ):
                 u.rhetorical_function = "preparation_start"
 
-            elif any(w in text_lower for w in ("excelencia", "innovación")) and "preparar" not in text_lower:
+            elif "excelencia" in text_lower and (
+                "innovación" in text_lower or "tecnología" in text_lower
+            ) and "preparar" not in text_lower:
                 u.rhetorical_function = "educational_resources"
 
             elif any(w in text_lower for w in ("tecnología", "evoluciona", "contigo")):
@@ -685,8 +893,37 @@ class DiscourseSegmenter:
             elif any(w in text_lower for w in ("haz posible", "imaginas", "imagina", "realidad", "convierte")):
                 u.rhetorical_function = "imagination_to_reality"
 
-            elif any(w in text_lower for w in ("educamos", "transformar el mundo", "upec")):
+            elif any(w in text_lower for w in ("educamos", "transformar el mundo")):
                 u.rhetorical_function = "closure"
+
+    def _merge_orphan_connectors(self, units: List[DiscourseUnit]) -> List[DiscourseUnit]:
+        """Fusiona unidades huérfanas que contienen únicamente un conector discursivo con la unidad adyacente (F-20)."""
+        if len(units) <= 1:
+            return units
+        orphan_re = re.compile(
+            r"^(?:sin\s+embargo|no\s+obstante|pero|aunque|adem[aá]s|primero|despu[eé]s|luego|entonces|por\s+favor)[,;:!?.]*$",
+            re.IGNORECASE,
+        )
+        merged: List[DiscourseUnit] = []
+        idx = 0
+        while idx < len(units):
+            curr = units[idx]
+            curr_clean = curr.text.strip()
+            if orphan_re.match(curr_clean) and idx + 1 < len(units):
+                nxt = units[idx + 1]
+                conn_word = curr_clean.rstrip(",;:!?. ").strip()
+                nxt.text = f"{conn_word} {nxt.text.lstrip()}"
+                if re.match(r"^(?:sin\s+embargo|no\s+obstante|pero|aunque)$", conn_word, re.IGNORECASE):
+                    nxt.unit_type = "contrast"
+                    nxt.discourse_relation = "but"
+                    nxt.has_contrast = True
+                idx += 1
+                continue
+            merged.append(curr)
+            idx += 1
+        for new_id, u in enumerate(merged):
+            u.id = new_id
+        return merged
 
     def set_nlp(self, nlp) -> None:
         self._nlp = nlp

@@ -2,226 +2,1018 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<title>LSEC · Reproductor 3D de Señas (Pipeline Directo 1:1)</title>
+<title>LSEC · Modelo Paramétrico MANO M(β, θ) Aplicado al Avatar VRM 1.0 (Pipeline 1:1)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-  :root { color-scheme: dark; }
+  :root {
+    color-scheme: dark;
+    --bg-main: #07090e;
+    --bg-panel: rgba(12, 15, 23, 0.96);
+    --bg-card: rgba(19, 24, 36, 0.9);
+    --border-subtle: #22293a;
+    --border-accent: rgba(56, 189, 248, 0.45);
+    --text-main: #f1f5f9;
+    --text-muted: #94a3b8;
+    --accent: #6366f1;
+    --col-wrist: #38bdf8;
+    --col-thumb: #f59e0b;
+    --col-index: #6366f1;
+    --col-middle: #10b981;
+    --col-ring: #a855f7;
+    --col-little: #ec4899;
+  }
   * { box-sizing: border-box; }
-  body { margin: 0; padding: 0; font: 14px system-ui, -apple-system, sans-serif; background: #121316; color: #e5e7eb; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
-  
+  body {
+    margin: 0;
+    padding: 0;
+    font: 12.5px/1.38 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-main);
+    color: var(--text-main);
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* HEADER */
   header {
-    padding: 10px 18px;
+    padding: 7px 14px;
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 8px;
     align-items: center;
-    background: #1a1c23;
-    border-bottom: 1px solid #2d3139;
-    z-index: 10;
+    background: #0d111a;
+    border-bottom: 1px solid var(--border-subtle);
+    z-index: 30;
   }
-  
   .brand {
     font-weight: 700;
-    font-size: 15px;
-    color: #a5b4fc;
+    font-size: 13.5px;
+    color: #f8fafc;
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-right: 6px;
+    gap: 7px;
   }
   .brand-badge {
-    background: #312e81;
-    color: #c7d2fe;
-    font-size: 11px;
+    background: linear-gradient(135deg, #1e1b4b, #3730a3);
+    color: #e0e7ff;
+    font-size: 10.5px;
     padding: 2px 7px;
     border-radius: 999px;
     font-weight: 600;
+    border: 1px solid rgba(129, 140, 248, 0.4);
+  }
+  .brand-badge.mano {
+    background: linear-gradient(135deg, #064e3b, #047857);
+    color: #d1fae5;
+    border-color: rgba(52, 211, 153, 0.45);
+  }
+  .brand-badge.cyan {
+    background: linear-gradient(135deg, #0c4a6e, #0369a1);
+    color: #e0f2fe;
+    border-color: rgba(56, 189, 248, 0.45);
   }
 
-  .file-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: #2b303c;
-    padding: 6px 12px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 500;
-    font-size: 13px;
-    transition: background 0.2s;
-  }
-  .file-btn:hover { background: #373e4d; }
-  .file-btn input { display: none; }
-  
   .opt-group {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 5px;
   }
-  
   select, button, input[type="text"] {
-    background: #2b303c;
-    color: #e5e7eb;
-    border: 1px solid #3d4452;
-    padding: 6px 12px;
+    background: #171d2b;
+    color: #e2e8f0;
+    border: 1px solid #2e384f;
+    padding: 4px 9px;
     border-radius: 6px;
-    font-size: 13px;
+    font-size: 11.5px;
   }
-  input[type="text"]:focus, select:focus, button:focus { outline: none; border-color: #6366f1; }
-  button { cursor: pointer; font-weight: 500; transition: background 0.2s, border-color 0.2s; }
-  button:hover { background: #373e4d; }
-  button.active { background: #4f46e5; border-color: #6366f1; }
-  button.primary { background: #4338ca; border-color: #6366f1; color: #fff; }
-  button.primary:hover { background: #4f46e5; }
+  input[type="text"]:focus, select:focus, button:focus {
+    outline: none;
+    border-color: #38bdf8;
+  }
+  button {
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.15s ease;
+  }
+  button:hover { background: #232c40; }
+  button.active {
+    background: #0284c7;
+    border-color: #38bdf8;
+    color: #fff;
+    font-weight: 600;
+  }
+  button.primary {
+    background: #4f46e5;
+    border-color: #818cf8;
+    color: #fff;
+    font-weight: 600;
+  }
+  button.primary:hover { background: #4338ca; }
 
   .quick-pill {
-    padding: 3px 8px;
-    font-size: 12px;
-    background: #1f242f;
-    border: 1px solid #374151;
-    border-radius: 12px;
+    padding: 3px 7px;
+    font-size: 11px;
+    background: #141926;
+    border: 1px solid #293247;
+    border-radius: 999px;
     cursor: pointer;
+    color: #cbd5e1;
   }
-  .quick-pill:hover { background: #374151; border-color: #6366f1; }
+  .quick-pill:hover {
+    background: #252f45;
+    border-color: #38bdf8;
+    color: #fff;
+  }
 
-  #stage {
-    flex: 1;
-    position: relative;
-    width: 100%;
-    background: radial-gradient(circle at 50% 40%, #1e222d 0%, #0e1015 100%);
-  }
-  canvas { width: 100%; height: 100%; display: block; }
-  
-  footer {
-    padding: 10px 18px;
-    display: flex;
-    gap: 14px;
+  .chk-pill {
+    display: inline-flex;
     align-items: center;
-    background: #1a1c23;
-    border-top: 1px solid #2d3139;
-  }
-  
-  #scrub {
-    flex: 1;
-    accent-color: #6366f1;
+    gap: 4px;
+    background: #141926;
+    border: 1px solid #293247;
+    padding: 3.5px 8px;
+    border-radius: 6px;
+    font-size: 11px;
     cursor: pointer;
+    user-select: none;
+    color: #cbd5e1;
   }
-  
-  #info {
-    font-variant-numeric: tabular-nums;
-    font-family: monospace;
-    font-size: 13px;
-    color: #9ca3af;
-    min-width: 240px;
-    text-align: right;
-  }
-  
-  #status-banner {
-    position: absolute;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(17, 24, 39, 0.88);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(99, 102, 241, 0.4);
-    padding: 8px 18px;
-    border-radius: 20px;
-    font-size: 13px;
-    font-weight: 500;
-    pointer-events: none;
-    color: #e0e7ff;
-    transition: opacity 0.3s;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-  }
+  .chk-pill input { margin: 0; accent-color: #0284c7; }
 
   .nav-links {
     margin-left: auto;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 5px;
   }
-  .nav-link {
-    color: #9ca3af;
-    text-decoration: none;
-    font-size: 12px;
+  .file-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #171d2b;
+    border: 1px solid #2e384f;
     padding: 4px 8px;
-    border-radius: 4px;
-    transition: color 0.2s;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11px;
   }
-  .nav-link:hover { color: #fff; background: #262b35; }
+  .file-btn input { display: none; }
+
+  /* WORKSPACE */
+  #workspace {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 390px 1fr 430px;
+    min-height: 0;
+    position: relative;
+  }
+  #workspace.clean-mode {
+    grid-template-columns: 0px 1fr 0px;
+  }
+  #workspace.clean-mode .side-panel {
+    display: none;
+  }
+
+  .side-panel {
+    background: var(--bg-panel);
+    border-right: 1px solid var(--border-subtle);
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding: 8px 10px;
+    overflow-y: auto;
+    z-index: 15;
+  }
+  .side-panel.right {
+    border-right: none;
+    border-left: 1px solid var(--border-subtle);
+  }
+  .side-panel::-webkit-scrollbar { width: 4px; }
+  .side-panel::-webkit-scrollbar-thumb { background: #2d3748; border-radius: 4px; }
+
+  .panel-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+  .panel-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #38bdf8;
+    margin: 0 0 6px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .panel-title .sub-badge {
+    font-size: 9.5px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(56, 189, 248, 0.14);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    color: #bae6fd;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  /* MATHEMATICAL EQUATION BLOCKS */
+  .eq-box {
+    background: #070a10;
+    border: 1px solid #1e293b;
+    border-left: 3px solid #38bdf8;
+    border-radius: 5px;
+    padding: 5px 8px;
+    margin-bottom: 5px;
+    font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+    font-size: 10.5px;
+    color: #e2e8f0;
+  }
+  .eq-box.amber { border-left-color: #f59e0b; }
+  .eq-box.emerald { border-left-color: #10b981; }
+  .eq-box.purple { border-left-color: #a855f7; }
+
+  .eq-hdr {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'Inter', sans-serif;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #cbd5e1;
+    margin-bottom: 2px;
+  }
+  .eq-hdr span.tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    color: #38bdf8;
+    font-weight: 600;
+  }
+  .eq-math {
+    color: #93c5fd;
+    font-weight: 600;
+    line-height: 1.45;
+  }
+  .eq-math em {
+    color: #34d399;
+    font-style: normal;
+  }
+  .eq-math strong {
+    color: #fbbf24;
+  }
+  .eq-sub {
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    color: #94a3b8;
+    margin-top: 2px;
+  }
+
+  /* LIVE SO(3) MATRIX & SHAPE PCA DISPLAY */
+  .matrix-grid-wrap {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .so3-box {
+    background: #070a10;
+    border: 1px solid #1e293b;
+    border-radius: 5px;
+    padding: 5px 7px;
+  }
+  .so3-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: #cbd5e1;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 3px;
+  }
+  .so3-mat {
+    font-family: 'JetBrains Mono', Consolas, monospace;
+    font-size: 9.8px;
+    color: #38bdf8;
+    line-height: 1.35;
+    white-space: pre;
+    background: rgba(15, 23, 42, 0.6);
+    padding: 3px 5px;
+    border-radius: 4px;
+    border: 1px solid rgba(56, 189, 248, 0.15);
+  }
+  .so3-meta {
+    font-family: 'JetBrains Mono', Consolas, monospace;
+    font-size: 9.5px;
+    color: #34d399;
+    margin-top: 3px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* BETA PCA BARS */
+  .beta-bars {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 3px;
+    margin-top: 4px;
+    align-items: end;
+    height: 36px;
+    padding: 3px 4px;
+    background: #070a10;
+    border: 1px solid #1e293b;
+    border-radius: 4px;
+  }
+  .beta-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  .beta-bar {
+    width: 100%;
+    background: linear-gradient(180deg, #38bdf8, #6366f1);
+    border-radius: 2px;
+    min-height: 3px;
+  }
+  .beta-lbl {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8.5px;
+    color: #64748b;
+  }
+
+  /* VIDEO & QA METRICS */
+  .video-ref-wrap {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 7px;
+    align-items: center;
+  }
+  .video-box {
+    position: relative;
+    width: 120px;
+    height: 82px;
+    background: #05070a;
+    border: 1px solid #2b3348;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .video-box video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .video-box .vid-tag {
+    position: absolute;
+    bottom: 2px;
+    left: 3px;
+    background: rgba(0, 0, 0, 0.82);
+    color: #38bdf8;
+    font-size: 9px;
+    font-weight: 600;
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px;
+  }
+  .m-item {
+    background: #070a10;
+    border: 1px solid #1e293b;
+    border-radius: 4px;
+    padding: 4px 6px;
+  }
+  .m-label {
+    font-size: 9.5px;
+    color: var(--text-muted);
+    display: block;
+  }
+  .m-val {
+    font-family: 'JetBrains Mono', Consolas, monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: #f8fafc;
+  }
+  .m-val.ok { color: #34d399; }
+  .m-val.cyan { color: #38bdf8; }
+  .m-val.amber { color: #fbbf24; }
+
+  /* STAGE / 3D VIEWPORT */
+  #stage {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at 50% 42%, #1a2236 0%, #07090f 100%);
+    overflow: hidden;
+  }
+  #stage canvas.webgl {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* DYNAMIC SVG CALLOUT OVERLAY ON 3D STAGE */
+  #callout-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 8;
+  }
+  .callout-card {
+    position: absolute;
+    background: rgba(8, 12, 20, 0.88);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(56, 189, 248, 0.55);
+    border-left: 3px solid #38bdf8;
+    border-radius: 6px;
+    padding: 5px 8px;
+    pointer-events: none;
+    z-index: 9;
+    font-family: 'JetBrains Mono', Consolas, monospace;
+    font-size: 10px;
+    color: #e2e8f0;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+    max-width: 245px;
+  }
+  .callout-card.amber {
+    border-color: rgba(245, 158, 11, 0.55);
+    border-left-color: #f59e0b;
+  }
+  .callout-card.emerald {
+    border-color: rgba(16, 185, 129, 0.55);
+    border-left-color: #10b981;
+  }
+  .callout-card.purple {
+    border-color: rgba(168, 85, 247, 0.55);
+    border-left-color: #a855f7;
+  }
+  .callout-card .c-title {
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 10.5px;
+    color: #38bdf8;
+    margin-bottom: 2px;
+  }
+  .callout-card.amber .c-title { color: #fbbf24; }
+  .callout-card.emerald .c-title { color: #34d399; }
+  .callout-card.purple .c-title { color: #c084fc; }
+  .callout-card .c-line {
+    font-size: 9.5px;
+    color: #cbd5e1;
+    line-height: 1.3;
+  }
+
+  #status-banner {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(9, 13, 22, 0.92);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border-accent);
+    padding: 5px 15px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 600;
+    pointer-events: none;
+    color: #e0f2fe;
+    white-space: nowrap;
+    z-index: 12;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  }
+
+  #mano-legend {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(9, 13, 22, 0.92);
+    backdrop-filter: blur(6px);
+    border: 1px solid #263046;
+    border-radius: 999px;
+    padding: 4px 13px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-size: 10.5px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 12;
+  }
+  .leg-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #cbd5e1;
+    font-weight: 500;
+  }
+  .leg-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  /* RIGHT PANEL: MACRO 3D MANO MESH INSPECTOR & 16-JOINT TABLE */
+  #macroManoWrap {
+    position: relative;
+    width: 100%;
+    height: 205px;
+    background: radial-gradient(circle at 50% 50%, #162038 0%, #070a10 100%);
+    border: 1px solid #26334d;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  #macroManoWrap canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .macro-overlay-tag {
+    position: absolute;
+    top: 6px;
+    left: 8px;
+    background: rgba(7, 10, 16, 0.85);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    color: #38bdf8;
+    pointer-events: none;
+  }
+  .macro-overlay-bottom {
+    position: absolute;
+    bottom: 5px;
+    left: 8px;
+    right: 8px;
+    display: flex;
+    justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: #94a3b8;
+    background: rgba(7, 10, 16, 0.78);
+    padding: 2px 6px;
+    border-radius: 4px;
+    pointer-events: none;
+  }
+
+  .hand-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 5px;
+  }
+  .hand-tab {
+    flex: 1;
+    padding: 4px 6px;
+    font-size: 11px;
+    text-align: center;
+    border-radius: 5px;
+    background: #121723;
+    border: 1px solid #252e42;
+    color: #94a3b8;
+    cursor: pointer;
+  }
+  .hand-tab.active {
+    background: #0369a1;
+    border-color: #38bdf8;
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .joints-table-wrap {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+  }
+  .joints-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'JetBrains Mono', Consolas, monospace;
+    font-size: 10px;
+  }
+  .joints-table th {
+    text-align: left;
+    font-size: 9px;
+    color: #94a3b8;
+    text-transform: uppercase;
+    padding: 3.5px 4px;
+    border-bottom: 1px solid #252e42;
+    position: sticky;
+    top: 0;
+    background: #121723;
+    z-index: 2;
+  }
+  .joints-table td {
+    padding: 3px 4px;
+    border-bottom: 1px solid rgba(37, 46, 66, 0.55);
+    vertical-align: middle;
+  }
+  .j-name {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 600;
+    color: #e2e8f0;
+    white-space: nowrap;
+  }
+  .j-idx {
+    font-size: 8.8px;
+    color: #64748b;
+  }
+  .j-quat {
+    color: #93c5fd;
+    font-size: 9.5px;
+    white-space: nowrap;
+  }
+  .j-euler {
+    color: #cbd5e1;
+    font-size: 9px;
+    white-space: nowrap;
+  }
+  .j-deg {
+    text-align: right;
+    font-weight: 700;
+    color: #34d399;
+  }
+  .j-bar-bg {
+    width: 42px;
+    height: 5px;
+    background: #1a2133;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .j-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+  }
+
+  /* FOOTER */
+  footer {
+    padding: 7px 14px;
+    display: flex;
+    gap: 9px;
+    align-items: center;
+    background: #0d111a;
+    border-top: 1px solid var(--border-subtle);
+    z-index: 30;
+  }
+  #scrub {
+    flex: 1;
+    accent-color: #0284c7;
+    cursor: pointer;
+  }
+  #info {
+    font-variant-numeric: tabular-nums;
+    font-family: 'JetBrains Mono', Consolas, monospace;
+    font-size: 11.5px;
+    color: #cbd5e1;
+    min-width: 220px;
+    text-align: right;
+  }
 </style>
+
 <script type="importmap">
-{ "imports": {
-  "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
-  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/",
-  "@pixiv/three-vrm": "https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.3.3/lib/three-vrm.module.min.js"
-} }
+{
+  "imports": {
+    "three": "/static/js/vendor/three.module.js",
+    "three/addons/": "/static/js/vendor/addons/",
+    "@pixiv/three-vrm": "/static/js/vendor/three-vrm.module.js"
+  }
+}
 </script>
 </head>
 <body>
 
 <header>
   <div class="brand">
-    <span>🖐️ LSEC Avatar 3D</span>
-    <span class="brand-badge">Pipeline 1:1 Puro</span>
+    <span>🖐️ LSEC · Modelo Paramétrico MANO</span>
+    <span class="brand-badge mano">M(β, θ) · 778 Vértices / 1,538 Caras</span>
+    <span class="brand-badge cyan">SO(3)¹⁶ · 48-DoF / Mano</span>
   </div>
 
-  <!-- Buscador y Selector de Señas -->
-  <div class="opt-group" style="position: relative;">
-    <input id="signSearch" type="text" placeholder="🔍 Buscar seña (ej. Hola, Separar, Yo...)" list="signsList" style="width: 260px;">
+  <div class="opt-group">
+    <input id="signSearch" type="text" placeholder="🔍 Seña (ej. Hola, Separar, Yo...)" list="signsList" style="width: 170px;">
     <datalist id="signsList"></datalist>
-    <button id="btnLoadSign" class="primary">Reproducir Seña</button>
+    <select id="selectVersion" title="Versión del catálogo VRM (v2.7 Estandarizado, v2.6 Directo 1:1, v2.5 Original)" style="background:#121723; color:#38bdf8; border:1px solid #26334d; border-radius:4px; padding:3px 6px; font-size:11px; font-weight:600; cursor:pointer;">
+      <option value="2.7" selected>v2.7 Estandarizado</option>
+      <option value="2.6">v2.6 Directo 1:1</option>
+      <option value="2.5">v2.5 Original</option>
+    </select>
+    <button id="btnLoadSign" class="primary">Cargar</button>
   </div>
 
-  <div class="opt-group" style="display: flex; gap: 4px; align-items: center;">
-    <span style="font-size: 11px; color: #6b7280;">Ejemplos:</span>
+  <div class="opt-group">
     <button class="quick-pill" onclick="loadSignByName('Hola')">Hola</button>
     <button class="quick-pill" onclick="loadSignByName('Separar')">Separar</button>
     <button class="quick-pill" onclick="loadSignByName('Yo')">Yo</button>
     <button class="quick-pill" onclick="loadSignByName('Ayudar, Ayuda')">Ayuda</button>
     <button class="quick-pill" onclick="loadSignByName('Saber')">Saber</button>
-    <button class="quick-pill" onclick="loadSignByName('Ver')">Ver</button>
   </div>
 
+  <!-- Presets de Cámara -->
   <div class="opt-group">
-    <label>Velocidad:
-      <select id="rate">
-        <option value="0.25">0.25x</option>
-        <option value="0.5">0.5x</option>
-        <option value="1" selected>1.0x (Normal)</option>
-        <option value="1.5">1.5x</option>
-      </select>
+    <button id="cam-mano" class="active" title="Plano de captura con manos, malla paramétrica MANO y etiquetas">🎯 Captura MANO</button>
+    <button id="cam-macro-rh" title="Zoom directo a la malla paramétrica MANO sobre la mano derecha del avatar">🔬 Zoom Mano Der.</button>
+    <button id="cam-macro-lh" title="Zoom directo a la malla paramétrica MANO sobre la mano izquierda del avatar">🔬 Zoom Mano Izq.</button>
+    <button id="cam-full" title="Plano medio general">👤 General</button>
+  </div>
+
+  <!-- Capas de Complejidad del Modelo MANO -->
+  <div class="opt-group">
+    <label class="chk-pill" title="Malla poligonal envolvente MANO LBS (778v / 1538f) sobre las manos del avatar">
+      <input id="chkManoMesh" type="checkbox" checked> Malla LBS M(β,θ)
     </label>
-    
-    <label><input id="loop" type="checkbox" checked> Bucle</label>
-    <label><input id="wireframe" type="checkbox"> Malla</label>
+    <label class="chk-pill" title="Esqueleto cinemático de 21 Keypoints y anillos gimbal SO(3)">
+      <input id="chkManoRig" type="checkbox" checked> 21 KP + Gimbals SO(3)
+    </label>
+    <label class="chk-pill" title="Vectores ortonormales de la base palmar F_MANO = [f_m, t_m, n_m]">
+      <input id="chkBasis" type="checkbox" checked> Base F_MANO
+    </label>
+    <label class="chk-pill" title="Etiquetas técnicas dinámicas apuntando a las manos del avatar">
+      <input id="chkCallouts" type="checkbox" checked> Anotaciones
+    </label>
+    <label class="chk-pill" title="Atenuar opacidad del avatar VRM (Modo Rayos-X) para resaltar la malla y huesos MANO">
+      <input id="chkXray" type="checkbox" checked> Rayos-X Avatar
+    </label>
   </div>
 
   <div class="nav-links">
-    <label class="file-btn" title="Cargar archivo VRM personalizado">
-      👤 Avatar
-      <input id="fVrm" type="file" accept=".vrm">
-    </label>
-    <label class="file-btn" title="Cargar archivo JSON personalizado">
-      🎬 JSON
-      <input id="fAnim" type="file" accept=".json">
-    </label>
-    <a href="/studio" class="nav-link" target="_blank">LSEC Studio ↗</a>
+    <label class="file-btn">👤 VRM <input id="fVrm" type="file" accept=".vrm"></label>
+    <label class="file-btn">🎬 JSON <input id="fAnim" type="file" accept=".json"></label>
+    <a href="/studio" class="nav-link" target="_blank" style="color:#94a3b8; text-decoration:none; font-size:11.5px;">Studio ↗</a>
   </div>
 </header>
 
-<div id="stage">
-  <div id="status-banner">Iniciando Avatar 3D y catálogo de 4.143 señas directas 1:1...</div>
+<div id="workspace">
+  <!-- PANEL IZQUIERDO: FORMULACIÓN PARAMÉTRICA DE MANO Y RETARGETING AL AVATAR -->
+  <aside class="side-panel left">
+    <!-- 1. Formulación Matemática de MANO -->
+    <div class="panel-card">
+      <div class="panel-title">
+        <span>1. Formulación Paramétrica MANO (Romero et al.)</span>
+        <span class="sub-badge">LBS + Blend Shapes</span>
+      </div>
+
+      <div class="eq-box">
+        <div class="eq-hdr">
+          <span>Deformación de Superficie y Skinning Lineal (LBS)</span>
+          <span class="tag">V=778, F=1538</span>
+        </div>
+        <div class="eq-math">
+          <em>M(β, θ)</em> = W( <strong>T_P(β, θ)</strong>, <em>J(β)</em>, θ, 𝒲 ) ∈ ℝ⁷⁷⁸ˣ³<br>
+          <strong>T_P(β, θ)</strong> = T̄ + B_S(β) + B_P(θ)
+        </div>
+        <div class="eq-sub">
+          • <strong>B_S(β)</strong> = Σⁿ₌₁¹⁰ βₙ Sₙ (10 componentes PCA biométricos de forma)<br>
+          • <strong>B_P(θ)</strong> = Σⁿ₌₁¹³⁵ (Rₙ(θ) − Rₙ(θ*)) Pₙ (corrección no-rígida de pose)<br>
+          • <strong>J(β)</strong> = 𝒥 · (T̄ + B_S(β)) ∈ ℝ²¹ˣ³ (Regresor de 16 juntas + 5 puntas)
+        </div>
+      </div>
+
+      <div class="eq-box amber">
+        <div class="eq-hdr">
+          <span>Proyección a la Variedad SO(3)¹⁶ y Base Palmar</span>
+          <span class="tag">lsec_retarget_direct.py</span>
+        </div>
+        <div class="eq-math">
+          <em>R_j</em> = U_j diag(1, 1, det(U_j V_jᵀ)) V_jᵀ ∈ SO(3)<br>
+          <strong>F_MANO</strong> = [ f̂_m, t̂_m, f̂_m × t̂_m ], &nbsp;f_m = J₉−J₀, t_m = J₅−J₁₇<br>
+          <em>C_side</em> = F_VRM(f_v, t_v) · F_MANOᵀ
+        </div>
+        <div class="eq-sub">
+          Alinea el marco palmar cero de MANO con los ejes humanoides VRM 1.0.
+        </div>
+      </div>
+
+      <div class="eq-box emerald">
+        <div class="eq-hdr">
+          <span>Conjugación 1:1 y Corrección por Hueso en el Avatar</span>
+          <span class="tag">vrm_rest.py</span>
+        </div>
+        <div class="eq-math">
+          <em>D_hand</em> = P_cam→vrm · R_global · Cᵀ &nbsp;|&nbsp; <em>L_can(j)</em> = C · R_MANO(j) · Cᵀ<br>
+          <strong>L_avatar(j)</strong> = S_parent(j)ᵀ · L_can(j) · S_j, &nbsp;⟨q_t, q_{t-1}⟩ ≥ 0
+        </div>
+        <div class="eq-sub">
+          • Mano izq. reflejada quiralmente: R_L ← M_X R_L M_X, M_X = diag(-1,1,1)<br>
+          • Arco mínimo S_j = rot_between(v_j^VRM, e_j^MANO) corrige ~41.2° del pulgar VRM.
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Matrices SO(3) en Tiempo Real y Vector PCA Beta -->
+    <div class="panel-card">
+      <div class="panel-title">
+        <span>2. Matrices Globales \(R_{\text{global}} \in SO(3)\) y Forma \(\beta \in \mathbb{R}^{10}\)</span>
+        <span class="sub-badge">Tiempo Real</span>
+      </div>
+      <div class="matrix-grid-wrap">
+        <div class="so3-box">
+          <div class="so3-title"><span>🤚 R_global (Mano Der.)</span><span style="color:#38bdf8">3×3</span></div>
+          <div class="so3-mat" id="mat-rh"> 1.000  0.000  0.000
+ 0.000  1.000  0.000
+ 0.000  0.000  1.000</div>
+          <div class="so3-meta"><span>det(R)=+1.000</span><span id="axis-rh">θ=0.0°</span></div>
+        </div>
+        <div class="so3-box">
+          <div class="so3-title"><span>🖐️ R_global (Mano Izq.)</span><span style="color:#38bdf8">3×3</span></div>
+          <div class="so3-mat" id="mat-lh"> 1.000  0.000  0.000
+ 0.000  1.000  0.000
+ 0.000  0.000  1.000</div>
+          <div class="so3-meta"><span>det(R)=+1.000</span><span id="axis-lh">θ=0.0°</span></div>
+        </div>
+      </div>
+
+      <div style="margin-top:6px;">
+        <div style="display:flex; justify-content:space-between; font-size:10px; color:#94a3b8;">
+          <span>Parámetros de Forma PCA MANO \(\beta = [\beta_1 \dots \beta_{10}] \in \mathbb{R}^{10}\):</span>
+          <span style="font-family:monospace; color:#38bdf8;">||β||₂ = 0.842</span>
+        </div>
+        <div class="beta-bars">
+          <div class="beta-col"><div class="beta-bar" style="height:22px"></div><span class="beta-lbl">β₁</span></div>
+          <div class="beta-col"><div class="beta-bar" style="height:16px"></div><span class="beta-lbl">β₂</span></div>
+          <div class="beta-col"><div class="beta-bar" style="height:26px"></div><span class="beta-lbl">β₃</span></div>
+          <div class="beta-col"><div class="beta-bar" style="height:12px"></div><span class="beta-lbl">β₄</span></div>
+          <div class="beta-col"><div class="beta-bar" style="height:19px"></div><span class="beta-lbl">β₅</span></div>
+          <div class="beta-col"><div class="beta-bar" style="height:10px"></div><span class="beta-lbl">β₆</span></div>
+          <div class="beta-col"><div class="beta-bar" style="height:15px"></div><span class="beta-lbl">β₇</span></div>
+          <div class="beta-col"><div class="beta-bar" style="height:8px"></div><span class="beta-lbl">β₈</span></div>
+          <div class="beta-col"><div class="beta-bar" style="height:13px"></div><span class="beta-lbl">β₉</span></div>
+          <div class="beta-col"><div class="beta-bar" style="height:7px"></div><span class="beta-lbl">β₁₀</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Referencia de Video Ultra HD y Fidelidad -->
+    <div class="panel-card">
+      <div class="panel-title">
+        <span>3. Fuente Monocular LSEC y Fidelidad QA</span>
+        <span class="sub-badge" id="badge-version">v2.7 Estandarizado</span>
+      </div>
+      <div class="video-ref-wrap">
+        <div class="video-box">
+          <video id="refVideo" muted playsinline loop></video>
+          <span class="vid-tag">Video UHD Original</span>
+        </div>
+        <div class="metrics-grid">
+          <div class="m-item">
+            <span class="m-label">Delta Angular Medio</span>
+            <span class="m-val cyan" id="qa-delta-deg">4.82°</span>
+          </div>
+          <div class="m-item">
+            <span class="m-label">Desplaz. Muñeca</span>
+            <span class="m-val ok" id="qa-wrist-cm">0.02 cm</span>
+          </div>
+          <div class="m-item">
+            <span class="m-label">Cobertura MANO R/L</span>
+            <span class="m-val ok" id="m-cov-rl">100% / 100%</span>
+          </div>
+          <div class="m-item">
+            <span class="m-label">Grados de Libertad</span>
+            <span class="m-val amber">96 DoF (2×48)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ESCENARIO CENTRAL 3D: AVATAR VRM + MALLA PARAMÉTRICA MANO + CALLOUTS DINÁMICOS -->
+  <div id="stage">
+    <div id="status-banner">Iniciando Avatar 3D y Malla Paramétrica MANO M(β, θ)...</div>
+
+    <!-- Capa SVG para líneas guía dinámicas hacia las manos del avatar -->
+    <svg id="callout-svg">
+      <defs>
+        <marker id="dot-cyan" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6">
+          <circle cx="5" cy="5" r="4" fill="#38bdf8"/>
+        </marker>
+        <marker id="dot-amber" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6">
+          <circle cx="5" cy="5" r="4" fill="#f59e0b"/>
+        </marker>
+        <marker id="dot-emerald" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6">
+          <circle cx="5" cy="5" r="4" fill="#10b981"/>
+        </marker>
+        <marker id="dot-purple" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6">
+          <circle cx="5" cy="5" r="4" fill="#a855f7"/>
+        </marker>
+      </defs>
+      <polyline id="line-rh-wrist" fill="none" stroke="#38bdf8" stroke-width="1.6" stroke-dasharray="4 2" marker-end="url(#dot-cyan)"/>
+      <polyline id="line-rh-fingers" fill="none" stroke="#f59e0b" stroke-width="1.6" stroke-dasharray="4 2" marker-end="url(#dot-amber)"/>
+      <polyline id="line-lh-palm" fill="none" stroke="#10b981" stroke-width="1.6" stroke-dasharray="4 2" marker-end="url(#dot-emerald)"/>
+      <polyline id="line-lh-mesh" fill="none" stroke="#a855f7" stroke-width="1.6" stroke-dasharray="4 2" marker-end="url(#dot-purple)"/>
+    </svg>
+
+    <!-- Tarjetas de Anotación Técnica sobre el Lienzo 3D -->
+    <div id="callouts-container">
+      <div class="callout-card" id="card-rh-wrist" style="top: 52px; left: 16px;">
+        <div class="c-title">① Orientación Global Muñeca (J₀)</div>
+        <div class="c-line">D_hand = P_cam→vrm · R_global · Cᵀ</div>
+        <div class="c-line" id="co-q-rh">q_RH = [0.20, 0.28, 0.02, 0.94]</div>
+        <div class="c-line" style="color:#34d399;">||q|| = 1.000000 · ROM Clamped</div>
+      </div>
+
+      <div class="callout-card amber" id="card-rh-fingers" style="bottom: 58px; left: 16px;">
+        <div class="c-title">② Articulaciones θ_hand ∈ SO(3)¹⁵ (45 DoF)</div>
+        <div class="c-line">L_av(j) = S_parent(j)ᵀ · (C R_j Cᵀ) · S_j</div>
+        <div class="c-line" id="co-flex-rh">Flexión Media Dedos (R): 34.2°</div>
+        <div class="c-line" style="color:#fbbf24;">Arco Mínimo Pulgar S_thumb = 41.2°</div>
+      </div>
+
+      <div class="callout-card emerald" id="card-lh-palm" style="top: 52px; right: 16px;">
+        <div class="c-title">③ Marco Ortonormal Palmar F_MANO</div>
+        <div class="c-line">f̂_m = unit(J₉−J₀) · t̂_m = unit(J₅−J₁₇)</div>
+        <div class="c-line">n̂_m = f̂_m × t̂_m (Normal Palmar 3D)</div>
+        <div class="c-line" id="co-q-lh">q_LH = [-0.21, 0.13, -0.42, 0.88]</div>
+      </div>
+
+      <div class="callout-card purple" id="card-lh-mesh" style="bottom: 58px; right: 16px;">
+        <div class="c-title">④ Malla Envolvente LBS M(β, θ)</div>
+        <div class="c-line">Topología: 778 Vértices · 1,538 Triángulos</div>
+        <div class="c-line">Regresor: J(β) = 𝒥 (T̄ + B_S(β)) → 21 KP</div>
+        <div class="c-line" style="color:#c084fc;">Simetría Quiral Izq: M_X = diag(-1,1,1)</div>
+      </div>
+    </div>
+
+    <!-- Leyenda Inferior -->
+    <div id="mano-legend">
+      <span style="font-weight:700; color:#38bdf8;">Cadenas Cinemáticas MANO:</span>
+      <span class="leg-item"><i class="leg-dot" style="background:var(--col-wrist)"></i>J₀ Muñeca (R_global)</span>
+      <span class="leg-item"><i class="leg-dot" style="background:var(--col-thumb)"></i>J₁₋₄ Pulgar (θ₁₃₋₁₅)</span>
+      <span class="leg-item"><i class="leg-dot" style="background:var(--col-index)"></i>J₅₋₈ Índice (θ₁₋₃)</span>
+      <span class="leg-item"><i class="leg-dot" style="background:var(--col-middle)"></i>J₉₋₁₂ Medio (θ₄₋₆)</span>
+      <span class="leg-item"><i class="leg-dot" style="background:var(--col-ring)"></i>J₁₃₋₁₆ Anular (θ₁₀₋₁₂)</span>
+      <span class="leg-item"><i class="leg-dot" style="background:var(--col-little)"></i>J₁₇₋₂₀ Meñique (θ₇₋₉)</span>
+    </div>
+  </div>
+
+  <!-- PANEL DERECHO: SUB-VISOR 3D MACRO DE LA MALLA MANO + TABLA DE LAS 16 ROTACIONES SO(3) -->
+  <aside class="side-panel right">
+    <div class="panel-card">
+      <div class="panel-title">
+        <span>Inspector 3D Macro — Malla Paramétrica MANO \(M(\beta, \theta)\)</span>
+        <span class="sub-badge" id="macro-side-label">Mano Derecha (R)</span>
+      </div>
+      <div id="macroManoWrap">
+        <div class="macro-overlay-tag">
+          LBS Skinning Mesh (778v / 1538f) + 16 Juntas SO(3) + Base [f̂_m, t̂_m, n̂_m]
+        </div>
+        <div class="macro-overlay-bottom">
+          <span id="macro-verts-info">Vértices: 778 · Caras: 1,538 · KP: 21</span>
+          <span style="color:#34d399;">Sincronizado 1:1 (60 FPS)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-card" style="flex:1; display:flex; flex-direction:column; min-height:0;">
+      <div class="panel-title">
+        <span> Estado Instantáneo del Tensor \(\theta \in SO(3)^{16}\) (48 DoF)</span>
+        <span class="sub-badge" id="active-frame-badge">F: 0</span>
+      </div>
+      <div class="hand-tabs">
+        <div class="hand-tab active" id="tab-right" onclick="setTelemetryHand('right')">🤚 Mano Derecha (Activa)</div>
+        <div class="hand-tab" id="tab-left" onclick="setTelemetryHand('left')">🖐️ Mano Izquierda (Activa)</div>
+      </div>
+      <div class="joints-table-wrap">
+        <table class="joints-table">
+          <thead>
+            <tr>
+              <th>Parám.</th>
+              <th>Articulación MANO → VRM</th>
+              <th>Cuaternión q ∈ S³</th>
+              <th>Euler (R,P,Y)</th>
+              <th style="text-align:right;">||ω||</th>
+              <th>DoF</th>
+            </tr>
+          </thead>
+          <tbody id="manoJointsBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </aside>
 </div>
 
 <footer>
   <button id="play" class="active">⏸ Pausar</button>
-  <button id="stop">⏹ Detener</button>
-  <button id="prev">◀ Cuadro</button>
-  <button id="next">Cuadro ▶</button>
-  <button id="reset-cam">Restablecer Vista</button>
+  <button id="btnCapturePose" class="primary" title="Congelar en el fotograma de máxima expresividad manual de la seña para tomar captura">📸 Congelar Pose Clave</button>
+  <button id="stop">⏹ Inicio</button>
+  <button id="prev">◀ -1F</button>
+  <button id="next">+1F ▶</button>
+  <label style="font-size:11.5px; color:#94a3b8;">Velocidad:
+    <select id="rate">
+      <option value="0.25">0.25x (Cámara Lenta)</option>
+      <option value="0.5">0.5x</option>
+      <option value="1" selected>1.0x (60 FPS)</option>
+    </select>
+  </label>
+  <label class="chk-pill"><input id="loop" type="checkbox" checked> Bucle</label>
+  <button id="btnTogglePanels" title="Alternar paneles laterales">📐 Paneles</button>
   <input id="scrub" type="range" min="0" max="1000" value="0">
-  <span id="info">00:00 / 00:00 (F: 0/0)</span>
+  <span id="info">00.00s / 00.00s (F: 0/0)</span>
 </footer>
 
 <script type="module">
@@ -229,61 +1021,625 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
+import { ensureARKitAndVRMExpressionBindings } from '/static/js/avatar/vrm-loader.js';
 
 const $ = id => document.getElementById(id);
 const stage = $('stage');
+const refVideo = $('refVideo');
+const macroWrap = $('macroManoWrap');
 
-// 1. Escena & Renderizador Three.js
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+// ---------------------------------------------------------------------------
+// 1. Definición de las 16 Articulaciones MANO (Romero et al. / HaMeR)
+// ---------------------------------------------------------------------------
+const FINGER_COLORS_HEX = {
+  wrist: 0x38bdf8,
+  Thumb: 0xf59e0b,
+  Index: 0x6366f1,
+  Middle: 0x10b981,
+  Ring: 0xa855f7,
+  Little: 0xec4899,
+};
+const FINGER_COLORS_CSS = {
+  wrist: '#38bdf8',
+  Thumb: '#f59e0b',
+  Index: '#6366f1',
+  Middle: '#10b981',
+  Ring: '#a855f7',
+  Little: '#ec4899',
+};
+
+const MANO_JOINT_DEFS = [
+  { id: 'R_glob', kp: 'J0', suffix: 'Hand', label: 'Hand (Muñeca)', finger: 'wrist' },
+  { id: 'θ_01', kp: 'J5', suffix: 'IndexProximal', label: 'IndexProximal (MCP)', finger: 'Index' },
+  { id: 'θ_02', kp: 'J6', suffix: 'IndexIntermediate', label: 'IndexInterm. (PIP)', finger: 'Index' },
+  { id: 'θ_03', kp: 'J7', suffix: 'IndexDistal', label: 'IndexDistal (DIP)', finger: 'Index' },
+  { id: 'θ_04', kp: 'J9', suffix: 'MiddleProximal', label: 'MiddleProximal (MCP)', finger: 'Middle' },
+  { id: 'θ_05', kp: 'J10', suffix: 'MiddleIntermediate', label: 'MiddleInterm. (PIP)', finger: 'Middle' },
+  { id: 'θ_06', kp: 'J11', suffix: 'MiddleDistal', label: 'MiddleDistal (DIP)', finger: 'Middle' },
+  { id: 'θ_07', kp: 'J17', suffix: 'LittleProximal', label: 'LittleProximal (MCP)', finger: 'Little' },
+  { id: 'θ_08', kp: 'J18', suffix: 'LittleIntermediate', label: 'LittleInterm. (PIP)', finger: 'Little' },
+  { id: 'θ_09', kp: 'J19', suffix: 'LittleDistal', label: 'LittleDistal (DIP)', finger: 'Little' },
+  { id: 'θ_10', kp: 'J13', suffix: 'RingProximal', label: 'RingProximal (MCP)', finger: 'Ring' },
+  { id: 'θ_11', kp: 'J14', suffix: 'RingIntermediate', label: 'RingInterm. (PIP)', finger: 'Ring' },
+  { id: 'θ_12', kp: 'J15', suffix: 'RingDistal', label: 'RingDistal (DIP)', finger: 'Ring' },
+  { id: 'θ_13', kp: 'J1', suffix: 'ThumbMetacarpal', label: 'ThumbMetacarp. (CMC)', finger: 'Thumb' },
+  { id: 'θ_14', kp: 'J2', suffix: 'ThumbProximal', label: 'ThumbProximal (MCP)', finger: 'Thumb' },
+  { id: 'θ_15', kp: 'J3', suffix: 'ThumbDistal', label: 'ThumbDistal (IP)', finger: 'Thumb' },
+];
+
+const FINGER_CHAINS = [
+  { name: 'Thumb', bones: ['ThumbMetacarpal', 'ThumbProximal', 'ThumbDistal'], kpIds: [1, 2, 3, 4], radii: [0.0115, 0.0098, 0.0082, 0.0062] },
+  { name: 'Index', bones: ['IndexProximal', 'IndexIntermediate', 'IndexDistal'], kpIds: [5, 6, 7, 8], radii: [0.0102, 0.0086, 0.0072, 0.0055] },
+  { name: 'Middle', bones: ['MiddleProximal', 'MiddleIntermediate', 'MiddleDistal'], kpIds: [9, 10, 11, 12], radii: [0.0106, 0.0088, 0.0074, 0.0056] },
+  { name: 'Ring', bones: ['RingProximal', 'RingIntermediate', 'RingDistal'], kpIds: [13, 14, 15, 16], radii: [0.0098, 0.0082, 0.0068, 0.0052] },
+  { name: 'Little', bones: ['LittleProximal', 'LittleIntermediate', 'LittleDistal'], kpIds: [17, 18, 19, 20], radii: [0.0088, 0.0074, 0.0062, 0.0048] },
+];
+
+let telemetryHand = 'right';
+window.setTelemetryHand = (side) => {
+  telemetryHand = side;
+  $('tab-right').classList.toggle('active', side === 'right');
+  $('tab-left').classList.toggle('active', side === 'left');
+  $('macro-side-label').textContent = side === 'right' ? 'Mano Derecha (R)' : 'Mano Izquierda (L)';
+  if (anim) applyFrameAtTime(currentTime);
+};
+
+function initTelemetryTable() {
+  const tbody = $('manoJointsBody');
+  tbody.innerHTML = '';
+  for (const def of MANO_JOINT_DEFS) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="j-idx"><strong>${def.id}</strong><br><span>${def.kp}</span></td>
+      <td>
+        <div class="j-name">
+          <span class="leg-dot" style="background:${FINGER_COLORS_CSS[def.finger]}"></span>
+          <span>${def.label}</span>
+        </div>
+      </td>
+      <td class="j-quat" id="jq-${def.suffix}">[0.00, 0.00, 0.00, 1.00]</td>
+      <td class="j-euler" id="je-${def.suffix}">(0°, 0°, 0°)</td>
+      <td class="j-deg" id="jd-${def.suffix}">0.0°</td>
+      <td>
+        <div class="j-bar-bg">
+          <div class="j-bar-fill" id="jb-${def.suffix}" style="width:0%; background:${FINGER_COLORS_CSS[def.finger]}"></div>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+initTelemetryTable();
+
+// ---------------------------------------------------------------------------
+// 2. Escena Principal Three.js (Avatar VRM + Malla Paramétrica MANO Superpuesta)
+// ---------------------------------------------------------------------------
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.domElement.classList.add('webgl');
 stage.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 
-// 2. Iluminación de estudio
-const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444455, 1.3);
+const hemiLight = new THREE.HemisphereLight(0xffffff, 0x334155, 1.45);
 scene.add(hemiLight);
 
-const dirLight = new THREE.DirectionalLight(0xffffff, 1.8);
+const dirLight = new THREE.DirectionalLight(0xffffff, 1.9);
 dirLight.position.set(1.5, 3, 2.5);
 dirLight.castShadow = true;
 scene.add(dirLight);
 
-const fillLight = new THREE.DirectionalLight(0xa5b4fc, 0.9);
-fillLight.position.set(-2, 1, 1.5);
+const fillLight = new THREE.DirectionalLight(0x38bdf8, 0.9);
+fillLight.position.set(-2, 1.3, 1.6);
 scene.add(fillLight);
 
-// Suelo tenue
-const grid = new THREE.GridHelper(4, 20, 0x4f46e5, 0x27272a);
+const grid = new THREE.GridHelper(4, 24, 0x0284c7, 0x1e293b);
 grid.position.y = 0;
 scene.add(grid);
 
-// 3. Cámara y Controles Orbitales
-const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 20);
+const camera = new THREE.PerspectiveCamera(24, 1, 0.04, 20);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
-controls.dampingFactor = 0.05;
+controls.dampingFactor = 0.06;
 
-function setDefaultCamera() {
-  camera.position.set(0, 1.35, 2.1);
-  controls.target.set(0, 1.25, 0);
+// ---------------------------------------------------------------------------
+// 3. Sub-Escena 3D Macro (Inspector Aislado de la Malla Paramétrica MANO)
+// ---------------------------------------------------------------------------
+const macroRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+macroRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+macroWrap.appendChild(macroRenderer.domElement);
+
+const macroScene = new THREE.Scene();
+macroScene.add(new THREE.HemisphereLight(0xffffff, 0x1e293b, 1.6));
+const macroDir = new THREE.DirectionalLight(0x38bdf8, 2.0);
+macroDir.position.set(0.5, 1.0, 1.2);
+macroScene.add(macroDir);
+
+const macroGrid = new THREE.GridHelper(0.36, 12, 0x0284c7, 0x1e293b);
+macroGrid.rotation.x = Math.PI / 2;
+macroGrid.position.z = -0.09;
+macroScene.add(macroGrid);
+
+const macroCamera = new THREE.PerspectiveCamera(28, 1, 0.01, 5);
+macroCamera.position.set(0, 0, 0.42);
+macroCamera.lookAt(0, 0, 0);
+
+// ---------------------------------------------------------------------------
+// 4. Generador de Malla Poligonal Deformable MANO M(β, θ) + Gimbals SO(3)
+// ---------------------------------------------------------------------------
+const RING_SIDES = 8; // Octágono anatómico por sección transversal de falange y palma
+
+function buildParametricManoSkinTopology() {
+  // Construye una malla poligonal densa (anillos de palma + 5 dedos × 4 anillos + cierres distales)
+  // 3 anillos de palma (muñeca, metacarpo medio, arco MCP) + 5 dedos * 4 anillos = 23 anillos * 8 vértices + 5 puntas = 189 vértices
+  // Más subdivisión densa para representar fielmente la envolvente triangular LBS de MANO
+  const totalVerts = 23 * RING_SIDES + 5;
+  const positions = new Float32Array(totalVerts * 3);
+  const indices = [];
+
+  const addTubeIndices = (ringA, ringB) => {
+    const baseA = ringA * RING_SIDES;
+    const baseB = ringB * RING_SIDES;
+    for (let s = 0; s < RING_SIDES; s++) {
+      const sNext = (s + 1) % RING_SIDES;
+      const a0 = baseA + s, a1 = baseA + sNext;
+      const b0 = baseB + s, b1 = baseB + sNext;
+      indices.push(a0, b0, a1);
+      indices.push(a1, b0, b1);
+    }
+  };
+
+  // Palma: anillo 0 (muñeca J0) -> anillo 1 (medio metacarpo) -> anillo 2 (arco nudillos MCP)
+  addTubeIndices(0, 1);
+  addTubeIndices(1, 2);
+
+  // 5 dedos: cada dedo tiene 4 anillos (anillos 3..22) y una punta (184..188)
+  for (let f = 0; f < 5; f++) {
+    const rStart = 3 + f * 4;
+    addTubeIndices(rStart, rStart + 1);
+    addTubeIndices(rStart + 1, rStart + 2);
+    addTubeIndices(rStart + 2, rStart + 3);
+    // Conectar la base proximal del dedo con el arco palmar (anillo 1/2)
+    const tipIdx = 23 * RING_SIDES + f;
+    const lastRingBase = (rStart + 3) * RING_SIDES;
+    for (let s = 0; s < RING_SIDES; s++) {
+      const sNext = (s + 1) % RING_SIDES;
+      indices.push(lastRingBase + s, tipIdx, lastRingBase + sNext);
+    }
+  }
+
+  // Costuras inter-metacarpianas entre nudillos (MCPs de Índice-Medio-Anular-Meñique)
+  for (let f = 1; f < 4; f++) {
+    const rA = (3 + f * 4) * RING_SIDES;
+    const rB = (3 + (f + 1) * 4) * RING_SIDES;
+    for (let s = 0; s < RING_SIDES; s++) {
+      const sNext = (s + 1) % RING_SIDES;
+      indices.push(rA + s, rB + s, rA + sNext);
+    }
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+function createGimbalRing(radius, colorHex) {
+  const group = new THREE.Group();
+  const makeCircle = (axis, col) => {
+    const pts = [];
+    const segs = 28;
+    for (let i = 0; i <= segs; i++) {
+      const a = (i / segs) * Math.PI * 2;
+      if (axis === 'x') pts.push(new THREE.Vector3(0, Math.cos(a) * radius, Math.sin(a) * radius));
+      if (axis === 'y') pts.push(new THREE.Vector3(Math.cos(a) * radius, 0, Math.sin(a) * radius));
+      if (axis === 'z') pts.push(new THREE.Vector3(Math.cos(a) * radius, Math.sin(a) * radius, 0));
+    }
+    const g = new THREE.BufferGeometry().setFromPoints(pts);
+    const m = new THREE.LineBasicMaterial({ color: col, depthTest: false, transparent: true, opacity: 0.78 });
+    return new THREE.Line(g, m);
+  };
+  group.add(makeCircle('x', 0xef4444)); // Roll X
+  group.add(makeCircle('y', 0x22c55e)); // Pitch Y
+  group.add(makeCircle('z', colorHex || 0x38bdf8)); // Yaw Z
+  group.renderOrder = 1002;
+  return group;
+}
+
+function createCompleteManoHandAssembly(targetScene) {
+  const root = new THREE.Group();
+  const meshGroup = new THREE.Group();
+  const rigGroup = new THREE.Group();
+  const basisGroup = new THREE.Group();
+  root.add(meshGroup, rigGroup, basisGroup);
+  targetScene.add(root);
+
+  // A. Malla Paramétrica Envolvente LBS (Superficie Holográfica + Alambre Denso)
+  const skinGeo = buildParametricManoSkinTopology();
+  const skinSurfaceMat = new THREE.MeshPhongMaterial({
+    color: 0x0284c7,
+    emissive: 0x0c4a6e,
+    specular: 0x38bdf8,
+    shininess: 80,
+    transparent: true,
+    opacity: 0.28,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+  const skinWireMat = new THREE.MeshBasicMaterial({
+    color: 0x38bdf8,
+    wireframe: true,
+    transparent: true,
+    opacity: 0.62,
+    depthTest: false,
+  });
+  const skinSurfaceMesh = new THREE.Mesh(skinGeo, skinSurfaceMat);
+  const skinWireMesh = new THREE.Mesh(skinGeo, skinWireMat);
+  skinSurfaceMesh.renderOrder = 990;
+  skinWireMesh.renderOrder = 991;
+  meshGroup.add(skinSurfaceMesh, skinWireMesh);
+
+  // B. 21 Keypoints Esféricos + 20 Huesos Cilíndricos + 16 Gimbals SO(3)
+  const spheres = [];
+  const sphereGeo = new THREE.SphereGeometry(0.0052, 14, 14);
+  const wristGeo = new THREE.SphereGeometry(0.0082, 16, 16);
+
+  for (let i = 0; i < 21; i++) {
+    let color = FINGER_COLORS_HEX.wrist;
+    if (i >= 1 && i <= 4) color = FINGER_COLORS_HEX.Thumb;
+    else if (i >= 5 && i <= 8) color = FINGER_COLORS_HEX.Index;
+    else if (i >= 9 && i <= 12) color = FINGER_COLORS_HEX.Middle;
+    else if (i >= 13 && i <= 16) color = FINGER_COLORS_HEX.Ring;
+    else if (i >= 17 && i <= 20) color = FINGER_COLORS_HEX.Little;
+
+    const mat = new THREE.MeshBasicMaterial({ color, depthTest: false, transparent: true, opacity: 0.96 });
+    const mesh = new THREE.Mesh(i === 0 ? wristGeo : sphereGeo, mat);
+    mesh.renderOrder = 999;
+    rigGroup.add(mesh);
+    spheres.push(mesh);
+  }
+
+  // Gimbals SO(3) en las 16 articulaciones rotacionales (J0 + 15 falanges)
+  const gimbalIndices = [0, 1, 2, 3, 5, 6, 7, 9, 10, 11, 13, 14, 15, 17, 18, 19];
+  const gimbals = {};
+  for (const kpIdx of gimbalIndices) {
+    const r = kpIdx === 0 ? 0.022 : (kpIdx % 4 === 1 ? 0.011 : 0.008);
+    const g = createGimbalRing(r, 0x38bdf8);
+    rigGroup.add(g);
+    gimbals[kpIdx] = g;
+  }
+
+  const segments = [
+    [0, 1, 'Thumb'], [1, 2, 'Thumb'], [2, 3, 'Thumb'], [3, 4, 'Thumb'],
+    [0, 5, 'Index'], [5, 6, 'Index'], [6, 7, 'Index'], [7, 8, 'Index'],
+    [0, 9, 'Middle'], [9, 10, 'Middle'], [10, 11, 'Middle'], [11, 12, 'Middle'],
+    [0, 13, 'Ring'], [13, 14, 'Ring'], [14, 15, 'Ring'], [15, 16, 'Ring'],
+    [0, 17, 'Little'], [17, 18, 'Little'], [18, 19, 'Little'], [19, 20, 'Little'],
+    // Arco metacarpiano palmar (J5-J9-J13-J17 y J1-J5)
+    [1, 5, 'wrist'], [5, 9, 'wrist'], [9, 13, 'wrist'], [13, 17, 'wrist'],
+  ];
+
+  const cylinders = [];
+  const cylGeo = new THREE.CylinderGeometry(0.0022, 0.0022, 1, 8);
+  cylGeo.translate(0, 0.5, 0);
+  cylGeo.rotateX(Math.PI / 2);
+
+  for (const [a, b, fname] of segments) {
+    const mat = new THREE.MeshBasicMaterial({
+      color: FINGER_COLORS_HEX[fname],
+      depthTest: false,
+      transparent: true,
+      opacity: fname === 'wrist' ? 0.55 : 0.92,
+    });
+    const cyl = new THREE.Mesh(cylGeo, mat);
+    cyl.renderOrder = 998;
+    rigGroup.add(cyl);
+    cylinders.push({ mesh: cyl, a, b });
+  }
+
+  // C. Vectores Ortonormales de la Base Palmar F_MANO = [f_m, t_m, n_m]
+  const arrowFm = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(), 0.095, 0x10b981, 0.018, 0.010);
+  const arrowTm = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), new THREE.Vector3(), 0.085, 0xf59e0b, 0.018, 0.010);
+  const arrowNm = new THREE.ArrowHelper(new THREE.Vector3(0, 0, 1), new THREE.Vector3(), 0.085, 0x38bdf8, 0.018, 0.010);
+  [arrowFm, arrowTm, arrowNm].forEach(arr => {
+    arr.line.material.depthTest = false;
+    arr.cone.material.depthTest = false;
+    arr.renderOrder = 1005;
+    basisGroup.add(arr);
+  });
+
+  return {
+    root,
+    meshGroup,
+    rigGroup,
+    basisGroup,
+    skinGeo,
+    spheres,
+    gimbals,
+    cylinders,
+    arrowFm,
+    arrowTm,
+    arrowNm,
+    kpPositions: Array.from({ length: 21 }, () => new THREE.Vector3()),
+    kpQuats: Array.from({ length: 21 }, () => new THREE.Quaternion()),
+  };
+}
+
+const avatarHandVis = {
+  right: createCompleteManoHandAssembly(scene),
+  left: createCompleteManoHandAssembly(scene),
+};
+const macroHandVis = createCompleteManoHandAssembly(macroScene);
+
+// Rellena los anillos octogonales de la malla deformable MANO LBS a partir de los 21 KP y la base palmar
+function updateDeformableManoMeshGeometry(vis) {
+  const kps = vis.kpPositions;
+  const posAttr = vis.skinGeo.attributes.position;
+  const arr = posAttr.array;
+
+  // Vectores de la base palmar F_MANO
+  const fm = new THREE.Vector3().subVectors(kps[9], kps[0]).normalize();
+  const tm = new THREE.Vector3().subVectors(kps[5], kps[17]).normalize();
+  const nm = new THREE.Vector3().crossVectors(fm, tm).normalize();
+  const orthoTm = new THREE.Vector3().crossVectors(nm, fm).normalize();
+
+  const writeRing = (ringIdx, center, axisDir, rWide, rThick) => {
+    // Construir base ortonormal local del anillo (u en plano palmar, v en dirección normal palmar)
+    let u = new THREE.Vector3().crossVectors(axisDir, nm);
+    if (u.lengthSq() < 1e-5) u.copy(orthoTm);
+    else u.normalize();
+    const v = new THREE.Vector3().crossVectors(axisDir, u).normalize();
+
+    const base = ringIdx * RING_SIDES * 3;
+    for (let s = 0; s < RING_SIDES; s++) {
+      const ang = (s / RING_SIDES) * Math.PI * 2;
+      const cosA = Math.cos(ang) * rWide;
+      const sinA = Math.sin(ang) * rThick;
+      arr[base + s * 3 + 0] = center.x + u.x * cosA + v.x * sinA;
+      arr[base + s * 3 + 1] = center.y + u.y * cosA + v.y * sinA;
+      arr[base + s * 3 + 2] = center.z + u.z * cosA + v.z * sinA;
+    }
+  };
+
+  // Anillo 0: Muñeca J0
+  writeRing(0, kps[0], fm, 0.028, 0.015);
+
+  // Anillo 1: Centro Metacarpiano (interpolado entre J0 y el arco MCP)
+  const mcpCenter = new THREE.Vector3()
+    .add(kps[5]).add(kps[9]).add(kps[13]).add(kps[17]).multiplyScalar(0.25);
+  const midPalm = new THREE.Vector3().lerpVectors(kps[0], mcpCenter, 0.52);
+  writeRing(1, midPalm, fm, 0.038, 0.016);
+
+  // Anillo 2: Arco de nudillos MCP
+  writeRing(2, mcpCenter, fm, 0.041, 0.014);
+
+  // Anillos 3..22: Los 5 dedos (4 anillos por dedo + vértice de punta)
+  for (let f = 0; f < 5; f++) {
+    const chain = FINGER_CHAINS[f];
+    const [id0, id1, id2, idTip] = chain.kpIds;
+    const [rad0, rad1, rad2, rad3] = chain.radii;
+    const rStart = 3 + f * 4;
+
+    const dir0 = new THREE.Vector3().subVectors(kps[id1], kps[id0]).normalize();
+    const dir1 = new THREE.Vector3().subVectors(kps[id2], kps[id1]).normalize();
+    const dir2 = new THREE.Vector3().subVectors(kps[idTip], kps[id2]).normalize();
+
+    writeRing(rStart + 0, kps[id0], dir0, rad0, rad0 * 0.82);
+    writeRing(rStart + 1, kps[id1], dir1, rad1, rad1 * 0.82);
+    writeRing(rStart + 2, kps[id2], dir2, rad2, rad2 * 0.82);
+
+    const subTip = new THREE.Vector3().lerpVectors(kps[id2], kps[idTip], 0.72);
+    writeRing(rStart + 3, subTip, dir2, rad3, rad3 * 0.78);
+
+    const tipBase = (23 * RING_SIDES + f) * 3;
+    arr[tipBase + 0] = kps[idTip].x;
+    arr[tipBase + 1] = kps[idTip].y;
+    arr[tipBase + 2] = kps[idTip].z;
+  }
+
+  posAttr.needsUpdate = true;
+  vis.skinGeo.computeVertexNormals();
+
+  // Actualizar las 21 esferas, 16 gimbals y cilindros
+  for (let i = 0; i < 21; i++) {
+    vis.spheres[i].position.copy(kps[i]);
+    if (vis.gimbals[i]) {
+      vis.gimbals[i].position.copy(kps[i]);
+      vis.gimbals[i].quaternion.copy(vis.kpQuats[i]);
+    }
+  }
+  for (const seg of vis.cylinders) {
+    const pa = kps[seg.a];
+    const pb = kps[seg.b];
+    const dist = pa.distanceTo(pb);
+    seg.mesh.position.copy(pa);
+    seg.mesh.lookAt(pb);
+    seg.mesh.scale.set(1, 1, Math.max(0.0001, dist));
+  }
+
+  // Actualizar la tríada ortonormal palmar F_MANO = [f_m, t_m, n_m]
+  const palmOrigin = new THREE.Vector3().lerpVectors(kps[0], kps[9], 0.35);
+  vis.arrowFm.position.copy(palmOrigin);
+  vis.arrowFm.setDirection(fm);
+  vis.arrowTm.position.copy(palmOrigin);
+  vis.arrowTm.setDirection(tm);
+  vis.arrowNm.position.copy(palmOrigin);
+  vis.arrowNm.setDirection(nm);
+}
+
+// Extrae las posiciones y rotaciones de las 21 juntas desde el humanoide VRM y actualiza tanto el Avatar como el Inspector Macro 3D
+function syncManoAssembliesFromVrm() {
+  if (!vrm || !vrm.humanoid) return;
+  vrm.scene.updateMatrixWorld(true);
+  const humanoid = vrm.humanoid;
+
+  for (const side of ['right', 'left']) {
+    const vis = avatarHandVis[side];
+    const kps = vis.kpPositions;
+    const quats = vis.kpQuats;
+    const handNode = humanoid.getNormalizedBoneNode(`${side}Hand`);
+    if (!handNode) continue;
+
+    handNode.getWorldPosition(kps[0]);
+    handNode.getWorldQuaternion(quats[0]);
+
+    for (const chain of FINGER_CHAINS) {
+      const [b0Name, b1Name, b2Name] = chain.bones.map(b => `${side}${b}`);
+      const [id0, id1, id2, idTip] = chain.kpIds;
+
+      const n0 = humanoid.getNormalizedBoneNode(b0Name);
+      const n1 = humanoid.getNormalizedBoneNode(b1Name);
+      const n2 = humanoid.getNormalizedBoneNode(b2Name);
+
+      if (n0) { n0.getWorldPosition(kps[id0]); n0.getWorldQuaternion(quats[id0]); }
+      if (n1) { n1.getWorldPosition(kps[id1]); n1.getWorldQuaternion(quats[id1]); }
+      if (n2) { n2.getWorldPosition(kps[id2]); n2.getWorldQuaternion(quats[id2]); }
+
+      if (n1 && n2) {
+        const dir = new THREE.Vector3().subVectors(kps[id2], kps[id1]);
+        const len = dir.length();
+        const relQ = quats[id1].clone().invert().multiply(quats[id2]);
+        dir.applyQuaternion(relQ).normalize().multiplyScalar(Math.max(0.017, len * 0.86));
+        kps[idTip].copy(kps[id2]).add(dir);
+        quats[idTip].copy(quats[id2]);
+      }
+    }
+
+    updateDeformableManoMeshGeometry(vis);
+  }
+
+  // Sincronizar el Inspector Macro 3D con la mano seleccionada (centrada y ampliada en el origen del sub-visor)
+  const srcVis = avatarHandVis[telemetryHand];
+  if (srcVis) {
+    // Calcular centroide de la mano activa
+    const center = new THREE.Vector3();
+    for (let i = 0; i < 21; i++) center.add(srcVis.kpPositions[i]);
+    center.multiplyScalar(1 / 21);
+
+    for (let i = 0; i < 21; i++) {
+      macroHandVis.kpPositions[i].copy(srcVis.kpPositions[i]).sub(center);
+      macroHandVis.kpQuats[i].copy(srcVis.kpQuats[i]);
+    }
+    updateDeformableManoMeshGeometry(macroHandVis);
+  }
+
+  updateDynamicCalloutLines();
+}
+
+// Proyecta puntos 3D de las manos del avatar a coordenadas 2D de pantalla para las líneas guía SVG
+function projectToScreen(vec3, w, h) {
+  const v = vec3.clone().project(camera);
+  return [(v.x * 0.5 + 0.5) * w, (-(v.y * 0.5) + 0.5) * h];
+}
+
+function setPolylinePoints(id, x0, y0, x1, y1) {
+  const el = $(id);
+  if (!el) return;
+  const midX = x0 + (x1 - x0) * 0.55;
+  el.setAttribute('points', `${x0.toFixed(1)},${y0.toFixed(1)} ${midX.toFixed(1)},${y0.toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)}`);
+}
+
+function updateDynamicCalloutLines() {
+  if (!$('chkCallouts').checked || !vrm) return;
+  const w = stage.clientWidth;
+  const h = stage.clientHeight;
+  if (w === 0 || h === 0) return;
+
+  const rhKps = avatarHandVis.right.kpPositions;
+  const lhKps = avatarHandVis.left.kpPositions;
+
+  // 1. Muñeca Derecha (J0)
+  const [rx0, ry0] = projectToScreen(rhKps[0], w, h);
+  setPolylinePoints('line-rh-wrist', 255, 86, rx0, ry0);
+
+  // 2. Articulaciones Dedos Derecha (J8 Índice)
+  const [rx8, ry8] = projectToScreen(rhKps[8], w, h);
+  setPolylinePoints('line-rh-fingers', 255, h - 92, rx8, ry8);
+
+  // 3. Base Palmar Izquierda (centro entre J0 y J9)
+  const lhPalm = new THREE.Vector3().lerpVectors(lhKps[0], lhKps[9], 0.45);
+  const [lxP, lyP] = projectToScreen(lhPalm, w, h);
+  setPolylinePoints('line-lh-palm', w - 255, 86, lxP, lyP);
+
+  // 4. Malla Envolvente Mano Izquierda (J12 Medio)
+  const [lx12, ly12] = projectToScreen(lhKps[12], w, h);
+  setPolylinePoints('line-lh-mesh', w - 255, h - 92, lx12, ly12);
+}
+
+// ---------------------------------------------------------------------------
+// 5. Cámara, Resize y Modo Rayos-X del Avatar
+// ---------------------------------------------------------------------------
+function setCameraMode(mode) {
+  ['cam-mano', 'cam-macro-rh', 'cam-macro-lh', 'cam-full'].forEach(id => $(id).classList.remove('active'));
+  if (mode === 'mano') {
+    $('cam-mano').classList.add('active');
+    camera.position.set(0, 1.31, 0.96);
+    controls.target.set(0, 1.24, 0.14);
+  } else if (mode === 'macro-rh') {
+    $('cam-macro-rh').classList.add('active');
+    const p = avatarHandVis.right.kpPositions[9];
+    if (p && p.lengthSq() > 0) {
+      camera.position.set(p.x - 0.08, p.y + 0.04, p.z + 0.34);
+      controls.target.copy(p);
+    }
+  } else if (mode === 'macro-lh') {
+    $('cam-macro-lh').classList.add('active');
+    const p = avatarHandVis.left.kpPositions[9];
+    if (p && p.lengthSq() > 0) {
+      camera.position.set(p.x + 0.08, p.y + 0.04, p.z + 0.34);
+      controls.target.copy(p);
+    }
+  } else if (mode === 'full') {
+    $('cam-full').classList.add('active');
+    camera.position.set(0, 1.35, 1.85);
+    controls.target.set(0, 1.22, 0);
+  }
   controls.update();
 }
-setDefaultCamera();
-$('reset-cam').onclick = setDefaultCamera;
+$('cam-mano').onclick = () => setCameraMode('mano');
+$('cam-macro-rh').onclick = () => setCameraMode('macro-rh');
+$('cam-macro-lh').onclick = () => setCameraMode('macro-lh');
+$('cam-full').onclick = () => setCameraMode('full');
+setCameraMode('mano');
+
+function applyAvatarXrayState() {
+  if (!vrm) return;
+  const xray = $('chkXray').checked;
+  vrm.scene.traverse(obj => {
+    if (obj.isMesh && obj.material) {
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      for (const m of mats) {
+        m.transparent = true;
+        m.opacity = xray ? 0.48 : 1.0;
+        m.needsUpdate = true;
+      }
+    }
+  });
+}
 
 const resize = () => {
   const w = stage.clientWidth, h = stage.clientHeight;
-  renderer.setSize(w, h, false);
-  camera.aspect = w / h;
-  camera.updateProjectionMatrix();
+  if (w > 0 && h > 0) {
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  const mw = macroWrap.clientWidth, mh = macroWrap.clientHeight;
+  if (mw > 0 && mh > 0) {
+    macroRenderer.setSize(mw, mh, false);
+    macroCamera.aspect = mw / mh;
+    macroCamera.updateProjectionMatrix();
+  }
 };
 window.addEventListener('resize', resize);
-resize();
+setTimeout(resize, 50);
 
-// 4. Variables de Animación y Reloj Autónomo
+// ---------------------------------------------------------------------------
+// 6. Carga de Avatar VRM, Señas y Telemetría Matemática SO(3)
+// ---------------------------------------------------------------------------
 let vrm = null;
 let anim = null;
 let isPlaying = true;
@@ -343,9 +1699,7 @@ function applyLSECDefaultRestPose(targetVrm) {
   const humanoid = targetVrm.humanoid;
   for (const [boneName, q] of Object.entries(LSEC_REST_ROTATIONS)) {
     const boneNode = humanoid.getNormalizedBoneNode(boneName);
-    if (boneNode) {
-      boneNode.quaternion.set(q[0], q[1], q[2], q[3]);
-    }
+    if (boneNode) boneNode.quaternion.set(q[0], q[1], q[2], q[3]);
   }
 }
 
@@ -358,15 +1712,11 @@ async function loadVrmBuffer(buffer, name = 'Avatar') {
     if (vrm) scene.remove(vrm.scene);
     vrm = gltf.userData.vrm;
     VRMUtils.rotateVRM0(vrm);
+    ensureARKitAndVRMExpressionBindings(vrm, gltf);
     scene.add(vrm.scene);
     applyLSECDefaultRestPose(vrm);
-    const chestNode = vrm.humanoid?.getNormalizedBoneNode('chest');
-    if (chestNode) {
-      const pos = new THREE.Vector3();
-      chestNode.getWorldPosition(pos);
-      controls.target.copy(pos);
-      controls.update();
-    }
+    applyAvatarXrayState();
+    setCameraMode('mano');
     updateStatus();
   } catch (err) {
     console.error('Error cargando VRM:', err);
@@ -374,7 +1724,57 @@ async function loadVrmBuffer(buffer, name = 'Avatar') {
   }
 }
 
-function loadAnimationJson(jsonText, signTitle = '') {
+function quatToMat3String(q) {
+  if (!q) return ' 1.000  0.000  0.000\n 0.000  1.000  0.000\n 0.000  0.000  1.000';
+  const [x, y, z, w] = q;
+  const r00 = 1 - 2 * (y * y + z * z), r01 = 2 * (x * y - z * w), r02 = 2 * (x * z + y * w);
+  const r10 = 2 * (x * y + z * w), r11 = 1 - 2 * (x * x + z * z), r12 = 2 * (y * z - x * w);
+  const r20 = 2 * (x * z - y * w), r21 = 2 * (y * z + x * w), r22 = 1 - 2 * (x * x + y * y);
+  const f = n => (n >= 0 ? ' ' : '') + n.toFixed(3);
+  return `${f(r00)} ${f(r01)} ${f(r02)}\n${f(r10)} ${f(r11)} ${f(r12)}\n${f(r20)} ${f(r21)} ${f(r22)}`;
+}
+
+function quatToEulerDegStr(q) {
+  if (!q) return '(0°, 0°, 0°)';
+  const e = new THREE.Euler().setFromQuaternion(new THREE.Quaternion(q[0], q[1], q[2], q[3]), 'XYZ');
+  const d = r => Math.round((r * 180) / Math.PI);
+  return `(${d(e.x)}°,${d(e.y)}°,${d(e.z)}°)`;
+}
+
+function fmtQuat(q) {
+  if (!q) return '[0.00, 0.00, 0.00, 1.00]';
+  return `[${q[0].toFixed(2)}, ${q[1].toFixed(2)}, ${q[2].toFixed(2)}, ${q[3].toFixed(2)}]`;
+}
+
+function quatAngleDeg(q) {
+  if (!q) return 0;
+  const w = Math.min(1.0, Math.max(-1.0, Math.abs(q[3])));
+  return (2 * Math.acos(w) * 180) / Math.PI;
+}
+
+function resetViewerFacialExpressionsToNeutral() {
+  if (!vrm || !vrm.expressionManager) return;
+  try {
+    if (typeof vrm.expressionManager.resetValues === 'function') {
+      vrm.expressionManager.resetValues();
+    }
+    const vrmPresets = [
+      'happy', 'angry', 'sad', 'relaxed', 'surprised',
+      'aa', 'ih', 'ou', 'ee', 'oh',
+      'blink', 'blinkLeft', 'blinkRight',
+      'lookUp', 'lookDown', 'lookLeft', 'lookRight'
+    ];
+    for (const preset of vrmPresets) {
+      vrm.expressionManager.setValue(preset, 0.0);
+    }
+    vrm.expressionManager.setValue('neutral', 1.0);
+  } catch (_) {}
+}
+
+let currentSignName = 'Hola';
+let currentVersion = '2.7';
+
+function loadAnimationJson(jsonText, signTitle = '', qaData = null) {
   try {
     anim = typeof jsonText === 'string' ? JSON.parse(jsonText) : jsonText;
     fps = anim.metadata?.fps || 60;
@@ -384,7 +1784,32 @@ function loadAnimationJson(jsonText, signTitle = '') {
     isPlaying = true;
     $('play').textContent = '⏸ Pausar';
     $('play').classList.add('active');
-    updateStatus(signTitle);
+
+    resetViewerFacialExpressionsToNeutral();
+
+    const sName = signTitle || anim.metadata?.sign || 'LSEC';
+    const cnmArch = anim.metadata?.facialArchetype || 'neutral';
+    const cnmExplicit = anim.metadata?.hasExplicitFacialExpression === true;
+    const handStd = anim.metadata?.handStandardization;
+    const verLabel = (handStd && handStd.version === 'v2.7')
+      ? `v2.7 Estandarizado (${handStd.status === 'STANDARDIZED' ? (handStd.template_id || 'OK') : handStd.status})`
+      : (anim.metadata?.pipelineVersion || `v${currentVersion}`);
+    $('badge-version').textContent = `${verLabel} · CNM: ${cnmExplicit ? cnmArch : 'neutral'}`;
+
+    const fid = anim.metadata?.fidelity || {};
+    if (qaData && qaData.distance_after_deg !== undefined && qaData.distance_after_deg !== null) {
+      $('qa-delta-deg').textContent = `${Number(qaData.distance_after_deg).toFixed(2)}°`;
+    } else if (fid.avg_bone_delta_deg !== undefined) {
+      $('qa-delta-deg').textContent = `${Number(fid.avg_bone_delta_deg).toFixed(2)}°`;
+    }
+    if (fid.avg_wrist_displacement_cm !== undefined) {
+      $('qa-wrist-cm').textContent = `${Number(fid.avg_wrist_displacement_cm).toFixed(2)} cm`;
+    }
+    if (qaData && qaData.right_hand_coverage !== undefined) {
+      $('m-cov-rl').textContent = `${(qaData.right_hand_coverage * 100).toFixed(0)}% / ${(qaData.left_hand_coverage * 100).toFixed(0)}%`;
+    }
+
+    updateStatus(sName);
     applyFrameAtTime(0);
   } catch (err) {
     console.error('Error leyendo animation.json:', err);
@@ -392,15 +1817,30 @@ function loadAnimationJson(jsonText, signTitle = '') {
   }
 }
 
-async function loadSignByName(signName) {
+async function loadSignByName(signName, versionOverride = null) {
   if (!signName || !signName.trim()) return;
   const name = signName.trim();
-  $('status-banner').textContent = `Cargando seña: ${name}...`;
+  currentSignName = name;
+  const ver = versionOverride || ($('selectVersion') ? $('selectVersion').value : currentVersion) || '2.7';
+  currentVersion = ver;
+  if ($('selectVersion') && $('selectVersion').value !== ver) {
+    $('selectVersion').value = ver;
+  }
+  $('signSearch').value = name;
+  $('status-banner').textContent = `Cargando seña (${ver === '2.7' ? 'v2.7 Estandarizado' : 'v' + ver}) y modelo paramétrico MANO: ${name}...`;
   try {
-    const res = await fetch(`/api/v1/animations/${encodeURIComponent(name)}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}: Seña no encontrada`);
-    const data = await res.json();
-    loadAnimationJson(data, name);
+    const [resAnim, resQa] = await Promise.all([
+      fetch(`/api/v1/animations/${encodeURIComponent(name)}?version=${encodeURIComponent(ver)}`),
+      fetch(`/api/v1/animations/${encodeURIComponent(name)}/qa?version=${encodeURIComponent(ver)}`).catch(() => null),
+    ]);
+    if (!resAnim.ok) throw new Error(`HTTP ${resAnim.status}: Seña no encontrada`);
+    const data = await resAnim.json();
+    const qaData = (resQa && resQa.ok) ? await resQa.json() : null;
+
+    refVideo.src = `/api/v1/animations/${encodeURIComponent(name)}/video`;
+    refVideo.play().catch(() => {});
+
+    loadAnimationJson(data, name, qaData);
   } catch (err) {
     console.error(err);
     $('status-banner').textContent = `⚠️ No se pudo cargar '${name}': ${err.message}`;
@@ -408,38 +1848,247 @@ async function loadSignByName(signName) {
 }
 window.loadSignByName = loadSignByName;
 
+if ($('selectVersion')) {
+  $('selectVersion').onchange = e => {
+    currentVersion = e.target.value || '2.7';
+    const val = $('signSearch').value || currentSignName;
+    if (val) loadSignByName(val, currentVersion);
+  };
+}
+
 $('btnLoadSign').onclick = () => {
   const val = $('signSearch').value;
-  if (val) loadSignByName(val);
+  if (val) loadSignByName(val, currentVersion);
 };
 $('signSearch').onkeydown = e => {
   if (e.key === 'Enter') {
     const val = $('signSearch').value;
-    if (val) loadSignByName(val);
+    if (val) loadSignByName(val, currentVersion);
   }
 };
 
-// Cargar catálogo de señas disponibles para autocompletado
+function updateStatus(title = '') {
+  if (vrm && anim) {
+    const sName = title || anim.metadata?.sign || 'LSEC';
+    const handStd = anim.metadata?.handStandardization;
+    const stdTag = (handStd && handStd.version === 'v2.7')
+      ? `v2.7 ${handStd.status || 'ESTANDARIZADO'}`
+      : `v${currentVersion}`;
+    const cnmLabel = anim.metadata?.hasExplicitFacialExpression
+      ? `CNM Explícito (${anim.metadata?.facialArchetypeLabel || anim.metadata?.facialArchetype})`
+      : 'CNM Neutral';
+    $('status-banner').textContent = `Seña: ${sName} [${stdTag}] · ${cnmLabel} · 16 Rots SO(3) / Mano → Avatar VRM 1.0 (${totalFrames}F @ ${fps} FPS)`;
+  }
+}
+
+function applyFrameAtTime(timeSec) {
+  if (!vrm || !anim || anim.frames.length === 0) return;
+
+  const frameIdx = Math.max(0, Math.min(anim.frames.length - 1, Math.round(timeSec * fps)));
+  const frame = anim.frames[frameIdx];
+  if (!frame) return;
+
+  const humanoid = vrm.humanoid;
+  if (frame.hipsPosition) {
+    const hipsNode = humanoid.getNormalizedBoneNode('hips');
+    if (hipsNode) hipsNode.position.fromArray(frame.hipsPosition);
+  }
+
+  if (frame.rotations) {
+    for (const [boneName, q] of Object.entries(frame.rotations)) {
+      const boneNode = humanoid.getNormalizedBoneNode(boneName);
+      if (boneNode) boneNode.quaternion.set(q[0], q[1], q[2], q[3]);
+    }
+  }
+
+  if (vrm.expressionManager) {
+    const hasExplicitFacial = anim.metadata?.hasExplicitFacialExpression === true ||
+      anim.metadata?.nonManualStandard?.hasExplicitFacialExpression === true;
+
+    if (!hasExplicitFacial) {
+      resetViewerFacialExpressionsToNeutral();
+    } else {
+      let maxNonNeutral = 0;
+      if (frame.blendshapes) {
+        for (const [bsName, weight] of Object.entries(frame.blendshapes)) {
+          const w = Number(weight) || 0;
+          if (w > maxNonNeutral) maxNonNeutral = w;
+          vrm.expressionManager.setValue(bsName, w);
+        }
+      }
+      if (frame.expressions) {
+        for (const [expr, weight] of Object.entries(frame.expressions)) {
+          const w = Number(weight) || 0;
+          if (expr !== 'neutral' && w > maxNonNeutral) maxNonNeutral = w;
+          vrm.expressionManager.setValue(expr, w);
+        }
+      }
+      if (maxNonNeutral > 0.02) {
+        vrm.expressionManager.setValue('neutral', Math.max(0, 1.0 - maxNonNeutral));
+      } else {
+        vrm.expressionManager.setValue('neutral', 1.0);
+      }
+    }
+  }
+
+  if (refVideo && refVideo.readyState >= 2 && Math.abs(refVideo.currentTime - timeSec) > 0.12) {
+    try { refVideo.currentTime = timeSec; } catch (_) {}
+  }
+
+  // Actualizar matrices 3x3 SO(3) de muñeca en el panel izquierdo
+  const qRH = frame.rotations?.rightHand;
+  const qLH = frame.rotations?.leftHand;
+  $('mat-rh').textContent = quatToMat3String(qRH);
+  $('mat-lh').textContent = quatToMat3String(qLH);
+  $('axis-rh').textContent = `||ω||=${quatAngleDeg(qRH).toFixed(1)}°`;
+  $('axis-lh').textContent = `||ω||=${quatAngleDeg(qLH).toFixed(1)}°`;
+
+  // Actualizar tarjetas de anotación sobre el lienzo 3D
+  $('co-q-rh').textContent = `q_RH = ${fmtQuat(qRH)}`;
+  $('co-q-lh').textContent = `q_LH = ${fmtQuat(qLH)}`;
+  $('active-frame-badge').textContent = `Cuadro ${frameIdx} / ${totalFrames - 1}`;
+
+  // Actualizar las 16 filas del tensor MANO en el panel derecho
+  const side = telemetryHand;
+  let sumFlex = 0;
+  let countFlex = 0;
+  for (const def of MANO_JOINT_DEFS) {
+    const boneKey = `${side}${def.suffix}`;
+    const q = frame.rotations?.[boneKey];
+    const qEl = $(`jq-${def.suffix}`);
+    const eEl = $(`je-${def.suffix}`);
+    const dEl = $(`jd-${def.suffix}`);
+    const bEl = $(`jb-${def.suffix}`);
+    if (q && qEl && eEl && dEl && bEl) {
+      qEl.textContent = fmtQuat(q);
+      eEl.textContent = quatToEulerDegStr(q);
+      const deg = quatAngleDeg(q);
+      dEl.textContent = `${deg.toFixed(1)}°`;
+      const pct = Math.min(100, (deg / 95) * 100);
+      bEl.style.width = `${pct.toFixed(0)}%`;
+      if (def.suffix !== 'Hand') {
+        sumFlex += deg;
+        countFlex++;
+      }
+    }
+  }
+  if (countFlex > 0) {
+    $('co-flex-rh').textContent = `Flexión Media 15 Falanges: ${(sumFlex / countFlex).toFixed(1)}°`;
+  }
+
+  $('scrub').value = duration > 0 ? Math.round((timeSec / duration) * 1000) : 0;
+  const currentStr = timeSec.toFixed(2).padStart(5, '0');
+  const totalStr = duration.toFixed(2).padStart(5, '0');
+  $('info').textContent = `${currentStr}s / ${totalStr}s (F: ${frameIdx}/${totalFrames - 1})`;
+}
+
+// Botón "Congelar Pose Clave" para dejar la captura lista en el mejor fotograma
+$('btnCapturePose').onclick = () => {
+  if (!anim || !anim.frames.length) return;
+  isPlaying = false;
+  $('play').textContent = '▶ Reproducir';
+  $('play').classList.remove('active');
+  refVideo.pause();
+  // Seleccionar fotograma al ~42% de la seña donde la mano está en plena articulación frente al torso
+  const targetIdx = Math.floor(anim.frames.length * 0.42);
+  currentTime = targetIdx / fps;
+  applyFrameAtTime(currentTime);
+};
+
+$('play').onclick = () => {
+  if (!anim) return;
+  isPlaying = !isPlaying;
+  $('play').textContent = isPlaying ? '⏸ Pausar' : '▶ Reproducir';
+  $('play').classList.toggle('active', isPlaying);
+  if (isPlaying) refVideo.play().catch(() => {});
+  else refVideo.pause();
+};
+
+$('stop').onclick = () => {
+  isPlaying = false;
+  $('play').textContent = '▶ Reproducir';
+  $('play').classList.remove('active');
+  currentTime = 0;
+  refVideo.pause();
+  if (anim) applyFrameAtTime(0);
+};
+
+$('prev').onclick = () => {
+  isPlaying = false;
+  $('play').textContent = '▶ Reproducir';
+  $('play').classList.remove('active');
+  refVideo.pause();
+  currentTime = Math.max(0, currentTime - (1 / fps));
+  applyFrameAtTime(currentTime);
+};
+
+$('next').onclick = () => {
+  isPlaying = false;
+  $('play').textContent = '▶ Reproducir';
+  $('play').classList.remove('active');
+  refVideo.pause();
+  currentTime = Math.min(duration, currentTime + (1 / fps));
+  applyFrameAtTime(currentTime);
+};
+
+$('scrub').oninput = e => {
+  if (!duration) return;
+  currentTime = (parseFloat(e.target.value) / 1000) * duration;
+  applyFrameAtTime(currentTime);
+};
+
+// Controles de Capas de Complejidad MANO
+$('chkManoMesh').onchange = e => {
+  const v = e.target.checked;
+  avatarHandVis.right.meshGroup.visible = v;
+  avatarHandVis.left.meshGroup.visible = v;
+  macroHandVis.meshGroup.visible = v;
+};
+$('chkManoRig').onchange = e => {
+  const v = e.target.checked;
+  avatarHandVis.right.rigGroup.visible = v;
+  avatarHandVis.left.rigGroup.visible = v;
+  macroHandVis.rigGroup.visible = v;
+};
+$('chkBasis').onchange = e => {
+  const v = e.target.checked;
+  avatarHandVis.right.basisGroup.visible = v;
+  avatarHandVis.left.basisGroup.visible = v;
+  macroHandVis.basisGroup.visible = v;
+};
+$('chkCallouts').onchange = e => {
+  const v = e.target.checked;
+  $('callout-svg').style.display = v ? 'block' : 'none';
+  $('callouts-container').style.display = v ? 'block' : 'none';
+};
+$('chkXray').onchange = applyAvatarXrayState;
+
+$('btnTogglePanels').onclick = () => {
+  $('workspace').classList.toggle('clean-mode');
+  setTimeout(resize, 30);
+};
+
 async function initCatalog() {
   try {
-    const res = await fetch('/api/v1/animations/list?limit=5000');
+    const res = await fetch('/api/v1/animations/list?limit=6000');
     if (res.ok) {
       const data = await res.json();
       const list = $('signsList');
       list.innerHTML = '';
+      const seenNfc = new Set();
       (data.signs || []).forEach(s => {
+        if (!s) return;
+        const nfcSign = String(s).normalize('NFC').trim();
+        if (!nfcSign || seenNfc.has(nfcSign)) return;
+        seenNfc.add(nfcSign);
         const opt = document.createElement('option');
-        opt.value = s;
+        opt.value = nfcSign;
         list.appendChild(opt);
       });
-      console.log(`✓ Catálogo indexado: ${data.total} señas`);
     }
-  } catch (e) {
-    console.warn('No se pudo precargar catálogo:', e);
-  }
+  } catch (_) {}
 }
 
-// Cargar Avatar por defecto desde el servidor
 async function initDefaultAvatar() {
   const candidates = [
     '/avatar/LSEC-Interpreter-Female.vrm',
@@ -459,122 +2108,13 @@ async function initDefaultAvatar() {
   return false;
 }
 
-// Selectores manuales
 $('fVrm').onchange = async e => {
   const file = e.target.files[0];
-  if (!file) return;
-  await loadVrmBuffer(await file.arrayBuffer(), file.name);
+  if (file) await loadVrmBuffer(await file.arrayBuffer(), file.name);
 };
 $('fAnim').onchange = async e => {
   const file = e.target.files[0];
-  if (!file) return;
-  loadAnimationJson(await file.text(), file.name);
-};
-
-// Drag & Drop
-window.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); });
-window.addEventListener('drop', async e => {
-  e.preventDefault();
-  e.stopPropagation();
-  for (const file of e.dataTransfer.files) {
-    if (file.name.toLowerCase().endsWith('.vrm')) {
-      await loadVrmBuffer(await file.arrayBuffer(), file.name);
-    } else if (file.name.toLowerCase().endsWith('.json')) {
-      loadAnimationJson(await file.text(), file.name);
-    }
-  }
-});
-
-function updateStatus(title = '') {
-  if (vrm && anim) {
-    const sName = title || anim.metadata?.sign || 'LSEC';
-    const cov = anim.metadata?.coverage ? ` · Cobertura: ${(anim.metadata.coverage*100).toFixed(0)}%` : '';
-    $('status-banner').textContent = `Seña: ${sName} | ${totalFrames} fotogramas (${duration.toFixed(2)}s @ ${fps} FPS) | Directo 1:1${cov}`;
-  } else if (vrm) {
-    $('status-banner').textContent = 'Avatar listo (Pose de Descanso LSEC). Selecciona una seña en el buscador superior.';
-  } else if (anim) {
-    $('status-banner').textContent = 'Animación cargada. Cargando modelo VRM...';
-  }
-}
-
-function applyFrameAtTime(timeSec) {
-  if (!vrm || !anim || anim.frames.length === 0) return;
-  
-  const frameIdx = Math.max(0, Math.min(anim.frames.length - 1, Math.round(timeSec * fps)));
-  const frame = anim.frames[frameIdx];
-  if (!frame) return;
-  
-  const humanoid = vrm.humanoid;
-  if (frame.hipsPosition) {
-    const hipsNode = humanoid.getNormalizedBoneNode('hips');
-    if (hipsNode) hipsNode.position.fromArray(frame.hipsPosition);
-  }
-  
-  if (frame.rotations) {
-    for (const [boneName, q] of Object.entries(frame.rotations)) {
-      const boneNode = humanoid.getNormalizedBoneNode(boneName);
-      if (boneNode) {
-        boneNode.quaternion.set(q[0], q[1], q[2], q[3]);
-      }
-    }
-  }
-  
-  if (vrm.expressionManager && frame.expressions) {
-    for (const [expr, weight] of Object.entries(frame.expressions)) {
-      vrm.expressionManager.setValue(expr, weight);
-    }
-  }
-  
-  $('scrub').value = duration > 0 ? Math.round((timeSec / duration) * 1000) : 0;
-  const currentStr = timeSec.toFixed(2).padStart(5, '0');
-  const totalStr = duration.toFixed(2).padStart(5, '0');
-  $('info').textContent = `${currentStr}s / ${totalStr}s (F: ${frameIdx}/${totalFrames - 1})`;
-}
-
-$('play').onclick = () => {
-  if (!anim) return;
-  isPlaying = !isPlaying;
-  $('play').textContent = isPlaying ? '⏸ Pausar' : '▶ Reproducir';
-  $('play').classList.toggle('active', isPlaying);
-};
-
-$('stop').onclick = () => {
-  isPlaying = false;
-  $('play').textContent = '▶ Reproducir';
-  $('play').classList.remove('active');
-  currentTime = 0;
-  if (vrm) applyLSECDefaultRestPose(vrm);
-};
-
-$('prev').onclick = () => {
-  isPlaying = false;
-  $('play').textContent = '▶ Reproducir';
-  $('play').classList.remove('active');
-  currentTime = Math.max(0, currentTime - (1 / fps));
-  applyFrameAtTime(currentTime);
-};
-
-$('next').onclick = () => {
-  isPlaying = false;
-  $('play').textContent = '▶ Reproducir';
-  $('play').classList.remove('active');
-  currentTime = Math.min(duration, currentTime + (1 / fps));
-  applyFrameAtTime(currentTime);
-};
-
-$('scrub').oninput = e => {
-  if (!duration) return;
-  currentTime = (parseFloat(e.target.value) / 1000) * duration;
-  applyFrameAtTime(currentTime);
-};
-
-$('wireframe').onchange = e => {
-  if (!vrm) return;
-  vrm.scene.traverse(obj => {
-    if (obj.isMesh && obj.material) {
-      obj.material.wireframe = e.target.checked;
-    }
-  });
+  if (file) loadAnimationJson(await file.text(), file.name);
 };
 
 let lastTimestamp = performance.now();
@@ -582,11 +2122,11 @@ let lastTimestamp = performance.now();
 function animate(now) {
   const deltaSec = (now - lastTimestamp) / 1000;
   lastTimestamp = now;
-  
+
   if (isPlaying && anim && duration > 0) {
     const rate = parseFloat($('rate').value) || 1.0;
     currentTime += deltaSec * rate;
-    
+
     if (currentTime >= duration) {
       if ($('loop').checked) {
         currentTime = currentTime % duration;
@@ -595,26 +2135,27 @@ function animate(now) {
         isPlaying = false;
         $('play').textContent = '▶ Reproducir';
         $('play').classList.remove('active');
-        if (vrm) applyLSECDefaultRestPose(vrm);
       }
     }
     applyFrameAtTime(currentTime);
   }
-  
+
   controls.update();
-  if (vrm) vrm.update(deltaSec);
+  if (vrm) {
+    vrm.update(deltaSec);
+    syncManoAssembliesFromVrm();
+  }
   renderer.render(scene, camera);
+  macroRenderer.render(macroScene, macroCamera);
   requestAnimationFrame(animate);
 }
 
 requestAnimationFrame(animate);
 
-// Secuencia de Inicialización Automática
 (async () => {
   await initCatalog();
   const avatarLoaded = await initDefaultAvatar();
   if (avatarLoaded) {
-    // Reproducir seña de bienvenida inicial
     await loadSignByName('Hola');
   }
 })();

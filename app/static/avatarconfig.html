@@ -275,18 +275,25 @@
       background: rgba(255, 255, 255, 0.06);
     }
 
-    .version-nav-btn.active.v26 {
+    .version-nav-btn.active.v27 {
       background: #064e3b;
       color: #6ee7b7;
-      border-color: #059669;
-      box-shadow: 0 0 10px rgba(16, 185, 129, 0.25);
+      border-color: #10b981;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+    }
+
+    .version-nav-btn.active.v26 {
+      background: #1e3a8a;
+      color: #93c5fd;
+      border-color: #3b82f6;
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.25);
     }
 
     .version-nav-btn.active.v25 {
       background: #1e293b;
-      color: #93c5fd;
-      border-color: #3b82f6;
-      box-shadow: 0 0 10px rgba(59, 130, 246, 0.25);
+      color: #cbd5e1;
+      border-color: #64748b;
+      box-shadow: 0 0 10px rgba(100, 116, 139, 0.25);
     }
 
     .version-nav-toggle-btn {
@@ -312,7 +319,7 @@
     /* Switcher en Tarjeta 2 */
     .version-card-switcher {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(3, 1fr);
       gap: 6px;
       margin-bottom: 8px;
     }
@@ -336,16 +343,22 @@
       background: rgba(255, 255, 255, 0.05);
     }
 
+    .version-card-btn.active.v27 {
+      background: rgba(6, 78, 59, 0.38);
+      border-color: #10b981;
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.22);
+    }
+
     .version-card-btn.active.v26 {
-      background: rgba(6, 78, 59, 0.35);
-      border-color: #059669;
-      box-shadow: 0 0 12px rgba(16, 185, 129, 0.18);
+      background: rgba(30, 58, 138, 0.35);
+      border-color: #3b82f6;
+      box-shadow: 0 0 12px rgba(59, 130, 246, 0.18);
     }
 
     .version-card-btn.active.v25 {
       background: rgba(30, 41, 59, 0.45);
-      border-color: #3b82f6;
-      box-shadow: 0 0 12px rgba(59, 130, 246, 0.18);
+      border-color: #64748b;
+      box-shadow: 0 0 12px rgba(100, 116, 139, 0.18);
     }
 
     .version-card-btn-header {
@@ -357,41 +370,51 @@
     }
 
     .version-card-btn-title {
-      font-size: 0.74rem;
+      font-size: 0.72rem;
       font-weight: 700;
       color: var(--text-primary);
     }
 
-    .version-card-btn.active.v26 .version-card-btn-title {
+    .version-card-btn.active.v27 .version-card-btn-title {
       color: #6ee7b7;
     }
 
-    .version-card-btn.active.v25 .version-card-btn-title {
+    .version-card-btn.active.v26 .version-card-btn-title {
       color: #93c5fd;
     }
 
+    .version-card-btn.active.v25 .version-card-btn-title {
+      color: #cbd5e1;
+    }
+
     .version-card-btn-badge {
-      font-size: 0.62rem;
+      font-size: 0.60rem;
       font-weight: 700;
-      padding: 1px 5px;
+      padding: 1px 4px;
       border-radius: 4px;
       text-transform: uppercase;
     }
 
-    .version-card-btn.active.v26 .version-card-btn-badge {
-      background: rgba(16, 185, 129, 0.2);
+    .version-card-btn.active.v27 .version-card-btn-badge {
+      background: rgba(16, 185, 129, 0.22);
       color: #34d399;
-      border: 1px solid rgba(16, 185, 129, 0.4);
+      border: 1px solid rgba(16, 185, 129, 0.45);
     }
 
-    .version-card-btn.active.v25 .version-card-btn-badge {
+    .version-card-btn.active.v26 .version-card-btn-badge {
       background: rgba(59, 130, 246, 0.2);
       color: #60a5fa;
       border: 1px solid rgba(59, 130, 246, 0.4);
     }
 
+    .version-card-btn.active.v25 .version-card-btn-badge {
+      background: rgba(100, 116, 139, 0.2);
+      color: #cbd5e1;
+      border: 1px solid rgba(100, 116, 139, 0.4);
+    }
+
     .version-card-btn-desc {
-      font-size: 0.64rem;
+      font-size: 0.62rem;
       color: var(--text-muted);
       line-height: 1.25;
     }
@@ -408,15 +431,21 @@
       transition: all 0.2s ease;
     }
 
-    .version-status-banner.v26 {
-      background: rgba(6, 78, 59, 0.25);
-      border: 1px solid rgba(5, 150, 105, 0.4);
+    .version-status-banner.v27 {
+      background: rgba(6, 78, 59, 0.28);
+      border: 1px solid rgba(16, 185, 129, 0.45);
       color: #a7f3d0;
+    }
+
+    .version-status-banner.v26 {
+      background: rgba(30, 58, 138, 0.25);
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      color: #bfdbfe;
     }
 
     .version-status-banner.v25 {
       background: rgba(30, 41, 59, 0.3);
-      border: 1px solid rgba(59, 130, 246, 0.35);
+      border: 1px solid rgba(100, 116, 139, 0.35);
       color: #cbd5e1;
     }
 
@@ -432,6 +461,182 @@
       font-size: 0.68rem;
       font-weight: 700;
       letter-spacing: 0.02em;
+    }
+
+    /* --- Explorador Visual de Configuraciones Manuales (I–IX y *) y 82 Sub-variantes --- */
+    .cm-filter-section {
+      background: rgba(15, 19, 17, 0.75);
+      border: 1px solid var(--border-subtle);
+      border-radius: 7px;
+      padding: 8px;
+      margin-bottom: 8px;
+    }
+
+    .cm-pills-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 4px;
+      margin-top: 5px;
+    }
+
+    .cm-pill-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 2px;
+      border-radius: 5px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.16s ease;
+      user-select: none;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cm-pill-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.25);
+      color: var(--text-primary);
+    }
+
+    .cm-pill-btn.active {
+      background: rgba(183, 211, 107, 0.16);
+      border-color: var(--action-primary, #B7D36B);
+      color: #fff;
+      box-shadow: 0 0 10px rgba(183, 211, 107, 0.22);
+    }
+
+    .cm-pill-roman {
+      font-size: 0.74rem;
+      font-weight: 800;
+      line-height: 1.1;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .cm-pill-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+
+    .cm-pill-count {
+      font-size: 0.60rem;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+      margin-top: 1px;
+    }
+
+    .cm-pill-btn.active .cm-pill-count {
+      color: #d9f99d;
+      font-weight: 700;
+    }
+
+    /* Tira / Galería de Sub-variantes con Miniaturas Recortadas */
+    .cm-variants-drawer {
+      margin-top: 7px;
+      padding-top: 7px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      display: none;
+    }
+
+    .cm-variants-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 5px;
+      max-height: 185px;
+      overflow-y: auto;
+      padding-right: 2px;
+      margin-top: 5px;
+    }
+
+    .cm-variant-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 4px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      background: #0b0e0c;
+      cursor: pointer;
+      transition: all 0.16s ease;
+      text-align: center;
+    }
+
+    .cm-variant-card:hover {
+      border-color: #60a5fa;
+      transform: translateY(-1px);
+    }
+
+    .cm-variant-card.active {
+      border-color: #10b981;
+      background: rgba(6, 78, 59, 0.35);
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.25);
+    }
+
+    .cm-variant-thumb {
+      width: 44px;
+      height: 44px;
+      object-fit: contain;
+      border-radius: 4px;
+      background: #fff;
+      margin-bottom: 3px;
+    }
+
+    .cm-variant-lbl {
+      font-size: 0.62rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1.1;
+    }
+
+    .cm-variant-cnt {
+      font-size: 0.58rem;
+      color: var(--text-muted);
+    }
+
+    /* Tarjeta de Referencia Visual de Configuración Manual en Ficha Técnica */
+    .cm-active-ref-box {
+      background: var(--bg-subtle, rgba(255, 255, 255, 0.03));
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border-subtle);
+      margin-bottom: 8px;
+    }
+
+    .cm-active-ref-grid {
+      display: grid;
+      grid-template-columns: 84px 1fr;
+      gap: 8px;
+      align-items: center;
+      margin-top: 6px;
+    }
+
+    .cm-active-thumb-wrap {
+      width: 84px;
+      height: 84px;
+      border-radius: 6px;
+      background: #ffffff;
+      border: 2px solid rgba(255, 255, 255, 0.18);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      cursor: pointer;
+      position: relative;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .cm-active-thumb-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
     }
   </style>
 </head>
@@ -461,7 +666,10 @@
     <div class="avatar-config-nav-right">
       <!-- Conmutador Rápido de Versión de Pipeline -->
       <div class="version-pill-group" id="navbar-version-group" title="Seleccionar versión del pipeline cinemático">
-        <button type="button" class="version-nav-btn active v26" id="nav-btn-v26" title="Versión 2.6 Corregida (Suavizado de muñecas, IK despeje ~1cm, expresiones 52 ARKit y cabeza)">
+        <button type="button" class="version-nav-btn active v27" id="nav-btn-v27" title="Versión 2.7 Estandarizada (Manos alineadas a la Configuración Manual oficial I–IX + 52 ARKit)">
+          <span>v2.7 Estandarizada</span>
+        </button>
+        <button type="button" class="version-nav-btn" id="nav-btn-v26" title="Versión 2.6 Corregida (Suavizado de muñecas, IK despeje ~1cm, expresiones 52 ARKit y cabeza)">
           <span>v2.6 Corregida</span>
         </button>
         <button type="button" class="version-nav-btn" id="nav-btn-v25" title="Versión 2.5 Directo (1:1 Original sin postproceso)">
@@ -474,7 +682,7 @@
 
       <!-- Indicador de Señas Verificadas -->
       <span class="avatar-model-pill" id="verification-progress-pill" style="background:#0f291e; color:#6ee7b7; border:1px solid #059669; font-weight:700; font-size:0.75rem;">
-        ✓ 0 / 5.052 VERIFICADAS
+        ✓ 0 / 4.142 VERIFICADAS
       </span>
 
       <span class="avatar-status-badge" id="avatar-playback-status-badge">Listo</span>
@@ -526,7 +734,7 @@
               <div class="avatar-hud-gloss">
                 <span class="avatar-hud-label">AVATAR 3D:</span>
                 <span class="avatar-hud-value" id="avatar-active-gloss-hud">—</span>
-                <button type="button" id="hud-pipeline-badge" style="font-size:0.65rem; padding:1px 6px; border-radius:4px; font-weight:700; margin-left:6px; background:#064e3b; color:#6ee7b7; border:1px solid #059669; cursor:pointer; display:inline-flex; align-items:center;" title="Clic para alternar versión de animación (v2.6 / v2.5)">v2.6</button>
+                <button type="button" id="hud-pipeline-badge" style="font-size:0.65rem; padding:1px 6px; border-radius:4px; font-weight:700; margin-left:6px; background:#064e3b; color:#6ee7b7; border:1px solid #10b981; cursor:pointer; display:inline-flex; align-items:center;" title="Clic para alternar versión de animación (v2.7 / v2.6 / v2.5)">v2.7</button>
                 <span id="hud-expressions-badge" style="font-size:0.65rem; padding:1px 6px; border-radius:4px; font-weight:600; margin-left:4px; background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3); display:inline-flex; align-items:center;" title="Expresiones faciales y orientación cefálica">🎭 52 ARKit</span>
               </div>
               <div class="avatar-hud-time">
@@ -612,6 +820,9 @@
                 <span style="font-size:0.8rem; font-weight:700; color:var(--text-primary);" id="uhd-header-sign-name">Cargando seña...</span>
               </div>
               <div style="display:flex; align-items:center; gap:6px;">
+                <button class="btn btn-secondary btn-sm" id="btn-uhd-open-cm-sheet" title="Ver Lámina Oficial de Configuración Manual de esta seña" style="padding:2px 8px; font-size:0.7rem; border-color:#10b981; color:#a7f3d0; display:none;">
+                  🖐️ <span id="uhd-cm-pill-text">CM —</span>
+                </button>
                 <button class="btn btn-secondary btn-sm" id="btn-toggle-uhd-illustration" title="Ver Ilustración oficial de la seña (Tecla I)" style="padding:2px 8px; font-size:0.7rem; border-color:#6366f1; color:#c7d2fe; display:none;">
                   🖼️ Ilustración
                 </button>
@@ -757,16 +968,61 @@
       <!-- ZONA DERECHA: CATÁLOGO OFICIAL, VERIFICACIÓN Y MODELO VRM -->
       <aside class="avatar-config-sidebar-zone" aria-label="Catálogo de Señas y Verificación">
         
-        <!-- CARD 1: BUSCADOR Y NAVEGACIÓN EN ORDEN OFICIAL DEL CATÁLOGO -->
+        <!-- CARD 1: BUSCADOR Y NAVEGACIÓN EN ORDEN OFICIAL DEL CATÁLOGO Y CONFIGURACIONES MANUALES -->
         <div class="avatar-config-card">
           <div class="avatar-config-card-header">
             <span class="avatar-config-card-title">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z"/></svg>
               Catálogo Oficial Diccionario LSEC
             </span>
-            <span class="avatar-config-card-subtitle" id="sign-count-badge" style="color:var(--action-primary); font-weight:700;">5.052 Señas</span>
+            <span class="avatar-config-card-subtitle" id="sign-count-badge" style="color:var(--action-primary); font-weight:700;">4.142 Señas</span>
           </div>
 
+          <!-- EXPLORADOR VISUAL DE CONFIGURACIÓN MANUAL (I–IX y *) + 82 SUB-VARIANTES + LETRA -->
+          <div class="cm-filter-section" id="cm-explorer-panel">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size:0.68rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em;">
+                🖐️ Configuración Manual (Láminas I–IX y *)
+              </span>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-reset-cm-filters" style="display:none; padding:1px 6px; font-size:0.62rem; height:18px;">
+                ✕ Limpiar filtro
+              </button>
+            </div>
+
+            <!-- Botones de Láminas I a IX + * + Todas -->
+            <div class="cm-pills-grid" id="cm-pills-container">
+              <!-- Poblado dinámicamente desde /api/v1/animations/handshapes -->
+            </div>
+
+            <!-- Galería de Sub-variantes Recortadas (aparece al elegir una Configuración I–IX) -->
+            <div class="cm-variants-drawer" id="cm-variants-drawer">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:4px;">
+                <span id="cm-drawer-title" style="font-size:0.68rem; font-weight:700; color:#e2e8f0;">Sub-variantes de la Mano</span>
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-open-cm-sheet-drawer" style="padding:1px 7px; font-size:0.64rem; border-color:#3b82f6; color:#93c5fd;" title="Ver lámina oficial completa con su forma base y variantes">
+                  📋 Ver Lámina Completa
+                </button>
+              </div>
+              <div class="cm-variants-strip" id="cm-variants-strip"></div>
+            </div>
+
+            <!-- Filtro combinado por Letra Inicial (alfa-a..z) y Criterio de Orden -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:7px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.06);">
+              <div>
+                <label for="select-filter-alfa" style="display:block; font-size:0.63rem; color:var(--text-muted); margin-bottom:2px;">Letra inicial (alfa):</label>
+                <select id="select-filter-alfa" class="avatar-select" style="width:100%; font-size:0.72rem; padding:3px 6px;">
+                  <option value="">Todas las letras (A–Z)</option>
+                </select>
+              </div>
+              <div>
+                <label for="select-sort-order" style="display:block; font-size:0.63rem; color:var(--text-muted); margin-bottom:2px;">Ordenar lista por:</label>
+                <select id="select-sort-order" class="avatar-select" style="width:100%; font-size:0.72rem; padding:3px 6px;">
+                  <option value="catalog">Orden Catálogo (#1–4252)</option>
+                  <option value="hand_config">Config. Manual (I–IX → Var)</option>
+                  <option value="alfa">Alfabético (A–Z)</option>
+                </select>
+              </div>
+            </div>
+          </div>
 
           <!-- Buscador en tiempo real -->
           <div style="position:relative; margin-bottom:8px;">
@@ -779,7 +1035,7 @@
           <!-- Selector desplegable de señas ordenadas según catalogo_lsec.json -->
           <div>
             <label for="select-avatar-clip" class="avatar-control-label" style="display:flex; justify-content:space-between; margin-bottom:4px;">
-              <span>Seña en orden de catálogo:</span>
+              <span>Seña activa en el filtro:</span>
               <span id="select-sign-index-hint" style="color:var(--text-muted); font-size:0.7rem;">Cargando catálogo...</span>
             </label>
             <select id="select-avatar-clip" class="avatar-select" style="width:100%; font-size:0.82rem;">
@@ -795,7 +1051,7 @@
             <button class="btn btn-secondary btn-sm" id="btn-sign-next" title="Seña Siguiente en el catálogo (Tecla Flecha Derecha →)">
               <span>Siguiente ➡</span>
             </button>
-            <button class="btn btn-secondary btn-sm" id="btn-sign-random" title="Ir a una seña aleatoria del catálogo">
+            <button class="btn btn-secondary btn-sm" id="btn-sign-random" title="Ir a una seña aleatoria del filtro activo">
               <span>🎲 Azar</span>
             </button>
           </div>
@@ -822,10 +1078,17 @@
 
           <!-- Selector de Versión Cinemática Destacado -->
           <div class="version-card-switcher" id="card-version-switcher">
-            <button type="button" class="version-card-btn active v26" id="card-btn-v26" title="Seleccionar versión corregida v2.6">
+            <button type="button" class="version-card-btn active v27" id="card-btn-v27" title="Seleccionar versión estandarizada v2.7 (Manos alineadas a la Configuración Manual oficial)">
+              <div class="version-card-btn-header">
+                <span class="version-card-btn-title">v2.7 Estandarizada</span>
+                <span class="version-card-btn-badge">Activa</span>
+              </div>
+              <div class="version-card-btn-desc">Manos alineadas a la Configuración Manual (I–IX) + IK + 52 ARKit.</div>
+            </button>
+            <button type="button" class="version-card-btn" id="card-btn-v26" title="Seleccionar versión corregida v2.6">
               <div class="version-card-btn-header">
                 <span class="version-card-btn-title">v2.6 Corregida</span>
-                <span class="version-card-btn-badge">Activa</span>
+                <span class="version-card-btn-badge" style="display:none;">v2.6</span>
               </div>
               <div class="version-card-btn-desc">Muñecas sin giros bruscos, IK anti-penetración (~1cm) y 52 ARKit faciales.</div>
             </button>
@@ -839,10 +1102,46 @@
           </div>
 
           <!-- Banner de Estado de Versión y Detección de Seña Re-extraída -->
-          <div class="version-status-banner v26" id="version-status-banner">
+          <div class="version-status-banner v27" id="version-status-banner">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px;">
-              <span id="version-status-text" style="font-weight:600;">✓ Versión 2.6 Corregida: Cinemática optimizada + 52 Blendshapes.</span>
+              <span id="version-status-text" style="font-weight:600;">✓ Versión 2.7 Estandarizada: Configuración Manual oficial (I–IX) + 52 Blendshapes.</span>
               <span id="reextracted-sign-tag" class="reextracted-sign-tag" style="display:none;" title="Seña re-extraída en GPU en Google Colab con 64+ cuadros">✨ RE-EXTRAÍDA GPU</span>
+            </div>
+          </div>
+
+          <!-- TARJETA DE REFERENCIA VISUAL: CONFIGURACIÓN MANUAL OFICIAL DE LA SEÑA ACTIVA -->
+          <div class="cm-active-ref-box" id="active-sign-cm-box">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="color:var(--text-muted); font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">
+                🖐️ Configuración Manual Oficial
+              </span>
+              <span id="active-cm-badge" style="font-size:0.68rem; font-weight:800; padding:1px 7px; border-radius:4px; background:rgba(16,185,129,0.18); color:#6ee7b7; border:1px solid rgba(16,185,129,0.35);">
+                —
+              </span>
+            </div>
+
+            <div class="cm-active-ref-grid">
+              <div class="cm-active-thumb-wrap" id="active-cm-thumb-box" title="Clic para ampliar sub-variante de configuración manual">
+                <img id="active-cm-variant-img" src="" alt="Sub-variante de mano LSEC" style="display:none;">
+                <span id="active-cm-no-img" style="font-size:1.5rem; color:#475569; font-weight:800;">*</span>
+              </div>
+
+              <div style="display:flex; flex-direction:column; gap:4px; min-width:0;">
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-primary); line-height:1.2;" id="active-cm-title">
+                  Cargando configuración...
+                </div>
+                <div style="font-size:0.68rem; color:var(--text-secondary); line-height:1.25;" id="active-cm-subtitle">
+                  Sub-variante: —
+                </div>
+                <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:2px;">
+                  <button type="button" class="btn btn-secondary btn-sm" id="btn-active-cm-filter-variant" style="padding:2px 7px; font-size:0.64rem; border-color:#10b981; color:#6ee7b7;" title="Filtrar todas las señas que comparten exactamente esta sub-variante manual">
+                    🔗 Ver grupo (<span id="active-cm-group-count">0</span>)
+                  </button>
+                  <button type="button" class="btn btn-secondary btn-sm" id="btn-active-cm-open-sheet" style="padding:2px 7px; font-size:0.64rem; border-color:#3b82f6; color:#93c5fd;" title="Abrir la lámina romana completa I–IX con su forma base y variantes">
+                    📋 Lámina I–IX
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -851,8 +1150,8 @@
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; padding-bottom:4px; border-bottom:1px solid rgba(255,255,255,0.05);">
               <span style="color:var(--text-muted); font-size:0.68rem;">Versión Cinemática:</span>
               <div style="display:flex; align-items:center; gap:6px;">
-                <span id="info-pipeline-version" style="font-weight:700; color:#a7f3d0; font-size:0.72rem;">v2.6 Corregida</span>
-                <button class="btn btn-secondary btn-sm" id="btn-toggle-pipeline-version" style="font-size:0.65rem; padding:1px 6px; height:20px;" title="Alternar entre versión v2.6 (corregida) y v2.5 (original)">Ver v2.5</button>
+                <span id="info-pipeline-version" style="font-weight:700; color:#a7f3d0; font-size:0.72rem;">v2.7 Estandarizada</span>
+                <button class="btn btn-secondary btn-sm" id="btn-toggle-pipeline-version" style="font-size:0.65rem; padding:1px 6px; height:20px;" title="Alternar entre versión v2.7 (estandarizada), v2.6 (corregida) y v2.5 (original)">Ver v2.6</button>
               </div>
             </div>
             <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
@@ -963,7 +1262,14 @@
     let verifiedSigns = new Set();
     let currentIllustrationUrl = null;
     let isUhdIllustrationOpen = false;
-    let preferredVersion = '2.6';
+    let preferredVersion = '2.7';
+    let handshapesCatalog = null;
+    let handshapesById = {};
+    let activeCmFilter = '';
+    let activeVariantFilter = '';
+    let activeAlfaFilter = '';
+    let activeSortOrder = 'catalog';
+    let activeSignCmMeta = null;
 
     // Lista de las 56 señas re-extraídas en GPU en Google Colab (antes truncadas <= 30 frames)
     const TRUNCATED_REEXTRACTED_SIGNS = new Set([
@@ -1037,50 +1343,61 @@
       return false;
     }
 
-    function setPreferredVersion(newVer) {
-      if (newVer !== '2.6' && newVer !== '2.5') return;
-      preferredVersion = newVer;
-      const isV26 = preferredVersion === '2.6';
+    function getNextVersion(ver = preferredVersion) {
+      if (ver === '2.7') return '2.6';
+      if (ver === '2.6') return '2.5';
+      return '2.7';
+    }
 
-      // 1. Botones de Navbar
-      const navV26 = document.getElementById('nav-btn-v26');
-      const navV25 = document.getElementById('nav-btn-v25');
-      if (navV26 && navV25) {
-        if (isV26) {
-          navV26.className = 'version-nav-btn active v26';
-          navV25.className = 'version-nav-btn';
-        } else {
-          navV26.className = 'version-nav-btn';
-          navV25.className = 'version-nav-btn active v25';
+    function setPreferredVersion(newVer) {
+      if (newVer !== '2.7' && newVer !== '2.6' && newVer !== '2.5') return;
+      preferredVersion = newVer;
+      if (window.avatarController) {
+        window.avatarController.preferredVersion = newVer;
+        if (window.avatarController.syncController && typeof window.avatarController.syncController.setPreferredVersion === 'function') {
+          window.avatarController.syncController.setPreferredVersion(newVer);
         }
       }
+      const isV27 = preferredVersion === '2.7';
+      const isV26 = preferredVersion === '2.6';
+      const isV25 = preferredVersion === '2.5';
+
+      // 1. Botones de Navbar
+      const navV27 = document.getElementById('nav-btn-v27');
+      const navV26 = document.getElementById('nav-btn-v26');
+      const navV25 = document.getElementById('nav-btn-v25');
+      if (navV27) navV27.className = isV27 ? 'version-nav-btn active v27' : 'version-nav-btn';
+      if (navV26) navV26.className = isV26 ? 'version-nav-btn active v26' : 'version-nav-btn';
+      if (navV25) navV25.className = isV25 ? 'version-nav-btn active v25' : 'version-nav-btn';
 
       // 2. Botones de Card 2 Switcher
+      const cardV27 = document.getElementById('card-btn-v27');
       const cardV26 = document.getElementById('card-btn-v26');
       const cardV25 = document.getElementById('card-btn-v25');
-      if (cardV26 && cardV25) {
-        if (isV26) {
-          cardV26.className = 'version-card-btn active v26';
-          cardV25.className = 'version-card-btn';
-          const b26 = cardV26.querySelector('.version-card-btn-badge');
-          const b25 = cardV25.querySelector('.version-card-btn-badge');
-          if (b26) { b26.style.display = 'inline-block'; b26.textContent = 'Activa'; }
-          if (b25) { b25.style.display = 'none'; }
-        } else {
-          cardV26.className = 'version-card-btn';
-          cardV25.className = 'version-card-btn active v25';
-          const b26 = cardV26.querySelector('.version-card-btn-badge');
-          const b25 = cardV25.querySelector('.version-card-btn-badge');
-          if (b25) { b25.style.display = 'inline-block'; b25.textContent = 'Activa'; }
-          if (b26) { b26.style.display = 'none'; }
-        }
+      if (cardV27) {
+        cardV27.className = isV27 ? 'version-card-btn active v27' : 'version-card-btn';
+        const b27 = cardV27.querySelector('.version-card-btn-badge');
+        if (b27) { b27.style.display = isV27 ? 'inline-block' : 'none'; b27.textContent = 'Activa'; }
+      }
+      if (cardV26) {
+        cardV26.className = isV26 ? 'version-card-btn active v26' : 'version-card-btn';
+        const b26 = cardV26.querySelector('.version-card-btn-badge');
+        if (b26) { b26.style.display = isV26 ? 'inline-block' : 'none'; b26.textContent = 'Activa'; }
+      }
+      if (cardV25) {
+        cardV25.className = isV25 ? 'version-card-btn active v25' : 'version-card-btn';
+        const b25 = cardV25.querySelector('.version-card-btn-badge');
+        if (b25) { b25.style.display = isV25 ? 'inline-block' : 'none'; b25.textContent = 'Activa'; }
       }
 
       // 3. Banner Informativo de Versión
       const banner = document.getElementById('version-status-banner');
       const bannerText = document.getElementById('version-status-text');
       if (banner && bannerText) {
-        if (isV26) {
+        if (isV27) {
+          banner.className = 'version-status-banner v27';
+          bannerText.textContent = '✓ Versión 2.7 Estandarizada: Configuración Manual oficial (I–IX) + IK + 52 Blendshapes.';
+        } else if (isV26) {
           banner.className = 'version-status-banner v26';
           bannerText.textContent = '✓ Versión 2.6 Corregida: Cinemática optimizada, IK anti-penetración (~1cm) y 52 Blendshapes.';
         } else {
@@ -1093,20 +1410,25 @@
       const hudBadge = document.getElementById('hud-pipeline-badge');
       const hudExpr = document.getElementById('hud-expressions-badge');
       if (hudBadge) {
-        if (isV26) {
-          hudBadge.textContent = 'v2.6';
+        if (isV27) {
+          hudBadge.textContent = 'v2.7';
           hudBadge.style.background = '#064e3b';
           hudBadge.style.color = '#6ee7b7';
-          hudBadge.style.borderColor = '#059669';
+          hudBadge.style.borderColor = '#10b981';
+        } else if (isV26) {
+          hudBadge.textContent = 'v2.6';
+          hudBadge.style.background = '#1e3a8a';
+          hudBadge.style.color = '#93c5fd';
+          hudBadge.style.borderColor = '#3b82f6';
         } else {
           hudBadge.textContent = 'v2.5';
           hudBadge.style.background = '#1e293b';
-          hudBadge.style.color = '#93c5fd';
-          hudBadge.style.borderColor = '#3b82f6';
+          hudBadge.style.color = '#cbd5e1';
+          hudBadge.style.borderColor = '#64748b';
         }
       }
       if (hudExpr) {
-        if (isV26) {
+        if (isV27 || isV26) {
           hudExpr.textContent = '🎭 52 ARKit';
           hudExpr.style.background = 'rgba(16,185,129,0.15)';
           hudExpr.style.color = '#34d399';
@@ -1123,12 +1445,13 @@
       const infoPipe = document.getElementById('info-pipeline-version');
       const toggleBtn = document.getElementById('btn-toggle-pipeline-version');
       if (infoPipe) {
-        infoPipe.textContent = isV26 ? 'v2.6 Corregida' : 'v2.5 Directo';
-        infoPipe.style.color = isV26 ? '#a7f3d0' : '#94a3b8';
+        infoPipe.textContent = isV27 ? 'v2.7 Estandarizada' : (isV26 ? 'v2.6 Corregida' : 'v2.5 Directo');
+        infoPipe.style.color = isV27 ? '#6ee7b7' : (isV26 ? '#93c5fd' : '#94a3b8');
       }
       if (toggleBtn) {
-        toggleBtn.textContent = isV26 ? 'Ver v2.5' : 'Ver v2.6';
-        toggleBtn.title = isV26 ? 'Alternar a versión original v2.5' : 'Alternar a versión corregida v2.6';
+        const nextVer = getNextVersion(preferredVersion);
+        toggleBtn.textContent = `Ver v${nextVer}`;
+        toggleBtn.title = `Alternar a versión v${nextVer}`;
       }
 
       // 6. Recargar seña activa en el avatar con la versión elegida
@@ -1341,6 +1664,328 @@
       testImg.src = illUrl;
     }
 
+    function getCmSortKey(cmId) {
+      if (!cmId) return 99;
+      if (cmId.endsWith('rostro')) return 10;
+      if (cmId.endsWith('*')) return 11;
+      const m = String(cmId).match(/(\d+)$/);
+      return m ? parseInt(m[1], 10) : 99;
+    }
+
+    function getVariantSortKey(vKey) {
+      if (!vKey || vKey === 'base' || vKey === 'sin_recuadro') return 0;
+      const m = String(vKey).match(/(\d+)$/);
+      return m ? parseInt(m[1], 10) : 99;
+    }
+
+    function updateActiveSignHandshapeCard(signName, info) {
+      const itemFromList = allItems.find(it => it.sign === signName) || {};
+      const merged = { ...itemFromList, ...(info || {}) };
+      const cmMeta = merged.hand_configuration_meta || {};
+      const cmId = merged.hand_configuration || cmMeta.id || 'configuracion_manual_*';
+      const cfgFromCatalog = handshapesById[cmId] || {};
+
+      const isRostro = cmId === 'configuracion_manual_rostro';
+      const roman = cmMeta.roman || cfgFromCatalog.roman || (cmId.endsWith('*') ? '*' : cmId.replace('configuracion_manual_', '').toUpperCase());
+      const colorHex = cmMeta.color_hex || cfgFromCatalog.color_hex || '#64748B';
+      const cmName = cmMeta.name || cfgFromCatalog.name || cmId;
+      const sheetUrl = cmMeta.sheet_url || cfgFromCatalog.sheet_url || (cmId.endsWith('*') ? null : `/configuracion-manual/${cmId}.jpg`);
+      const variantId = merged.hand_variant || cmMeta.variant_id || (cmId.endsWith('*') ? 'configuracion_manual_*_sin_recuadro' : `${cmId}_base`);
+      const variantKey = merged.hand_variant_key || cmMeta.variant_key || (cmId.endsWith('*') ? 'sin_recuadro' : 'base');
+      const variantLabel = merged.hand_variant_label || cmMeta.variant_label || `${roman}-${variantKey.toUpperCase()}`;
+
+      let variantImgUrl = cmMeta.variant_image_url;
+      let variantCount = 0;
+      if (cfgFromCatalog.variants) {
+        const vObj = cfgFromCatalog.variants.find(v => v.variant_id === variantId || v.short_key === variantKey);
+        if (vObj) {
+          if (!variantImgUrl) variantImgUrl = vObj.image_url;
+          variantCount = vObj.total_signs || 0;
+        }
+      }
+      if (!variantCount) {
+        variantCount = allItems.filter(it => it.hand_variant === variantId).length;
+      }
+
+      activeSignCmMeta = {
+        cmId,
+        roman,
+        colorHex,
+        cmName,
+        sheetUrl,
+        variantId,
+        variantKey,
+        variantLabel,
+        variantImgUrl,
+        variantCount,
+      };
+
+      const badgeEl = document.getElementById('active-cm-badge');
+      const thumbImg = document.getElementById('active-cm-variant-img');
+      const thumbNoImg = document.getElementById('active-cm-no-img');
+      const thumbBox = document.getElementById('active-cm-thumb-box');
+      const titleEl = document.getElementById('active-cm-title');
+      const subEl = document.getElementById('active-cm-subtitle');
+      const grpCntEl = document.getElementById('active-cm-group-count');
+      const btnSheet = document.getElementById('btn-active-cm-open-sheet');
+      const uhdCmBtn = document.getElementById('btn-uhd-open-cm-sheet');
+      const uhdCmTxt = document.getElementById('uhd-cm-pill-text');
+
+      if (badgeEl) {
+        if (isRostro) {
+          badgeEl.textContent = `🎭 ${roman} · ${variantLabel}`;
+        } else if (cmId.endsWith('*')) {
+          badgeEl.textContent = 'CM * (Sin recuadro)';
+        } else {
+          badgeEl.textContent = `Lámina ${roman} · ${variantLabel}`;
+        }
+        badgeEl.style.borderColor = colorHex;
+        badgeEl.style.color = '#fff';
+        badgeEl.style.background = `${colorHex}33`;
+      }
+
+      if (thumbBox) {
+        thumbBox.style.borderColor = colorHex;
+      }
+
+      if (variantImgUrl && !cmId.endsWith('*')) {
+        if (thumbImg) {
+          thumbImg.src = variantImgUrl;
+          thumbImg.style.display = 'block';
+        }
+        if (thumbNoImg) thumbNoImg.style.display = 'none';
+      } else {
+        if (thumbImg) thumbImg.style.display = 'none';
+        if (thumbNoImg) {
+          thumbNoImg.style.display = 'block';
+          thumbNoImg.textContent = roman || '*';
+        }
+      }
+
+      if (titleEl) {
+        titleEl.textContent = cmName;
+      }
+      if (subEl) {
+        const alfaTag = merged.alphabetical_group ? ` · Letra: ${merged.alphabetical_group.toUpperCase()}` : '';
+        if (isRostro) {
+          subEl.textContent = `Expresión facial exclusiva (CNM) · Brazos en reposo biomecánico (${variantLabel})${alfaTag}`;
+        } else if (cmId.endsWith('*')) {
+          subEl.textContent = `Seña sin recuadro manual en el video original${alfaTag}`;
+        } else {
+          subEl.textContent = `Sub-variante: ${variantLabel} (${variantKey === 'base' ? 'Forma Base' : 'Variante ' + variantKey.toUpperCase()})${alfaTag}`;
+        }
+      }
+      if (grpCntEl) {
+        grpCntEl.textContent = variantCount.toLocaleString();
+      }
+      if (btnSheet) {
+        btnSheet.style.display = sheetUrl ? 'inline-flex' : 'none';
+      }
+      if (uhdCmBtn && uhdCmTxt) {
+        uhdCmTxt.textContent = isRostro
+          ? `🎭 ROSTRO · ${variantKey.toUpperCase()}`
+          : (cmId.endsWith('*') ? 'CM *' : `CM ${roman} · ${variantKey.toUpperCase()}`);
+        uhdCmBtn.style.borderColor = colorHex;
+        uhdCmBtn.style.display = 'inline-flex';
+      }
+    }
+
+    function renderCmExplorer() {
+      const pillsContainer = document.getElementById('cm-pills-container');
+      const drawer = document.getElementById('cm-variants-drawer');
+      const drawerTitle = document.getElementById('cm-drawer-title');
+      const variantsStrip = document.getElementById('cm-variants-strip');
+      const resetBtn = document.getElementById('btn-reset-cm-filters');
+      const alfaSelect = document.getElementById('select-filter-alfa');
+      if (!pillsContainer) return;
+
+      const hasAnyFilter = Boolean(activeCmFilter || activeVariantFilter || activeAlfaFilter);
+      if (resetBtn) resetBtn.style.display = hasAnyFilter ? 'inline-flex' : 'none';
+
+      const cfgs = (handshapesCatalog && handshapesCatalog.configurations) ? handshapesCatalog.configurations : [];
+      pillsContainer.innerHTML = '';
+
+      // 1. Botón "Todas"
+      const allBtn = document.createElement('button');
+      allBtn.type = 'button';
+      allBtn.className = `cm-pill-btn ${activeCmFilter === '' ? 'active' : ''}`;
+      allBtn.title = 'Mostrar todas las configuraciones manuales (4.142 señas)';
+      allBtn.innerHTML = `
+        <span class="cm-pill-roman">Todas</span>
+        <span class="cm-pill-count">${allSigns.length.toLocaleString()}</span>
+      `;
+      allBtn.addEventListener('click', () => {
+        activeCmFilter = '';
+        activeVariantFilter = '';
+        renderCmExplorer();
+        applySignFilters(true);
+      });
+      pillsContainer.appendChild(allBtn);
+
+      // 2. Botones I a IX y *
+      cfgs.forEach(cfg => {
+        const isActive = activeCmFilter === cfg.id;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `cm-pill-btn ${isActive ? 'active' : ''}`;
+        btn.title = `${cfg.name} (${cfg.total_signs} señas)`;
+        if (isActive && cfg.color_hex) {
+          btn.style.borderColor = cfg.color_hex;
+        }
+        btn.innerHTML = `
+          <span class="cm-pill-roman">
+            <span class="cm-pill-dot" style="background:${cfg.color_hex || '#64748B'};"></span>
+            ${cfg.roman}
+          </span>
+          <span class="cm-pill-count">${cfg.total_signs}</span>
+        `;
+        btn.addEventListener('click', () => {
+          if (activeCmFilter === cfg.id && !activeVariantFilter) {
+            activeCmFilter = '';
+          } else {
+            activeCmFilter = cfg.id;
+          }
+          activeVariantFilter = '';
+          renderCmExplorer();
+          applySignFilters(true);
+        });
+        pillsContainer.appendChild(btn);
+      });
+
+      // 3. Galería de Sub-variantes si hay una Configuración I–IX seleccionada
+      const selectedCfg = activeCmFilter ? handshapesById[activeCmFilter] : null;
+      if (drawer && variantsStrip) {
+        if (selectedCfg && selectedCfg.id !== 'configuracion_manual_*' && Array.isArray(selectedCfg.variants) && selectedCfg.variants.length > 0) {
+          drawer.style.display = 'block';
+          if (drawerTitle) {
+            drawerTitle.textContent = `Lámina ${selectedCfg.roman} (${selectedCfg.total_signs} señas) — ${selectedCfg.variants.length} formas`;
+          }
+          variantsStrip.innerHTML = '';
+
+          // Tarjeta "Todas las de esta Lámina"
+          const allVarCard = document.createElement('div');
+          allVarCard.className = `cm-variant-card ${activeVariantFilter === '' ? 'active' : ''}`;
+          allVarCard.title = `Ver todas las ${selectedCfg.total_signs} señas de la Configuración Manual ${selectedCfg.roman}`;
+          const baseImg = selectedCfg.variants[0]?.image_url || '';
+          allVarCard.innerHTML = `
+            ${baseImg ? `<img src="${baseImg}" class="cm-variant-thumb" alt="Todas ${selectedCfg.roman}" style="opacity:0.85;">` : ''}
+            <span class="cm-variant-lbl">Todas (${selectedCfg.roman})</span>
+            <span class="cm-variant-cnt">${selectedCfg.total_signs} señas</span>
+          `;
+          allVarCard.addEventListener('click', () => {
+            activeVariantFilter = '';
+            renderCmExplorer();
+            applySignFilters(true);
+          });
+          variantsStrip.appendChild(allVarCard);
+
+          selectedCfg.variants.forEach(v => {
+            const isVarActive = activeVariantFilter === v.variant_id;
+            const card = document.createElement('div');
+            card.className = `cm-variant-card ${isVarActive ? 'active' : ''}`;
+            card.title = `${v.description} (${v.total_signs} señas) — Clic para filtrar, doble clic para ampliar`;
+            card.innerHTML = `
+              ${v.image_url ? `<img src="${v.image_url}" class="cm-variant-thumb" alt="${v.label}">` : ''}
+              <span class="cm-variant-lbl">${v.short_key === 'base' ? 'Base' : v.short_key.toUpperCase()}</span>
+              <span class="cm-variant-cnt">${v.total_signs} señas</span>
+            `;
+            card.addEventListener('click', () => {
+              activeVariantFilter = (activeVariantFilter === v.variant_id) ? '' : v.variant_id;
+              renderCmExplorer();
+              applySignFilters(true);
+            });
+            card.addEventListener('dblclick', (e) => {
+              e.stopPropagation();
+              if (v.image_url) openLightbox(v.image_url, `${selectedCfg.name} — ${v.description}`);
+            });
+            variantsStrip.appendChild(card);
+          });
+        } else {
+          drawer.style.display = 'none';
+        }
+      }
+
+      // 4. Poblar selector de Letra (alfa-a..z) con conteos dinámicos
+      if (alfaSelect) {
+        const alfaCounts = {};
+        allItems.forEach(it => {
+          if (activeCmFilter && it.hand_configuration !== activeCmFilter) return;
+          if (activeVariantFilter && it.hand_variant !== activeVariantFilter) return;
+          const al = it.alphabetical_group || '';
+          if (al) alfaCounts[al] = (alfaCounts[al] || 0) + 1;
+        });
+        const sortedAlfas = Object.keys(alfaCounts).sort();
+        const prevAlfa = activeAlfaFilter;
+        alfaSelect.innerHTML = `<option value="">Todas las letras (${Object.values(alfaCounts).reduce((a, b) => a + b, 0)})</option>`;
+        sortedAlfas.forEach(al => {
+          const letter = al.replace('alfa-', '').toUpperCase();
+          const opt = document.createElement('option');
+          opt.value = al;
+          opt.textContent = `Letra ${letter} (${al}) — ${alfaCounts[al]} señas`;
+          if (al === prevAlfa) opt.selected = true;
+          alfaSelect.appendChild(opt);
+        });
+      }
+    }
+
+    function applySignFilters(autoSelectFirst = false) {
+      const searchInput = document.getElementById('input-search-sign');
+      const term = searchInput ? searchInput.value.trim().toLowerCase() : '';
+
+      const pairs = [];
+      allSigns.forEach((s, idx) => {
+        const it = allItems[idx] || { sign: s };
+        if (activeCmFilter && it.hand_configuration !== activeCmFilter) return;
+        if (activeVariantFilter && it.hand_variant !== activeVariantFilter && it.hand_variant_key !== activeVariantFilter) return;
+        if (activeAlfaFilter && it.alphabetical_group !== activeAlfaFilter) return;
+
+        if (term) {
+          const matchesSign = s.toLowerCase().includes(term);
+          const matchesPalabra = (it.palabra || '').toLowerCase().includes(term);
+          const matchesSlug = (it.slug || '').toLowerCase().includes(term);
+          const matchesIdx = String(it.catalog_index || (idx + 1)) === term;
+          const matchesVar = (it.hand_variant_label || '').toLowerCase().includes(term);
+          if (!matchesSign && !matchesPalabra && !matchesSlug && !matchesIdx && !matchesVar) return;
+        }
+        pairs.push({ sign: s, item: it });
+      });
+
+      if (activeSortOrder === 'hand_config') {
+        pairs.sort((a, b) => {
+          const cA = getCmSortKey(a.item.hand_configuration);
+          const cB = getCmSortKey(b.item.hand_configuration);
+          if (cA !== cB) return cA - cB;
+          const vA = getVariantSortKey(a.item.hand_variant_key);
+          const vB = getVariantSortKey(b.item.hand_variant_key);
+          if (vA !== vB) return vA - vB;
+          const alA = a.item.alphabetical_group || 'zzz';
+          const alB = b.item.alphabetical_group || 'zzz';
+          if (alA !== alB) return alA.localeCompare(alB);
+          return (a.item.catalog_index || 999999) - (b.item.catalog_index || 999999);
+        });
+      } else if (activeSortOrder === 'alfa') {
+        pairs.sort((a, b) => {
+          const alA = a.item.alphabetical_group || 'zzz';
+          const alB = b.item.alphabetical_group || 'zzz';
+          if (alA !== alB) return alA.localeCompare(alB);
+          return (a.item.catalog_index || 999999) - (b.item.catalog_index || 999999);
+        });
+      }
+
+      displayedSigns = pairs.map(p => p.sign);
+      displayedItems = pairs.map(p => p.item);
+      renderSignOptions(displayedSigns, displayedItems);
+
+      const selectEl = document.getElementById('select-avatar-clip');
+      if (autoSelectFirst && displayedSigns.length > 0) {
+        const nextSign = displayedSigns.includes(currentSignName) ? currentSignName : displayedSigns[0];
+        if (selectEl) selectEl.value = nextSign;
+        if (nextSign !== currentSignName) {
+          playSign(nextSign);
+        }
+      }
+    }
+
     async function playSign(signName) {
       if (!signName || !window.avatarController) return;
       currentSignName = signName;
@@ -1353,6 +1998,7 @@
       if (statusBadge) statusBadge.textContent = 'Cargando...';
 
       updateVerifyButtonState(signName);
+      updateActiveSignHandshapeCard(signName, null);
 
       // Tag de seña re-extraída en GPU en Colab
       const reTag = document.getElementById('reextracted-sign-tag');
@@ -1377,6 +2023,7 @@
             catEl.textContent = cats;
           }
         }
+        updateActiveSignHandshapeCard(signName, info);
         updateUHDVideoPlayer(signName, info);
         updateSignIllustration(signName, info);
       });
@@ -1409,21 +2056,51 @@
         await window.avatarController.importCustomClip(animData);
         
         // Sincronizar badges e indicadores de versión según la animación servida
-        const pipeVer = animData?.metadata?.pipelineVersion || (preferredVersion === '2.6' ? '2.6_Directo_1a1_corregido' : '2.5_Directo_1a1');
-        const isV26 = pipeVer.startsWith('2.6');
+        const pipeVer = animData?.metadata?.pipelineVersion || (preferredVersion === '2.7' ? '2.7_Estandarizado' : (preferredVersion === '2.6' ? '2.6_Directo_1a1_corregido' : '2.5_Directo_1a1'));
+        const handStd = animData?.metadata?.handStandardization || null;
+        const isV27 = pipeVer.startsWith('2.7') || handStd?.version === '2.7' || preferredVersion === '2.7';
+        const isV26 = !isV27 && pipeVer.startsWith('2.6');
 
         // Actualizar badges
         const hudBadge = document.getElementById('hud-pipeline-badge');
         const hudExpr = document.getElementById('hud-expressions-badge');
         const infoPipe = document.getElementById('info-pipeline-version');
         const toggleBtn = document.getElementById('btn-toggle-pipeline-version');
+        const bannerText = document.getElementById('version-status-text');
 
-        if (isV26) {
+        if (isV27) {
           if (hudBadge) {
-            hudBadge.textContent = 'v2.6';
+            hudBadge.textContent = 'v2.7';
             hudBadge.style.background = '#064e3b';
             hudBadge.style.color = '#6ee7b7';
-            hudBadge.style.borderColor = '#059669';
+            hudBadge.style.borderColor = '#10b981';
+          }
+          if (hudExpr) {
+            hudExpr.textContent = '🎭 52 ARKit';
+            hudExpr.style.background = 'rgba(16,185,129,0.15)';
+            hudExpr.style.color = '#34d399';
+            hudExpr.style.borderColor = 'rgba(16,185,129,0.3)';
+          }
+          if (infoPipe) {
+            infoPipe.textContent = 'v2.7 Estandarizada';
+            infoPipe.style.color = '#6ee7b7';
+          }
+          if (bannerText) {
+            const stdTag = handStd?.status === 'STANDARDIZED'
+              ? `🖐️ ${handStd.template_id || handStd.template_variant || handStd.hand_configuration || 'CM'} (${handStd.frames_modified || 0} frames)`
+              : (handStd?.status || 'CM Estandarizada');
+            bannerText.textContent = `✓ Versión 2.7 Estandarizada: ${stdTag} + 52 Blendshapes.`;
+          }
+          if (toggleBtn) {
+            toggleBtn.textContent = 'Ver v2.6';
+            toggleBtn.title = 'Alternar a versión corregida v2.6';
+          }
+        } else if (isV26) {
+          if (hudBadge) {
+            hudBadge.textContent = 'v2.6';
+            hudBadge.style.background = '#1e3a8a';
+            hudBadge.style.color = '#93c5fd';
+            hudBadge.style.borderColor = '#3b82f6';
           }
           if (hudExpr) {
             hudExpr.textContent = '🎭 52 ARKit';
@@ -1433,7 +2110,7 @@
           }
           if (infoPipe) {
             infoPipe.textContent = 'v2.6 Corregida';
-            infoPipe.style.color = '#a7f3d0';
+            infoPipe.style.color = '#93c5fd';
           }
           if (toggleBtn) {
             toggleBtn.textContent = 'Ver v2.5';
@@ -1443,8 +2120,8 @@
           if (hudBadge) {
             hudBadge.textContent = 'v2.5';
             hudBadge.style.background = '#1e293b';
-            hudBadge.style.color = '#94a3b8';
-            hudBadge.style.borderColor = '#475569';
+            hudBadge.style.color = '#cbd5e1';
+            hudBadge.style.borderColor = '#64748b';
           }
           if (hudExpr) {
             hudExpr.textContent = '🎭 Sin ARKit';
@@ -1457,8 +2134,8 @@
             infoPipe.style.color = '#94a3b8';
           }
           if (toggleBtn) {
-            toggleBtn.textContent = 'Ver v2.6';
-            toggleBtn.title = 'Alternar a versión corregida v2.6';
+            toggleBtn.textContent = 'Ver v2.7';
+            toggleBtn.title = 'Alternar a versión estandarizada v2.7';
           }
         }
 
@@ -1489,27 +2166,41 @@
 
       selectEl.innerHTML = '';
       if (!signsList || signsList.length === 0) {
-        selectEl.innerHTML = '<option value="">No se encontraron señas</option>';
+        selectEl.innerHTML = '<option value="">No se encontraron señas con este filtro</option>';
         if (hintEl) hintEl.textContent = '0 encontradas';
         return;
       }
 
       const frag = document.createDocumentFragment();
-      signsList.forEach((sign, idx) => {
+      const seenNfc = new Set();
+      let renderedCount = 0;
+      const curNfc = currentSignName ? currentSignName.normalize('NFC') : '';
+
+      signsList.forEach((rawSign, idx) => {
+        if (!rawSign) return;
+        const sign = String(rawSign).normalize('NFC').trim();
+        if (!sign || seenNfc.has(sign)) return;
+        seenNfc.add(sign);
+        renderedCount++;
+
         const opt = document.createElement('option');
         opt.value = sign;
-        const itemMeta = itemsList[idx];
-        const catIdx = itemMeta && itemMeta.catalog_index ? `#${itemMeta.catalog_index}` : `#${idx + 1}`;
+        const itemMeta = itemsList[idx] || {};
+        const catIdx = itemMeta.catalog_index ? `#${itemMeta.catalog_index}` : `#${renderedCount}`;
+        const vLbl = itemMeta.hand_variant_label ? ` [${itemMeta.hand_variant_label}]` : '';
         const isVerif = verifiedSigns.has(sign) ? '✓ ' : '';
         const isRe = isReextractedSign(sign) ? '✨ ' : '';
-        opt.textContent = `${isVerif}${isRe}${catIdx}: ${sign}`;
-        if (sign === currentSignName) opt.selected = true;
+        opt.textContent = `${isVerif}${isRe}${catIdx}${vLbl}: ${sign}`;
+        if (sign === curNfc) opt.selected = true;
         frag.appendChild(opt);
       });
       selectEl.appendChild(frag);
 
       if (hintEl) {
-        hintEl.textContent = `${signsList.length.toLocaleString()} disponibles (Orden Catálogo)`;
+        const filterTag = activeVariantFilter
+          ? `Variante activa`
+          : (activeCmFilter ? `CM activa` : `Catálogo`);
+        hintEl.textContent = `${renderedCount.toLocaleString()} señas (${filterTag})`;
       }
     }
 
@@ -1583,9 +2274,10 @@
         document.getElementById('btn-sign-prev')?.addEventListener('click', () => navigateSign(-1));
         document.getElementById('btn-sign-next')?.addEventListener('click', () => navigateSign(1));
         document.getElementById('btn-sign-random')?.addEventListener('click', () => {
-          if (allSigns.length === 0) return;
-          const randIdx = Math.floor(Math.random() * allSigns.length);
-          const targetSign = allSigns[randIdx];
+          const activeList = (displayedSigns && displayedSigns.length > 0) ? displayedSigns : allSigns;
+          if (activeList.length === 0) return;
+          const randIdx = Math.floor(Math.random() * activeList.length);
+          const targetSign = activeList[randIdx];
           if (selectEl) selectEl.value = targetSign;
           playSign(targetSign);
         });
@@ -1605,26 +2297,94 @@
           }
           updateVerifyButtonState(currentSignName);
           updateVerificationBadge();
-          renderSignOptions(allSigns, allItems);
+          renderSignOptions(displayedSigns, displayedItems);
         });
 
         // 7b. Control y Conmutadores de Versión Cinemática (Navbar, Card y HUD)
+        document.getElementById('nav-btn-v27')?.addEventListener('click', () => setPreferredVersion('2.7'));
         document.getElementById('nav-btn-v26')?.addEventListener('click', () => setPreferredVersion('2.6'));
         document.getElementById('nav-btn-v25')?.addEventListener('click', () => setPreferredVersion('2.5'));
         document.getElementById('nav-btn-toggle-version')?.addEventListener('click', () => {
-          setPreferredVersion(preferredVersion === '2.6' ? '2.5' : '2.6');
+          setPreferredVersion(getNextVersion(preferredVersion));
         });
 
+        document.getElementById('card-btn-v27')?.addEventListener('click', () => setPreferredVersion('2.7'));
         document.getElementById('card-btn-v26')?.addEventListener('click', () => setPreferredVersion('2.6'));
         document.getElementById('card-btn-v25')?.addEventListener('click', () => setPreferredVersion('2.5'));
         document.getElementById('btn-toggle-pipeline-version')?.addEventListener('click', () => {
-          setPreferredVersion(preferredVersion === '2.6' ? '2.5' : '2.6');
+          setPreferredVersion(getNextVersion(preferredVersion));
         });
 
         document.getElementById('hud-pipeline-badge')?.addEventListener('click', () => {
-          setPreferredVersion(preferredVersion === '2.6' ? '2.5' : '2.6');
+          setPreferredVersion(getNextVersion(preferredVersion));
         });
 
+        // 7c. Eventos del Explorador de Configuración Manual y Tarjeta de Referencia Activa
+        document.getElementById('btn-reset-cm-filters')?.addEventListener('click', () => {
+          activeCmFilter = '';
+          activeVariantFilter = '';
+          activeAlfaFilter = '';
+          const alfaSel = document.getElementById('select-filter-alfa');
+          if (alfaSel) alfaSel.value = '';
+          renderCmExplorer();
+          applySignFilters(true);
+        });
+
+        document.getElementById('select-filter-alfa')?.addEventListener('change', (e) => {
+          activeAlfaFilter = e.target.value || '';
+          renderCmExplorer();
+          applySignFilters(true);
+        });
+
+        document.getElementById('select-sort-order')?.addEventListener('change', (e) => {
+          activeSortOrder = e.target.value || 'catalog';
+          applySignFilters(false);
+        });
+
+        document.getElementById('btn-open-cm-sheet-drawer')?.addEventListener('click', () => {
+          const cfg = activeCmFilter ? handshapesById[activeCmFilter] : null;
+          if (cfg && cfg.sheet_url) {
+            openLightbox(cfg.sheet_url, `${cfg.name} — Lámina Oficial Completa (${cfg.total_signs} señas)`);
+          }
+        });
+
+        document.getElementById('active-cm-thumb-box')?.addEventListener('click', () => {
+          if (!activeSignCmMeta) return;
+          if (activeSignCmMeta.variantImgUrl) {
+            openLightbox(
+              activeSignCmMeta.variantImgUrl,
+              `${activeSignCmMeta.cmName} · Sub-variante ${activeSignCmMeta.variantLabel}`
+            );
+          } else if (activeSignCmMeta.sheetUrl) {
+            openLightbox(activeSignCmMeta.sheetUrl, activeSignCmMeta.cmName);
+          }
+        });
+
+        document.getElementById('btn-active-cm-open-sheet')?.addEventListener('click', () => {
+          if (activeSignCmMeta && activeSignCmMeta.sheetUrl) {
+            openLightbox(
+              activeSignCmMeta.sheetUrl,
+              `${activeSignCmMeta.cmName} — Lámina Oficial Completa`
+            );
+          }
+        });
+
+        document.getElementById('btn-uhd-open-cm-sheet')?.addEventListener('click', () => {
+          if (activeSignCmMeta && activeSignCmMeta.sheetUrl) {
+            openLightbox(
+              activeSignCmMeta.sheetUrl,
+              `${activeSignCmMeta.cmName} — Lámina Oficial Completa`
+            );
+          }
+        });
+
+        document.getElementById('btn-active-cm-filter-variant')?.addEventListener('click', () => {
+          if (!activeSignCmMeta) return;
+          activeCmFilter = activeSignCmMeta.cmId;
+          activeVariantFilter = activeSignCmMeta.cmId.endsWith('*') ? '' : activeSignCmMeta.variantId;
+          renderCmExplorer();
+          applySignFilters(false);
+        });
 
         // 8. Controles del Video Ultra HD
         const videoEl = document.getElementById('avatar-uhd-video');
@@ -1755,7 +2515,7 @@
             btnReset?.click();
           } else if (e.key === 'v' || e.key === 'V') {
             e.preventDefault();
-            setPreferredVersion(preferredVersion === '2.6' ? '2.5' : '2.6');
+            setPreferredVersion(getNextVersion(preferredVersion));
           } else if (e.key === 'c' || e.key === 'C') {
             e.preventDefault();
             toggleCompBtn?.click();
@@ -1768,51 +2528,54 @@
           }
         });
 
-        // 11. Buscador en tiempo real
+        // 11. Buscador en tiempo real integrado con los filtros de Configuración Manual y Letra
         const searchInput = document.getElementById('input-search-sign');
-        searchInput?.addEventListener('input', (e) => {
-          const term = e.target.value.trim().toLowerCase();
-          if (!term) {
-            displayedSigns = [...allSigns];
-            displayedItems = [...allItems];
-            renderSignOptions(allSigns, allItems);
-            return;
-          }
-          const filteredSigns = [];
-          const filteredItems = [];
-          allSigns.forEach((s, idx) => {
-            const it = allItems[idx] || {};
-            const matchesSign = s.toLowerCase().includes(term);
-            const matchesPalabra = (it.palabra || '').toLowerCase().includes(term);
-            const matchesSlug = (it.slug || '').toLowerCase().includes(term);
-            const matchesIdx = String(it.catalog_index || (idx + 1)) === term;
-
-            if (matchesSign || matchesPalabra || matchesSlug || matchesIdx) {
-              filteredSigns.push(s);
-              filteredItems.push(it);
-            }
-          });
-          displayedSigns = filteredSigns;
-          displayedItems = filteredItems;
-          renderSignOptions(filteredSigns, filteredItems);
-          if (filteredSigns.length > 0 && selectEl) {
-            selectEl.value = filteredSigns[0];
+        searchInput?.addEventListener('input', () => {
+          applySignFilters(false);
+          if (displayedSigns.length > 0 && selectEl) {
+            selectEl.value = displayedSigns[0];
           }
         });
 
-        // 13. Cargar Catálogo Ordenado desde la API
+        // 12. Cargar Catálogo Jerárquico de Configuraciones Manuales (I–IX y *) + Lista de Señas
         try {
-          const res = await fetch('/api/v1/animations/list?limit=6000');
-          if (res.ok) {
-            const data = await res.json();
-            allSigns = data.signs || [];
-            allItems = data.items || [];
+          const [listRes, hsRes] = await Promise.all([
+            fetch('/api/v1/animations/list?limit=6000'),
+            fetch('/api/v1/animations/handshapes'),
+          ]);
+
+          if (hsRes.ok) {
+            handshapesCatalog = await hsRes.json();
+            handshapesById = {};
+            (handshapesCatalog.configurations || []).forEach(c => {
+              handshapesById[c.id] = c;
+            });
+          }
+
+          if (listRes.ok) {
+            const data = await listRes.json();
+            const rawSigns = data.signs || [];
+            const rawItems = data.items || [];
+            const seenInitNfc = new Set();
+            allSigns = [];
+            allItems = [];
+            rawSigns.forEach((s, idx) => {
+              if (!s) return;
+              const nfcSign = String(s).normalize('NFC').trim();
+              if (!nfcSign || seenInitNfc.has(nfcSign)) return;
+              seenInitNfc.add(nfcSign);
+              allSigns.push(nfcSign);
+              const it = rawItems[idx] ? { ...rawItems[idx], sign: nfcSign } : { sign: nfcSign };
+              if (it.palabra) it.palabra = String(it.palabra).normalize('NFC').trim();
+              allItems.push(it);
+            });
             displayedSigns = [...allSigns];
             displayedItems = [...allItems];
             
             const badge = document.getElementById('sign-count-badge');
             if (badge) badge.textContent = `${allSigns.length.toLocaleString()} Señas`;
             
+            renderCmExplorer();
             updateVerificationBadge();
             renderSignOptions(allSigns, allItems);
 
@@ -1828,7 +2591,7 @@
             }
           }
         } catch (err) {
-          console.error('Error al obtener lista de animaciones:', err);
+          console.error('Error al obtener lista de animaciones y configuraciones manuales:', err);
         }
 
       } catch (err) {

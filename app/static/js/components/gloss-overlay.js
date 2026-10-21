@@ -115,15 +115,27 @@ class GlossOverlayController {
       project.__sequentialGlossesNormalized = true;
     }
 
-    // 1. Encontrar la glosa activa una por una para este instante exacto
-    let activeGloss = allGlosses.find(g => {
-      const st = g.start_seconds !== undefined ? g.start_seconds : (g.start_time !== undefined ? g.start_time : (g.start !== undefined ? g.start : 0));
-      const et = g.end_seconds !== undefined ? g.end_seconds : (g.end_time !== undefined ? g.end_time : (g.end !== undefined ? g.end : 0));
-      return time >= st && time <= et;
-    });
+    // 1. Encontrar la glosa activa (evaluando SequenceCompiler en `time` exacto para evitar lecturas desfasadas tras seek)
+    const bridge = window.studioAvatarBridge;
+    const hasCompiledPlan = Boolean(bridge && bridge.fluidMode && bridge.compiler?.compiled);
+    const sampleResult = hasCompiledPlan
+      ? ((bridge.lastSampleResult && Math.abs(bridge.lastSampleResult.timeSec - time) < 1e-3)
+          ? bridge.lastSampleResult
+          : bridge.compiler.sample(time))
+      : null;
+    const sampleEntry = sampleResult?.activeEntry || null;
+    let activeGloss = (sampleEntry && sampleEntry.raw) ? sampleEntry.raw : null;
 
-    // Si no coincide exactamente con un intervalo pero hay un segmento activo, buscar la glosa por interpolación
-    if (!activeGloss && project && project.segments) {
+    if (!hasCompiledPlan && !activeGloss) {
+      activeGloss = allGlosses.find(g => {
+        const st = g.start_seconds !== undefined ? g.start_seconds : (g.start_time !== undefined ? g.start_time : (g.start !== undefined ? g.start : 0));
+        const et = g.end_seconds !== undefined ? g.end_seconds : (g.end_time !== undefined ? g.end_time : (g.end !== undefined ? g.end : 0));
+        return time >= st && time <= et;
+      });
+    }
+
+    // Si no coincide exactamente con un intervalo pero hay un segmento activo (solo antes de compilar plan), buscar por interpolación
+    if (!hasCompiledPlan && !activeGloss && project && project.segments) {
       const activeSeg = project.segments.find(s => {
         const st = s.start_time !== undefined ? s.start_time : (s.start_seconds || 0);
         const et = s.end_time !== undefined ? s.end_time : (s.end_seconds || 0);
@@ -201,6 +213,9 @@ class GlossOverlayController {
 
   refreshBadgeWarning(glossName) {
     if (!this.glossHost || !glossName) return;
+    if (appState?.state?.playback) {
+      this.render(appState.state.playback.currentTime || 0);
+    }
     const badgeEl = this.glossHost.querySelector('.avatar-pip-gloss-badge');
     if (!badgeEl || badgeEl.getAttribute('data-gloss-name') !== glossName.toUpperCase().trim()) return;
     const existingWarn = badgeEl.querySelector('.avatar-pip-gloss-warn');

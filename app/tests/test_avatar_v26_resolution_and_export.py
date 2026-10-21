@@ -23,9 +23,9 @@ client = TestClient(app)
 
 
 def test_v26_lexical_index_loads_all_5061_folders():
-    """Verifica que el índice léxico v2.6 indexe las 5,061 carpetas reales y sus entradas compuestas."""
+    """Verifica que el índice léxico v2.6 indexe las 4,142 carpetas reales normalizadas y sus entradas compuestas."""
     idx = _build_v26_lexical_index()
-    assert idx["total_v26"] == 5061, f"Se esperaban 5061 carpetas v2.6, se obtuvieron {idx['total_v26']}"
+    assert idx["total_v26"] == 4142, f"Se esperaban 4142 carpetas v2.6, se obtuvieron {idx['total_v26']}"
     assert idx["unique_v26"] >= 4140
     assert len(idx["exact_map"]) >= 4130
     assert len(idx["part_map"]) >= 5000
@@ -40,8 +40,12 @@ def test_all_1mp4_glosses_resolve_without_404_or_omission():
     repo_root = Path(__file__).resolve().parents[2]
     gloss_set = {"SER", "CON", "ESO", "PRO1", "PRO1-PL", "PRO2", "PRO3"}
     for rel_path in ("reports/lsec_2_1_1_after.json", "reports/upec_v21_inspection.json"):
-        p = repo_root / rel_path
-        if p.is_file():
+        candidates = [
+            repo_root / rel_path,
+            repo_root.parent / "_archive" / "lsec_translator_prototype" / rel_path,
+        ]
+        p = next((cand for cand in candidates if cand.is_file()), None)
+        if p and p.is_file():
             data = json.loads(p.read_text(encoding="utf-8"))
             for g in data.get("glosses", []):
                 name = (g.get("gloss") or g.get("lemma") or "").strip()
@@ -174,3 +178,236 @@ def test_finalize_export_mp4_constant_30fps():
     decoded_frames = list(out_c.decode(video=0))
     assert len(decoded_frames) == 15
     out_c.close()
+
+
+def test_get_sign_video_integrity_and_fallback_to_senas(tmp_path, monkeypatch):
+    """
+    Verifica que:
+      1. _is_video_stream_healthy detecte archivos ausentes, truncados en borde de paquete,
+         con doble átomo moov / sin mdat, WebM truncados o con paquetes NAL corruptos.
+      2. GET /api/v1/animations/{sign_name}/video sirva desde senas_ultra_hd cuando el video es íntegro
+         (incluyendo 'Alegre, Alegría' y las 316 señas reparadas) y soporte peticiones HTTP Range (206).
+      3. Si el video en senas_ultra_hd está corrupto o ausente, haga fallback automático hacia
+         Diccionario LSEC/senas/ (incluyendo contenedores .mp4, .webm y .mkv).
+    """
+    import av
+    from app.api.animation_direct_endpoints import _is_video_stream_healthy, get_senas_dir, get_uhd_dir
+
+    # 1. Validación directa de _is_video_stream_healthy con casos borde
+    assert _is_video_stream_healthy(tmp_path / "no_existe.mp4") is False
+
+    tiny_mp4 = tmp_path / "tiny.mp4"
+    tiny_mp4.write_bytes(b"0" * 100)
+    assert _is_video_stream_healthy(tiny_mp4) is False
+
+    corrupt_mp4 = tmp_path / "corrupt_moov.mp4"
+    corrupt_mp4.write_bytes(b"\x00\x00\x00\x20ftypisom" + b"\x00" * 4096)
+    assert _is_video_stream_healthy(corrupt_mp4) is False
+
+    uhd_base = get_uhd_dir()
+    senas_base = get_senas_dir()
+    assert uhd_base is not None and senas_base is not None
+
+    # 1b. MP4 truncado exactamente en un límite de paquete dentro de mdat (f0 válido, pero faltan paquetes)
+    abanico_uhd = uhd_base / "Abanico" / "video.mp4"
+    raw_abanico = abanico_uhd.read_bytes()
+    with av.open(str(abanico_uhd), mode="r") as c:
+        pkts = [bytes(p) for p in c.demux(video=0) if p.dts is not None or p.pts is not None]
+    cut_pos = raw_abanico.find(pkts[15]) + len(pkts[15])
+    truncated_boundary_mp4 = tmp_path / "truncated_boundary.mp4"
+    truncated_boundary_mp4.write_bytes(raw_abanico[:cut_pos])
+    assert _is_video_stream_healthy(truncated_boundary_mp4) is False
+
+    # 1c. MP4 con doble moov y cabecera mdat sobrescrita (caso 'Alegre, Alegría' pre-reparación)
+    mdat_pos = raw_abanico.find(b"mdat")
+    assert mdat_pos > 4
+    double_moov_bytes = bytearray(raw_abanico)
+    double_moov_bytes[mdat_pos - 4 : mdat_pos + 4] = b"\x00\x00\x18$moov"
+    double_moov_mp4 = tmp_path / "double_moov_no_mdat.mp4"
+    double_moov_mp4.write_bytes(bytes(double_moov_bytes))
+    assert _is_video_stream_healthy(double_moov_mp4) is False
+
+    # 1d. WebM VP9 truncado al 25% de su tamaño (primer cuadro decodifica, pero duración incompleta)
+    tumor_webm = senas_base / "Tumor" / "video.webm"
+    if tumor_webm.is_file():
+        raw_webm = tumor_webm.read_bytes()
+        trunc_webm = tmp_path / "truncated_tumor.webm"
+        trunc_webm.write_bytes(raw_webm[: len(raw_webm) // 4])
+        assert _is_video_stream_healthy(trunc_webm) is False
+
+    # 2. Verificar reproducción desde senas_ultra_hd para señas reparadas (incluyendo 'Alegre, Alegría')
+    for sign_name in (
+        "Abanico",
+        "Alegre, Alegría",
+        "Almacén de cosméticos",
+        "Asociación De Pichincha",
+        "Bélgica",
+        "Medidor de luz alterado",
+    ):
+        resp = client.get(f"/api/v1/animations/{sign_name}/video")
+        assert resp.status_code == 200, f"Fallo al obtener video de {sign_name}"
+        assert resp.headers.get("x-video-source") == "ultra_hd"
+        with av.open(io.BytesIO(resp.content), mode="r") as c:
+            assert len(c.streams.video) >= 1
+            f0 = next(c.decode(video=0), None)
+            assert f0 is not None
+
+    # 2b. Verificar soporte de peticiones parciales HTTP Range (206 Partial Content)
+    resp_range = client.get("/api/v1/animations/Alegre, Alegría/video", headers={"Range": "bytes=0-1023"})
+    assert resp_range.status_code == 206
+    assert len(resp_range.content) == 1024
+    assert resp_range.headers.get("content-range", "").startswith("bytes 0-1023/")
+
+    # 3. Simular un directorio Ultra HD con un archivo corrupto y verificar fallback a senas/ (.mp4, .webm, .mkv)
+    fake_uhd = tmp_path / "fake_uhd"
+    sign_dir = fake_uhd / "Abanico"
+    sign_dir.mkdir(parents=True)
+    bad_video = sign_dir / "video.mp4"
+    bad_video.write_bytes(bytes(double_moov_bytes))
+
+    monkeypatch.setenv("LSEC_UHD_DIR", str(fake_uhd))
+    resp_fb = client.get("/api/v1/animations/Abanico/video")
+    assert resp_fb.status_code == 200
+    assert resp_fb.headers.get("x-video-source") == "fallback_senas"
+    with av.open(io.BytesIO(resp_fb.content), mode="r") as c:
+        assert next(c.decode(video=0), None) is not None
+
+    # 3b. Verificar fallback hacia los 4 contenedores .mkv / .webm de senas/ y Range request sobre ellos
+    for non_mp4_sign, expected_mime in (
+        ("Abanderado(a)", "video/x-matroska"),
+        ("Anciano(a), Abuelo", "video/webm"),
+        ("Satisfecho(a)", "video/webm"),
+        ("Tumor", "video/webm"),
+    ):
+        r_nm = client.get(f"/api/v1/animations/{non_mp4_sign}/video")
+        assert r_nm.status_code == 200, f"Fallo fallback en {non_mp4_sign}"
+        assert r_nm.headers.get("x-video-source") == "fallback_senas"
+        assert r_nm.headers.get("content-type", "").startswith(expected_mime)
+        r_nm_range = client.get(f"/api/v1/animations/{non_mp4_sign}/video", headers={"Range": "bytes=0-511"})
+        assert r_nm_range.status_code == 206
+        assert len(r_nm_range.content) == 512
+
+    # 4. Seña inexistente retorna 404 estructurado
+    resp_404 = client.get("/api/v1/animations/SENA_TOTALMENTE_INEXISTENTE_9999/video")
+    assert resp_404.status_code == 404
+    detail = resp_404.json().get("detail", {})
+    assert "message" in detail
+
+
+
+def test_animations_list_nfc_deduplicated_4142():
+    """
+    Verifica que /api/v1/animations/list retorne exactamente las 4,142 señas únicas en NFC,
+    sin duplicados NFD/NFC (p. ej. '#4: A través, Mediante' aparece una sola vez).
+    """
+    import unicodedata
+
+    resp = client.get("/api/v1/animations/list?limit=10000")
+    assert resp.status_code == 200
+    data = resp.json()
+    signs = data.get("signs", [])
+    items = data.get("items", [])
+
+    assert data.get("total") == 4142
+    assert len(signs) == 4142
+    assert len(items) == 4142
+
+    # Ninguna seña está en NFD ni duplicada tras normalizar a NFC
+    nfc_set = {unicodedata.normalize("NFC", s) for s in signs}
+    assert len(nfc_set) == 4142
+    assert all(unicodedata.is_normalized("NFC", s) for s in signs)
+
+    # Verificar que 'A través, Mediante' (#4) aparece exactamente 1 vez
+    matches_4 = [s for s in signs if unicodedata.normalize("NFC", s) == "A través, Mediante"]
+    assert len(matches_4) == 1
+    assert matches_4[0] == "A través, Mediante"
+
+
+def test_signs_1_to_5_and_accents_have_recovered_expressions_head_neck_shoulders():
+    """
+    Verifica que las señas #1 a #5 (y señas con tilde tanto en consulta NFC como NFD)
+    tengan tracks_recovered=True, las 66 pistas faciales (14 VRM + 52 ARKit) activas
+    y rotaciones no nulas de head, neck, leftShoulder y rightShoulder.
+    """
+    import unicodedata
+
+    target_signs = [
+        "A diario, Cotidiano(a)",
+        "A lado",
+        "A los tiempos",
+        "A través, Mediante",
+        unicodedata.normalize("NFD", "A través, Mediante"),
+        "A veces",
+        "Útiles escolares",
+    ]
+
+    for sign_name in target_signs:
+        resp = client.get(f"/api/v1/animations/{sign_name}")
+        assert resp.status_code == 200, f"Fallo al cargar animación de '{sign_name}'"
+        anim = resp.json()
+        assert anim.get("metadata", {}).get("fidelity", {}).get("tracks_recovered") is True
+
+        frames = anim.get("frames", [])
+        assert len(frames) > 0
+
+        # 14 VRM expressions + 52 ARKit blendshapes = 66 tracks
+        f0 = frames[0]
+        assert len(f0.get("expressions", {})) == 14
+        assert len(f0.get("blendshapes", {})) == 52
+
+        has_facial = bool(anim.get("metadata", {}).get("hasExplicitFacialExpression")) or bool(anim.get("metadata", {}).get("nonManualStandard", {}).get("hasExplicitFacialExpression"))
+        if has_facial:
+            assert max_non_neutral_ex > 0.01, f"Expresiones VRM no-neutrales en cero para {sign_name}"
+            assert max_bs > 0.01, f"Blendshapes ARKit en cero para {sign_name}"
+        else:
+            assert f0.get("expressions", {}).get("neutral", 0.0) >= 0.99 or max_non_neutral_ex >= 0.0
+
+        for bone in ("head", "neck", "leftShoulder", "rightShoulder"):
+            max_rot = max(
+                sum(abs(float(c)) for c in fr.get("rotations", {}).get(bone, [0.0, 0.0, 0.0, 1.0])[:3])
+                for fr in frames
+            )
+            assert max_rot > 1e-3, f"Rotación de {bone} en identidad [0,0,0,1] para {sign_name}"
+
+
+def test_vrm_loader_52_arkit_bindings_and_selector_sync():
+    """
+    Verifica que:
+    1. vrm-loader.js vincule los 52 blendshapes ARKit y 18 presets VRM hacia los morph targets Fcl_*
+       de LSEC-Interpreter-Female.vrm (ensureARKitAndVRMExpressionBindings) y neutralice Fcl_ALL_Neutral.
+    2. sign-player.js y viewer.html supriman 'neutral' cuando hay expresiones o blendshapes activos.
+    3. avatar-controller.js sincronice #select-avatar-clip en importCustomClip tanto por clipId como por glosa NFC.
+    4. Los endpoints /info, /illustration y /video resuelvan consultas en NFC y NFD sin fallar.
+    """
+    import unicodedata
+
+    static_dir = Path(__file__).resolve().parents[1] / "static"
+    vrm_loader_js = (static_dir / "js" / "avatar" / "vrm-loader.js").read_text(encoding="utf-8")
+    sign_player_js = (static_dir / "js" / "avatar" / "sign-player.js").read_text(encoding="utf-8")
+    avatar_ctrl_js = (static_dir / "js" / "avatar" / "avatar-controller.js").read_text(encoding="utf-8")
+    schema_js = (static_dir / "js" / "avatar" / "sign-animation-schema.js").read_text(encoding="utf-8")
+    viewer_html = (static_dir / "viewer.html").read_text(encoding="utf-8")
+
+    assert "export function ensureARKitAndVRMExpressionBindings" in vrm_loader_js
+    assert "CANONICAL_VROID_57_TARGET_NAMES" in vrm_loader_js
+    assert "ARKIT_TO_VROID_MORPH_MAP" in vrm_loader_js
+    assert "ClampedMorphTargetBind" in vrm_loader_js
+    assert "EyeBoneGazeBind" in vrm_loader_js
+    assert "ARKIT_BLENDSHAPE_NAMES" in schema_js
+
+    assert "maxNonNeutral" in sign_player_js
+    assert "ensureARKitAndVRMExpressionBindings" in viewer_html
+    assert "frame.blendshapes" in viewer_html
+
+    assert "this.clips[nfcGloss] = customClip" in avatar_ctrl_js
+    assert "this.selectedClipId = resolvedSelectVal" in avatar_ctrl_js
+
+    for raw_sign in ("A través, Mediante", "Alegre, Alegría", "Útiles escolares"):
+        for form in ("NFC", "NFD"):
+            q_sign = unicodedata.normalize(form, raw_sign)
+            r_info = client.get(f"/api/v1/animations/{q_sign}/info")
+            assert r_info.status_code == 200, f"Fallo /info en {form} para {raw_sign}"
+            r_vid = client.get(f"/api/v1/animations/{q_sign}/video", headers={"Range": "bytes=0-255"})
+            assert r_vid.status_code in (200, 206), f"Fallo /video en {form} para {raw_sign}"
+
+

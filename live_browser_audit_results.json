@@ -1,0 +1,59 @@
+{
+  "studio": {
+    "http_status": 200,
+    "structural_elements": {
+      "navbar": true,
+      "video_zone": true,
+      "inspector_dock": true,
+      "bottom_dock": true
+    },
+    "avatar_3d": {
+      "canvas_visible": true,
+      "model_source": "VRM 1.0 (LSEC-Interpreter-Female.vrm)"
+    },
+    "avatar_playback": {
+      "play_status": "playing",
+      "pause_status": "paused",
+      "reset_status": "Inactivo"
+    },
+    "translation": {
+      "glossesCount": 2,
+      "glossTokens": [
+        "HOLA",
+        "BUENOS-DÍAS"
+      ],
+      "status": null
+    },
+    "timeline_pills": [
+      "HOLA\n⧉\n×",
+      "BUENOS-DÍAS\n⧉\n×"
+    ]
+  },
+  "viewer": {
+    "http_status": 200,
+    "stage_visible": true,
+    "canvas_count": 1,
+    "macro_canvas_count": 1,
+    "controls_present": true
+  },
+  "avatarconfig": {
+    "http_status": 200,
+    "canvas_visible": true,
+    "btn_back_visible": true,
+    "version_group_visible": true,
+    "uhd_layout_visible": true
+  },
+  "docs": {
+    "http_status": 200,
+    "swagger_ui_visible": true,
+    "title": "LSEC Translator Prototype - Swagger UI"
+  },
+  "telemetry": {
+    "page_errors": [],
+    "console_errors": [],
+    "network_errors": [],
+    "total_requests": 207,
+    "passed_checks": 0,
+    "failed_checks": 0
+  }
+}

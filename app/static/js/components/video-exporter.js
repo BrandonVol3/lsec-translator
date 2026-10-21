@@ -293,7 +293,12 @@ class CompositeVideoExporter {
     mediaRecorder.start(200);
 
     // 6. Ciclo de Renderizado Determinista a 30.0 FPS constantes (dt = 1/30 s)
-    const totalFrames = Math.max(1, Math.round(duration * TARGET_FPS));
+    // Si el avatar tiene desfase al final (política "se extiende el PiP"), extender hasta sequenceEndTime
+    // manteniendo el último fotograma del video fuente mientras el intérprete concluye su secuencia.
+    const effectiveEndTime = (includeInterpreter && window.studioAvatarBridge && typeof window.studioAvatarBridge.getSequenceEndTime === 'function')
+      ? Math.max(duration, window.studioAvatarBridge.getSequenceEndTime(duration))
+      : duration;
+    const totalFrames = Math.max(1, Math.round(effectiveEndTime * TARGET_FPS));
 
     try {
       for (let frameIdx = 0; frameIdx < totalFrames; frameIdx++) {
@@ -308,19 +313,22 @@ class CompositeVideoExporter {
           return;
         }
 
-        const currentTime = Math.min(duration, frameIdx * DT);
+        const currentTime = Math.min(effectiveEndTime, frameIdx * DT);
+        const videoSeekTime = Math.min(duration, currentTime);
 
-        // 6.1 Posicionar video fuente en currentTime
-        await seekVideoDeterministic(currentTime);
+        // 6.1 Posicionar video fuente en videoSeekTime (mantiene último fotograma si currentTime > duration)
+        if (currentTime <= duration + DT * 0.5) {
+          await seekVideoDeterministic(videoSeekTime);
 
-        if (videoEl && videoEl.videoWidth > 0 && videoEl.readyState >= 2 && !videoEl.seeking) {
-          try {
-            lastFrameCtx.drawImage(videoEl, 0, 0, targetWidth, targetHeight);
-            this._hasLastValidFrame = true;
-          } catch (e) {}
+          if (videoEl && videoEl.videoWidth > 0 && videoEl.readyState >= 2 && !videoEl.seeking) {
+            try {
+              lastFrameCtx.drawImage(videoEl, 0, 0, targetWidth, targetHeight);
+              this._hasLastValidFrame = true;
+            } catch (e) {}
+          }
         }
 
-        // 6.2 Avanzar determinísticamente el motor 3D del avatar (mixer.update(dt), vrm.update(dt), renderer.render)
+        // 6.2 Avanzar determinísticamente el motor 3D del avatar (compiler.sample(currentTime), vrm.update(dt), renderer.render)
         if (includeInterpreter && window.studioAvatarBridge && typeof window.studioAvatarBridge.stepAtVideoTime === 'function') {
           await window.studioAvatarBridge.stepAtVideoTime(currentTime, DT);
         }
@@ -355,7 +363,7 @@ class CompositeVideoExporter {
         onProgress({
           progress,
           currentTime,
-          duration,
+          duration: effectiveEndTime,
           frameIndex: frameIdx + 1,
           totalFrames,
           fps: TARGET_FPS,
@@ -559,15 +567,27 @@ class CompositeVideoExporter {
     const boxW = cardWidth - (boxMargin * 2);
     const boxH = badgeHeight;
 
-    // Encontrar glosa activa
-    let activeGloss = allGlosses.find(g => {
-      const st = g.start_seconds !== undefined ? g.start_seconds : (g.start_time !== undefined ? g.start_time : (g.start !== undefined ? g.start : 0));
-      const et = g.end_seconds !== undefined ? g.end_seconds : (g.end_time !== undefined ? g.end_time : (g.end !== undefined ? g.end : 0));
-      return currentTime >= st && currentTime <= et;
-    });
+    // Encontrar glosa activa (evaluando SequenceCompiler en `currentTime` exacto si el plan está activo)
+    const bridge = window.studioAvatarBridge;
+    const hasCompiledPlan = Boolean(bridge && bridge.fluidMode && bridge.compiler?.compiled);
+    const sampleResult = hasCompiledPlan
+      ? ((bridge.lastSampleResult && Math.abs(bridge.lastSampleResult.timeSec - currentTime) < 1e-3)
+          ? bridge.lastSampleResult
+          : bridge.compiler.sample(currentTime))
+      : null;
+    const sampleEntry = sampleResult?.activeEntry || null;
+    let activeGloss = (sampleEntry && sampleEntry.raw) ? sampleEntry.raw : null;
+
+    if (!hasCompiledPlan && !activeGloss) {
+      activeGloss = allGlosses.find(g => {
+        const st = g.start_seconds !== undefined ? g.start_seconds : (g.start_time !== undefined ? g.start_time : (g.start !== undefined ? g.start : 0));
+        const et = g.end_seconds !== undefined ? g.end_seconds : (g.end_time !== undefined ? g.end_time : (g.end !== undefined ? g.end : 0));
+        return currentTime >= st && currentTime <= et;
+      });
+    }
 
     // Fallback: interpolar desde el segmento activo
-    if (!activeGloss && segments) {
+    if (!hasCompiledPlan && !activeGloss && segments) {
       const activeSeg = segments.find(s => {
         const st = s.start_seconds !== undefined ? s.start_seconds : (s.start_time || 0);
         const et = s.end_seconds !== undefined ? s.end_seconds : (s.end_time || 0);

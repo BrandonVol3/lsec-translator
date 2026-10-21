@@ -113,8 +113,7 @@ class SourceAlignmentService:
                 global_cursor = sum(1 for i in alive_idx if i <= last_g)
             elif p_words and n_alive > 0:
                 clean_p_words = [re.sub(r"[^\wáéíóúñüÁÉÍÓÚÑÜ\-]", "", w.lower()) for w in p_words if w]
-                # Filtrar palabras agregadas sintéticamente que no existen en el audio
-                real_p_words = [w for w in clean_p_words if w not in ("ofrecer", "varias", "dos")]
+                real_p_words = clean_p_words
                 if not real_p_words:
                     real_p_words = clean_p_words
 

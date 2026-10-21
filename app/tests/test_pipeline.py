@@ -1123,8 +1123,9 @@ class TestUPECComprehensiveIntegration:
         assert "CONOCIMIENTO" in glosses and "PODER" in glosses
         # 2. DECIR no queda ambiguamente gobernado por conocimiento
         assert "DECIR" in glosses
-        # 3. NADIE aparece en la proposición de explicación/comunicación
-        assert "NADIE" in glosses and "EXPLICAR" in glosses
+        # 3. NADIE aparece en la proposición de explicación/comunicación.
+        # El verbo direccional puede llevar vector de persona (EXPLICAR[3->2]).
+        assert "NADIE" in glosses and any(g.startswith("EXPLICAR") for g in glosses)
         # 4. Negación de NADIE no cubre LIBERTAD
         libertad_g = next((g for g in result.glosses if g.gloss == "LIBERTAD"), None)
         assert libertad_g is not None and libertad_g.non_manual.expression != FacialExpression.NEGATION

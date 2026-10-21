@@ -236,6 +236,9 @@ class DictionaryEntry:
     illustration_url: Optional[str] = None
     source_url: Optional[str] = None
     hand_configuration: Optional[str] = None
+    hand_variant: Optional[str] = None
+    hand_variant_key: Optional[str] = None
+    hand_variant_label: Optional[str] = None
     alphabetical_group: Optional[str] = None
     categories: List[str] = field(default_factory=list)
 
@@ -413,8 +416,8 @@ class LSECDictionaryService:
                     if f not in forms:
                         forms.append(f)
             cats = [str(c) for c in (item.get("categorias") or [])]
-            hand = next((c for c in cats if c.startswith("configuracion_manual")), None)
-            alpha = next((c for c in cats if c.startswith("alfa-")), None)
+            hand = item.get("hand_configuration") or next((c for c in cats if c.startswith("configuracion_manual")), None)
+            alpha = item.get("alphabetical_group") or next((c for c in cats if c.startswith("alfa-")), None)
             themes = [c for c in cats if c != hand and c != alpha]
             video_url = item.get("video_url") or (
                 f"https://www.youtube.com/watch?v={item['video_id']}" if item.get("video_id") else None
@@ -429,6 +432,9 @@ class LSECDictionaryService:
                     illustration_url=item.get("imagen_url") or None,
                     source_url=item.get("url_origen") or None,
                     hand_configuration=hand,
+                    hand_variant=item.get("hand_variant"),
+                    hand_variant_key=item.get("hand_variant_key"),
+                    hand_variant_label=item.get("hand_variant_label"),
                     alphabetical_group=alpha,
                     categories=themes,
                 )

@@ -172,6 +172,79 @@ _DEFAULT_MWE_DEFINITIONS: List[MWEDefinition] = [
         requires_native_review=True,
         confidence=0.90,
     ),
+    MWEDefinition(
+        id="mwe_sin_embargo",
+        source_phrase="sin embargo",
+        semantic_concept="contrast_connector",
+        prevent_component_parsing=True,
+        preferred_gloss="PERO",
+        candidate_realizations=[["PERO"]],
+        requires_native_review=False,
+        confidence=0.95,
+    ),
+    MWEDefinition(
+        id="mwe_no_obstante",
+        source_phrase="no obstante",
+        semantic_concept="contrast_connector",
+        prevent_component_parsing=True,
+        preferred_gloss="PERO",
+        candidate_realizations=[["PERO"]],
+        requires_native_review=False,
+        confidence=0.95,
+    ),
+    MWEDefinition(
+        id="mwe_a_pesar_de",
+        source_phrase="a pesar de",
+        semantic_concept="concessive_connector",
+        prevent_component_parsing=True,
+        preferred_gloss="AUNQUE",
+        candidate_realizations=[["AUNQUE"]],
+        requires_native_review=False,
+        confidence=0.95,
+    ),
+    MWEDefinition(
+        id="mwe_a_partir_de",
+        source_phrase="a partir de",
+        semantic_concept="temporal_start_point",
+        prevent_component_parsing=True,
+        preferred_gloss="DESDE",
+        candidate_realizations=[["DESDE"], ["A-PARTIR-DE"]],
+        requires_native_review=False,
+        confidence=0.95,
+        regex_pattern=re.compile(r"\ba\s+partir\s+de(?:l)?\b", re.IGNORECASE),
+    ),
+    MWEDefinition(
+        id="mwe_llevar_a_cabo",
+        source_phrase="llevar a cabo",
+        semantic_concept="realizar",
+        prevent_component_parsing=True,
+        preferred_gloss="REALIZAR",
+        candidate_realizations=[["REALIZAR"]],
+        requires_native_review=False,
+        confidence=0.95,
+        regex_pattern=re.compile(r"\bllev[a-záéíóúñ]+\s+a\s+cabo\b", re.IGNORECASE),
+    ),
+    MWEDefinition(
+        id="mwe_prestar_atencion",
+        source_phrase="prestar atención",
+        semantic_concept="pay_attention",
+        prevent_component_parsing=True,
+        preferred_gloss="PRESTAR-ATENCIÓN",
+        candidate_realizations=[["PRESTAR-ATENCIÓN"]],
+        requires_native_review=False,
+        confidence=0.95,
+        regex_pattern=re.compile(r"\bprest[a-záéíóúñ]*\s+atenci[oó]n\b", re.IGNORECASE),
+    ),
+    MWEDefinition(
+        id="mwe_de_nuevo",
+        source_phrase="de nuevo",
+        semantic_concept="otra_vez",
+        prevent_component_parsing=True,
+        preferred_gloss="OTRA-VEZ",
+        candidate_realizations=[["OTRA-VEZ"]],
+        requires_native_review=False,
+        confidence=0.95,
+    ),
 ]
 
 
@@ -184,10 +257,11 @@ class MWEDetector:
         self._definitions: List[MWEDefinition] = []
         defs = definitions or list(_DEFAULT_MWE_DEFINITIONS)
         for d in defs:
-            # Compilar regex para búsqueda flexible de espacios y acentos
-            pattern_str = r"\b" + re.escape(d.source_phrase).replace(r"\ ", r"\s+") + r"\b"
-            compiled = re.compile(pattern_str, re.IGNORECASE)
-            d.regex_pattern = compiled
+            if d.regex_pattern is None:
+                # Compilar regex para búsqueda flexible de espacios y acentos
+                pattern_str = r"\b" + re.escape(d.source_phrase).replace(r"\ ", r"\s+") + r"\b"
+                compiled = re.compile(pattern_str, re.IGNORECASE)
+                d.regex_pattern = compiled
             self._definitions.append(d)
 
         logger.info("MWEDetector inicializado con %d reglas MWE.", len(self._definitions))

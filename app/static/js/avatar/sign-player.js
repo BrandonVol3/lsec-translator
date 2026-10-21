@@ -50,7 +50,9 @@ export class SignPlayer {
     this.coartActive = false;
     this.coartDuration = 0.12;
     this.coartBoneSnapshots = new Map();
+    this.coartExpressionSnapshots = new Map();
     this.returnToNeutralOnEnd = true;
+    this.externalPoseControl = false;
   }
 
   /**
@@ -66,15 +68,27 @@ export class SignPlayer {
   }
 
   /**
-   * Captura la postura actual de todos los huesos del avatar para coarticulación SLERP.
+   * Captura la postura actual de todos los huesos y expresiones del avatar para coarticulación.
    */
   captureCurrentPoseSnapshot() {
     this.coartBoneSnapshots.clear();
+    this.coartExpressionSnapshots.clear();
     if (!this.model) return;
     for (const bName of HUMAN_BONE_NAMES) {
       const node = this.getBoneNode(bName);
       if (node) {
         this.coartBoneSnapshots.set(bName, node.quaternion.clone());
+      }
+    }
+    const stdPresets = ['neutral', 'aa', 'ih', 'ou', 'ee', 'oh', 'blink', 'blinkLeft', 'blinkRight', 'happy', 'angry', 'sad', 'relaxed', 'surprised'];
+    if (this.isVRM && this.model.expressionManager && typeof this.model.expressionManager.getValue === 'function') {
+      for (const p of stdPresets) {
+        try {
+          const val = this.model.expressionManager.getValue(p);
+          if (typeof val === 'number' && Number.isFinite(val)) {
+            this.coartExpressionSnapshots.set(p, val);
+          }
+        } catch (_) {}
       }
     }
   }
@@ -103,6 +117,7 @@ export class SignPlayer {
     } else {
       this.coartActive = false;
       this.coartBoneSnapshots.clear();
+      this.coartExpressionSnapshots.clear();
     }
 
     if (options.returnToNeutralOnEnd !== undefined) {
@@ -116,12 +131,35 @@ export class SignPlayer {
     this.currentTime = 0.0;
     this.processClipData(clip);
 
+    // Solo restablecer el rostro a estado neutral duro cuando no hay coarticulación activa
+    if (this.model && !this.coartActive) {
+      this.resetFacialExpressionsToNeutral();
+    }
+
     // Si no estamos coarticulando, limpiar huesos ausentes a su pose de reposo natural
     if (!this.coartActive && this.model) {
       this.resetUntrackedBonesToNeutral();
     }
 
     return true;
+  }
+
+  resetFacialExpressionsToNeutral() {
+    if (!this.model) return;
+    if (this.isVRM && this.model.expressionManager) {
+      if (typeof this.model.expressionManager.resetValues === 'function') {
+        this.model.expressionManager.resetValues();
+      }
+      try {
+        this.model.expressionManager.setValue('neutral', 1.0);
+      } catch (_) {}
+    } else if (typeof this.model.setExpressionWeight === 'function') {
+      const stdPresets = ['aa', 'ih', 'ou', 'ee', 'oh', 'blink', 'blinkLeft', 'blinkRight', 'happy', 'angry', 'sad', 'relaxed', 'surprised'];
+      for (const p of stdPresets) {
+        this.model.setExpressionWeight(p, 0.0);
+      }
+      this.model.setExpressionWeight('neutral', 1.0);
+    }
   }
 
   resetUntrackedBonesToNeutral() {
@@ -377,7 +415,7 @@ export class SignPlayer {
    * @param {number} delta 
    */
   update(delta) {
-    if (!this.model) return;
+    if (!this.model || this.externalPoseControl) return;
 
     if (this.isTransitioning) {
       this.updateTransition(delta);
@@ -487,6 +525,24 @@ export class SignPlayer {
   applyExpressionsAtTime(time) {
     if (!this.model) return;
 
+    const isCoartBlending = this.coartDuration > 0 && time < this.coartDuration && this.coartExpressionSnapshots.size > 0;
+    const rawCoart = isCoartBlending ? Math.max(0, Math.min(1, time / this.coartDuration)) : 1.0;
+    const coartT = rawCoart * rawCoart * (3.0 - 2.0 * rawCoart);
+
+    const meta = (this.currentClip && this.currentClip.metadata) || {};
+    if (meta.defaultNeutralFacialMode === true || this.processedExpressions.length === 0) {
+      if (isCoartBlending) {
+        for (const [eName, prevVal] of this.coartExpressionSnapshots.entries()) {
+          const targetVal = eName === 'neutral' ? 1.0 : 0.0;
+          this.setExpressionValue(eName, prevVal + coartT * (targetVal - prevVal));
+        }
+      } else {
+        this.setExpressionValue('neutral', 1.0);
+      }
+      return;
+    }
+
+    let maxNonNeutral = 0;
     for (let i = 0; i < this.processedExpressions.length; i++) {
       const track = this.processedExpressions[i];
       const kf = track.keyframes;
@@ -507,7 +563,21 @@ export class SignPlayer {
         value = prev.value + alpha * (next.value - prev.value);
       }
 
+      if (isCoartBlending && this.coartExpressionSnapshots.has(track.expressionName)) {
+        const prevVal = this.coartExpressionSnapshots.get(track.expressionName);
+        value = prevVal + coartT * (value - prevVal);
+      }
+
+      if (track.expressionName !== 'neutral' && value > maxNonNeutral) {
+        maxNonNeutral = value;
+      }
       this.setExpressionValue(track.expressionName, value);
+    }
+
+    if (maxNonNeutral > 0.02) {
+      this.setExpressionValue('neutral', Math.max(0.0, 1.0 - maxNonNeutral));
+    } else {
+      this.setExpressionValue('neutral', 1.0);
     }
   }
 
@@ -547,13 +617,8 @@ export class SignPlayer {
           node.quaternion.copy(this.getNeutralPoseForBone(bName));
         }
       }
-
-      if (this.model.expressionManager) {
-        if (typeof this.model.expressionManager.resetValues === 'function') {
-          this.model.expressionManager.resetValues();
-        }
-      }
     }
+    this.resetFacialExpressionsToNeutral();
   }
 
   emitProgress() {

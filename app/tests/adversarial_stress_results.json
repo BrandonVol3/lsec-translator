@@ -1,0 +1,84 @@
+{
+  "layout_stress": {
+    "b_key_toggles": 10,
+    "state_coherent": true,
+    "inspector_tab_switches": 20,
+    "dock_tab_switches": 10
+  },
+  "translation_stress": {
+    "inputs_tested": 8,
+    "results": [
+      {
+        "text": "Hola buenos días",
+        "gloss_count": 2,
+        "success": true
+      },
+      {
+        "text": "Educación pública superior de ",
+        "gloss_count": 4,
+        "success": true
+      },
+      {
+        "text": "¿Cómo estás tú hoy?",
+        "gloss_count": 3,
+        "success": true
+      },
+      {
+        "text": "1 2 3 4 5 números",
+        "gloss_count": 6,
+        "success": true
+      },
+      {
+        "text": "!@#$%^&*()_+~`-={}|[]:;\"'<>?,.",
+        "gloss_count": 7,
+        "success": true
+      },
+      {
+        "text": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "gloss_count": 1,
+        "success": true
+      },
+      {
+        "text": "   espacios en blanco   ",
+        "gloss_count": 3,
+        "success": true
+      },
+      {
+        "text": "El estudiante viaja a Quito ma",
+        "gloss_count": 5,
+        "success": true
+      }
+    ]
+  },
+  "avatar_playback_stress": {
+    "action_cycles": 3,
+    "actions_per_cycle": 7,
+    "clips_tested": [
+      "SALUDAR_DEMO",
+      "NEGACION_DEMO",
+      "NEUTRAL",
+      "TEST_MANO_ABIERTA",
+      "TEST_PUNO",
+      "TEST_CNM_HEAD_NOD"
+    ],
+    "webgl_alive": true
+  },
+  "cross_navigation_stress": {
+    "routes_visited": [
+      "/studio",
+      "/viewer",
+      "/avatarconfig",
+      "/studio"
+    ],
+    "return_navigation_success": true
+  },
+  "telemetry": {
+    "total_requests": 261,
+    "page_errors": [],
+    "console_errors": [],
+    "network_errors": [],
+    "zero_uncaught_js": true,
+    "zero_console_errors": true,
+    "zero_network_errors": true
+  }
+}

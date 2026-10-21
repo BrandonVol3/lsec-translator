@@ -1,6 +1,6 @@
-# LSEC Translator Architecture 2.2
+# LSEC Translator Architecture 2.2 & Pipeline Cinemático VRM v2.5–v2.6
 
-> Sistema Híbrido de Transcripción Inteligente, Representación Semántica, Generación de Glosas LSEC, Plataforma de Anotación Lingüística y Pipeline MLOps para la Lengua de Señas Ecuatoriana (LSEC).
+> Sistema Híbrido 100 % Offline de Transcripción Inteligente (ASR), Motor Gramatical de 7 Etapas (Español → Glosas LSEC), Animación 3D 1:1 en Avatar VRM (4.143 señas), Estación Audiovisual Bilingüe (*LSEC Studio*), Plataforma de Anotación Nativa y Pipeline MLOps para la Lengua de Señas Ecuatoriana (LSEC).
 
 ---
 
@@ -16,10 +16,22 @@
 
 ---
 
+## 🛠️ Los 5 Pilares Tecnológicos del Ecosistema
+
+| Pilar | Tecnologías Principales | Rol en el Sistema |
+| :--- | :--- | :--- |
+| **1. Backend Web & Persistencia** | `Python 3.10+`, `FastAPI`, `Uvicorn`, `Pydantic v2`, `pydantic-settings`, `SQLite3`, `HTTPX` | Servidor ASGI asíncrono (REST + WebSockets), validación estricta de contratos de datos y base de datos local 100 % offline con fallback en memoria. |
+| **2. Reconocimiento de Voz (ASR) & Video** | `Faster-Whisper`, `CTranslate2` (`FP16`/`INT8`), `CUDA 12.x`, `PyAV (av)` + `libx264` + `AAC` | Transcripción acústica neuronal con marcas de tiempo por palabra y codificación determinista de video MP4 a **30.0 FPS constantes** (`/finalize-export-mp4`). |
+| **3. Motor PLN Híbrido & Gramática LSEC** | `spaCy` (`es_core_news_md` / `sm`), 7 Etapas Lingüísticas, 22 Reglas LSEC, 4 Reglas FENASEC, Catálogo CONADIS (**4.252 señas**), 13 Invariantes | Limpieza de disfluencias, normalización ecuatoriana/quichuismos, MWEs, segmentación proposicional, análisis morfosintáctico, reordenamiento `TIEMPO + TÓPICO + SOV` y validación estructural. |
+| **4. Visión 3D & Cinemática (`Diccionario LSEC` v2.5–v2.6)** | `PyTorch`, `HaMeR`, `MANO (smplx)`, `DWPose` / `RTMW3D` (`rtmlib` + `onnxruntime-gpu`), `MediaPipe Face` (52 ARKit Blendshapes), `OpenCV`, `NumPy`, `SciPy` | Mejora de video 15→60 FPS Ultra HD (`video_enhancer.py`), extracción 3D de manos en $\text{SO}(3)$, retargeting directo 1:1 (`v2.5`) y post-procesamiento Stage C (`v2.6`) con IK analítica de 2 huesos anti-penetración sobre **4.143 señas VRM**. |
+| **5. Frontend NLE, Motor 3D WebGL & QA** | `Vanilla HTML5/CSS3/ES6+`, `Three.js`, `@pixiv/three-vrm`, `VRM 1.0 Humanoid` (54 huesos), `HTML5 Canvas 2D`, `MediaRecorder`, `Pytest`, `Playwright` | Estación audiovisual *LSEC Studio* (`/studio`), reproductor 3D autónomo (`/viewer`), línea de tiempo multipista a 60 FPS, intérprete 3D PiP y suite con **358+ pruebas automatizadas**. |
+
+---
+
 ## 🚀 Inicio Rápido
 
 ```bash
-# 1. Entorno virtual e instalación (Python 3.10+; probado con 3.13)
+# 1. Entorno virtual e instalación (Python 3.10+; probado con 3.11-3.13)
 python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt        # incluye el modelo spaCy es_core_news_sm
@@ -31,19 +43,21 @@ copy .env.example .env
 uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-- **LSEC Studio** (editor audiovisual): <http://127.0.0.1:8000/studio>
-- **Configuración del avatar 3D:** <http://127.0.0.1:8000/avatarconfig>
-- **Documentación interactiva de la API:** <http://127.0.0.1:8000/docs>
+- **LSEC Studio** (estación audiovisual NLE + intérprete 3D PiP): <http://127.0.0.1:8000/studio>
+- **Reproductor 3D Interactivo 1:1 (4.143 señas VRM):** <http://127.0.0.1:8000/viewer> (o `/reproductor`)
+- **Configuración y calibración del avatar 3D:** <http://127.0.0.1:8000/avatarconfig>
+- **Documentación interactiva de la API (OpenAPI 3.1):** <http://127.0.0.1:8000/docs>
 
 **Variables de entorno principales** (`.env`):
 
 | Variable | Valor por defecto | Descripción |
 |---|---|---|
-| `WHISPER_MODEL_SIZE` | `base` | Tamaño del modelo de faster-whisper (`tiny`, `base`, `small`, ...) |
-| `WHISPER_DEVICE` / `WHISPER_COMPUTE_TYPE` | `cpu` / `int8` | Usar `cuda` / `float16` con GPU NVIDIA |
-| `WHISPER_MODEL_PATH` | `data/models/whisper` | Pesos locales de Whisper (modo offline) |
+| `WHISPER_MODEL_SIZE` | `small` / `base` | Tamaño del modelo de faster-whisper (`tiny`, `base`, `small`, ...) |
+| `WHISPER_DEVICE` / `WHISPER_COMPUTE_TYPE` | `cuda` / `float16` (`cpu` / `int8`) | Aceleración por GPU NVIDIA o ejecución en CPU |
+| `WHISPER_MODEL_PATH` | `data/models/whisper` | Pesos locales de Whisper (modo 100 % offline) |
 | `LSEC_DATABASE_PATH` | `data/lsec_database.sqlite` | Base SQLite local (logs de traducción y revisiones) |
 | `LSEC_DICTIONARY_*` | ver sección del Diccionario | Catálogo CONADIS, marcado de no verificadas y frases |
+| `LSEC_ANIMATIONS_V26_DIR` / `LSEC_ANIMATIONS_DIR` | autodetección en `../Diccionario LSEC/` | Directorios de animaciones VRM 1:1 (`senas_vrm_direct_v2.6` / `senas_vrm_direct`) |
 | `APP_HOST` / `APP_PORT` / `APP_DEBUG` | `0.0.0.0` / `8000` / `false` | Servidor (con `APP_DEBUG=true` se sirve `/media` con los videos de prueba) |
 
 ---
@@ -52,36 +66,37 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000
 
 ```mermaid
 graph TD
-    subgraph INGESTION["1. Ingesta"]
-        A1["Audio (Micro/Archivo)"] --> A2["Whisper ASR (Confianza Acústica)"]
-        A3["Texto Directo (Español)"] --> B1["TextNormalizer & PunctuationAnalyzer"]
-        A2 --> B1
+    subgraph INGESTION["1. Ingesta y Limpieza Oral"]
+        A1["Audio / Video (Micro/Archivo)"] --> A2["Whisper ASR (Confianza Acústica & Word Timestamps)"]
+        A3["Texto Directo (Español)"] --> B0["SpokenTextCleaner (Etapa 1: Disfluencias y Tartamudeo)"]
+        A2 --> B0
+        B0 --> B1["TextNormalizer (Etapa 2: Modismos EC, Cifras y Reparación ASR)"]
     end
 
-    subgraph NLP_SEMANTIC["2. Análisis Semántico y Lingüístico"]
-        B1 --> B2["DiscourseSegmenter (Segmentación Proposicional)"]
-        B2 --> B3["SemanticParser (SpanishVerbLexicon & SemanticRoleExtractor)"]
-        B3 --> B4["DiscoursePlanner (Plan de Traducción & ConceptTraceability)"]
-        B4 --> B5["Reglas FENASEC + Diccionario Oficial CONADIS (cascada léxica)"]
+    subgraph NLP_SEMANTIC["2. Análisis Semántico y Motor Gramatical LSEC (Etapas 3 a 6)"]
+        B1 --> B2["MWEDetector + Frases CONADIS (Etapa 3)"]
+        B2 --> B3["DiscourseSegmenter (Etapa 4: Segmentación Proposicional)"]
+        B3 --> B4["spaCy + SemanticParser + LinguisticAnalyzer + 22 Reglas LSEC (Etapa 5)"]
+        B4 --> B5["Post-Procesador FENASEC (Etapa 6: POR-FAVOR, NO-Verbo, Direccionales, ++)"]
     end
 
-    subgraph GENERATION_VALIDATION["3. Generación y Validación Estructural"]
-        B5 --> C1["TimingService (Invariantes Temporales & Pausas)"]
+    subgraph GENERATION_VALIDATION["3. Diccionario, Temporización y Validación (Etapa 7)"]
+        B5 --> C0["DictionaryService (4.252 señas CONADIS + Cascada Léxica)"]
+        C0 --> C1["TimingService (Redistribución SOV & Pausas)"]
         C1 --> C2["AlignmentService (Deixis vs. Correferencia Espacial)"]
         C2 --> C3["StructuralValidator (13 Invariantes LSEC 2.1.1)"]
     end
 
-    subgraph ACTIVE_LEARNING_MLOPS["4. Aprendizaje Activo y MLOps"]
+    subgraph ANIMATION_AND_MLOPS["4. Animación 3D VRM (v2.5-v2.6), Exportación y MLOps"]
         C3 --> D1{"Evaluación de Estado"}
-        D1 -- "Incertidumbre / Paráfrasis / No verificado" --> D2["ActiveLearningService (Priorización de Cola)"]
+        D1 -- "Incertidumbre / No verificado" --> D2["ActiveLearningService (Priorización de Cola)"]
         D2 --> D3["Plataforma de Anotación y Validación Sorda Nativa"]
-        D3 --> D4["DatasetValidator (Auditoría de Fugas SHA-256)"]
-        D4 --> D5["MLOpsPipeline (Evaluación Frozen Test Set & Quality Gate)"]
-        D1 -- "Aprobado (AUTO_VERIFIED)" --> E1["Salida API / WebSocket / LSEC Studio"]
+        D3 --> D4["DatasetValidator (Auditoría de Fugas SHA-256) & MLOpsPipeline"]
+        D1 -- "Aprobado / Reproducción" --> E1["LSEC Studio (/studio) & Visor 3D (/viewer)"]
+        VRM_CAT["Catálogo 4.143 Señas VRM 1:1 (HaMeR + DWPose + Stage C v2.6)"] --> E1
+        E1 --> EXP["Exportación Compuesta MP4 30 FPS (Canvas + MediaRecorder + PyAV H.264/AAC)"]
     end
 ```
-
-> **Alcance:** este proyecto genera y valida glosas LSEC y ofrece la estación de trabajo audiovisual. La **generación de animaciones de señas para el avatar** se desarrolla en un proyecto aparte; aquí solo se conserva el visor 3D (Three.js + VRM) que reproduce los clips JSON ubicados en `app/static/assets/clips/`.
 
 ---
 
@@ -90,128 +105,76 @@ graph TD
 ```
 lsec_translator_prototype/
 ├── app/
-│   ├── main.py                          # FastAPI + Lifespan + CORS + Routers + archivos estáticos
-│   ├── config.py                        # Configuración y variables de entorno (pydantic-settings)
+│   ├── main.py                              # FastAPI + Lifespan + CORS + Routers + archivos estáticos
+│   ├── config.py                            # Configuración y variables de entorno (pydantic-settings)
 │   ├── api/
-│   │   ├── endpoints.py                 # REST (/health, /transcribe, /translate, /pipeline, /review/*)
-│   │   ├── annotation_endpoints.py      # REST (/dataset/*, /annotations/*, /mlops/benchmark)
-│   │   ├── dictionary_endpoints.py      # REST (/dictionary/search, /{slug}, /stats)
-│   │   └── websocket.py                 # Streaming bidireccional (/ws/pipeline)
+│   │   ├── endpoints.py                     # REST (/health, /transcribe, /translate, /pipeline, /review/*)
+│   │   ├── animation_direct_endpoints.py    # REST (/animations/*, /animations-direct/*, /finalize-export-mp4)
+│   │   ├── annotation_endpoints.py          # REST (/dataset/*, /annotations/*, /mlops/benchmark)
+│   │   ├── dictionary_endpoints.py          # REST (/dictionary/search, /{slug}, /stats)
+│   │   └── websocket.py                     # Streaming bidireccional (/ws/pipeline)
 │   ├── core/
-│   │   ├── schemas.py                   # Modelos Pydantic v2 (GlossOutput, GlossItem, DictionarySignMetadata...)
-│   │   ├── dataset_schemas.py           # Esquemas del Corpus (LSECDatasetItem, SignBoundary, AuditLog)
-│   │   └── audio_reference.py           # Referencias acústicas temporales
-│   ├── lsec_grammar/                    # Motor de reglas: registro, RuleEngine, ConflictResolver, confianza
+│   │   ├── schemas.py                       # Modelos Pydantic v2 (GlossOutput, GlossItem, DictionarySignMetadata...)
+│   │   ├── dataset_schemas.py               # Esquemas del Corpus (LSECDatasetItem, SignBoundary, AuditLog)
+│   │   └── audio_reference.py               # Referencias acústicas temporales
+│   ├── lsec_grammar/                        # Motor formal de 22 reglas gramaticales LSEC (RuleEngine)
 │   ├── services/
-│   │   ├── asr_service.py               # WhisperASRService (faster-whisper, pesos locales)
-│   │   ├── spoken_text_cleaner.py       # Limpieza de muletillas y titubeos
-│   │   ├── text_normalizer.py           # PunctuationAnalyzer & TextNormalizer
-│   │   ├── mwe_detector.py              # Expresiones multipalabra
-│   │   ├── discourse_segmenter.py       # DiscourseSegmenter
-│   │   ├── semantic_parser.py           # SpanishVerbLexicon & SemanticRoleExtractor
-│   │   ├── linguistic_analyzer.py       # Análisis lingüístico auxiliar
-│   │   ├── discourse_planner.py         # DiscoursePlanner & ConceptTraceability
-│   │   ├── fenasec_rules.py             # Reglas FENASEC (cortesía, negación, direccionales, intensidad)
-│   │   ├── dictionary_service.py        # Diccionario Oficial CONADIS (4.252 señas) + cascada léxica
-│   │   ├── duplicate_resolver.py        # Resolución de glosas duplicadas
-│   │   ├── metadata_linker.py           # Enlace de IDs proposición / glosa / locus
-│   │   ├── alignment_service.py         # SourceAlignmentService (Deixis vs Correferencia)
-│   │   ├── timing_service.py            # TimingService & TimeBudget
-│   │   ├── review_service.py            # Propagación de marcas de revisión
-│   │   ├── validator.py                 # StructuralValidator (13 Invariantes LSEC)
-│   │   ├── active_learning_service.py   # ActiveLearningService (Muestreo por Incertidumbre)
-│   │   ├── dataset_validator.py         # DatasetValidator (Auditoría de Fugas)
-│   │   ├── mlops_pipeline.py            # MLOpsPipeline (Evaluación Frozen Test)
-│   │   ├── nlp_service.py               # LSECTranslatorService (Orquestador)
-│   │   └── storage_service.py           # LocalStorageService (SQLite, 100% offline)
-│   ├── static/                          # LSEC Studio: index.html, avatarconfig.html, js/, css/, assets/clips/
-│   └── tests/                           # Suite pytest (unitarias, integración y aceptación)
-├── data/
-│   ├── lexicon_lsec.json                # Lexicón normalizado con lemas y paradigmas verbales
-│   ├── lexicon_queiremas_3d.json        # Queiremas para el visor 3D
-│   ├── guidelines/                      # Guía de anotación LSEC v1.0 y gramática visual
-│   ├── corpus/pilot_corpus_lsec.json    # Corpus piloto validado y particionado sin fugas
-│   └── models/whisper/                  # (opcional) pesos locales de faster-whisper
-├── scripts/                             # Utilidades de Blender para exportar/cargar clips de señas
-├── docs/                                # Documentación técnica del sistema
-├── run_studio.bat                       # Lanzador portable (Windows)
+│   │   ├── asr_service.py                   # WhisperASRService (faster-whisper, pesos locales)
+│   │   ├── spoken_text_cleaner.py           # Etapa 1: Limpieza de muletillas y titubeos
+│   │   ├── text_normalizer.py               # Etapa 2: Modismos ecuatorianos, quichuismos y reparación ASR
+│   │   ├── mwe_detector.py                  # Etapa 3: Expresiones multipalabra
+│   │   ├── discourse_segmenter.py           # Etapa 4: Segmentación proposicional
+│   │   ├── semantic_parser.py               # Etapa 5A: SpanishVerbLexicon & SemanticRoleExtractor
+│   │   ├── linguistic_analyzer.py           # Etapa 5A: Pro-drop, negación, tiempo/aspecto y preposiciones
+│   │   ├── discourse_planner.py             # Etapa 5B: DiscoursePlanner & ConceptTraceability
+│   │   ├── fenasec_rules.py                 # Etapa 6: Reglas FENASEC (cortesía, negación, direccionales, ++)
+│   │   ├── dictionary_service.py            # Etapa 7: Diccionario Oficial CONADIS (4.252 señas) + cascada
+│   │   ├── duplicate_resolver.py            # Resolución de glosas duplicadas
+│   │   ├── metadata_linker.py               # Enlace de IDs proposición / glosa / locus
+│   │   ├── alignment_service.py             # SourceAlignmentService (Deixis vs Correferencia)
+│   │   ├── timing_service.py                # TimingService & Redistribución temporal SOV
+│   │   ├── review_service.py                # Propagación de marcas de revisión
+│   │   ├── validator.py                     # StructuralValidator (13 Invariantes LSEC)
+│   │   ├── active_learning_service.py       # ActiveLearningService (Muestreo por Incertidumbre)
+│   │   ├── dataset_validator.py             # DatasetValidator (Auditoría de Fugas SHA-256)
+│   │   ├── mlops_pipeline.py                # MLOpsPipeline (Evaluación Frozen Test)
+│   │   ├── nlp_service.py                   # LSECTranslatorService (Orquestador de las 7 etapas)
+│   │   └── storage_service.py               # LocalStorageService (SQLite, 100% offline)
+│   ├── static/                              # LSEC Studio (index.html), Visor 3D (viewer.html), avatarconfig.html, js/
+│   └── tests/                               # Suite pytest (358 pruebas unitarias/integración + E2E Playwright)
+├── data/                                    # Lexicones, guía de anotación v1.0, corpus piloto y base SQLite
+├── docs/                                    # Documentación técnica detallada del backend y frontend
+├── run_studio.bat                           # Lanzador portable (Windows)
 ├── requirements.txt
 └── README.md
 ```
 
-> El diccionario CONADIS vive fuera del paquete (`../Diccionario LSEC/catalogo_lsec.json`) y el modelo del avatar en `../Avatar/`; ambos deben incluirse al distribuir.
+---
+
+## 📡 Endpoints de la API REST y WebSockets
+
+Todos bajo el prefijo `/api/v1` (más el alias `/api/animations-direct` para el motor 3D).
+
+1. **Estado del sistema:** `GET /api/v1/health` — estado de `asr`, `nlp` y `storage` (SQLite local).
+2. **Transcripción y Pipeline completo:** `POST /api/v1/transcribe` y `POST /api/v1/pipeline` (mp4, mov, avi, mkv, webm, wav, mp3, ogg, flac).
+3. **Traducción Español → LSEC:** `POST /api/v1/translate` (`mode=detailed|legacy|debug`, `budget=compact|medium|expanded`).
+4. **Animaciones Directas 1:1 (VRM v2.6 / v2.5) y Exportación MP4:**
+   - `GET /api/v1/animations/list?q=&limit=` y `GET /api/v1/animations/stats`: Catálogo de 4.143 señas VRM ordenadas según `catalogo_lsec.json`.
+   - `GET /api/v1/animations/resolve/{gloss}` y `POST /api/v1/animations/resolve`: Resolución de glosas a animaciones 3D.
+   - `GET /api/v1/animations/{sign_name}`, `/{sign_name}/qa`, `/{sign_name}/info`, `/{sign_name}/video`, `/{sign_name}/illustration`: Datos cinemáticos, video MP4 Ultra HD e ilustración oficial.
+   - `POST /api/v1/animations/finalize-export-mp4`: Remuxeado/codificación determinista a **MP4 (`H.264 + AAC` a 30.0 FPS constantes)** con `PyAV`.
+5. **Diccionario Oficial CONADIS:** `GET /api/v1/dictionary/search`, `GET /api/v1/dictionary/{slug}`, `GET /api/v1/dictionary/stats`.
+6. **Revisión, Anotaciones y MLOps:** `POST /api/v1/review/validate`, `GET /api/v1/review/history`, `GET /api/v1/dataset/manifest`, `POST /api/v1/annotations/submit`, `GET /api/v1/annotations/queue`, `POST /api/v1/mlops/benchmark`.
+7. **Tiempo real e interfaces web:** `WS /ws/pipeline`, `GET /studio`, `GET /viewer` (`/reproductor`), `GET /avatarconfig`.
 
 ---
 
-## 📡 Endpoints de la API REST
+## 📖 Documentación Técnica Adicional del Repositorio
 
-Todos bajo el prefijo `/api/v1` salvo indicación.
-
-### 1. Estado del sistema
-- **Ruta:** `GET /api/v1/health` — estado de los servicios `asr`, `nlp` y `storage` (SQLite local).
-
-### 2. Transcripción y Pipeline completo
-- **Rutas:** `POST /api/v1/transcribe` (audio/video → texto con marcas de tiempo por palabra) y `POST /api/v1/pipeline` (audio → ASR → glosas LSEC).
-- **Formatos:** mp4, mov, avi, mkv, webm, wav, mp3, ogg, flac (se valida la cabecera del archivo).
-
-### 3. Traducción Español → LSEC
-- **Ruta:** `POST /api/v1/translate`
-- **Body:** `{"text": "¿Tú comes manzana?"}`
-- **Parámetros:** `mode=detailed|legacy|debug`, `budget=compact|medium|expanded`.
-
-### 4. Revisión lingüística (persistente en SQLite)
-- **Rutas:** `POST /api/v1/review/validate` y `GET /api/v1/review/history`.
-
-### 5. Manifiesto del Dataset y Auditoría de Fugas
-- **Rutas:** `GET /api/v1/dataset/manifest`, `POST /api/v1/dataset/validate-item`, `GET /api/v1/dataset/export`.
-- **Descripción:** distribución por partición (*Train/Val/Test/Frozen*), variantes regionales, control de fugas SHA-256 y exportación solo de ejemplos validados por personas nativas con consentimiento.
-
-### 6. Envío de Anotaciones y Revisiones Humanas
-- **Ruta:** `POST /api/v1/annotations/submit`
-- **Descripción:** registra la validación o modificación de un ejemplo con auditoría append-only sin sobrescritura destructiva.
-
-### 7. Cola Priorizada de Aprendizaje Activo
-- **Ruta:** `GET /api/v1/annotations/queue?top_k=20`
-- **Descripción:** entrega los ejemplos con mayor incertidumbre, inconsistencias estructurales o glosas no verificadas en el diccionario.
-
-### 8. Evaluación MLOps contra Frozen Test Set
-- **Ruta:** `POST /api/v1/mlops/benchmark`
-- **Descripción:** compuerta de evaluación automatizada (Exact Match, F1, Distancia de Edición, Concept Recall) con dictamen `PASS` / `FAIL`.
-
-### 9. Diccionario Oficial
-- **Rutas:** `GET /api/v1/dictionary/search`, `GET /api/v1/dictionary/{slug}`, `GET /api/v1/dictionary/stats` (detalle en la sección siguiente).
-
-### 10. Tiempo real e interfaces web
-- **WebSocket:** `WS /ws/pipeline`.
-- **Interfaces:** `GET /studio`, `GET /avatarconfig`, `GET /api/info`.
-
----
-
-## 📖 Diccionario Oficial LSEC "Gabriel Román" (CONADIS)
-
-El catálogo `../Diccionario LSEC/catalogo_lsec.json` (4.252 señas) es la fuente de verdad léxica de la generación de glosas ([`app/services/dictionary_service.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/services/dictionary_service.py)).
-
-**Indexación.** Cada título se expande: `Abuelo(a)` → *abuelo, abuela*; `A diario, Cotidiano(a)` → *a diario* · *cotidiano, cotidiana*; `Encontrar / Hallar`; siglas con su expansión; se descartan calificadores como `(1)` o `(Costa)`. La búsqueda ignora tildes (conserva la ñ), guiones y plurales simples; los verbos se resuelven por lema.
-
-**Cascada por glosa** (`GlossItem.dictionary_metadata`):
-
-| Estado | Significado | ¿Revisión nativa? |
-|---|---|---|
-| `VERIFICADO_CONADIS` | Existe en el diccionario oficial (ficha con video, ilustración, configuración manual, sinónimos) | No |
-| `DACTILOLOGIA` / `EXENTO_GRAMATICAL` | Deletreo, `PRO1`, `CL:`, marcadores | No |
-| `LEXICON_LOCAL` | Curada en `lexicon_lsec.json` (MWE, institucional, paráfrasis) | No |
-| `PARAFRASIS_REVISION` | Paráfrasis ya marcada para revisión | Sí (ya existente) |
-| `NO_VERIFICADO` | Léxica y ausente del diccionario; se agregan sugerencias cercanas (`perrito` → `PERRO`) | **Sí** (`UNVERIFIED_LEXICAL_SIGN` + cola de aprendizaje activo) |
-
-> Figurar en CONADIS **no** sustituye la validación por personas sordas usuarias nativas de LSEC.
-
-**Configuración** (`.env`): `LSEC_DICTIONARY_CATALOG_PATH` (por defecto `data/` → `../Diccionario LSEC/`), `LSEC_DICTIONARY_ENABLED=true`, `LSEC_DICTIONARY_FLAG_UNVERIFIED=true` (si es `false` el estado es solo informativo), `LSEC_DICTIONARY_PHRASE_MATCHING=true`.
-
-**Detección de frases:** las entradas de varias palabras (p. ej. «a diario», «buenos días») se emiten como una sola glosa oficial. Se excluyen: coincidencias solo por lema con verbos conjugados, interrogativos, y tokens gobernados por reglas FENASEC (negación, «por favor», intensificadores).
-
-**Índice pre-calculado (opcional):** `python -m app.services.dictionary_service --build-index` genera `data/lsec_dictionary_index.json` (se invalida solo si cambia el catálogo).
-
-**Endpoints:** `GET /api/v1/dictionary/search?q=&limit=` · `GET /api/v1/dictionary/{slug}` · `GET /api/v1/dictionary/stats`.
+- **[Documentación General del Sistema y Tecnologías (v2.6)](file:///c:/Users/brana/Desktop/TIC%20Software/DOCUMENTACION_GENERAL_SISTEMA_LSEC_V2.6.md):** Documento maestro consolidado con los 5 pilares tecnológicos.
+- **[Informe de Reglas Lingüísticas LSEC (7 Etapas)](file:///c:/Users/brana/Desktop/TIC%20Software/Informe_Reglas_Linguisticas_LSEC.md):** Desglose completo de las reglas de conversión Español Hablado → Glosas LSEC.
+- **[Detalle Técnico del Uso de `spaCy`](file:///c:/Users/brana/Desktop/TIC%20Software/Detalle_Uso_spaCy_LSEC.md):** Rol morfosintáctico y de dependencias de `spaCy` en el motor híbrido.
+- **[Descripción de Tecnologías y Funciones del Sistema](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/docs/DESCRIPCION_TECNOLOGIAS_Y_FUNCIONES_DEL_SISTEMA.md)** y **[Documentación Backend, Pipeline 3D y Frontend](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/docs/DOCUMENTACION_SISTEMA_BACKEND_FRONTEND.md)**.
 
 ---
 
@@ -225,62 +188,4 @@ venv\Scripts\activate
 pytest -q --deselect app/tests/test_lsec_avatar_vrm_validation.py -k "not playwright"
 ```
 
-**Resultado actual:** **358 pruebas aprobadas, 0 fallos** (≈ 70 s).
-
-Las pruebas E2E con Playwright (`test_playwright_e2e.py`, `test_avatar_3d_playwright.py`, `test_lsec_avatar_vrm_validation.py`) necesitan el servidor activo en `http://127.0.0.1:8000` y Playwright instalado:
-
-```bash
-pip install playwright && playwright install chromium
-uvicorn app.main:app --port 8000     # en otra terminal
-pytest app/tests/test_playwright_e2e.py
-```
-
----
-
-## 💿 Distribución Portable y Offline (CD / USB)
-
-La aplicación no depende de Internet ni de servicios en la nube:
-
-- **Persistencia:** SQLite local (`data/lsec_database.sqlite`, variable `LSEC_DATABASE_PATH`) para logs de traducción y revisiones lingüísticas. Si el medio es de solo lectura (p. ej. un CD) opera en memoria sin fallar; para conservar datos, copie la carpeta a un disco escribible o use una ruta distinta.
-- **ASR sin descargas:** coloque los pesos de faster-whisper en `data/models/whisper/<tamaño>/` (p. ej. `.../small/model.bin`), o en `data/models/whisper/` directamente. `WHISPER_MODEL_PATH` cambia la carpeta. Sin pesos locales, faster-whisper intenta descargarlos la primera vez.
-- **Dependencias sin Internet:** `pip download -r requirements.txt -d wheels` (con conexión) y luego `pip install --no-index --find-links wheels -r requirements.txt`. El modelo spaCy `es_core_news_sm` se instala desde su `.whl`.
-- **Lanzador:** [`run_studio.bat`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/run_studio.bat) usa `venv\` (o `python\`) junto al archivo, fuerza modo offline y abre `http://127.0.0.1:8000/studio`.
-- **Avatar 3D:** el modelo VRM se sirve desde la carpeta `Avatar/` (junto al proyecto o en su carpeta padre); inclúyala en la distribución. Los clips de animación se colocan en `app/static/assets/clips/` (la generación de señas vive en un proyecto aparte).
-- **Diccionario:** incluya `Diccionario LSEC/catalogo_lsec.json` junto al proyecto, o indique su ubicación con `LSEC_DICTIONARY_CATALOG_PATH`.
-- **Sin servicios externos:** el sistema no usa nube, bases remotas, visión artificial ni modelos de lenguaje externos; el traductor es 100% basado en reglas.
-
----
-
-## 📜 Guía de Anotación Lingüística LSEC v1.0
-
-La especificación formal de anotación se encuentra en [`data/guidelines/annotation_guide_lsec_v1.md`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/data/guidelines/annotation_guide_lsec_v1.md) y cubre 30 categorías lingüísticas:
-1. Glosas canónicas en mayúsculas.
-2. Tipografía y guiones de compuestos/deletreo (`U-P-E-C`, `SOLAMENTE-NO`).
-3. Pronombres personales (`PRO1`, `PRO2`, `PRO3`).
-4. Deixis vs. Correferencia anafórica con locus.
-5. Sujetos implícitos (*pro-drop*).
-6. Predicados y lemas verbales protegidos.
-7. Roles semánticos nucleares (`AGENT`, `PATIENT`, `THEME`, `LOCATION`, etc.).
-8. Negación manual y gestual (*headshake*).
-9. Preguntas sí/no (`pregunta_sn` con cejas elevadas).
-10. Preguntas abiertas (`pregunta_qu` con ceño fruncido).
-11. Línea temporal y marcadores deícticos temporales.
-12. Aspecto verbal (durativo, reiterativo, completivo).
-13. Pluralidad, cuantificadores y numerales.
-14. Relaciones de posesión.
-15. Clasificadores (`CL:`).
-16. Verbos direccionales y de concordancia.
-17. Asignación de loci espaciales.
-18. Operaciones de indexación espacial.
-19. Componentes no manuales (CNM).
-20. Expresiones faciales gramaticales.
-21. Movimientos de cabeza.
-22. Mirada (*eye gaze*).
-23. Cambio de rol (*role shift*).
-24. Segmentación temporal milimétrica.
-25. Variantes regionales (Sierra vs. Costa).
-26. Alternativas léxicas concurrentes.
-27. Desambiguación contextual de homónimos.
-28. Nombres propios y señas de identidad.
-29. Préstamos lingüísticos y dactilología.
-30. Protocolo de resolución de desacuerdos inter-anotadores.
+**Resultado actual:** **358 pruebas aprobadas, 0 fallos**.

@@ -1,0 +1,33 @@
+{
+  "project": "Video_UPEC_Institucional_2026.mp4",
+  "evaluatedAt": "2026-10-18T16:41:26.859Z",
+  "glossCount": 91,
+  "resolvedV27ClipsCount": 61,
+  "before": {
+    "intraSentenceRestDrops": 12,
+    "deadTimePct": 18.73,
+    "transitionVelocityJumpRadPerSec": 5.2136,
+    "maxSpeedMultiplier": 2.6
+  },
+  "after": {
+    "intraSentenceRestDrops": 0,
+    "deadTimePct": 5.7,
+    "transitionVelocityJumpRadPerSec": 0.7299,
+    "maxSpeedMultiplier": 1.6,
+    "maxLagSec": 0.998,
+    "videoDurationSec": 48.85,
+    "sequenceEndTimeSec": 49.388,
+    "pipExtendedSec": 0.538,
+    "determinismMaxDiffDeg": 0,
+    "totalEntriesCompiled": 91,
+    "totalTransitionsCompiled": 77
+  },
+  "improvements": {
+    "intraSentenceRestDropsEliminated": 12,
+    "deadTimeReductionPctPoints": 13.03,
+    "velocityJumpReductionPct": 86,
+    "speedCapEnforced": true,
+    "lagBudgetEnforced": true,
+    "deterministicExact": true
+  }
+}

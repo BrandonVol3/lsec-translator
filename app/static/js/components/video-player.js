@@ -200,6 +200,12 @@ class VideoPlayerController {
           this.videoEl.currentTime = appState.state.playback.inPoint || 0;
           this.videoEl.play();
         } else {
+          const endDur = Number.isFinite(this.videoEl.duration) && this.videoEl.duration > 0
+            ? this.videoEl.duration
+            : (appState.state.playback.duration || this.videoEl.currentTime || 0);
+          if (endDur > 0) {
+            appState.setCurrentTime(endDur, 'end');
+          }
           appState.setIsPlaying(false);
         }
       });

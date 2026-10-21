@@ -34,6 +34,9 @@ class DictionaryEntryResponse(BaseModel):
     gloss_variants: List[str]
     forms: List[str]
     hand_configuration: Optional[str] = None
+    hand_variant: Optional[str] = None
+    hand_variant_key: Optional[str] = None
+    hand_variant_label: Optional[str] = None
     alphabetical_group: Optional[str] = None
     categories: List[str] = Field(default_factory=list)
     video_url: Optional[str] = None
@@ -73,6 +76,9 @@ def _to_response(entry: DictionaryEntry) -> DictionaryEntryResponse:
         gloss_variants=[to_gloss_form(v) for v in entry.variants],
         forms=list(entry.forms),
         hand_configuration=entry.hand_configuration,
+        hand_variant=entry.hand_variant,
+        hand_variant_key=entry.hand_variant_key,
+        hand_variant_label=entry.hand_variant_label,
         alphabetical_group=entry.alphabetical_group,
         categories=list(entry.categories),
         video_url=entry.video_url,
@@ -84,11 +90,21 @@ def _to_response(entry: DictionaryEntry) -> DictionaryEntryResponse:
 @dictionary_router.get("/search", response_model=DictionarySearchResponse)
 async def search_dictionary(
     q: str = Query(..., min_length=1, max_length=120, description="Palabra o frase a buscar"),
+    hand_config: Optional[str] = Query(None, description="Filtrar por configuración manual (ej. configuracion_manual_3)"),
+    hand_variant: Optional[str] = Query(None, description="Filtrar por sub-variante (ej. configuracion_manual_3_v2)"),
+    alfa: Optional[str] = Query(None, description="Filtrar por grupo alfabético (ej. alfa-a)"),
     limit: int = Query(20, ge=1, le=100),
 ) -> DictionarySearchResponse:
     """Busca señas por coincidencia exacta, prefijo, inicio de palabra, subcadena o aproximada."""
     svc = _service()
-    hits = svc.search(q, limit=limit)
+    hits = svc.search(q, limit=100 if (hand_config or hand_variant or alfa) else limit)
+    if hand_config:
+        hits = [h for h in hits if h.entry.hand_configuration == hand_config]
+    if hand_variant:
+        hits = [h for h in hits if h.entry.hand_variant == hand_variant or h.entry.hand_variant_key == hand_variant]
+    if alfa:
+        hits = [h for h in hits if h.entry.alphabetical_group == alfa]
+    hits = hits[:limit]
     return DictionarySearchResponse(
         query=q,
         total=len(hits),

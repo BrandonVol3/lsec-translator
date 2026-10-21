@@ -329,18 +329,22 @@ def test_13_animation_endpoints_v25_integration():
 
     client = TestClient(app)
 
-    # 1. Endpoint /stats reporta versión v2.5 y al menos 5.052 señas
+    # 1. Endpoint /stats reporta versión activa por defecto (v2.7) y soporta explícitamente v2.5 con las 4.142 señas canónicas NFC
     stats_res = client.get("/api/v1/animations/stats")
     assert stats_res.status_code == 200
     stats = stats_res.json()
-    assert stats.get("pipeline_version") == "2.5_Directo_1a1"
-    assert stats.get("total_signs") >= 5052
+    assert stats.get("pipeline_version") in ["2.5_Directo_1a1", "2.6_Directo_1a1_corregido", "2.7_Estandarizado"]
+    assert stats.get("total_signs") >= 4140
 
-    # 2. Endpoint /{sign_name} sirve animaciones directas v2.6 corregidas por defecto con fallback a v2.5
+    stats_v25_res = client.get("/api/v1/animations/stats?version=2.5")
+    assert stats_v25_res.status_code == 200
+    assert stats_v25_res.json().get("pipeline_version") == "2.5_Directo_1a1"
+
+    # 2. Endpoint /{sign_name} sirve animaciones directas v2.7 estandarizadas por defecto con soporte para v2.6 y v2.5
     anim_res = client.get("/api/v1/animations/A diario, Cotidiano(a)")
     assert anim_res.status_code == 200
     anim_data = anim_res.json()
-    assert anim_data["metadata"]["pipelineVersion"] in ["2.5_Directo_1a1", "2.6_Directo_1a1_corregido"]
+    assert anim_data["metadata"]["pipelineVersion"] in ["2.5_Directo_1a1", "2.6_Directo_1a1_corregido", "2.7_Estandarizado"]
     assert anim_data["metadata"]["pure1to1Copy"] is True
     assert "frames" in anim_data and len(anim_data["frames"]) > 0
 

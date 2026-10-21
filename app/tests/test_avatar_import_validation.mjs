@@ -11,11 +11,24 @@ import {
   detectDatasetQuaternionLayout as schemaDetectLayout,
   normalizeBoneName as schemaNormalizeBone
 } from '../static/js/avatar/sign-animation-schema.js';
+import {
+  SequenceCompiler,
+  interpolateSO3HermiteC1,
+  quatAngleDeg,
+  quatNormalize,
+  quatMultiply,
+  quatConjugate,
+  quatLogRad
+} from '../static/js/avatar/sequence-compiler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const controllerPath = path.join(__dirname, '../static/js/avatar/avatar-controller.js');
-const rawBakedPath = path.join(__dirname, '../../scripts/lunes_raw_baked_animation.json');
+const candidateRawBaked = [
+  path.join(__dirname, '../../scripts/lunes_raw_baked_animation.json'),
+  path.join(__dirname, '../../../_archive/lsec_translator_prototype/scripts/lunes_raw_baked_animation.json')
+];
+const rawBakedPath = candidateRawBaked.find(p => fs.existsSync(p)) || candidateRawBaked[0];
 
 console.log('--- TEST 1: Verificar importación estática en avatar-controller.js ---');
 const controllerSource = fs.readFileSync(controllerPath, 'utf8');
@@ -535,7 +548,12 @@ async function testNullPlayerSafety() {
 
 console.log('--- TEST 9: Conversión y validación de seña v2.5 Directo 1:1 ---');
 async function testDirectV25AnimationConversion() {
-  const directPath = path.join(__dirname, '../../../Diccionario LSEC/senas_vrm_direct/A diario, Cotidiano(a)/animation.json');
+  const candidateDirectPaths = [
+    path.join(__dirname, '../../../_archive/Diccionario LSEC/senas_vrm_direct/A diario, Cotidiano(a)/animation.json'),
+    path.join(__dirname, '../../../Diccionario LSEC/senas_vrm_direct/A diario, Cotidiano(a)/animation.json'),
+    path.join(__dirname, '../../../Diccionario LSEC/senas_vrm_direct_v2.6/A diario, Cotidiano(a)/animation.json')
+  ];
+  const directPath = candidateDirectPaths.find(p => fs.existsSync(p)) || candidateDirectPaths[0];
   if (fs.existsSync(directPath)) {
     const rawData = JSON.parse(fs.readFileSync(directPath, 'utf8'));
     const converted = convertDirectAnimationToSignClip(rawData);
@@ -609,7 +627,11 @@ async function testResolveOverlappingGlossIntervals() {
     throw new Error('FAIL: No se pudo instanciar LSECStateStore desde state.js');
   }
 
-  const reportPath = path.join(__dirname, '../../reports/lsec_2_1_1_after.json');
+  const candidateReportPaths = [
+    path.join(__dirname, '../../reports/lsec_2_1_1_after.json'),
+    path.join(__dirname, '../../../_archive/lsec_translator_prototype/reports/lsec_2_1_1_after.json')
+  ];
+  const reportPath = candidateReportPaths.find(p => fs.existsSync(p)) || candidateReportPaths[0];
   if (!fs.existsSync(reportPath)) {
     throw new Error(`FAIL: Reporte 1.mp4 no encontrado en ${reportPath}`);
   }
@@ -687,6 +709,252 @@ async function testResolveOverlappingGlossIntervals() {
   console.log(`PASS: Las ${allGlosses.length} glosas de 1.mp4 tienen intervalos secuenciales sin solapamiento y 0 glosas omitidas.`);
 }
 
+console.log('--- TEST 13: Conversión de animación estandarizada v2.7 y control de versión en AvatarSyncController ---');
+async function testV27StandardizedAnimationAndSyncVersion() {
+  const v27Path = path.join(__dirname, '../../../Diccionario LSEC/senas_vrm_standardized_v2.7/Abanico/animation.json');
+  if (!fs.existsSync(v27Path)) {
+    throw new Error(`FAIL: Carpeta senas_vrm_standardized_v2.7/Abanico no encontrada en ${v27Path}`);
+  }
+  const rawV27 = JSON.parse(fs.readFileSync(v27Path, 'utf8'));
+  const clipV27 = convertDirectAnimationToSignClip(rawV27);
+  const val = validateSignClip(clipV27);
+  if (!val.valid) {
+    throw new Error(`FAIL: Clip v2.7 "Abanico" inválido: ${val.errors.join(', ')}`);
+  }
+  if (clipV27.metadata?.standardizedVersion !== '2.7') {
+    throw new Error(`FAIL: standardizedVersion esperado '2.7', recibido '${clipV27.metadata?.standardizedVersion}'`);
+  }
+  if (clipV27.metadata?.pipelineVersion !== '2.7_Estandarizado') {
+    throw new Error(`FAIL: pipelineVersion esperado '2.7_Estandarizado', recibido '${clipV27.metadata?.pipelineVersion}'`);
+  }
+  if (clipV27.metadata?.version_served !== '2.7') {
+    throw new Error(`FAIL: version_served esperado '2.7', recibido '${clipV27.metadata?.version_served}'`);
+  }
+  if (clipV27.metadata?.handStandardization?.version !== 'v2.7' || clipV27.metadata?.handStandardization?.status !== 'STANDARDIZED') {
+    throw new Error(`FAIL: handStandardization v2.7 ausente o inválido en metadata`);
+  }
+  if (!String(clipV27.metadata?.source || '').includes('v2.7')) {
+    throw new Error(`FAIL: source no refleja v2.7: '${clipV27.metadata?.source}'`);
+  }
+
+  const vm = await import('node:vm');
+  const syncSrcRaw = fs.readFileSync(path.join(__dirname, '../static/js/avatar/avatar-sync-controller.js'), 'utf8');
+  const syncSrcEval = syncSrcRaw
+    .replace(/^import\s+[\s\S]*?from\s+['"][^'"]+['"];?\s*$/gm, '')
+    .replace(/export\s+class\s+AvatarSyncController/, 'class AvatarSyncController');
+  const memClips = new Map();
+  const sandbox = {
+    console,
+    Map,
+    Set,
+    Promise,
+    encodeURIComponent,
+    fetch: async () => ({ ok: false }),
+    convertDirectAnimationToSignClip,
+    validateSignClip,
+    trimSignClipStroke,
+    createNeutralClip: () => ({}),
+    createSaludarDemoClip: () => ({}),
+    createNegacionDemoClip: () => ({}),
+    createLunesSignClip: () => ({}),
+    createFingerspellingClip: () => ({}),
+    createLexicalFallbackClip: () => ({}),
+    defaultAnimationCache: {
+      get: async () => null,
+      set: async () => {},
+      getClip: (k) => memClips.get(k) || null,
+      setClip: (k, v) => memClips.set(k, v)
+    },
+  };
+  vm.runInNewContext(`${syncSrcEval}\nthis.AvatarSyncController = AvatarSyncController;`, sandbox);
+  const syncCtrl = new sandbox.AvatarSyncController({});
+  if (syncCtrl.getPreferredVersion() !== '2.7') {
+    throw new Error(`FAIL: AvatarSyncController.getPreferredVersion() por defecto debe ser '2.7', recibido '${syncCtrl.getPreferredVersion()}'`);
+  }
+  // Verificar aislamiento de caché entre versiones (no debe filtrar v2.7 al consultar v2.6 o v2.5)
+  memClips.set('v27_trim_ABANICO', clipV27);
+  syncCtrl.resolutionCache.set('v27_ABANICO', { match_type: 'exact', version_served: '2.7' });
+  if (syncCtrl.getCachedClip('ABANICO', '2.7') !== clipV27) {
+    throw new Error('FAIL: getCachedClip("ABANICO", "2.7") no devolvió el clip v2.7 en caché');
+  }
+  if (syncCtrl.getCachedClip('ABANICO', '2.6') !== null) {
+    throw new Error('FAIL: Fuga de caché entre versiones: getCachedClip("ABANICO", "2.6") devolvió el clip v2.7');
+  }
+  if (syncCtrl.getResolutionMetadata('ABANICO', '2.6') !== null) {
+    throw new Error('FAIL: Fuga de metadatos de resolución entre versiones: getResolutionMetadata("ABANICO", "2.6") devolvió metadatos v2.7');
+  }
+  if (syncCtrl.setPreferredVersion('2.6') !== '2.6' || syncCtrl._versionPrefix() !== 'v26_') {
+    throw new Error('FAIL: Cambio de versión a 2.6 en AvatarSyncController falló');
+  }
+  if (syncCtrl.setPreferredVersion('2.5') !== '2.5' || syncCtrl._versionPrefix() !== 'v25_') {
+    throw new Error('FAIL: Cambio de versión a 2.5 en AvatarSyncController falló');
+  }
+  if (syncCtrl.setPreferredVersion('invalid') !== '2.7' || syncCtrl._versionPrefix() !== 'v27_') {
+    throw new Error('FAIL: Fallback de versión inválida a 2.7 en AvatarSyncController falló');
+  }
+  console.log(`PASS: Seña v2.7 "Abanico" (${clipV27.metadata.handStandardization.template_id}) convertida y AvatarSyncController configurado en v2.7 por defecto con aislamiento de caché.`);
+}
+
+console.log('--- TEST 14: SequenceCompiler, coarticulación C¹, tope 1.6x, no-retorno <= 1.5s y extensión PiP ---');
+async function testSequenceCompilerAndCoarticulation() {
+  const strokeIdxPath = path.join(__dirname, '../data/stroke_index_v27.json');
+  if (!fs.existsSync(strokeIdxPath)) {
+    throw new Error(`FAIL: stroke_index_v27.json no existe en ${strokeIdxPath}`);
+  }
+  const strokeIdxRaw = JSON.parse(fs.readFileSync(strokeIdxPath, 'utf8'));
+  if (strokeIdxRaw.totalSigns !== 4142 || !strokeIdxRaw.signs || !strokeIdxRaw.signs['Abanico']) {
+    throw new Error(`FAIL: stroke_index_v27.json incompleto o corrupto (totalSigns=${strokeIdxRaw.totalSigns})`);
+  }
+
+  // Cargar dos señas reales v2.7 con su stroke_index precalculado
+  const v27Base = path.join(__dirname, '../../../Diccionario LSEC/senas_vrm_standardized_v2.7');
+  const rawAbanico = JSON.parse(fs.readFileSync(path.join(v27Base, 'Abanico', 'animation.json'), 'utf8'));
+  rawAbanico.metadata = { ...(rawAbanico.metadata || {}), version_served: '2.7', stroke: strokeIdxRaw.signs['Abanico'] };
+  const clipAbanico = trimSignClipStroke(convertDirectAnimationToSignClip(rawAbanico, 'ABANICO'));
+  if (clipAbanico.metadata?.strokeSource !== 'stroke_index_v27') {
+    throw new Error(`FAIL: trimSignClipStroke no utilizó stroke_index_v27 (strokeSource=${clipAbanico.metadata?.strokeSource})`);
+  }
+
+  const rawHola = JSON.parse(fs.readFileSync(path.join(v27Base, 'Hola', 'animation.json'), 'utf8'));
+  rawHola.metadata = { ...(rawHola.metadata || {}), version_served: '2.7', stroke: strokeIdxRaw.signs['Hola'] };
+  const clipHola = trimSignClipStroke(convertDirectAnimationToSignClip(rawHola, 'HOLA'));
+
+  const clipMap = new Map([
+    ['HOLA', clipHola],
+    ['ABANICO', clipAbanico]
+  ]);
+
+  const compiler = new SequenceCompiler({
+    maxSpeed: 1.6,
+    maxLagSec: 1.0,
+    restGapThresholdSec: 1.5,
+    extendEndForLag: true
+  });
+
+  // 14a. Caso borde: proyecto vacío / sin glosas
+  const emptyPlan = compiler.compile({ glosses: [] }, clipMap, { videoDuration: 5.0 });
+  if (emptyPlan.entries.length !== 0 || emptyPlan.segments.length !== 0) {
+    throw new Error('FAIL: Plan vacío debe tener 0 entradas y 0 segmentos');
+  }
+  const emptySample = compiler.pose(2.5);
+  if (emptySample.phase !== 'rest' || !emptySample.bones.rightUpperArm) {
+    throw new Error('FAIL: compiler.pose(t) en plan vacío no devolvió pose de reposo válida');
+  }
+
+  // 14b. Caso: pausa intra-oración <= 1.5s NO cae a reposo; pausa > 1.5s SÍ retorna a reposo
+  const seqProject = {
+    media_info: { duration_seconds: 10.0 },
+    glosses: [
+      { id: 'g1', gloss: 'HOLA', start_seconds: 0.4, end_seconds: 1.3, proposition_id: 'p1' },
+      // Hueco de 0.70s (<= 1.5s) dentro de p1 -> debe mantener pose / coarticular sin caer a REST_POSE
+      { id: 'g2', gloss: 'ABANICO', start_seconds: 2.0, end_seconds: 3.1, proposition_id: 'p1' },
+      // Hueco de 1.45s (<= 1.5s) -> tampoco debe caer a REST_POSE
+      { id: 'g3', gloss: 'HOLA', start_seconds: 4.55, end_seconds: 5.5, proposition_id: 'p1' },
+      // Hueco de 2.20s (> 1.5s) hacia p2 -> SÍ debe retornar a REST_POSE
+      { id: 'g4', gloss: 'ABANICO', start_seconds: 7.7, end_seconds: 8.8, proposition_id: 'p2' }
+    ]
+  };
+  const plan = compiler.compile(seqProject, clipMap, { videoDuration: 10.0 });
+  if (plan.stats.intraSentenceRestDrops !== 0) {
+    throw new Error(`FAIL: intraSentenceRestDrops esperado 0, obtenido ${plan.stats.intraSentenceRestDrops}`);
+  }
+  if (plan.stats.interSentenceRestDrops !== 1) {
+    throw new Error(`FAIL: interSentenceRestDrops esperado 1 en hueco de 2.20s, obtenido ${plan.stats.interSentenceRestDrops}`);
+  }
+
+  // Verificar que en la mitad del hueco de 1.45s (t = 3.8s) la fase sea 'hold' o 'transition', NUNCA 'rest'
+  const midGapSample = compiler.pose(3.8);
+  if (midGapSample.phase === 'rest') {
+    throw new Error('FAIL: El avatar cayó a REST_POSE durante una pausa de 1.45s (<= 1.5s)');
+  }
+  // Y en la mitad del hueco de 2.20s (t = 6.6s) sí esté en 'rest'
+  const longGapSample = compiler.pose(6.6);
+  if (longGapSample.phase !== 'rest') {
+    throw new Error(`FAIL: El avatar no retornó a REST_POSE durante una pausa de 2.20s (> 1.5s); phase=${longGapSample.phase}`);
+  }
+
+  // 14c. Caso: ráfaga densa al final del video -> respeta maxSpeed <= 1.6x, startLag <= 1.0s y endLag <= 1.0s reales sin clamp artificial, y extiende PiP
+  const denseProject = {
+    media_info: { duration_seconds: 1.50 },
+    glosses: [
+      { id: 'd1', gloss: 'ABANICO', start_seconds: 0.0, end_seconds: 0.35, proposition_id: 'p_dense' },
+      { id: 'd2', gloss: 'HOLA', start_seconds: 0.35, end_seconds: 0.70, proposition_id: 'p_dense' },
+      { id: 'd3', gloss: 'ABANICO', start_seconds: 0.70, end_seconds: 1.05, proposition_id: 'p_dense' },
+      { id: 'd4', gloss: 'HOLA', start_seconds: 1.05, end_seconds: 1.45, proposition_id: 'p_dense' }
+    ]
+  };
+  const densePlan = compiler.compile(denseProject, clipMap, { videoDuration: 1.50 });
+  if (densePlan.stats.maxSpeedUsed > 1.6001) {
+    throw new Error(`FAIL: Tope de velocidad violado: ${densePlan.stats.maxSpeedUsed} > 1.6x`);
+  }
+  if (densePlan.stats.maxLagSec > 1.0001) {
+    throw new Error(`FAIL: Presupuesto de lag violado: ${densePlan.stats.maxLagSec} > 1.0s`);
+  }
+  for (const pe of densePlan.playableEntries) {
+    const realStartLag = pe.startSec - pe.slotStart;
+    const realEndLag = pe.endSec - pe.slotEnd;
+    if (realStartLag > 1.001 || realEndLag > 1.001) {
+      throw new Error(`FAIL: Lag real no acotado en ${pe.gloss}: startLag=${realStartLag.toFixed(4)}s, endLag=${realEndLag.toFixed(4)}s`);
+    }
+  }
+  if (densePlan.sequenceEndTime <= 1.50) {
+    throw new Error(`FAIL: El PiP no se extendió al final pese al lag acumulado (sequenceEndTime=${densePlan.sequenceEndTime})`);
+  }
+
+  // 14d. Determinismo exacto: muestreo secuencial vs acceso aleatorio
+  const sampleA = compiler.pose(0.9333).bones;
+  compiler.pose(2.1);
+  compiler.pose(0.0);
+  const sampleB = compiler.pose(0.9333).bones;
+  for (const b of Object.keys(sampleA)) {
+    const diff = quatAngleDeg(sampleA[b], sampleB[b]);
+    if (diff !== 0) {
+      throw new Error(`FAIL: No determinismo en hueso ${b}: diff=${diff}°`);
+    }
+  }
+
+  // 14e. Continuidad C¹ exacta en ambos bordes u=0+ y u=1- de interpolateSO3HermiteC1 (con Jacobiano derecho inverso J_r^{-1})
+  const q0Test = quatNormalize([0.15, -0.25, 0.35, 0.88]);
+  const q1Test = quatNormalize([-0.30, 0.40, -0.10, 0.86]);
+  const w0Test = [1.2, -0.8, 0.5];
+  const w1Test = [-0.9, 1.4, -0.6];
+  const TTest = 0.25;
+  const epsU = 1e-5;
+  const qAtEps = interpolateSO3HermiteC1(q0Test, q1Test, w0Test, w1Test, TTest, epsU);
+  const qAt1MinusEps = interpolateSO3HermiteC1(q0Test, q1Test, w0Test, w1Test, TTest, 1.0 - epsU);
+  const wStartNum = quatLogRad(quatMultiply(quatConjugate(q0Test), qAtEps)).map(v => v / (epsU * TTest));
+  const wEndNum = quatLogRad(quatMultiply(quatConjugate(qAt1MinusEps), q1Test)).map(v => v / (epsU * TTest));
+  const errW0 = Math.hypot(wStartNum[0] - w0Test[0], wStartNum[1] - w0Test[1], wStartNum[2] - w0Test[2]);
+  const errW1 = Math.hypot(wEndNum[0] - w1Test[0], wEndNum[1] - w1Test[1], wEndNum[2] - w1Test[2]);
+  if (errW0 > 0.01 || errW1 > 0.01) {
+    throw new Error(`FAIL: Discontinuidad C¹ en interpolateSO3HermiteC1: errW0=${errW0.toFixed(5)}, errW1=${errW1.toFixed(5)}`);
+  }
+
+  // 14f. Preservación de glosas FINGERSPELLING durante hold/transition sin bajar brazos a reposo
+  const fsProject = {
+    media_info: { duration_seconds: 6.0 },
+    glosses: [
+      { id: 'f1', gloss: 'HOLA', start_seconds: 0.5, end_seconds: 1.4, proposition_id: 'p_fs' },
+      { id: 'f2', gloss: 'U-P-E-C', is_fingerspelling: true, gloss_type: 'DACTILOLOGÍA', start_seconds: 1.5, end_seconds: 2.2, proposition_id: 'p_fs' },
+      { id: 'f3', gloss: 'ABANICO', start_seconds: 2.3, end_seconds: 3.4, proposition_id: 'p_fs' }
+    ]
+  };
+  compiler.compile(fsProject, clipMap, { videoDuration: 6.0 });
+  const fsSample = compiler.pose(1.85);
+  if (fsSample.phase === 'rest') {
+    throw new Error('FAIL: El avatar cayó a REST_POSE durante una glosa deletreada intra-oración');
+  }
+  if (!fsSample.activeEntry || fsSample.activeGloss !== 'U-P-E-C') {
+    throw new Error(`FAIL: La glosa deletreada U-P-E-C fue suprimida en sample(1.85); activeGloss=${fsSample.activeGloss}`);
+  }
+  const postRunSample = compiler.pose(5.2);
+  if (postRunSample.activeEntry !== null || postRunSample.activeGloss !== null) {
+    throw new Error(`FAIL: En reposo posterior (t=5.2s) activeEntry debe ser null; obtenido ${postRunSample.activeGloss}`);
+  }
+
+  console.log('PASS: SequenceCompiler cumple C¹ exacto (u=0 y u=1), no-retorno <= 1.5s, tope 1.6x, lag <= 1.0s, preservación de dactilología, extensión PiP y determinismo 0.0°.');
+}
+
 (async () => {
   await testFileImport();
   await testCorruptedImport();
@@ -695,5 +963,8 @@ async function testResolveOverlappingGlossIntervals() {
   await testRestPoseConsistency();
   await testV26StrokeTrimming();
   await testResolveOverlappingGlossIntervals();
+  await testV27StandardizedAnimationAndSyncVersion();
+  await testSequenceCompilerAndCoarticulation();
   console.log('\n=== TODOS LOS TESTS DE VALIDACIÓN JS PASARON SATISFACTORIAMENTE ===');
 })();
+

@@ -333,11 +333,46 @@
       "totalFrames": 223,
       "difficulty": "Difícil"
     },
-    "DIRECCIONALES": "DIRECCIONALES.json",
-    "CILANTRO, CULANTRO": "CILANTRO_CULANTRO.json",
-    "PAPA, CURA": "PAPA_CURA.json",
-    "PERFECTO(A)": "PERFECTO_A.json",
-    "REMOLCAR, REMOLQUE": "REMOLCAR_REMOLQUE.json",
+    "DIRECCIONALES": {
+      "clipId": "DIRECCIONALES_V2_5",
+      "gloss": "DIRECCIONALES",
+      "signOriginal": "Direccionales",
+      "file": "DIRECCIONALES.json",
+      "validationStatus": "REQUIRES_LSEC_VALIDATION",
+      "format": "vrm-1.0-retargeted"
+    },
+    "CILANTRO, CULANTRO": {
+      "clipId": "CILANTRO_CULANTRO_V2_5",
+      "gloss": "CILANTRO, CULANTRO",
+      "signOriginal": "Cilantro, Culantro",
+      "file": "CILANTRO_CULANTRO.json",
+      "validationStatus": "REQUIRES_LSEC_VALIDATION",
+      "format": "vrm-1.0-retargeted"
+    },
+    "PAPA, CURA": {
+      "clipId": "PAPA_CURA_V2_5",
+      "gloss": "PAPA, CURA",
+      "signOriginal": "Papa, Cura",
+      "file": "PAPA_CURA.json",
+      "validationStatus": "REQUIRES_LSEC_VALIDATION",
+      "format": "vrm-1.0-retargeted"
+    },
+    "PERFECTO(A)": {
+      "clipId": "PERFECTO_A_V2_5",
+      "gloss": "PERFECTO(A)",
+      "signOriginal": "Perfecto(a)",
+      "file": "PERFECTO_A.json",
+      "validationStatus": "REQUIRES_LSEC_VALIDATION",
+      "format": "vrm-1.0-retargeted"
+    },
+    "REMOLCAR, REMOLQUE": {
+      "clipId": "REMOLCAR_REMOLQUE_V2_5",
+      "gloss": "REMOLCAR, REMOLQUE",
+      "signOriginal": "Remolcar, Remolque",
+      "file": "REMOLCAR_REMOLQUE.json",
+      "validationStatus": "REQUIRES_LSEC_VALIDATION",
+      "format": "vrm-1.0-retargeted"
+    },
     "BODEGUERO_A": {
       "clipId": "BODEGUERO_A_V2_5",
       "gloss": "BODEGUERO_A",

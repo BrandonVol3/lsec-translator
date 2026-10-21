@@ -161,6 +161,8 @@ class RuleEngine:
                     target_g = params.get("gloss")
                     if target_g:
                         for g in current_glosses:
+                            if g.gloss.upper().startswith("NO-"):
+                                continue
                             if g.gloss.upper() in _COPULA_GLOSSES or (g.normalized_word and g.normalized_word.lower() in ("haber", "ser", "estar")):
                                 g.gloss = target_g
                                 g.normalized_word = target_g.lower()
@@ -192,6 +194,8 @@ class RuleEngine:
                             duration_ms=400,
                             notes=f"Insertado por regla {rule.rule_id}",
                             alignment_type=AlignmentType.GRAMMATICAL,
+                            inference_rule_id=rule.rule_id,
+                            lexical_strategy="grammatical_rule",
                         )
 
                         # Posicionamiento exacto
@@ -210,12 +214,37 @@ class RuleEngine:
                             else:
                                 current_glosses.append(new_item)
                         else:  # before_predicate
-                            verb_idx = 0
-                            for idx, g in enumerate(current_glosses):
-                                if g.gloss not in _TIME_GLOSSES and g.gloss.startswith("PRO"):
-                                    verb_idx = idx + 1
+                            # Posición canónica del sujeto en LSEC: después de TIEMPO y LUGAR, antes del OBJETO y VERBO
+                            insert_idx = 0
+                            leading_temporal = False
+                            is_question = str(frame.get("sentence_type", "")).startswith("interrogative")
+                            if current_glosses and current_glosses[0].gloss in ("AUNQUE", "PERO", "ADEMÁS"):
+                                insert_idx = 1
+                                leading_temporal = True
+                            scan_indexes = [] if is_question else range(insert_idx, len(current_glosses))
+                            for idx in scan_indexes:
+                                g = current_glosses[idx]
+                                g_up = g.gloss.upper()
+                                is_time_g = (
+                                    g_up in _TIME_GLOSSES
+                                    or (g.normalized_word and g.normalized_word.lower() in ("ayer", "hoy", "mañana", "antes", "futuro", "después", "ahora", "siempre"))
+                                )
+                                is_loc_g = (
+                                    g.spatial_location is not None
+                                    or (g.notes and "lugar" in g.notes.lower())
+                                    or (g.normalized_word and g.normalized_word.lower() in ("escuela", "casa", "colegio", "universidad", "hospital", "parque", "aula", "clase"))
+                                    or (g.source_word and g.source_word.lower() in ("escuela", "casa", "colegio", "universidad", "hospital", "parque", "aula", "clase"))
+                                )
+                                if is_time_g:
+                                    insert_idx = idx + 1
+                                    leading_temporal = True
+                                elif is_loc_g and leading_temporal:
+                                    insert_idx = idx + 1
+                                elif g_up.startswith("PRO"):
+                                    insert_idx = idx + 1
+                                else:
                                     break
-                            current_glosses.insert(verb_idx, new_item)
+                            current_glosses.insert(insert_idx, new_item)
 
                         app.affected_gloss_ids.append(str(new_item.id))
 
@@ -248,14 +277,14 @@ class RuleEngine:
                                 app.affected_gloss_ids.append(str(ni.id))
 
                     elif pattern == "verb_first":
-                        # En imperativos directivos simples, ubicar el verbo de mandato al inicio tras el tiempo
-                        time_items = [g for g in current_glosses if g.gloss in _TIME_GLOSSES]
+                        # En imperativos directivos simples, ubicar el verbo de mandato al inicio tras el tiempo/cortesía
+                        time_items = [g for g in current_glosses if g.gloss in _TIME_GLOSSES or g.gloss == "POR-FAVOR"]
                         non_time = [g for g in current_glosses if g not in time_items]
                         if len(non_time) >= 2:
                             pred_lem = str(frame.get("predicate_lemma", "")).lower()
                             verb_idx = -1
                             for idx, g in enumerate(non_time):
-                                if (g.normalized_word and g.normalized_word.lower() == pred_lem) or g.alignment_type == AlignmentType.PREDICATE:
+                                if (g.normalized_word and g.normalized_word.lower() == pred_lem):
                                     verb_idx = idx
                                     break
                             if verb_idx == -1:

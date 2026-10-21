@@ -314,9 +314,9 @@ export function createSaludarDemoClip() {
     ],
     expressionTracks: [
       {
-        expressionName: 'happy',
-        times: [0.0, 0.45, 1.65, 2.2],
-        values: [0.0, 0.45, 0.45, 0.0],
+        expressionName: 'neutral',
+        times: [0.0, 2.2],
+        values: [1.0, 1.0],
         interpolation: 'LINEAR'
       }
     ],
@@ -324,6 +324,8 @@ export function createSaludarDemoClip() {
     metadata: {
       description: 'Prueba técnica de movimiento del brazo derecho y mano (SALUDAR DEMO).',
       isValidatedLSEC: false,
+      defaultNeutralFacialMode: true,
+      hasExplicitFacialExpression: false,
       disclaimer: 'PRUEBA TÉCNICA DEMOSTRATIVA. No es una traducción lingüísticamente validada de LSEC.'
     }
   };
@@ -751,15 +753,9 @@ export function createLunesSignClip() {
     ],
     expressionTracks: [
       {
-        expressionName: 'ou',
-        times: [0.0, 0.70, 1.20, 1.90, 2.50, 3.20],
-        values: [0.0, 0.15, 0.35, 0.35, 0.10, 0.0],
-        interpolation: 'LINEAR'
-      },
-      {
-        expressionName: 'blink',
-        times: [0.0, 0.35, 0.45, 0.55, 2.65, 2.75, 2.85, 3.20],
-        values: [0.0, 0.0, 0.90, 0.0, 0.0, 0.90, 0.0, 0.0],
+        expressionName: 'neutral',
+        times: [0.0, 3.20],
+        values: [1.0, 1.0],
         interpolation: 'LINEAR'
       }
     ],

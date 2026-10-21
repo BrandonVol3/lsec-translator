@@ -1,0 +1,1199 @@
+{
+  "version": "2.7",
+  "totalSignsIndexed": 4142,
+  "processingTimeSec": 97.91,
+  "originalDurationSec": {
+    "mean": 4.955,
+    "median": 4.8,
+    "p90": 6.333
+  },
+  "strokeDurationSec": {
+    "mean": 2.81,
+    "median": 2.6,
+    "p10": 1.767,
+    "p90": 4.117
+  },
+  "leadInTrimmedSec": {
+    "mean": 1.524,
+    "median": 1.533,
+    "p90": 2.3
+  },
+  "tailOutTrimmedSec": {
+    "mean": 0.621,
+    "median": 0.533,
+    "p90": 1.283
+  },
+  "residualDeadTimeSec": {
+    "leadMedian": 0.0833,
+    "tailMedian": 0.0833,
+    "leadMean": 0.3295,
+    "tailMean": 0.1991,
+    "leadP90": 1.1,
+    "tailP90": 0.55
+  },
+  "deadTimeShareRemovedPct": 43.29,
+  "flagsCount": {
+    "repeatedStroke": 1113,
+    "oneHanded": 422,
+    "tooShort": 0,
+    "faceOnly": 6
+  },
+  "histograms": {
+    "strokeDurationSec": [
+      {
+        "range": "[0.00, 0.40)",
+        "min": 0.0,
+        "max": 0.4,
+        "count": 0,
+        "pct": 0.0
+      },
+      {
+        "range": "[0.40, 0.80)",
+        "min": 0.4,
+        "max": 0.8,
+        "count": 45,
+        "pct": 1.09
+      },
+      {
+        "range": "[0.80, 1.20)",
+        "min": 0.8,
+        "max": 1.2,
+        "count": 25,
+        "pct": 0.6
+      },
+      {
+        "range": "[1.20, 1.60)",
+        "min": 1.2,
+        "max": 1.6,
+        "count": 133,
+        "pct": 3.21
+      },
+      {
+        "range": "[1.60, 2.00)",
+        "min": 1.6,
+        "max": 2.0,
+        "count": 569,
+        "pct": 13.74
+      },
+      {
+        "range": "[2.00, 2.50)",
+        "min": 2.0,
+        "max": 2.5,
+        "count": 1095,
+        "pct": 26.44
+      },
+      {
+        "range": "[2.50, 3.50)",
+        "min": 2.5,
+        "max": 3.5,
+        "count": 1462,
+        "pct": 35.3
+      },
+      {
+        "range": "[3.50, 10.00)",
+        "min": 3.5,
+        "max": 10.0,
+        "count": 806,
+        "pct": 19.46
+      }
+    ],
+    "leadInTrimmedSec": [
+      {
+        "range": "[0.00, 0.25)",
+        "min": 0.0,
+        "max": 0.25,
+        "count": 223,
+        "pct": 5.38
+      },
+      {
+        "range": "[0.25, 0.50)",
+        "min": 0.25,
+        "max": 0.5,
+        "count": 106,
+        "pct": 2.56
+      },
+      {
+        "range": "[0.50, 1.00)",
+        "min": 0.5,
+        "max": 1.0,
+        "count": 524,
+        "pct": 12.65
+      },
+      {
+        "range": "[1.00, 1.50)",
+        "min": 1.0,
+        "max": 1.5,
+        "count": 1108,
+        "pct": 26.75
+      },
+      {
+        "range": "[1.50, 2.00)",
+        "min": 1.5,
+        "max": 2.0,
+        "count": 1287,
+        "pct": 31.07
+      },
+      {
+        "range": "[2.00, 3.00)",
+        "min": 2.0,
+        "max": 3.0,
+        "count": 804,
+        "pct": 19.41
+      },
+      {
+        "range": "[3.00, 10.00)",
+        "min": 3.0,
+        "max": 10.0,
+        "count": 90,
+        "pct": 2.17
+      }
+    ],
+    "tailOutTrimmedSec": [
+      {
+        "range": "[0.00, 0.25)",
+        "min": 0.0,
+        "max": 0.25,
+        "count": 1038,
+        "pct": 25.06
+      },
+      {
+        "range": "[0.25, 0.50)",
+        "min": 0.25,
+        "max": 0.5,
+        "count": 861,
+        "pct": 20.79
+      },
+      {
+        "range": "[0.50, 1.00)",
+        "min": 0.5,
+        "max": 1.0,
+        "count": 1424,
+        "pct": 34.38
+      },
+      {
+        "range": "[1.00, 1.50)",
+        "min": 1.0,
+        "max": 1.5,
+        "count": 548,
+        "pct": 13.23
+      },
+      {
+        "range": "[1.50, 2.00)",
+        "min": 1.5,
+        "max": 2.0,
+        "count": 197,
+        "pct": 4.76
+      },
+      {
+        "range": "[2.00, 3.00)",
+        "min": 2.0,
+        "max": 3.0,
+        "count": 68,
+        "pct": 1.64
+      },
+      {
+        "range": "[3.00, 10.00)",
+        "min": 3.0,
+        "max": 10.0,
+        "count": 6,
+        "pct": 0.14
+      }
+    ],
+    "confidence": [
+      {
+        "range": "[0.00, 0.40)",
+        "min": 0.0,
+        "max": 0.4,
+        "count": 0,
+        "pct": 0.0
+      },
+      {
+        "range": "[0.40, 0.60)",
+        "min": 0.4,
+        "max": 0.6,
+        "count": 20,
+        "pct": 0.48
+      },
+      {
+        "range": "[0.60, 0.75)",
+        "min": 0.6,
+        "max": 0.75,
+        "count": 88,
+        "pct": 2.12
+      },
+      {
+        "range": "[0.75, 0.85)",
+        "min": 0.75,
+        "max": 0.85,
+        "count": 801,
+        "pct": 19.34
+      },
+      {
+        "range": "[0.85, 0.92)",
+        "min": 0.85,
+        "max": 0.92,
+        "count": 1276,
+        "pct": 30.81
+      },
+      {
+        "range": "[0.92, 1.01)",
+        "min": 0.92,
+        "max": 1.01,
+        "count": 1957,
+        "pct": 47.25
+      }
+    ]
+  },
+  "lowestConfidence50": [
+    {
+      "sign": "Área",
+      "confidence": 0.4295,
+      "strokeStart": 0.0,
+      "strokeEnd": 6.6,
+      "strokeDuration": 6.6,
+      "originalDuration": 6.6333,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "right"
+      }
+    },
+    {
+      "sign": "Característica",
+      "confidence": 0.4298,
+      "strokeStart": 1.2,
+      "strokeEnd": 5.2,
+      "strokeDuration": 4.0,
+      "originalDuration": 5.7333,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "left"
+      }
+    },
+    {
+      "sign": "Puré",
+      "confidence": 0.4321,
+      "strokeStart": 0.0,
+      "strokeEnd": 5.7833,
+      "strokeDuration": 5.7833,
+      "originalDuration": 5.8,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "left"
+      }
+    },
+    {
+      "sign": "Ladrón(a)",
+      "confidence": 0.4531,
+      "strokeStart": 0.5,
+      "strokeEnd": 4.4333,
+      "strokeDuration": 3.9333,
+      "originalDuration": 4.9333,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": true
+      },
+      "activeHands": {
+        "left": false,
+        "right": false,
+        "dominant": "none"
+      }
+    },
+    {
+      "sign": "Pingüino",
+      "confidence": 0.469,
+      "strokeStart": 0.0,
+      "strokeEnd": 5.4667,
+      "strokeDuration": 5.4667,
+      "originalDuration": 5.4667,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "left"
+      }
+    },
+    {
+      "sign": "Capitán (ana), Vocal",
+      "confidence": 0.505,
+      "strokeStart": 0.0,
+      "strokeEnd": 0.4,
+      "strokeDuration": 0.4,
+      "originalDuration": 0.5667,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "left"
+      }
+    },
+    {
+      "sign": "Convención",
+      "confidence": 0.505,
+      "strokeStart": 0.0,
+      "strokeEnd": 0.5,
+      "strokeDuration": 0.5,
+      "originalDuration": 0.5,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "left"
+      }
+    },
+    {
+      "sign": "Cállate",
+      "confidence": 0.505,
+      "strokeStart": 0.0,
+      "strokeEnd": 0.5,
+      "strokeDuration": 0.5,
+      "originalDuration": 0.5,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "left"
+      }
+    },
+    {
+      "sign": "Estreñido(a), Estreñimiento",
+      "confidence": 0.505,
+      "strokeStart": 0.0,
+      "strokeEnd": 0.8,
+      "strokeDuration": 0.8,
+      "originalDuration": 0.8,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": false,
+        "right": false,
+        "dominant": "none"
+      }
+    },
+    {
+      "sign": "Cooperar, Cooperación",
+      "confidence": 0.505,
+      "strokeStart": 0.0,
+      "strokeEnd": 1.05,
+      "strokeDuration": 1.05,
+      "originalDuration": 1.05,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": false,
+        "right": false,
+        "dominant": "none"
+      }
+    },
+    {
+      "sign": "Bilingüe, Bilingüisimo",
+      "confidence": 0.5188,
+      "strokeStart": 0.0,
+      "strokeEnd": 0.4,
+      "strokeDuration": 0.4,
+      "originalDuration": 0.5,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "left"
+      }
+    },
+    {
+      "sign": "Cien",
+      "confidence": 0.5343,
+      "strokeStart": 0.0,
+      "strokeEnd": 2.7167,
+      "strokeDuration": 2.7167,
+      "originalDuration": 3.4667,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "right"
+      }
+    },
+    {
+      "sign": "Archivar",
+      "confidence": 0.5381,
+      "strokeStart": 2.15,
+      "strokeEnd": 6.0,
+      "strokeDuration": 3.85,
+      "originalDuration": 6.0,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "right"
+      }
+    },
+    {
+      "sign": "Célula (1)",
+      "confidence": 0.5403,
+      "strokeStart": 0.0,
+      "strokeEnd": 0.75,
+      "strokeDuration": 0.75,
+      "originalDuration": 0.7667,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "left"
+      }
+    },
+    {
+      "sign": "Linterna",
+      "confidence": 0.5403,
+      "strokeStart": 0.0,
+      "strokeEnd": 10.7333,
+      "strokeDuration": 10.7333,
+      "originalDuration": 10.7667,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "right"
+      }
+    },
+    {
+      "sign": "Tachuela",
+      "confidence": 0.56,
+      "strokeStart": 0.3333,
+      "strokeEnd": 6.3,
+      "strokeDuration": 5.9667,
+      "originalDuration": 6.3333,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "left"
+      }
+    },
+    {
+      "sign": "Célula",
+      "confidence": 0.5604,
+      "strokeStart": 0.2333,
+      "strokeEnd": 1.3167,
+      "strokeDuration": 1.0834,
+      "originalDuration": 1.3333,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "left"
+      }
+    },
+    {
+      "sign": "Tuerca",
+      "confidence": 0.5783,
+      "strokeStart": 0.0,
+      "strokeEnd": 4.2167,
+      "strokeDuration": 4.2167,
+      "originalDuration": 4.2333,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "right"
+      }
+    },
+    {
+      "sign": "Denunciar",
+      "confidence": 0.585,
+      "strokeStart": 0.0,
+      "strokeEnd": 10.6333,
+      "strokeDuration": 10.6333,
+      "originalDuration": 10.6333,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "right"
+      }
+    },
+    {
+      "sign": "Malecón",
+      "confidence": 0.5923,
+      "strokeStart": 1.45,
+      "strokeEnd": 4.9833,
+      "strokeDuration": 3.5333,
+      "originalDuration": 5.4,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "left"
+      }
+    },
+    {
+      "sign": "Analizar, Análisis",
+      "confidence": 0.6037,
+      "strokeStart": 0.0,
+      "strokeEnd": 0.85,
+      "strokeDuration": 0.85,
+      "originalDuration": 0.9,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "right"
+      }
+    },
+    {
+      "sign": "Once",
+      "confidence": 0.6081,
+      "strokeStart": 0.0,
+      "strokeEnd": 4.0,
+      "strokeDuration": 4.0,
+      "originalDuration": 4.0,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "right"
+      }
+    },
+    {
+      "sign": "Billón",
+      "confidence": 0.6121,
+      "strokeStart": 0.0,
+      "strokeEnd": 3.7667,
+      "strokeDuration": 3.7667,
+      "originalDuration": 4.0,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "left"
+      }
+    },
+    {
+      "sign": "Indorfútbol",
+      "confidence": 0.6186,
+      "strokeStart": 0.0,
+      "strokeEnd": 4.7333,
+      "strokeDuration": 4.7333,
+      "originalDuration": 4.7333,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "right"
+      }
+    },
+    {
+      "sign": "Cancha",
+      "confidence": 0.6234,
+      "strokeStart": 0.0,
+      "strokeEnd": 9.2333,
+      "strokeDuration": 9.2333,
+      "originalDuration": 9.2333,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "left"
+      }
+    },
+    {
+      "sign": "Muy rápido  Rapidísimo",
+      "confidence": 0.6246,
+      "strokeStart": 0.25,
+      "strokeEnd": 4.9833,
+      "strokeDuration": 4.7333,
+      "originalDuration": 5.4,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "right"
+      }
+    },
+    {
+      "sign": "Atún",
+      "confidence": 0.6384,
+      "strokeStart": 0.2,
+      "strokeEnd": 0.75,
+      "strokeDuration": 0.55,
+      "originalDuration": 0.9,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "left"
+      }
+    },
+    {
+      "sign": "Felicitación",
+      "confidence": 0.6409,
+      "strokeStart": 0.0,
+      "strokeEnd": 0.6667,
+      "strokeDuration": 0.6667,
+      "originalDuration": 0.8333,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "right"
+      }
+    },
+    {
+      "sign": "Archipiélago",
+      "confidence": 0.6427,
+      "strokeStart": 0.1333,
+      "strokeEnd": 0.6167,
+      "strokeDuration": 0.4834,
+      "originalDuration": 0.8333,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "left"
+      }
+    },
+    {
+      "sign": "Colgar, Teléfono",
+      "confidence": 0.6626,
+      "strokeStart": 0.0,
+      "strokeEnd": 0.5333,
+      "strokeDuration": 0.5333,
+      "originalDuration": 0.8333,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "left"
+      }
+    },
+    {
+      "sign": "Gastronomía",
+      "confidence": 0.6648,
+      "strokeStart": 1.8667,
+      "strokeEnd": 5.4833,
+      "strokeDuration": 3.6166,
+      "originalDuration": 7.1333,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "right"
+      }
+    },
+    {
+      "sign": "Sal",
+      "confidence": 0.666,
+      "strokeStart": 0.1667,
+      "strokeEnd": 5.4667,
+      "strokeDuration": 5.3,
+      "originalDuration": 5.4667,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "left"
+      }
+    },
+    {
+      "sign": "Ochenta",
+      "confidence": 0.6825,
+      "strokeStart": 0.0,
+      "strokeEnd": 2.6167,
+      "strokeDuration": 2.6167,
+      "originalDuration": 3.8667,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "left"
+      }
+    },
+    {
+      "sign": "Tostado",
+      "confidence": 0.6825,
+      "strokeStart": 1.75,
+      "strokeEnd": 4.4,
+      "strokeDuration": 2.65,
+      "originalDuration": 4.6667,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "left"
+      }
+    },
+    {
+      "sign": "Tenis, Tenista",
+      "confidence": 0.6825,
+      "strokeStart": 2.5167,
+      "strokeEnd": 5.2,
+      "strokeDuration": 2.6833,
+      "originalDuration": 5.2,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": true,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": false,
+        "right": true,
+        "dominant": "right"
+      }
+    },
+    {
+      "sign": "Bastonera, Cachiporrera",
+      "confidence": 0.6825,
+      "strokeStart": 2.1333,
+      "strokeEnd": 4.8167,
+      "strokeDuration": 2.6834,
+      "originalDuration": 5.5333,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "right"
+      }
+    },
+    {
+      "sign": "Ola",
+      "confidence": 0.6825,
+      "strokeStart": 1.4167,
+      "strokeEnd": 4.1167,
+      "strokeDuration": 2.7,
+      "originalDuration": 5.0667,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "right"
+      }
+    },
+    {
+      "sign": "Jubilarse, Jubilación, Jubilado(a)",
+      "confidence": 0.6825,
+      "strokeStart": 1.4833,
+      "strokeEnd": 4.2667,
+      "strokeDuration": 2.7834,
+      "originalDuration": 4.2667,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "right"
+      }
+    },
+    {
+      "sign": "Asociación De Manabí",
+      "confidence": 0.6825,
+      "strokeStart": 0.0,
+      "strokeEnd": 2.8,
+      "strokeDuration": 2.8,
+      "originalDuration": 5.4,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "left"
+      }
+    },
+    {
+      "sign": "Dudar",
+      "confidence": 0.6825,
+      "strokeStart": 0.9,
+      "strokeEnd": 3.7,
+      "strokeDuration": 2.8,
+      "originalDuration": 4.8667,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "right"
+      }
+    },
+    {
+      "sign": "Tennis",
+      "confidence": 0.6825,
+      "strokeStart": 2.1333,
+      "strokeEnd": 4.9333,
+      "strokeDuration": 2.8,
+      "originalDuration": 4.9333,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": true,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": false,
+        "right": true,
+        "dominant": "right"
+      }
+    },
+    {
+      "sign": "Kiwi",
+      "confidence": 0.6825,
+      "strokeStart": 0.3,
+      "strokeEnd": 3.1833,
+      "strokeDuration": 2.8833,
+      "originalDuration": 4.2667,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "left"
+      }
+    },
+    {
+      "sign": "Papa, Cura",
+      "confidence": 0.6825,
+      "strokeStart": 2.55,
+      "strokeEnd": 5.4667,
+      "strokeDuration": 2.9167,
+      "originalDuration": 7.1333,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "right"
+      }
+    },
+    {
+      "sign": "Anular",
+      "confidence": 0.6825,
+      "strokeStart": 2.1333,
+      "strokeEnd": 5.0667,
+      "strokeDuration": 2.9334,
+      "originalDuration": 5.0667,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "left"
+      }
+    },
+    {
+      "sign": "Oler, Olor",
+      "confidence": 0.6825,
+      "strokeStart": 1.0333,
+      "strokeEnd": 4.0,
+      "strokeDuration": 2.9667,
+      "originalDuration": 5.3333,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "left"
+      }
+    },
+    {
+      "sign": "Pastel, Torta",
+      "confidence": 0.6825,
+      "strokeStart": 1.5,
+      "strokeEnd": 4.4667,
+      "strokeDuration": 2.9667,
+      "originalDuration": 5.1333,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "right"
+      }
+    },
+    {
+      "sign": "Estrecho",
+      "confidence": 0.6825,
+      "strokeStart": 1.3833,
+      "strokeEnd": 4.3833,
+      "strokeDuration": 3.0,
+      "originalDuration": 4.6,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "left"
+      }
+    },
+    {
+      "sign": "Distancia, Distante",
+      "confidence": 0.6825,
+      "strokeStart": 1.3167,
+      "strokeEnd": 4.35,
+      "strokeDuration": 3.0333,
+      "originalDuration": 5.4,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "right"
+      }
+    },
+    {
+      "sign": "Rápido(a), De velocidad",
+      "confidence": 0.6825,
+      "strokeStart": 0.7333,
+      "strokeEnd": 3.7667,
+      "strokeDuration": 3.0334,
+      "originalDuration": 4.2,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": true,
+        "right": true,
+        "dominant": "left"
+      }
+    },
+    {
+      "sign": "Bien",
+      "confidence": 0.6825,
+      "strokeStart": 1.0833,
+      "strokeEnd": 4.1333,
+      "strokeDuration": 3.05,
+      "originalDuration": 4.1333,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": true,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "activeHands": {
+        "left": false,
+        "right": true,
+        "dominant": "right"
+      }
+    }
+  ]
+}

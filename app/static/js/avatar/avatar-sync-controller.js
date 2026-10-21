@@ -29,12 +29,31 @@ export class AvatarSyncController {
    */
   constructor(sequencer) {
     this.sequencer = sequencer;
+    this.preferredVersion = '2.7';
 
     // Registro canónico: glosa -> { clipId, version, validationStatus, factory }
     this.clipRegistry = new Map();
     this.resolutionCache = new Map();
     this.clipCache = new Map();
     this.initDefaultRegistry();
+  }
+
+  _versionPrefix(version) {
+    const v = String(version || this.preferredVersion || '2.7');
+    if (v.startsWith('2.5')) return 'v25_';
+    if (v.startsWith('2.6')) return 'v26_';
+    return 'v27_';
+  }
+
+  setPreferredVersion(version) {
+    const v = String(version || '2.7').trim();
+    this.preferredVersion = (v === '2.5' || v === '2.6') ? v : '2.7';
+    this.clipCache.clear();
+    return this.preferredVersion;
+  }
+
+  getPreferredVersion() {
+    return this.preferredVersion || '2.7';
   }
 
   initDefaultRegistry() {
@@ -141,22 +160,22 @@ export class AvatarSyncController {
 
   /**
    * Obtiene y convierte la animación de una seña usando el endpoint libre de 404
-   * (/api/animations-direct/resolve/{gloss}?version=2.6) sobre las 5,061 señas v2.6.
+   * (/api/animations-direct/resolve/{gloss}?version=2.7) sobre las señas estandarizadas v2.7 (con fallback a v2.6 / v2.5).
    * Recorta automáticamente los frames muertos de reposo al stroke activo.
    * @param {string} glossName
    * @param {Object} [options]
-   * @param {string} [options.version='2.6'] - Versión solicitada ('2.6' o '2.5')
+   * @param {string} [options.version='2.7'] - Versión solicitada ('2.7', '2.6' o '2.5')
    * @param {boolean} [options.trimStroke=true] - Recortar frames muertos de entrada/salida
    * @returns {Promise<Object|null>} SignClip compatible con SignPlayer o null si no existe.
    */
-  async fetchDirectClip(glossName, options = { version: '2.6', trimStroke: true }) {
+  async fetchDirectClip(glossName, options = {}) {
     if (!glossName || typeof glossName !== 'string') return null;
     const clean = glossName.trim();
     if (!clean) return null;
     const normKey = clean.toUpperCase();
-    const verTag = (options && options.version) ? String(options.version) : '2.6';
+    const verTag = (options && options.version) ? String(options.version) : (this.preferredVersion || '2.7');
     const shouldTrim = options && options.trimStroke !== undefined ? Boolean(options.trimStroke) : true;
-    const verPrefix = verTag.startsWith('2.5') ? 'v25_' : 'v26_';
+    const verPrefix = this._versionPrefix(verTag);
     const cacheKey = `${verPrefix}${shouldTrim ? 'trim_' : 'raw_'}${normKey}`;
 
     // 1. Revisar caché en memoria
@@ -190,7 +209,9 @@ export class AvatarSyncController {
               needs_review: Boolean(payload.needs_review),
               resolved_gloss: payload.resolved_gloss || payload.sign || null,
               version_served: payload.version_served || verTag,
-              is_fingerspelling: Boolean(payload.is_fingerspelling)
+              is_fingerspelling: Boolean(payload.is_fingerspelling),
+              stroke: payload.stroke || null,
+              qa: payload.qa || null
             });
             if (!payload.found || !payload.animation) {
               return null;
@@ -201,6 +222,12 @@ export class AvatarSyncController {
           const resolvedGloss = isEnvelope ? (payload.resolved_gloss || payload.sign || clean) : clean;
 
           if (rawData && typeof rawData === 'object') {
+            if (isEnvelope && payload.stroke) {
+              rawData.metadata = rawData.metadata || {};
+              if (!rawData.metadata.stroke) {
+                rawData.metadata.stroke = payload.stroke;
+              }
+            }
             let clip = convertDirectAnimationToSignClip(rawData, clean);
             if (clip && Array.isArray(clip.boneTracks) && clip.boneTracks.length > 0) {
               if (isEnvelope) {
@@ -211,7 +238,8 @@ export class AvatarSyncController {
                   resolutionStatus: payload.status || 'EXACT',
                   needsReview: Boolean(payload.needs_review),
                   warning: payload.warning || null,
-                  versionServed: payload.version_served || verTag
+                  versionServed: payload.version_served || verTag,
+                  stroke: payload.stroke || (clip.metadata && clip.metadata.stroke) || null
                 };
               }
               if (shouldTrim) {
@@ -235,6 +263,14 @@ export class AvatarSyncController {
     return null;
   }
 
+  async fetchDirectV27Clip(glossName) {
+    return this.fetchDirectClip(glossName, { version: '2.7' });
+  }
+
+  async fetchDirectV26Clip(glossName) {
+    return this.fetchDirectClip(glossName, { version: '2.6' });
+  }
+
   /**
    * Alias de retrocompatibilidad para el pipeline v2.5 Directo 1:1 ('2.5_Directo_1a1').
    * Preserva compatibilidad con suites de pruebas y componentes existentes.
@@ -248,70 +284,77 @@ export class AvatarSyncController {
   /**
    * Obtiene un clip previamente cargado en caché para una glosa.
    * @param {string} glossName
-   * @param {string} [version='2.6']
+   * @param {string} [version]
    * @returns {Object|null}
    */
-  getCachedClip(glossName, version = '2.6') {
+  getCachedClip(glossName, version = null) {
     const normKey = (glossName || '').trim().toUpperCase();
     if (!normKey) return null;
-    if (this.clipCache.has(normKey)) {
-      return this.clipCache.get(normKey);
+    const effVer = version || this.preferredVersion || '2.7';
+    const verPrefix = this._versionPrefix(effVer);
+    if (this.clipCache.has(`${verPrefix}${normKey}`)) {
+      return this.clipCache.get(`${verPrefix}${normKey}`);
     }
-    const verPrefix = String(version).startsWith('2.5') ? 'v25_' : 'v26_';
-    return (
+    const verCached =
       defaultAnimationCache.getClip(`${verPrefix}trim_${normKey}`) ||
-      defaultAnimationCache.getClip(`${verPrefix}${normKey}`) ||
-      defaultAnimationCache.getClip(`v25_trim_${normKey}`) ||
-      defaultAnimationCache.getClip(`v25_${normKey}`) ||
-      null
-    );
+      defaultAnimationCache.getClip(`${verPrefix}raw_${normKey}`) ||
+      defaultAnimationCache.getClip(`${verPrefix}${normKey}`);
+    if (verCached) return verCached;
+
+    if (!version && this.clipCache.has(normKey)) {
+      const genericClip = this.clipCache.get(normKey);
+      const clipVer = genericClip?.metadata?.versionServed || genericClip?.metadata?.version_served;
+      if (!clipVer || String(clipVer) === String(effVer)) {
+        return genericClip;
+      }
+    }
+    return null;
   }
 
   /**
    * Obtiene la información de resolución léxica para una glosa (match_type, warning, needs_review).
    * @param {string} glossName
-   * @param {string} [version='2.6']
+   * @param {string} [version]
    */
-  getResolutionMetadata(glossName, version = '2.6') {
+  getResolutionMetadata(glossName, version = null) {
     const normKey = (glossName || '').trim().toUpperCase();
-    const verPrefix = String(version).startsWith('2.5') ? 'v25_' : 'v26_';
+    if (!normKey) return null;
+    const effVer = version || this.preferredVersion || '2.7';
+    const verPrefix = this._versionPrefix(effVer);
     return this.resolutionCache.get(`${verPrefix}${normKey}`) || null;
   }
 
-  getResolutionMeta(glossName, version = '2.6') {
+  getResolutionMeta(glossName, version = this.preferredVersion || '2.7') {
     return this.getResolutionMetadata(glossName, version);
   }
 
   /**
-   * Obtiene un clip de forma asíncrona por nombre de glosa, priorizando la versión oficial 2.6
-   * corregida, con fallback de continuidad a v2.5 y registro canónico local.
+   * Obtiene un clip de forma asíncrona por nombre de glosa, priorizando la versión preferida
+   * (por defecto v2.7 estandarizada), con fallback de continuidad a v2.6 -> v2.5 y registro canónico local.
    */
   async loadClipAsync(glossName, options = {}) {
     const key = (glossName || '').trim().toUpperCase();
     if (!key) return null;
 
     const shouldTrim = options.trimStroke !== undefined ? Boolean(options.trimStroke) : true;
+    const reqVersion = String(options.version || this.preferredVersion || '2.7');
+    const versionChain = reqVersion === '2.5'
+      ? ['2.5']
+      : (reqVersion === '2.6' ? ['2.6', '2.5'] : ['2.7', '2.6', '2.5']);
 
-    // 1. Prioridad Máxima: Pipeline v2.6 Corregido Oficial
-    let directClip = await this.fetchDirectClip(glossName, { version: '2.6', trimStroke: shouldTrim });
-    if (directClip) {
-      this.clipCache.set(key, directClip);
-      return directClip;
+    for (const ver of versionChain) {
+      const directClip = await this.fetchDirectClip(glossName, { version: ver, trimStroke: shouldTrim });
+      if (directClip) {
+        this.clipCache.set(key, directClip);
+        return directClip;
+      }
+      const resMeta = this.getResolutionMetadata(glossName, ver);
+      if (resMeta && resMeta.is_fingerspelling) {
+        return null;
+      }
     }
 
-    const resMeta = this.getResolutionMetadata(glossName, '2.6');
-    if (resMeta && resMeta.is_fingerspelling) {
-      return null;
-    }
-
-    // 2. Fallback de Continuidad: Pipeline v2.5 Directo 1:1
-    directClip = await this.fetchDirectClip(glossName, { version: '2.5', trimStroke: shouldTrim });
-    if (directClip) {
-      this.clipCache.set(key, directClip);
-      return directClip;
-    }
-
-    // 3. Fallback: Registro canónico local / manifest offline
+    // Fallback: Registro canónico local / manifest offline
     const entry = this.lookup(key);
     if (!entry) return null;
     let clip = defaultAnimationCache.getClip(entry.clipId);
@@ -363,6 +406,10 @@ export class AvatarSyncController {
     const rawGlosses = (inputData && Array.isArray(inputData.glosses))
       ? inputData.glosses
       : [];
+    const reqVersion = String((inputData && inputData.version) || this.preferredVersion || '2.7');
+    const versionChain = reqVersion === '2.5'
+      ? ['2.5']
+      : (reqVersion === '2.6' ? ['2.6', '2.5'] : ['2.7', '2.6', '2.5']);
 
     const playableClips = [];
     const sequencePlan = [];
@@ -376,22 +423,23 @@ export class AvatarSyncController {
       const endMs = typeof item.endMs === 'number' ? item.endMs : (item.end ? item.end * 1000 : startMs + 1000);
       const slotSec = Math.max(0.4, (endMs - startMs) / 1000.0);
 
-      // 1. Intentar resolver vía Pipeline v2.6 Oficial Corregido (o fallback v2.5 directo)
-      let clip = await this.fetchDirectClip(glossName, { version: '2.6', trimStroke: true });
-      if (!clip) {
-        const rm = this.getResolutionMetadata(glossName, '2.6');
-        if (!rm || !rm.is_fingerspelling) {
-          clip = await this.fetchDirectClip(glossName, { version: '2.5', trimStroke: true });
+      // 1. Intentar resolver vía cadena de versiones preferida (por defecto v2.7 -> v2.6 -> v2.5)
+      let clip = null;
+      let resMeta = null;
+      for (const ver of versionChain) {
+        clip = await this.fetchDirectClip(glossName, { version: ver, trimStroke: true });
+        resMeta = this.getResolutionMetadata(glossName, ver) || resMeta;
+        if (clip || (resMeta && resMeta.is_fingerspelling)) {
+          break;
         }
       }
 
-      let clipVersion = (clip && clip.metadata && clip.metadata.pipelineVersion) || '2.6_Directo_1a1_corregido';
-      let clipSource = (clip && clip.metadata && clip.metadata.source) || 'Pipeline v2.6 Directo 1:1 Oficial';
+      let clipVersion = (clip && clip.metadata && clip.metadata.pipelineVersion) || '2.7_Estandarizado';
+      let clipSource = (clip && clip.metadata && clip.metadata.source) || 'Pipeline LSEC v2.7 Estandarizado';
       let validationStatus = (clip && clip.validationStatus) || 'REQUIRES_LSEC_VALIDATION';
       let regEntry = null;
 
       // 2. Si no se resolvió vía API directa, buscar en el registro local / manifest offline
-      const resMeta = this.getResolutionMetadata(glossName, '2.6');
       if (!clip && (!resMeta || !resMeta.is_fingerspelling)) {
         regEntry = this.lookup(normKey);
 
@@ -419,7 +467,7 @@ export class AvatarSyncController {
 
       if (clip) {
         const clipDurSec = Math.max(0.35, (clip.durationMs || 1000) / 1000.0);
-        const recommendedSpeed = Math.max(1.0, Math.min(2.0, Number((clipDurSec / slotSec).toFixed(2))));
+        const recommendedSpeed = Math.max(1.0, Math.min(1.6, Number((clipDurSec / slotSec).toFixed(2))));
         const clipWithSpeed = {
           ...clip,
           gloss: glossName,
@@ -439,6 +487,7 @@ export class AvatarSyncController {
           warning: (clip.metadata && clip.metadata.warning) || (resMeta && resMeta.warning) || null,
           clipId: clip.clipId || regEntry?.clipId || normKey,
           version: clipVersion,
+          versionServed: (clip.metadata && clip.metadata.versionServed) || (resMeta && resMeta.version_served) || reqVersion,
           source: clipSource,
           status: 'AVAILABLE',
           validationStatus: validationStatus,
@@ -447,7 +496,7 @@ export class AvatarSyncController {
           endMs
         });
       } else {
-        // Glosa sin animación en v2.6/v2.5 ni en registro
+        // Glosa sin animación en v2.7/v2.6/v2.5 ni en registro
         missingGlosses.push(glossName);
         sequencePlan.push({
           index,
@@ -462,7 +511,7 @@ export class AvatarSyncController {
           validationStatus: 'NO_CLIP_AVAILABLE',
           startMs,
           endMs,
-          warning: (resMeta && resMeta.warning) || `Sin animación v2.6/v2.5 ni clip registrado para la glosa "${glossName}". Se omite sin interrumpir el flujo.`
+          warning: (resMeta && resMeta.warning) || `Sin animación v2.7/v2.6/v2.5 ni clip registrado para la glosa "${glossName}". Se omite sin interrumpir el flujo.`
         });
       }
     }

@@ -50,7 +50,7 @@ from app.lsec_grammar.rule_engine import RuleEngine, RuleApplication
 from app.lsec_grammar.conflict_resolver import ConflictResolver
 from app.lsec_grammar.confidence import ConfidenceCalculator, ConfidenceVector
 from app.services.mwe_detector import MWEDetector, MWEMatch
-from app.services.text_normalizer import EntityInfo, PunctuationAnalyzer
+from app.services.text_normalizer import EntityInfo, PunctuationAnalyzer, contains_negation
 from app.services.semantic_parser import SpanishVerbLexicon
 from app.services.linguistic_analyzer import LinguisticAnalyzer
 from app.services.dictionary_service import LSECDictionaryService, get_dictionary_service, to_gloss_form
@@ -61,7 +61,7 @@ logger = logging.getLogger(__name__)
 _RULE_MANAGED_TOKENS: Set[str] = {
     "no", "nunca", "jamas", "nadie", "ni", "tampoco", "nada", "ninguno", "ninguna", "favor",
 }
-_INTENSIFIER_RE = re.compile(r"^(muchísim[oa]s?|\w{3,}ísim[oa]s?)$", re.IGNORECASE)
+from app.services.fenasec_rules import _INTENSIFIER_RE
 
 
 def _strip_accents_lower(text: str) -> str:
@@ -84,6 +84,38 @@ _BLACKLIST_POS_TAGS: Set[str] = {
 _COPULATIVE_LEMMAS: Set[str] = {"ser", "estar", "haber"}
 _CLITIC_PRONOUNS: Set[str] = {"lo", "la", "le", "los", "las", "les", "se"}
 
+# Conjunciones subordinantes con contenido semántico que no deben omitirse.
+# "que" (complementizante) y "como" (comparativo) se gestionan aparte.
+_SEMANTIC_SCONJ_GLOSS: Dict[str, str] = {
+    "aunque": "AUNQUE",
+    "si": "SI",
+    "cuando": "CUANDO",
+    "mientras": "MIENTRAS",
+    "porque": "PORQUE",
+    "pues": "PUES",
+    "apenas": "APENAS",
+}
+
+_QUANTIFIER_CANON: Dict[str, str] = {
+    "todo": "todo", "todos": "todo", "toda": "todo", "todas": "todo",
+    "mucho": "mucho", "muchos": "mucho", "mucha": "mucho", "muchas": "mucho",
+    "varios": "varios", "varias": "varios",
+    "poco": "poco", "pocos": "poco", "poca": "poco", "pocas": "poco",
+    "alguno": "alguno", "algunos": "alguno", "alguna": "alguna", "algunas": "alguno",
+    "bastante": "bastante", "bastantes": "bastante",
+    "demasiado": "demasiado", "demasiados": "demasiado", "demasiada": "demasiado", "demasiadas": "demasiado",
+}
+
+_KNOWN_SIGN_PROPN: Set[str] = {
+    "maría", "maria", "juan", "pedro", "carlos", "ana", "josé", "jose", "luis",
+    "carchi", "politécnica", "politecnica", "ecuador", "quito", "guayaquil",
+    "cuenca", "ibarra", "tulcán", "tulcan", "cayambe", "sierra", "costa",
+    "oriente", "galápagos", "galapagos", "ambato", "loja", "manta", "portoviejo",
+    "riobamba", "esmeraldas", "machala", "babahoyo", "latacunga", "guaranda",
+    "azogues", "macas", "tena", "puyo", "zamora", "whatsapp", "lsec", "conadis", "fenasec", "upec",
+    "estatal",
+}
+
 
 class DiscoursePlanner:
     """
@@ -103,12 +135,14 @@ class DiscoursePlanner:
         plural_marker: str = "VARIOS",
         dictionary_service: Optional[LSECDictionaryService] = None,
         use_dictionary: Optional[bool] = None,
+        named_entities: Optional[Dict[str, Any]] = None,
     ) -> None:
         self._nlp = nlp
         self._institutional_dict = institutional_dict or {}
         self._lemma_overrides = lemma_overrides or {}
         self._pronoun_deixis = pronoun_deixis_map or {}
         self._semantic_paraphrases = semantic_paraphrases or {}
+        self._named_entities = named_entities if named_entities is not None else self._load_named_entities_from_data()
         self._duration_ms = duration_config or {
             "sign_base": 500,
             "sign_short": 400,
@@ -144,6 +178,7 @@ class DiscoursePlanner:
             "ayer", "hoy", "mañana", "ahora", "antes", "después", "siempre",
             "nunca", "jamás", "futuro", "pasado", "año", "mes", "día",
             "tarde", "noche", "temprano", "pronto", "semana", "desde",
+            "primero", "luego",
         }
 
         # Motor de reglas gramaticales centralizado y analizador lingüístico
@@ -173,6 +208,87 @@ class DiscoursePlanner:
             except Exception:  # pragma: no cover
                 self._phrase_matching = True
         self._known_local_glosses: Set[str] = self._build_known_local_glosses()
+
+    @staticmethod
+    def _has_nominal_context(token: Any) -> bool:
+        """Evidencia sintáctica de uso nominal (determinante, adjetivo o numeral)."""
+        try:
+            pos = token.pos_
+            dep = token.dep_
+            if pos in ("NOUN", "PROPN"):
+                if any(
+                    c.dep_ == "det" and "Int" not in c.morph.get("PronType", [])
+                    for c in token.children
+                ):
+                    return True
+                if any(
+                    c.dep_ == "nummod" and c.pos_ in ("NUM", "DET", "ADJ")
+                    for c in token.children
+                ):
+                    return True
+                if any(c.dep_ == "compound" for c in token.children):
+                    return True
+                if token.i > 0:
+                    prev = token.doc[token.i - 1]
+                    if prev.pos_ in ("DET", "ADJ") and not (
+                        prev.pos_ == "DET" and "Int" in prev.morph.get("PronType", [])
+                    ):
+                        return True
+                # Amod es evidencia nominal solo fuera de la raíz: evita que
+                # "comes manzana" (spaCy: comes=ROOT/PROPN) se vuelva nominal.
+                if dep != "ROOT" and any(c.dep_ == "amod" for c in token.children):
+                    return True
+            elif pos == "ADJ":
+                if dep == "amod":
+                    return False
+                if dep in ("nsubj", "nsubj:pass", "obj", "ROOT") and (
+                    any(c.dep_ in ("det", "amod", "nummod") for c in token.children)
+                    or (token.i > 0 and token.doc[token.i - 1].pos_ in ("DET", "ADJ"))
+                ):
+                    return True
+        except Exception:
+            return False
+        return False
+
+    @staticmethod
+    def _normalize_nominal_lemma(clean_word: str, raw_lemma: str) -> str:
+        """
+        Corrige lemas nominales truncados por spaCy (p. ej. *medicina* -> *medicín*)
+        sin dañar plurales ni derivados regulares.
+        """
+        raw = PunctuationAnalyzer.strip_punctuation((raw_lemma or "").lower())
+        clean = PunctuationAnalyzer.strip_punctuation((clean_word or "").lower())
+        if not raw:
+            return clean
+        if not clean:
+            return raw
+        raw_flat = raw.translate(str.maketrans("áéíóúü", "aeiouu"))
+        clean_flat = clean.translate(str.maketrans("áéíóúü", "aeiouu"))
+
+        # Formas plurales: comparar contra el singular derivado de la
+        # superficie, no contra el plural completo. Así se corrige
+        # *modernos* -> *moder* y *preprofesionales* -> *preprofesion*.
+        if clean.endswith("s"):
+            if clean.endswith("es"):
+                singular = clean[:-2]
+            else:
+                singular = clean[:-1]
+            singular_flat = singular.translate(str.maketrans("áéíóúü", "aeiouu"))
+            if (
+                len(raw_flat) >= 3
+                and singular_flat.startswith(raw_flat)
+                and 0 < len(singular_flat) - len(raw_flat) <= 2
+            ):
+                return singular
+            return raw
+
+        if (
+            len(raw_flat) >= 3
+            and clean_flat.startswith(raw_flat)
+            and 0 < len(clean_flat) - len(raw_flat) <= 2
+        ):
+            return clean
+        return raw
 
     def _build_known_local_glosses(self) -> Set[str]:
         """Glosas ya curadas en el léxico local del proyecto (no se marcan como no verificadas)."""
@@ -206,6 +322,24 @@ class DiscoursePlanner:
                 for g in seq:
                     known.add(str(g).upper())
         return known
+
+    @staticmethod
+    def _load_named_entities_from_data() -> Dict[str, Any]:
+        """Carga entidades nombradas y asignaciones de loci espaciales desde el lexicón LSEC."""
+        from pathlib import Path
+        import json
+        for p in (
+            Path(__file__).resolve().parent.parent.parent / "data" / "lexicon_lsec.json",
+            Path("data/lexicon_lsec.json"),
+        ):
+            if p.exists():
+                try:
+                    with open(p, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    return data.get("named_entities", {})
+                except Exception:
+                    pass
+        return {}
 
     def _detect_dictionary_phrases(
         self,
@@ -247,6 +381,13 @@ class DiscoursePlanner:
             if any(
                 _strip_accents_lower(t.text) in _RULE_MANAGED_TOKENS or _INTENSIFIER_RE.match(t.text)
                 for t in span
+            ):
+                continue
+            # Cópula atributiva / locativa: en oraciones declarativas la cópula es nula (ELIS-01/02),
+            # no debe fusionarse en glosa compuesta como "ESTÁ-BIEN"
+            if pm.entry.slug in ("esta-bien", "estar-bien") or (
+                any(t.dep_ == "cop" or t.lemma_.lower() in ("ser", "estar") for t in span)
+                and not any(t.text in ("?", "¿") for t in doc)
             ):
                 continue
             span_ids = {t.i for t in span}
@@ -381,23 +522,32 @@ class DiscoursePlanner:
         for token in doc:
             if token.i in consumed:
                 continue
-            lemma_lower = token.lemma_.lower()
+            clean_tok = PunctuationAnalyzer.strip_punctuation(token.text.lower())
+            lemma_lower = SpanishVerbLexicon.get_lemma(clean_tok, pos=token.pos_) or PunctuationAnalyzer.strip_punctuation(token.lemma_.lower())
 
-            # ir + a + infinitivo -> FUTURO
-            if lemma_lower == "ir" and token.pos_ in ("AUX", "VERB"):
-                inf_token = None
-                prep_a = None
-                for t2 in doc[token.i + 1:]:
-                    if t2.text.lower() == "a" and prep_a is None:
-                        prep_a = t2
-                    elif t2.pos_ in ("VERB", "AUX") and ("Inf" in t2.morph.get("VerbForm", []) or t2.lemma_.endswith(("ar", "er", "ir"))):
-                        inf_token = t2
-                        break
-                if inf_token is not None:
-                    consumed_set = {token.i}
-                    if prep_a is not None:
-                        consumed_set.add(prep_a.i)
-                    results.append(("FUTURO", "before", consumed_set))
+            # ir + a + infinitivo -> FUTURO (solo si 'a' e infinitivo son contiguos)
+            if lemma_lower == "ir" and (token.pos_ in ("AUX", "VERB") or clean_tok in ("voy", "vas", "va", "vamos", "van")):
+                if (
+                    token.i + 2 < len(doc)
+                    and doc[token.i + 1].text.lower() == "a"
+                    and (
+                        doc[token.i + 2].pos_ in ("VERB", "AUX")
+                        or PunctuationAnalyzer.strip_punctuation(doc[token.i + 2].text.lower()).endswith(("ar", "er", "ir"))
+                    )
+                    and (
+                        "Inf" in doc[token.i + 2].morph.get("VerbForm", [])
+                        or PunctuationAnalyzer.strip_punctuation(doc[token.i + 2].text.lower()).endswith(("ar", "er", "ir"))
+                    )
+                ):
+                    prep_a = doc[token.i + 1]
+                    consumed_set = {token.i, prep_a.i}
+                    has_future_adverb = any(
+                        t.text.lower() in ("mañana", "después", "pronto", "futuro") for t in doc
+                    )
+                    if not has_future_adverb:
+                        results.append(("FUTURO", "before", consumed_set))
+                    else:
+                        results.append(("", "", consumed_set))
                     consumed |= consumed_set
 
             # haber + participio -> aspecto perfectivo completivo (separado de tiempo)
@@ -412,8 +562,11 @@ class DiscoursePlanner:
                         t.text.lower() in ("ayer", "anoche") and t.dep_ in ("obl", "advmod")
                         for t in doc
                     )
-                    if not has_conflicting_past:
+                    has_explicit_ya = any(PunctuationAnalyzer.strip_punctuation(t.text.lower()) == "ya" for t in doc)
+                    if not has_conflicting_past and not has_explicit_ya:
                         results.append(("YA", "after", consumed_set))
+                    else:
+                        results.append(("", "", consumed_set))
                     consumed |= consumed_set
 
             # estar + gerundio: aspecto progresivo (separado de tiempo deíctico)
@@ -434,6 +587,8 @@ class DiscoursePlanner:
                     )
                     if has_explicit_present and not has_past_tense:
                         results.append(("AHORA", "after", consumed_set))
+                    else:
+                        results.append(("", "", consumed_set))
                     consumed |= consumed_set
 
             # tener + que + infinitivo -> DEBER
@@ -509,7 +664,10 @@ class DiscoursePlanner:
             # Motor Lingüístico General spaCy para cualquier oración
             if self._nlp is not None:
                 prop_glosses = self._translate_general_spacy(
-                    prop, global_order, active_rule_ids=active_rule_ids
+                    prop,
+                    global_order,
+                    active_rule_ids=active_rule_ids,
+                    exclude_rule_ids=exclude_rule_ids,
                 )
             else:
                 prop_glosses = self._translate_general_heuristic(prop, global_order)
@@ -531,10 +689,16 @@ class DiscoursePlanner:
             if not prop_glosses:
                 continue
 
-            # FENASEC: verbos de movimiento incorporan la dirección; se evita la fuga de la preposición 'a' (HACIA)
-            _motion = {"ENTRAR", "SALIR", "IR", "LLEGAR", "VENIR", "REGRESAR", "VOLVER"}
-            if any(g.gloss == "HACIA" for g in prop_glosses) and any(g.gloss in _motion for g in prop_glosses):
-                prop_glosses = [g for g in prop_glosses if g.gloss != "HACIA"]
+            # FENASEC: verbos de movimiento incorporan la dirección; se evita la fuga de la preposición 'a'/'al' (HACIA)
+            _motion = {
+                "ENTRAR", "SALIR", "IR", "LLEGAR", "VENIR", "REGRESAR", "VOLVER",
+                "VIAJAR", "CAMINAR", "CORRER", "PARTIR", "SUBIR", "BAJAR",
+            }
+            if any(g.gloss == "HACIA" for g in prop_glosses) and any(g.gloss.rstrip("+") in _motion for g in prop_glosses):
+                prop_glosses = [
+                    g for g in prop_glosses
+                    if not (g.gloss == "HACIA" and (g.source_word or "").lower() in ("a", "al", ""))
+                ]
                 for k, g in enumerate(prop_glosses):
                     g.order = prop_start_order + k
 
@@ -566,13 +730,14 @@ class DiscoursePlanner:
             for g in prop_glosses:
                 if g.spatial_ref:
                     ref_id = g.spatial_ref
-                    # Determinar ubicación espacial
+                    # Determinar ubicación espacial desde named_entities (datos) o alternancia posicional genérica
                     loc = "center"
-                    if "upec" in ref_id:
-                        loc = "center"
-                    elif "tulcan" in ref_id or len(active_referents) == 0:
+                    ent_match = next((e for e in self._named_entities.values() if e.get("id") == ref_id), None)
+                    if ent_match and ent_match.get("location"):
+                        loc = ent_match["location"]
+                    elif len(active_referents) == 0:
                         loc = "left"
-                    elif "cayambe" in ref_id or len(active_referents) == 1:
+                    elif len(active_referents) == 1:
                         loc = "right"
                     elif len(active_referents) % 2 == 0:
                         loc = "left"
@@ -580,12 +745,13 @@ class DiscoursePlanner:
                         loc = "right"
 
                     if ref_id not in active_referents:
+                        ent_type = ent_match.get("type", "location") if ent_match else ("location" if "campus" in ref_id else "organization")
                         ref_obj = SpatialReferent(
                             id=ref_id,
                             label=g.source_word or g.gloss,
                             location=loc,
                             established_at_order=g.order,
-                            entity_type="location" if "campus" in ref_id else "organization",
+                            entity_type=ent_type,
                         )
                         active_referents[ref_id] = ref_obj
                         all_referents.append(ref_obj)
@@ -602,6 +768,33 @@ class DiscoursePlanner:
                         all_operations.append(op)
                         if op.id not in g.spatial_operation_ids:
                             g.spatial_operation_ids.append(op.id)
+
+            # Loci espaciales y cambio de postura para pares contrastivos (Informe Sección 4 / Decisión D6)
+            if prop.discourse_relation in ("but", "contrast") and p_idx > 0:
+                prev_prop = propositions[p_idx - 1]
+                # Proposition A: Locus izquierdo para el referente del antecedente
+                for g in all_glosses:
+                    if g.proposition_id == prev_prop.id:
+                        is_ref = (
+                            any(part.semantic_role in (SemanticRole.AGENT, SemanticRole.THEME, SemanticRole.PATIENT) and part.lemma.lower() in (g.normalized_word or g.gloss).lower() for part in prev_prop.participants)
+                            or (g.gloss not in ("PRO1", "PRO2", "PRO3", "MI", "TU", "SU") and g.gloss in ("PADRE", "PAPA", "HOMBRE", "HERMANO", "HIJO"))
+                        )
+                        if is_ref:
+                            g.spatial_location = SpatialLocation.LEFT
+                # Proposition B: Locus derecho para el referente y predicado del consecuente
+                for g in prop_glosses:
+                    is_ref = (
+                        any(part.semantic_role in (SemanticRole.AGENT, SemanticRole.THEME, SemanticRole.PATIENT) and part.lemma.lower() in (g.normalized_word or g.gloss).lower() for part in prop.participants)
+                        or (g.gloss not in ("PRO1", "PRO2", "PRO3", "MI", "TU", "SU") and g.gloss in ("MADRE", "MAMA", "MUJER", "HERMANA", "HIJA"))
+                    )
+                    if is_ref:
+                        g.spatial_location = SpatialLocation.RIGHT
+                    from app.services.fenasec_rules import get_verb_class
+                    if get_verb_class(g.gloss) == "single_arg_locus" or g.gloss in ("MORIR", "VIVIR", "NACER"):
+                        g.spatial_location = SpatialLocation.RIGHT
+                        g.target_spatial_location = SpatialLocation.RIGHT
+                    if not g.facial_expression or g.facial_expression == FacialExpression.NEUTRAL:
+                        g.facial_expression = FacialExpression.CONTRAST
 
             all_glosses.extend(prop_glosses)
             global_order += len(prop_glosses)
@@ -627,6 +820,7 @@ class DiscoursePlanner:
                 "que", "de", "en", "con", "por", "para", "y", "o", "un", "una", "el", "la", "los", "las",
                 "yo", "tú", "él", "ella", "nosotros", "ustedes", "ellos", "me", "te", "se", "nos",
                 "not_only_focus", "aspect", "mood", "tense", "negation", "polarity",
+                "contrast_connector", "concessive_connector",
             }
             required_concepts: List[str] = [
                 c for c in src_concepts
@@ -656,6 +850,29 @@ class DiscoursePlanner:
                     "construir": {"DESARROLLAR", "IDEA", "CONSTRUIR", "CREAR"},
                     "desarrollar": {"DESARROLLAR", "IDEA", "CONSTRUIR", "CREAR"},
                     "varias": {"VARIOS", "MUCHO", "DIVERSO"},
+                    "varios": {"VARIOS", "MUCHO", "DIVERSO"},
+                    "muchas": {"MUCHO", "VARIOS"},
+                    "muchos": {"MUCHO", "VARIOS"},
+                    "mucha": {"MUCHO", "VARIOS"},
+                    "todos": {"TODO", "TODOS"},
+                    "todas": {"TODO", "TODOS"},
+                    "toda": {"TODO", "TODOS"},
+                    "desde": {"DESDE", "DESDE-PRIMER-DÍA"},
+                    "from_the_start": {"DESDE", "PRIMERO", "DÍA", "DIA"},
+                    "more_than_quantifier": {"MÁS-DE", "MÁS", "CINCO-MIL"},
+                    "porque": {"PORQUE", "CAUSA"},
+                    "embargo": {"PERO", "SIN-EMBARGO"},
+                    "sin": {"PERO", "SIN-EMBARGO", "SIN"},
+                    "pero": {"PERO"},
+                    "pesar": {"AUNQUE"},
+                    "contrast_connector": {"PERO", "SIN-EMBARGO"},
+                    "concessive_connector": {"AUNQUE", "PESAR"},
+                    "cabo": {"REALIZAR"},
+                    "llevar": {"LLEVAR", "REALIZAR"},
+                    "llevaremos": {"LLEVAR", "REALIZAR"},
+                    "realizar": {"REALIZAR", "LLEVAR"},
+                    "nuevo": {"NUEVO", "OTRA-VEZ"},
+                    "otra_vez": {"OTRA-VEZ", "NUEVO"},
                     "cercanía": {"ACOMPAÑAR"},
                     "decir": {"EXPLICAR", "DECIR"},
                     "imparable": {"PERSONA", "FUERTE", "AVANZAR", "DETERMINADA", "CONTINUAR"},
@@ -677,8 +894,12 @@ class DiscoursePlanner:
                     if any(syn in realized_set for syn in mwe_synonyms[c_clean]):
                         return True
 
+                if _INTENSIFIER_RE.match(c_clean) and any(rg.endswith("++") for rg in realized_set):
+                    return True
+
                 for rg in realized_set:
-                    if c_upper == rg or c_upper in rg or rg in c_upper:
+                    rg_no_hyphen = rg.replace("-", "")
+                    if c_upper == rg or c_upper == rg_no_hyphen or c_upper in rg or rg in c_upper:
                         return True
                     if self._lemma_overrides.get(c_clean, "").upper() == rg:
                         return True
@@ -820,7 +1041,7 @@ class DiscoursePlanner:
                 has_grammatical_support = (
                     g.alignment_type in (AlignmentType.GRAMMATICAL, AlignmentType.DISCOURSE_MARKER)
                     or g.lexical_strategy in ("grammatical_plural", "discourse_connector")
-                    or g.gloss in ("ADEMÁS", "VARIOS")
+                    or g.gloss in ("ADEMÁS", "VARIOS", "PERO", "AUNQUE", "PORQUE", "CAUSA")
                 )
 
                 is_supported = (
@@ -974,6 +1195,7 @@ class DiscoursePlanner:
         prop: SemanticProposition,
         start_order: int,
         active_rule_ids: Optional[Set[str]] = None,
+        exclude_rule_ids: Optional[Set[str]] = None,
     ) -> List[GlossItem]:
         """Traduce una proposición usando spaCy con reglas gramaticales completas."""
         doc = self._nlp(prop.source_text)
@@ -986,20 +1208,23 @@ class DiscoursePlanner:
         periphrasis_markers: List[Tuple[str, str]] = []
         for marker, position, consumed_set in periphrasis_results:
             periphrasis_consumed |= consumed_set
-            periphrasis_markers.append((marker, position))
+            if marker:
+                periphrasis_markers.append((marker, position))
 
         # 2. Expresiones Multipalabra (MWE)
         mwe_matches = self._mwe_detector.detect(prop.source_text)
         mwe_consumed: Set[int] = set()
         mwe_emitted: Dict[int, Tuple[Any, str, str, str, Dict[str, Any]]] = {}
+        mwe_span_head_map: Dict[int, int] = {}
 
         for m_item in mwe_matches:
             if m_item.prevent_component_parsing:
                 span_toks = [tok for tok in doc if m_item.start_char <= tok.idx < m_item.end_char]
                 if span_toks:
+                    first_tok = span_toks[0]
                     for tok in span_toks:
                         mwe_consumed.add(tok.i)
-                    first_tok = span_toks[0]
+                        mwe_span_head_map[tok.i] = first_tok.i
                     pref = m_item.preferred_gloss or m_item.source_phrase.upper().replace(" ", "-")
                     mwe_pos = "ADV"
                     mwe_dep = "advmod"
@@ -1009,7 +1234,7 @@ class DiscoursePlanner:
                     elif any(k in pref for k in ("CARRERA", "UNIVERSIDAD", "DÍA", "EXCELENCIA")):
                         mwe_pos = "NOUN"
                         mwe_dep = "obj"
-                    elif any(k in pref for k in ("HACER", "LOGRAR", "TRANSFORMAR", "AVANZAR")):
+                    elif any(k in pref for k in ("HACER", "LOGRAR", "TRANSFORMAR", "AVANZAR", "REALIZAR")):
                         mwe_pos = "VERB"
                         mwe_dep = "ROOT"
 
@@ -1033,6 +1258,7 @@ class DiscoursePlanner:
                 continue
             for tok in span_toks:
                 mwe_consumed.add(tok.i)
+                mwe_span_head_map[tok.i] = span_toks[0].i
             pref = dict_mwe.preferred_gloss or to_gloss_form(dict_mwe.source_phrase)
             mwe_emitted[span_toks[0].i] = (
                 span_toks[0],
@@ -1042,11 +1268,7 @@ class DiscoursePlanner:
                 {"is_mwe": True, "mwe": dict_mwe, "mwe_gloss": pref, "is_dictionary_phrase": True},
             )
 
-        # 3. Detección de numeral y cuantificador
-        has_numeral = any(t.pos_ == "NUM" or re.match(r"^\d+", t.text) for t in doc)
-        has_quantifier = any(t.text.lower() in self._quantifier_lemmas or t.lemma_.lower() in self._quantifier_lemmas for t in doc)
-
-        # 4. Extracción de tokens
+        # 3. Extracción de tokens
         for t in doc:
             if t.i in periphrasis_consumed:
                 continue
@@ -1065,6 +1287,28 @@ class DiscoursePlanner:
             if not clean_word:
                 continue
 
+            forced_verb_lemma: Optional[str] = None
+            if clean_word == "ven":
+                # "ven" es homógrafo: imperativo de VENIR y 3PL de VER.
+                # Al inicio de oración o ante destino/otro verbo predomina VENIR.
+                nxt = doc[t.i + 1] if t.i + 1 < len(doc) else None
+                prev = doc[t.i - 1] if t.i > 0 else None
+                at_start = (
+                    prev is None
+                    or prev.is_punct
+                    or prev.pos_ in ("CCONJ", "SCONJ")
+                )
+                destination = nxt is not None and nxt.text.lower() in (
+                    "a", "al", "hacia", "para", "aquí", "acá",
+                )
+                if at_start and (
+                    destination
+                    or nxt is None
+                    or nxt.is_punct
+                    or nxt.pos_ in ("VERB", "AUX")
+                ):
+                    forced_verb_lemma = "venir"
+
             is_nominal_homograph = (
                 clean_word in SpanishVerbLexicon.NOMINAL_HOMOGRAPHS
                 and (
@@ -1073,14 +1317,27 @@ class DiscoursePlanner:
                     or (t.i > 0 and doc[t.i - 1].pos_ in ("DET", "ADP", "CCONJ"))
                 )
             )
-            verb_lemma = None if is_nominal_homograph else SpanishVerbLexicon.get_lemma(clean_word)
-            if is_nominal_homograph:
-                pos = "NOUN"
+            # Contexto nominal inequívoco: determinante, adjetivo o numeral.
+            # Evita convertir sustantivos homógrafos (*estudio*, *formas*) en
+            # verbos por culpa de overrides o del inventario morfológico.
+            nominal_context = is_nominal_homograph or self._has_nominal_context(t)
+            structural_pos = pos in ("ADP", "DET", "SCONJ", "CCONJ", "PRON")
+            verb_lemma = forced_verb_lemma or (
+                None if nominal_context or structural_pos
+                else SpanishVerbLexicon.get_lemma(clean_word, pos=pos)
+            )
+            override_lemma = None if nominal_context or structural_pos else self._lemma_overrides.get(clean_word, self._lemma_overrides.get(text_lower))
+            override_is_verb = bool(override_lemma) and str(override_lemma).endswith(("ar", "er", "ir"))
+            if nominal_context:
+                pos = "NOUN" if pos in ("NOUN", "PROPN", "ADJ") else pos
                 base_nom = raw_lemma if (raw_lemma in SpanishVerbLexicon.NOMINAL_HOMOGRAPHS or not raw_lemma.endswith(("ar", "er", "ir"))) else clean_word
-                lemma = self._lemma_overrides.get(clean_word, base_nom)
-            elif clean_word in self._lemma_overrides or text_lower in self._lemma_overrides:
-                lemma = self._lemma_overrides.get(clean_word, self._lemma_overrides.get(text_lower))
-                lemma = PunctuationAnalyzer.strip_punctuation(lemma)
+                lemma = self._normalize_nominal_lemma(clean_word, base_nom)
+            elif override_lemma is not None and (
+                not override_is_verb
+                or clean_word not in SpanishVerbLexicon.POS_GATED_LEMMAS
+                or pos in ("VERB", "AUX")
+            ):
+                lemma = PunctuationAnalyzer.strip_punctuation(override_lemma)
                 if not verb_lemma and lemma not in SpanishVerbLexicon.NOMINAL_HOMOGRAPHS:
                     verb_lemma = SpanishVerbLexicon.get_lemma(lemma) or (lemma if lemma.endswith(("ar", "er", "ir")) else None)
                 if verb_lemma or (lemma.endswith(("ar", "er", "ir")) and lemma not in SpanishVerbLexicon.NOMINAL_HOMOGRAPHS):
@@ -1092,17 +1349,39 @@ class DiscoursePlanner:
                     lemma = "explicar"
                 else:
                     lemma = verb_lemma
+            elif clean_word in _QUANTIFIER_CANON:
+                lemma = _QUANTIFIER_CANON[clean_word]
             else:
-                norm_lemma = SpanishVerbLexicon.normalize_verb_lemma(clean_word, raw_lemma)
-                lemma = self._lemma_overrides.get(norm_lemma, self._lemma_overrides.get(raw_lemma, norm_lemma))
-                lemma = PunctuationAnalyzer.strip_punctuation(lemma)
-                if (
-                    lemma.endswith(("ar", "er", "ir"))
-                    and lemma not in SpanishVerbLexicon.NOMINAL_HOMOGRAPHS
-                    and pos not in ("NOUN", "PROPN", "ADJ")
-                ):
-                    pos = "VERB"
-                    verb_lemma = lemma
+                if structural_pos:
+                    lemma = self._normalize_nominal_lemma(clean_word, raw_lemma)
+                else:
+                    norm_lemma = SpanishVerbLexicon.normalize_verb_lemma(clean_word, raw_lemma, pos=pos)
+                    override_norm = self._lemma_overrides.get(
+                        norm_lemma, self._lemma_overrides.get(raw_lemma)
+                    )
+                    if override_norm is not None and (
+                        not str(override_norm).endswith(("ar", "er", "ir"))
+                        or norm_lemma not in SpanishVerbLexicon.POS_GATED_LEMMAS
+                        or pos in ("VERB", "AUX")
+                    ):
+                        lemma = override_norm
+                    else:
+                        lemma = norm_lemma
+                    lemma = PunctuationAnalyzer.strip_punctuation(lemma)
+                    if nominal_context:
+                        lemma = self._normalize_nominal_lemma(clean_word, lemma)
+                    elif (
+                        lemma.endswith(("ar", "er", "ir"))
+                        and lemma not in SpanishVerbLexicon.NOMINAL_HOMOGRAPHS
+                        and (
+                            pos not in ("NOUN", "PROPN", "ADJ")
+                            or SpanishVerbLexicon._is_verified_infinitive(lemma)
+                        )
+                    ):
+                        pos = "VERB"
+                        verb_lemma = lemma
+                    elif pos in ("NOUN", "PROPN", "ADJ") and not verb_lemma:
+                        lemma = self._normalize_nominal_lemma(clean_word, lemma)
 
             meta: Dict[str, Any] = {}
 
@@ -1113,9 +1392,25 @@ class DiscoursePlanner:
                 tokens_info.append((t, pos, dep, lemma, meta))
                 continue
 
-            if pos == "NUM" or re.match(r"^\d+", clean_word):
+            if pos == "NUM" or re.match(r"^\d+", clean_word) or clean_word in (
+                "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez",
+                "once", "doce", "veinte", "treinta", "cien", "mil",
+            ):
                 meta["is_numeral"] = True
                 meta["num_val"] = clean_word.replace(".", "").replace(",", "")
+                head_tok = t.head.head if t.head.pos_ == "DET" and t.head.head.i != t.head.i else t.head
+                target_head_idx = mwe_span_head_map.get(head_tok.i, head_tok.i)
+                if (
+                    head_tok.i != t.i
+                    and t.i < target_head_idx
+                    and (head_tok.pos_ in ("NOUN", "PROPN") or head_tok.i in mwe_span_head_map)
+                    and target_head_idx not in periphrasis_consumed
+                ):
+                    meta["is_amod"] = True
+                    meta["head_idx"] = target_head_idx
+                elif t.i + 1 < len(doc) and doc[t.i + 1].pos_ in ("NOUN", "PROPN"):
+                    meta["is_amod"] = True
+                    meta["head_idx"] = mwe_span_head_map.get(t.i + 1, t.i + 1)
                 tokens_info.append((t, pos, dep, lemma, meta))
                 continue
 
@@ -1147,7 +1442,7 @@ class DiscoursePlanner:
                     and other.i != t.i and other.lemma_.lower() not in _COPULATIVE_LEMMAS
                     for other in doc
                 )
-                if pos == "VERB" or not has_other_verb or verb_lemma == "comer":
+                if pos == "VERB" or not has_other_verb:
                     pos = "VERB"
                     lemma = "comer"
                     dep = "ROOT"
@@ -1159,9 +1454,27 @@ class DiscoursePlanner:
                 tokens_info.append((t, "ADV", "neg", lemma, meta))
                 continue
 
+            if prop.modality == "exclamative" and clean_word in ("qué", "que", "cuánto", "cuánta", "cuántos", "cuántas"):
+                continue
+
             if clean_word in self._wh_lemmas or raw_lemma in self._wh_lemmas:
                 meta["is_wh"] = True
                 tokens_info.append((t, pos, dep, lemma, meta))
+                continue
+
+            is_quantifier_token = clean_word in _QUANTIFIER_CANON
+
+            # Conjunciones subordinantes con contenido semántico (aunque, si,
+            # cuando, mientras, porque). Sin ellas se pierde la relación lógica.
+            if pos == "SCONJ" and clean_word in _SEMANTIC_SCONJ_GLOSS:
+                if clean_word == "porque" and prop.discourse_relation == "because":
+                    # La relación discursiva ya insertará PORQUE al final.
+                    continue
+                connector_gloss = _SEMANTIC_SCONJ_GLOSS[clean_word]
+                meta["is_functional_transfer"] = True
+                meta["ft_gloss"] = connector_gloss
+                meta["is_connector"] = True
+                tokens_info.append((t, "ADV", "advmod", connector_gloss.lower(), meta))
                 continue
 
             # Transferencia funcional de determinantes y preposiciones (Punto 3 de auditoría)
@@ -1182,11 +1495,23 @@ class DiscoursePlanner:
                         meta["deixis_gloss" if is_pro else "ft_gloss"] = ft.target_gloss
                         tokens_info.append((t, pos, dep, ft.target_gloss.lower(), meta))
                         continue
-                if pos in _BLACKLIST_POS_TAGS and not verb_lemma and pos not in ("NOUN", "PROPN"):
+                if pos in _BLACKLIST_POS_TAGS and not verb_lemma and pos not in ("NOUN", "PROPN") and not is_quantifier_token:
                     continue
 
-            if pos in _BLACKLIST_POS_TAGS and not verb_lemma and pos not in ("NOUN", "PROPN"):
+            if pos in _BLACKLIST_POS_TAGS and not verb_lemma and pos not in ("NOUN", "PROPN") and not is_quantifier_token:
                 continue
+
+            if is_quantifier_token and pos in ("DET", "PRON", "ADJ"):
+                head_tok = t.head.head if t.head.pos_ == "DET" and t.head.head.i != t.head.i else t.head
+                target_head_idx = mwe_span_head_map.get(head_tok.i, head_tok.i)
+                if (
+                    head_tok.i != t.i
+                    and t.i < target_head_idx
+                    and (head_tok.pos_ in ("NOUN", "PROPN") or head_tok.i in mwe_span_head_map)
+                    and target_head_idx not in periphrasis_consumed
+                ):
+                    meta["is_amod"] = True
+                    meta["head_idx"] = target_head_idx
 
             # Cópula tipificada (Punto 2 de auditoría)
             if pos in ("AUX", "VERB") and lemma in _COPULATIVE_LEMMAS:
@@ -1196,31 +1521,73 @@ class DiscoursePlanner:
                     and "LSEC_COPULA_EXISTENTIAL" not in active_rule_ids
                     and "LSEC_COPULA_LOCATIVE" not in active_rule_ids
                 ):
-                    # Regla de omisión desactivada: retener la cópula
-                    tokens_info.append((t, pos, dep, lemma.upper(), {"is_copula": True}))
+                    # La regla de frame no aplica (p. ej. cópula dentro de una
+                    # subordinada cuyo predicado principal es otro verbo). Si el
+                    # usuario desactivó explícitamente la omisión, se conserva.
+                    # En caso contrario se decide por sintaxis: la cópula de
+                    # enlace se elide (ELIS-03); los usos auxiliares
+                    # (pasiva/perífrasis) y el existencial "haber" se conservan.
+                    copula_excluded = bool(
+                        exclude_rule_ids and "LSEC_COPULA_OMISSION" in exclude_rule_ids
+                    )
+                    is_linking_copula = lemma in ("ser", "estar") and dep != "aux"
+                    if copula_excluded:
+                        tokens_info.append((t, pos, dep, lemma.upper(), {"is_copula": True}))
+                    elif lemma in ("ser", "estar") and dep == "aux":
+                        # Auxiliar de pasiva o perífrasis ("fue fundada",
+                        # "está construido"): la acción la aporta el verbo
+                        # principal; el auxiliar no se glosa.
+                        pass
+                    elif not is_linking_copula:
+                        tokens_info.append((t, pos, dep, lemma.upper(), {"is_copula": True}))
                     continue
                 elif active_rule_ids is not None and "LSEC_COPULA_EXISTENTIAL" in active_rule_ids and lemma == "haber":
-                    tokens_info.append((t, pos, dep, "haber", {"is_existential": True}))
+                    tokens_info.append((t, "VERB", dep, "haber", {"is_existential": True}))
                     continue
                 else:
                     continue
 
-            if dep == "amod" and pos == "ADJ":
+            if dep == "amod" and pos == "ADJ" and not meta.get("is_amod"):
                 head_clean = PunctuationAnalyzer.strip_punctuation(t.head.text.lower())
                 head_is_verb = (
-                    (t.head.pos_ in ("VERB", "AUX") or SpanishVerbLexicon.get_lemma(head_clean) is not None)
+                    not SpanishVerbLexicon.has_nominal_context(t.head)
+                    and (t.head.pos_ in ("VERB", "AUX") or SpanishVerbLexicon.get_lemma(head_clean) is not None)
                     and head_clean not in SpanishVerbLexicon.NOMINAL_HOMOGRAPHS
                 )
                 if not head_is_verb and clean_word not in ("manzana", "pan", "carne", "agua", "leche", "comida"):
                     meta["is_amod"] = True
-                    meta["head_idx"] = t.head.i
+                    meta["head_idx"] = mwe_span_head_map.get(t.head.i, t.head.i)
                 else:
                     pos = "NOUN"
                     dep = "obj"
+            elif (
+                dep == "flat"
+                and not meta.get("is_amod")
+                and pos != "VERB"
+                and t.head.i < t.i
+                and t.text
+                and not t.text[0].isupper()
+                and t.head.pos_ == "NOUN"
+            ):
+                pos = "ADJ"
+                dep = "amod"
+                meta["is_amod"] = True
+                meta["head_idx"] = mwe_span_head_map.get(t.head.i, t.head.i)
 
             morph_number = t.morph.get("Number", [])
-            if pos in ("NOUN", "PROPN") and "Plur" in morph_number and not verb_lemma:
+            if pos in ("NOUN", "PROPN") and "Plur" in morph_number and not verb_lemma and clean_word.endswith("s"):
                 meta["is_plural"] = True
+            elif (
+                pos == "ADJ"
+                and "Plur" in morph_number
+                and not verb_lemma
+                and clean_word.endswith("s")
+                and not meta.get("is_amod")
+                and dep in ("nsubj", "nsubj:pass", "obj", "ROOT")
+            ):
+                # Adjetivo sustantivado: "los docentes", "los jóvenes".
+                meta["is_plural"] = True
+                meta["is_nominalized"] = True
 
             # Detección de pro-drop de segunda persona en cláusulas relativas ('lo que imaginas')
             is_person_2 = ("2" in t.morph.get("Person", [])) or (pos == "VERB" and clean_word.endswith(("as", "es", "ás", "és")))
@@ -1230,12 +1597,15 @@ class DiscoursePlanner:
 
             tokens_info.append((t, pos, dep, lemma, meta))
 
-        # Reordenamiento discursivo LSEC condicionado (Puntos 7 y 10 de auditoría)
-        time_place: List[Any] = []
+        # Reordenamiento discursivo LSEC condicionado (Puntos 7 y 10 de auditoría, Fase 3)
+        time_tokens: List[Any] = []
+        connectors: List[Any] = []
+        location_tokens: List[Any] = []
         subjects: List[Any] = []
         objects: List[Any] = []
         modifiers_others: List[Any] = []
         verbs: List[Any] = []
+        manner_adverbs: List[Any] = []
         neg_tokens: List[Any] = []
         wh_tokens: List[Any] = []
         amod_by_head: Dict[int, List[Any]] = {}
@@ -1250,6 +1620,15 @@ class DiscoursePlanner:
                 amod_by_head.setdefault(head_idx, []).append(item)
                 continue
 
+            _is_counted_time_noun = (
+                l_lower in ("año", "mes", "día", "semana", "hora", "tarde", "noche")
+                and (
+                    dep in ("obj", "dobj", "nsubj", "nsubj:pass", "attr", "appos", "conj")
+                    or any(ch.pos_ == "NUM" or re.match(r"^\d+", ch.text) for ch in t.children)
+                    or (t.i > 0 and (doc[t.i - 1].pos_ == "NUM" or re.match(r"^\d+", doc[t.i - 1].text)))
+                )
+            )
+
             if meta.get("is_wh"):
                 wh_tokens.append(item)
             elif meta.get("is_negation") or dep == "neg":
@@ -1259,29 +1638,60 @@ class DiscoursePlanner:
                     subjects.append(item)
                 else:
                     modifiers_others.append(item)
-            elif l_lower in self._time_markers or t_lower in self._time_markers or dep in ("obl:tmod",):
-                time_place.append(item)
+            elif meta.get("is_connector"):
+                connectors.append(item)
+            elif meta.get("is_mwe") and meta.get("mwe_gloss") in ("AUNQUE", "PERO", "ADEMÁS"):
+                time_tokens.append(item)
+            elif (l_lower in self._time_markers or t_lower in self._time_markers or dep in ("obl:tmod",)) and not _is_counted_time_noun:
+                time_tokens.append(item)
             elif (
-                (dep in ("obl", "loc") or (dep in ("flat", "nmod", "appos", "compound") and t.head.dep_ in ("obl", "loc")))
-                and pos in ("PROPN", "NOUN")
+                (
+                    any(c.text.lower() in ("en", "sobre", "bajo", "hacia", "desde", "hasta") and c.pos_ == "ADP" for c in t.children)
+                    or (dep in ("obl", "loc") and pos in ("PROPN", "NOUN"))
+                    or (dep in ("flat", "nmod", "appos", "compound") and t.head.dep_ in ("obl", "loc"))
+                    or (pos in ("NOUN", "PROPN") and l_lower in ("escuela", "colegio", "universidad", "hospital", "parque", "casa", "biblioteca", "aula", "clase", "campus", "quito", "tulcán", "cayambe"))
+                )
                 and not subjects
             ):
-                time_place.append(item)
+                location_tokens.append(item)
             elif pos == "VERB":
                 verbs.append(item)
+            elif pos in ("ADV", "ADJ") and dep == "advmod" and t.head.pos_ in ("VERB", "AUX", "ADJ") and l_lower not in self._time_markers:
+                manner_adverbs.append(item)
             elif dep in ("nsubj", "nsubj:pass"):
+                subjects.append(item)
+            elif dep == "flat" and pos == "PROPN" and any(s[0].i == t.head.i for s in subjects):
                 subjects.append(item)
             elif pos in ("PRON", "PROPN") and not subjects and not verbs:
                 subjects.append(item)
-            elif dep in ("obj", "dobj", "iobj", "nmod"):
+            elif dep in ("obj", "dobj", "iobj", "nmod") or (dep == "flat" and pos == "PROPN" and any(o[0].i == t.head.i for o in objects)):
                 objects.append(item)
             elif pos == "NOUN":
-                if not subjects and not verbs and not time_place:
+                if not subjects and not verbs and not time_tokens and not location_tokens:
                     subjects.append(item)
                 else:
                     objects.append(item)
             else:
                 modifiers_others.append(item)
+
+        # Reordenamiento de verbos para cláusulas de complemento LSEC (SOV):
+        # Cuando un verbo es complemento xcomp/ccomp de un verbo no modal (ej. "ayudas a solucionar"),
+        # el complemento verbal precede al verbo matriz gobernante.
+        if len(verbs) > 1:
+            sorted_verbs: List[Any] = []
+            for v_item in verbs:
+                v_tok = v_item[0]
+                if v_tok.dep_ in ("xcomp", "ccomp") and any(o[0].i == v_tok.head.i for o in verbs):
+                    head_tok = v_tok.head
+                    if head_tok.lemma_.lower() not in ("querer", "poder", "deber", "soler"):
+                        head_idx = next((i for i, it in enumerate(sorted_verbs) if it[0].i == head_tok.i), None)
+                        if head_idx is not None:
+                            sorted_verbs.insert(head_idx, v_item)
+                            continue
+                sorted_verbs.append(v_item)
+            verbs = sorted_verbs
+
+        time_place = time_tokens + location_tokens
 
         apply_time = active_rule_ids is None or "LSEC_TIME_INITIAL" in active_rule_ids
         apply_wh = active_rule_ids is None or "LSEC_WH_FINAL" in active_rule_ids
@@ -1289,9 +1699,21 @@ class DiscoursePlanner:
         apply_sov = active_rule_ids is None or "LSEC_SOV_ORDER" in active_rule_ids
 
         if apply_time and apply_wh and apply_neg and apply_sov:
-            reordered = time_place + subjects + objects + modifiers_others + verbs + wh_tokens + neg_tokens
+            reordered = connectors + time_tokens + location_tokens + subjects + objects + modifiers_others + verbs + manner_adverbs + wh_tokens + neg_tokens
         else:
-            curr_tp = time_place if apply_time else []
+            curr_tp = (
+                time_place
+                if apply_time
+                else [
+                    it
+                    for it in time_place
+                    if not (
+                        it[3].lower() in self._time_markers
+                        or it[0].text.lower() in self._time_markers
+                        or it[2] in ("obl:tmod",)
+                    )
+                ]
+            )
             curr_wh = wh_tokens if apply_wh else []
             curr_neg = neg_tokens if apply_neg else []
 
@@ -1299,20 +1721,29 @@ class DiscoursePlanner:
             for item in tokens_info:
                 if item[4].get("is_amod"):
                     continue
-                if (item in time_place and apply_time) or (item in wh_tokens and apply_wh) or (item in neg_tokens and apply_neg):
+                if (item in connectors) or (item in curr_tp) or (item in wh_tokens and apply_wh) or (item in neg_tokens and apply_neg):
                     continue
                 non_displaced.append(item)
 
             if apply_sov:
-                s_list = [it for it in non_displaced if it in subjects]
-                o_list = [it for it in non_displaced if it in objects]
-                v_list = [it for it in non_displaced if it in verbs]
+                s_list = [it for it in subjects if it in non_displaced]
+                o_list = [it for it in objects if it in non_displaced]
+                v_list = [it for it in verbs if it in non_displaced]
                 m_list = [it for it in non_displaced if it not in s_list and it not in o_list and it not in v_list]
                 core_ordered = s_list + o_list + m_list + v_list
+            elif not objects:
+                # Si no hay objeto (intransitivo), orden canónico: LUGAR + SUJETO + MODIFICADORES + VERBO + ADVERBIO
+                loc_list = [it for it in location_tokens if it in non_displaced]
+                s_list = [it for it in subjects if it in non_displaced]
+                v_list = [it for it in verbs if it in non_displaced]
+                adv_list = [it for it in manner_adverbs if it in non_displaced]
+                m_list = [it for it in non_displaced if it not in loc_list and it not in s_list and it not in v_list and it not in adv_list]
+                core_ordered = loc_list + s_list + m_list + v_list + adv_list
             else:
+                # Si SOV fue desactivado y hay objeto, conservar el orden superficial (SVO)
                 core_ordered = non_displaced
 
-            reordered = curr_tp + core_ordered + curr_wh + curr_neg
+            reordered = connectors + curr_tp + core_ordered + curr_wh + curr_neg
         if "haz posible" in prop.source_text.lower() and "imagina" in prop.source_text.lower():
             # Estructura topic-comment de cláusula relativa LSEC: Tiempo + Sujeto + Verbo relativo + Objeto relativo + Predicado matriz
             tokens_by_key = {}
@@ -1358,6 +1789,33 @@ class DiscoursePlanner:
             )
             current_order += 1
             last_gloss = "ADEMÁS"
+        elif prop.discourse_relation == "but":
+            # REGLA LSEC (Informe Sección 4 / Decisión D6):
+            # Adversativas (pero / sin embargo / no obstante) se expresan mediante cambio de postura
+            # corporal (body shift: izquierda vs derecha) y loci espaciales, NO mediante glosa léxica PERO.
+            pass
+        elif prop.discourse_relation == "because":
+            p_low = prop.source_text.lower()
+            s_word = "porque" if "porque" in p_low else None
+            gloss_items.append(
+                GlossItem(
+                    gloss="PORQUE",
+                    gloss_type=GlossType.SIGN,
+                    order=current_order,
+                    source_word=s_word,
+                    normalized_word="porque",
+                    proposition_id=prop.id,
+                    duration_ms=self.compute_duration("PORQUE", GlossType.SIGN),
+                    notes="Marcador discursivo causal",
+                    alignment_type=AlignmentType.DISCOURSE_MARKER,
+                    lexical_strategy="discourse_connector",
+                    semantic_concept="causa",
+                    discourse_relation="because",
+                    validation={"lexical_source": "Gramática LSEC", "confidence": 0.95},
+                )
+            )
+            current_order += 1
+            last_gloss = "PORQUE"
 
         for marker, pos in periphrasis_markers:
             if pos == "before" and marker != last_gloss:
@@ -1368,12 +1826,37 @@ class DiscoursePlanner:
                         gloss_type=GlossType.SIGN,
                         order=current_order,
                         proposition_id=prop.id,
+                        alignment_type=AlignmentType.INFERRED,
+                        inference_rule_id=f"LSEC_PERIPHRASIS_{marker}",
                         duration_ms=self.compute_duration(marker, GlossType.SIGN, is_temporal=True),
                         notes="Marcador temporal de perífrasis",
                         validation={"lexical_source": "Gramática LSEC", "confidence": 0.95},
                     )
                 )
                 current_order += 1
+
+        def _flush_amod_for_head(head_idx: int) -> None:
+            nonlocal current_order, last_gloss
+            if head_idx not in amod_by_head:
+                return
+            for adj_item in amod_by_head[head_idx]:
+                adj_t, _, _, adj_lemma, adj_meta = adj_item
+                adj_g = (adj_meta.get("num_val") or adj_lemma).upper()
+                if adj_g != last_gloss:
+                    last_gloss = adj_g
+                    gloss_items.append(
+                        GlossItem(
+                            gloss=adj_g,
+                            gloss_type=GlossType.SIGN,
+                            order=current_order,
+                            source_word=adj_t.text.strip(),
+                            normalized_word=adj_lemma,
+                            proposition_id=prop.id,
+                            duration_ms=self.compute_duration(adj_g, GlossType.SIGN),
+                            notes="Adjetivo post-nominal",
+                        )
+                    )
+                    current_order += 1
 
         for item in reordered:
             t, pos, dep, lemma, meta = item
@@ -1391,6 +1874,8 @@ class DiscoursePlanner:
                     g_list = [mwe_pref]
 
                 for mwe_g in g_list:
+                    if mwe_g == "PERO" and any(g.gloss == "PERO" for g in gloss_items):
+                        continue
                     if mwe_g != last_gloss:
                         last_gloss = mwe_g
                         gloss_items.append(
@@ -1406,6 +1891,7 @@ class DiscoursePlanner:
                             )
                         )
                         current_order += 1
+                _flush_amod_for_head(t.i)
                 continue
 
             if meta.get("is_paraphrase"):
@@ -1549,16 +2035,13 @@ class DiscoursePlanner:
             if text_upper in self._institutional_dict:
                 gloss_txt = self._institutional_dict[text_upper]["gloss"]
                 gloss_typ = GlossType(self._institutional_dict[text_upper]["type"])
-                if "TULC" in text_upper:
-                    spatial_ref_id = "campus_tulcan"
-                elif text_upper == "CAYAMBE":
-                    spatial_ref_id = "campus_cayambe"
-                elif text_upper == "UPEC":
-                    spatial_ref_id = "upec"
+                ent_info = self._named_entities.get(clean_word.lower()) or self._named_entities.get(lemma.lower() if lemma else "")
+                if ent_info:
+                    spatial_ref_id = ent_info.get("id")
                 else:
                     spatial_ref_id = f"campus_{clean_word.lower()}"
-            elif prop.rhetorical_function in ("campus_enumeration", "enumeration") or "campus" in prop.source_text.lower():
-                if pos in ("PROPN", "NOUN") and clean_word not in ("campus", "dos", "sede", "sedes"):
+            elif prop.rhetorical_function in ("campus_enumeration", "enumeration"):
+                if pos == "PROPN" and clean_word not in ("campus", "dos", "sede", "sedes"):
                     gloss_txt = "-".join(list(clean_word.upper()))
                     gloss_typ = GlossType.FINGERSPELLING
                     spatial_ref_id = f"campus_{clean_word.lower()}"
@@ -1566,8 +2049,26 @@ class DiscoursePlanner:
                     gloss_txt = lemma.upper() if lemma else text_upper
                     gloss_typ = GlossType.SIGN
             else:
-                gloss_txt = lemma.upper() if lemma else text_upper
-                gloss_typ = GlossType.SIGN
+                cand_gloss = lemma.upper() if lemma else text_upper
+                is_oov_propn = (
+                    pos == "PROPN"
+                    and clean_text[:1].isupper()
+                    and len(clean_word) >= 2
+                    and clean_word not in _KNOWN_SIGN_PROPN
+                    and clean_word not in SpanishVerbLexicon.KNOWN_VERB_FORMS
+                    and cand_gloss not in self._known_local_glosses
+                    and text_upper not in self._known_local_glosses
+                    and (
+                        self._dictionary is None
+                        or (self._dictionary.lookup(clean_word) is None and self._dictionary.lookup(lemma) is None)
+                    )
+                )
+                if is_oov_propn:
+                    gloss_txt = "-".join(list(clean_word.upper()))
+                    gloss_typ = GlossType.FINGERSPELLING
+                else:
+                    gloss_txt = cand_gloss
+                    gloss_typ = GlossType.SIGN
 
             if gloss_txt == last_gloss:
                 continue
@@ -1603,31 +2104,37 @@ class DiscoursePlanner:
                     non_manual=NonManualMarker(expression=w_expr, head_movement=w_head),
                     duration_ms=self.compute_duration(gloss_txt, gloss_typ),
                     spatial_ref=spatial_ref_id,
+                    notes="Complemento de lugar" if dep in ("obl", "loc") else None,
                 )
             )
             current_order += 1
 
-            if t.i in amod_by_head:
-                for adj_item in amod_by_head[t.i]:
-                    adj_t, _, _, adj_lemma, _ = adj_item
-                    adj_g = adj_lemma.upper()
-                    if adj_g != last_gloss:
-                        last_gloss = adj_g
-                        gloss_items.append(
-                            GlossItem(
-                                gloss=adj_g,
-                                gloss_type=GlossType.SIGN,
-                                order=current_order,
-                                source_word=adj_t.text.strip(),
-                                normalized_word=adj_lemma,
-                                proposition_id=prop.id,
-                                duration_ms=self.compute_duration(adj_g, GlossType.SIGN),
-                                notes="Adjetivo post-nominal",
-                            )
-                        )
-                        current_order += 1
+            _flush_amod_for_head(t.i)
 
-            if meta.get("is_plural") and not has_numeral and not has_quantifier and pos in ("NOUN", "PROPN"):
+            noun_has_num_or_quant = (
+                any(
+                    ch.pos_ == "NUM"
+                    or re.match(r"^\d+", ch.text)
+                    or PunctuationAnalyzer.strip_punctuation(ch.text.lower()) in self._quantifier_lemmas
+                    or ch.lemma_.lower() in self._quantifier_lemmas
+                    for ch in t.children
+                )
+                or (
+                    t.i > 0
+                    and (
+                        doc[t.i - 1].pos_ == "NUM"
+                        or re.match(r"^\d+", doc[t.i - 1].text)
+                        or PunctuationAnalyzer.strip_punctuation(doc[t.i - 1].text.lower()) in self._quantifier_lemmas
+                        or doc[t.i - 1].lemma_.lower() in self._quantifier_lemmas
+                    )
+                )
+                or any(
+                    adj_item[4].get("is_numeral") or adj_item[3] in self._quantifier_lemmas
+                    for adj_item in amod_by_head.get(t.i, [])
+                )
+            )
+
+            if meta.get("is_plural") and not noun_has_num_or_quant and pos in ("NOUN", "PROPN", "ADJ"):
                 if self._plural_marker != last_gloss:
                     last_gloss = self._plural_marker
                     gloss_items.append(
@@ -1657,6 +2164,8 @@ class DiscoursePlanner:
                         gloss_type=GlossType.SIGN,
                         order=current_order,
                         proposition_id=prop.id,
+                        alignment_type=AlignmentType.INFERRED,
+                        inference_rule_id=f"LSEC_PERIPHRASIS_{marker}",
                         duration_ms=self.compute_duration(marker, GlossType.SIGN, is_temporal=True),
                         notes="Marcador aspectual",
                     )
@@ -1665,7 +2174,7 @@ class DiscoursePlanner:
 
         try:
             from app.services.fenasec_rules import apply_fenasec_rules
-            gloss_items = apply_fenasec_rules(gloss_items, doc, start_order)
+            gloss_items = apply_fenasec_rules(gloss_items, doc, start_order, proposition=prop)
         except Exception as exc:  # pragma: no cover - las reglas nunca deben romper el pipeline
             logger.warning("Reglas FENASEC omitidas: %s", exc)
 
@@ -1777,7 +2286,7 @@ class DiscoursePlanner:
             prop_expr = FacialExpression.IMPERATIVE
             prop_intensity = 1.1
             prop_priority = 2
-        elif prop.rhetorical_function == "closure":
+        elif prop.rhetorical_function == "closure" or prop.modality == "exclamative":
             prop_span_type = "emphasis"
             prop_expr = FacialExpression.EMPHASIS
             prop_intensity = 1.2
@@ -1810,7 +2319,7 @@ class DiscoursePlanner:
             )
 
         # Span de negación local
-        if prop.polarity == "negative" or "nadie" in p_text_lower or "no " in p_text_lower or p_text_lower.startswith("no "):
+        if prop.polarity == "negative" or contains_negation(p_text_lower):
             neg_items = [g for g in glosses if g.gloss in ("NADIE", "SOLAMENTE-NO", "NO", "NUNCA") or g.gloss.startswith("NO-")]
             if neg_items:
                 neg_start = min(g.order for g in neg_items)
@@ -1828,5 +2337,20 @@ class DiscoursePlanner:
                         proposition_id=prop.id,
                     )
                 )
+
+        if prop.context_info.get("tag_question") and glosses:
+            spans.append(
+                NonManualSpan(
+                    id=f"span_{p_idx + 1}_tag_q",
+                    type="question_yn",
+                    start_order=end_o,
+                    end_order=end_o,
+                    expression=FacialExpression.QUESTION_YESNO,
+                    head_movement="inclinar",
+                    intensity=1.0,
+                    priority=3,
+                    proposition_id=prop.id,
+                )
+            )
 
         return spans

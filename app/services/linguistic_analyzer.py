@@ -499,6 +499,17 @@ class EnhancedLinguisticAnalyzer:
                     target_gloss="PRO1",
                     justification="Posesivo de 1ra persona transferido a deixis PRO1",
                 ))
+            elif text_l in ("nuestro", "nuestra", "nuestros", "nuestras"):
+                transfers.append(FunctionalTransfer(
+                    token_idx=token.i,
+                    source_word=token.text,
+                    lemma=lemma_l,
+                    pos=pos,
+                    function_type="possession",
+                    target_action="possessive_index",
+                    target_gloss="PRO1-PL",
+                    justification="Posesivo de 1ra persona plural transferido a deixis PRO1-PL",
+                ))
             elif text_l in ("tu", "tus"):
                 transfers.append(FunctionalTransfer(
                     token_idx=token.i,
@@ -552,9 +563,19 @@ class EnhancedLinguisticAnalyzer:
                 head_tok = token.head
                 dep = token.dep_
 
-                if text_l in ("de", "desde"):
-                    # Origen, procedencia, o tiempo
-                    if any(t.text.lower() in ("ayer", "año", "mes", "hora", "cuando") for t in doc):
+                if text_l == "desde":
+                    transfers.append(FunctionalTransfer(
+                        token_idx=token.i,
+                        source_word=token.text,
+                        lemma=lemma_l,
+                        pos=pos,
+                        function_type="origin",
+                        target_action="source_locus",
+                        target_gloss="DESDE",
+                        justification="Preposición de origen espacial o temporal transferida a seña DESDE",
+                    ))
+                elif text_l == "de":
+                    if head_tok.text.lower() in ("ayer", "hoy", "mañana", "temprano"):
                         transfers.append(FunctionalTransfer(
                             token_idx=token.i,
                             source_word=token.text,
@@ -565,7 +586,11 @@ class EnhancedLinguisticAnalyzer:
                             target_gloss="DESDE",
                             justification="Preposición temporal de inicio de intervalo",
                         ))
-                    elif head_tok.pos_ in ("PROPN", "NOUN") and any(ch.dep_ == "obl" for ch in [token]):
+                    elif (
+                        head_tok.pos_ in ("PROPN", "NOUN")
+                        and head_tok.dep_ == "obl"
+                        and head_tok.head.lemma_.lower() in ("venir", "salir", "partir", "regresar", "volver", "llegar")
+                    ):
                         transfers.append(FunctionalTransfer(
                             token_idx=token.i,
                             source_word=token.text,
@@ -610,10 +635,17 @@ class EnhancedLinguisticAnalyzer:
                     non_locative_targets = {
                         "whatsapp", "correo", "teléfono", "telefono", "celular",
                         "número", "numero", "contacto", "parte", "través", "traves",
+                        "todos", "todas", "todo", "toda", "varios", "varias", "nadie", "alguien", "quien", "quién",
+                        "paciente", "pacientes", "director", "directora", "profesor", "profesora",
+                        "estudiante", "estudiantes", "médico", "medico", "doctor", "doctora",
+                        "niño", "niña", "niños", "niñas", "hermano", "hermana", "amigo", "amiga",
+                        "mamá", "papá", "familia", "persona", "personas", "gente", "cliente", "clientes",
+                        "hora", "horas", "tiempo", "día", "días", "semana", "mes", "año", "cabo", "pesar",
                     }
                     head_or_next_non_loc = (
                         head_tok.text.lower() in non_locative_targets
                         or head_tok.lemma_.lower() in non_locative_targets
+                        or head_tok.pos_ in ("PRON", "DET", "NUM")
                         or (next_tok is not None and next_tok.text.lower() in non_locative_targets)
                     )
                     is_personal_acc = any(
@@ -621,7 +653,21 @@ class EnhancedLinguisticAnalyzer:
                         for c in token.children
                     ) or (dep == "case" and head_tok.dep_ in ("obj", "iobj") and head_tok.pos_ in ("NOUN", "PROPN", "PRON"))
 
-                    if text_l in ("a", "al") and (is_personal_acc or next_is_inf or head_is_inf or head_or_next_non_loc):
+                    head_verb_lemma = (
+                        head_tok.head.lemma_.lower()
+                        if head_tok.head.pos_ in ("VERB", "AUX")
+                        else ""
+                    )
+                    regime_a_verbs = {
+                        "asistir", "pertenecer", "ayudar", "invitar", "llamar",
+                        "aprender", "enseñar", "dedicarse", "acceder",
+                    }
+                    head_governs_a = head_verb_lemma in regime_a_verbs
+
+                    if text_l in ("a", "al") and (
+                        is_personal_acc or next_is_inf or head_is_inf
+                        or head_or_next_non_loc or head_governs_a
+                    ):
                         transfers.append(FunctionalTransfer(
                             token_idx=token.i,
                             source_word=token.text,
@@ -643,7 +689,91 @@ class EnhancedLinguisticAnalyzer:
                             justification="Preposición de destino o dirección transferida a movimiento",
                         ))
 
-                elif text_l in ("en", "sobre", "bajo", "entre"):
+                elif text_l == "sin":
+                    transfers.append(FunctionalTransfer(
+                        token_idx=token.i,
+                        source_word=token.text,
+                        lemma=lemma_l,
+                        pos=pos,
+                        function_type="privative",
+                        target_action="semantic_marker",
+                        target_gloss="SIN",
+                        justification="Preposición privativa con contenido semántico; se conserva como SIN",
+                    ))
+
+                elif text_l == "hasta":
+                    transfers.append(FunctionalTransfer(
+                        token_idx=token.i,
+                        source_word=token.text,
+                        lemma=lemma_l,
+                        pos=pos,
+                        function_type="limit",
+                        target_action="semantic_marker",
+                        target_gloss="HASTA",
+                        justification="Preposición de límite temporal o espacial; se conserva como HASTA",
+                    ))
+
+                elif text_l == "sobre":
+                    transfers.append(FunctionalTransfer(
+                        token_idx=token.i,
+                        source_word=token.text,
+                        lemma=lemma_l,
+                        pos=pos,
+                        function_type="topic_or_location",
+                        target_action="semantic_marker",
+                        target_gloss="SOBRE",
+                        justification="Preposición 'sobre' con contenido de tema o ubicación; se conserva",
+                    ))
+
+                elif text_l == "por":
+                    # "por qué" forma una unidad interrogativa (POR-QUÉ);
+                    # no se glosa la preposición por separado.
+                    next_tok = doc[token.i + 1] if token.i + 1 < len(doc) else None
+                    if (
+                        next_tok is not None
+                        and (
+                            (next_tok.text.lower() in ("qué", "que")
+                             and ("?" in doc.text or "¿" in doc.text))
+                            or next_tok.text.lower() in (
+                                "favor", "ejemplo", "supuesto", "fin", "lo", "ciento",
+                            )
+                        )
+                    ):
+                        continue
+                    motion_verbs = {
+                        "ir", "venir", "caminar", "viajar", "pasar", "correr",
+                        "volver", "llegar", "salir", "entrar", "recorrer",
+                        "cruzar", "subir", "bajar",
+                    }
+                    governor = (
+                        head_tok.head.lemma_.lower()
+                        if head_tok.head.pos_ in ("VERB", "AUX")
+                        else ""
+                    )
+                    if governor in motion_verbs:
+                        transfers.append(FunctionalTransfer(
+                            token_idx=token.i,
+                            source_word=token.text,
+                            lemma=lemma_l,
+                            pos=pos,
+                            function_type="path",
+                            target_action="direction_goal",
+                            target_gloss="HACIA",
+                            justification="Preposición de trayectoria con verbo de movimiento",
+                        ))
+                    else:
+                        transfers.append(FunctionalTransfer(
+                            token_idx=token.i,
+                            source_word=token.text,
+                            lemma=lemma_l,
+                            pos=pos,
+                            function_type="cause_or_agent",
+                            target_action="semantic_marker",
+                            target_gloss="POR",
+                            justification="Preposición 'por' causal o agentiva; se conserva para no deformar el significado",
+                        ))
+
+                elif text_l in ("en", "bajo", "entre"):
                     if any(ch.pos_ == "NUM" or ch.text.lower() in ("año", "mes", "día", "semana") for ch in token.head.children):
                         transfers.append(FunctionalTransfer(
                             token_idx=token.i,
@@ -691,7 +821,16 @@ class EnhancedLinguisticAnalyzer:
 
                 elif text_l == "para":
                     # Distinguir beneficiario vs. finalidad
-                    has_inf = any(ch.pos_ == "VERB" for ch in token.head.children if ch.i > token.i)
+                    next_tok = doc[token.i + 1] if token.i + 1 < len(doc) else None
+                    head_is_inf = head_tok.pos_ in ("VERB", "AUX") and (
+                        "Inf" in head_tok.morph.get("VerbForm", [])
+                        or head_tok.text.lower().endswith(("ar", "er", "ir", "arse", "erse", "irse"))
+                    )
+                    next_is_inf = next_tok is not None and next_tok.pos_ in ("VERB", "AUX") and (
+                        "Inf" in next_tok.morph.get("VerbForm", [])
+                        or next_tok.text.lower().endswith(("ar", "er", "ir", "arse", "erse", "irse"))
+                    )
+                    has_inf = head_is_inf or next_is_inf or any(ch.pos_ == "VERB" for ch in token.head.children if ch.i > token.i)
                     if has_inf:
                         transfers.append(FunctionalTransfer(
                             token_idx=token.i,

@@ -130,6 +130,7 @@ class LSECTranslatorService:
             entity_registry=self._normalizer.get_all_entities(),
             mwe_detector=self._mwe_detector,
             plural_marker=self._plural_marker,
+            named_entities=self._lexicon_data.get("named_entities"),
         )
 
         # 7b. Analizador Lingüístico Avanzado
@@ -170,7 +171,15 @@ class LSECTranslatorService:
         if lex.get("institutional_dictionary"):
             self._institutional_dict = {}
             for k, v in lex["institutional_dictionary"].items():
-                g_typ = GlossType(v["type"]) if isinstance(v.get("type"), str) else GlossType.SIGN
+                raw_type = str(v.get("type", "SEÑA")).strip().upper()
+                if raw_type in ("FINGERSPELLING", "DACTILOLOGÍA", "DACTILOLOGIA"):
+                    g_typ = GlossType.FINGERSPELLING
+                elif raw_type in ("CLASSIFIER", "CLASIFICADOR"):
+                    g_typ = GlossType.CLASSIFIER
+                elif raw_type in ("EXPRESSION", "EXPRESIÓN", "EXPRESION"):
+                    g_typ = GlossType.EXPRESSION
+                else:
+                    g_typ = GlossType.SIGN
                 self._institutional_dict[k] = {"gloss": v["gloss"], "type": g_typ}
         else:
             self._institutional_dict = {

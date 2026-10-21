@@ -12,6 +12,7 @@ Audio/Texto → Transcripción → Normalización Trazable → Alineación de To
 
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
@@ -611,6 +612,9 @@ class SemanticFrame(BaseModel):
         past_words = {"ayer", "anoche", "antes", "pasado", "año_pasado", "mes_pasado", "hace", "anterior"}
         has_past = tense == "past" or any(pw in text_lower for pw in past_words)
 
+        temp_words = {"ayer", "anoche", "hoy", "mañana", "antes", "después", "pasado", "futuro", "siempre", "ahora", "tarde", "temprano", "pronto"}
+        has_temp_word = any(re.search(rf"\b{tw}\b", text_lower) for tw in temp_words)
+
         # Cópula tipificada: atributiva, identificacional, locativa, existencial, temporal
         is_cop = False
         c_type = None
@@ -636,7 +640,7 @@ class SemanticFrame(BaseModel):
         if not explicit_subj:
             if agent_p and agent_p.grammatical_person in ("1", "1-PL"):
                 pdrop_type = "pro1"
-            elif agent_p and agent_p.grammatical_person in ("2", "2-PL"):
+            elif agent_p and agent_p.grammatical_person in ("2", "2-PL") and prop.modality != "imperative":
                 pdrop_type = "pro2"
             elif agent_p and agent_p.coreference_id:
                 pdrop_type = "anaphoric"
@@ -669,7 +673,7 @@ class SemanticFrame(BaseModel):
             polarity=prop.polarity,
             modality=prop.modality,
             negation_scope="clausal" if prop.polarity == "negative" else None,
-            has_temporal_reference=has_temp or (temp_marker is not None),
+            has_temporal_reference=has_temp or (temp_marker is not None) or has_temp_word,
             has_past_reference=has_past,
             temporal_marker=temp_marker,
             grammatical_aspect=g_aspect,
@@ -899,16 +903,24 @@ class GlossItem(BaseModel):
         default=None,
         description="Ficha del Diccionario Oficial LSEC (CONADIS) asociada a la glosa, si aplica.",
     )
+    facial_expression: Optional[FacialExpression] = Field(default=None, description="Expresión facial directa")
+    spatial_location: Optional[SpatialLocation] = Field(default=None, description="Locus espacial de origen/asociación")
+    target_spatial_location: Optional[SpatialLocation] = Field(default=None, description="Locus espacial de destino")
 
     # Compatibilidad hacia atrás: alias de original_word
     original_word: Optional[str] = Field(default=None, description="[DEPRECATED] Use source_word o normalized_word")
 
     def model_post_init(self, __context: Any) -> None:
-        """Sincroniza original_word y source_word para máxima compatibilidad."""
+        """Sincroniza original_word, source_word y facial_expression para máxima compatibilidad."""
         if self.original_word is None and self.source_word is not None:
             self.original_word = self.source_word
         elif self.source_word is None and self.original_word is not None:
             self.source_word = self.original_word
+
+        if self.facial_expression is not None and self.non_manual is not None:
+            self.non_manual.expression = self.facial_expression
+        elif self.non_manual is not None and self.non_manual.expression != FacialExpression.NEUTRAL:
+            self.facial_expression = self.non_manual.expression
 
 
 class PauseType(str, Enum):

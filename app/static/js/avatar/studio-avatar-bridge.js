@@ -2,20 +2,27 @@
  * LSEC Studio ⇄ LSEC Avatar — Puente de Integración 3D (studio-avatar-bridge.js)
  * 
  * Conecta reactivamente el estado central de Studio (appState) con el motor 3D
- * de LSEC Avatar (AvatarPanelController, Three.js, VRM 1.0, Pipeline v2.6 Oficial):
+ * de LSEC Avatar (AvatarPanelController, Three.js, VRM 1.0, Pipeline v2.7/v2.6 Oficial)
+ * y el Compilador de Secuencias Fluidas (SequenceCompiler):
  * 
  * 1. PiP Minimalista sobre el reproductor de video:
  *    - Fondo sólido contrastante (#20242b) calibrado para contrastar con la ropa oscura.
  *    - Encuadre estricto de torso a cabeza (preset 'pip_bust').
  *    - Ocultamiento de manos en reposo (las manos descansan bajo el borde inferior).
- * 2. Glosas letra por letra / dactilología pendientes:
+ * 2. Secuencias Fluidas de Señas (SequenceCompiler):
+ *    - Evaluación determinista pura pose(t) compartida por reproducción en vivo (60 FPS),
+ *      scrub de línea de tiempo y exportación de video cuadro por cuadro (30 FPS).
+ *    - Cero retorno a reposo entre señas de una oración (umbral de pausa > 1.5 s).
+ *    - Coarticulación C^1 (Hermite + minimum-jerk en so(3)) con anticipación dactilar.
+ *    - Velocidad máxima 1.6x, lag máximo controlado de 1.0 s y extensión del PiP al final del video.
+ * 3. Glosas letra por letra / dactilología pendientes:
  *    - Si la glosa es deletreada, el avatar permanece en pose de reposo neutro sin bloquear.
- * 3. Sincronización continua de reproducción, saltos (seek) y velocidad (playbackRate).
  * 4. Gestión dinámica de canvas entre el PiP y la pestaña lateral "Avatar 3D".
  * 5. Captura síncrona de fotogramas 3D para el exportador de video (CompositeVideoExporter).
  */
 
 import { AvatarPanelController } from './avatar-controller.js?v=2.4.0';
+import { SequenceCompiler, applyCompiledSampleToModel } from './sequence-compiler.js';
 
 export class StudioAvatarBridge {
   constructor() {
@@ -27,7 +34,39 @@ export class StudioAvatarBridge {
     this.isReady = false;
     this.solidBgColor = '#20242b';
 
+    // Motor de compilación de secuencia fluida (pose(t) determinista)
+    this.fluidMode = true;
+    this.compiler = new SequenceCompiler({
+      maxSpeed: 1.6,
+      minSpeed: 0.70,
+      maxLagSec: 1.0,
+      restGapThresholdSec: 1.5,
+      extendEndForLag: true
+    });
+    this.clipMap = new Map();
+    this.clipMapVersion = '2.7';
+    this.lastSampleResult = null;
+    this.isManualPreviewActive = false;
+    this._extendedTailActive = false;
+    this._extendedTailTime = 0;
+    this._rebuildTimer = null;
+
     this.init();
+  }
+
+  /**
+   * Limpia la caché de clips compilados cuando cambia la versión del catálogo ('2.7' | '2.6' | '2.5')
+   * o se reinicia el proyecto.
+   */
+  clearClipCache(newVersion = null) {
+    this.clipMap.clear();
+    if (newVersion) {
+      this.clipMapVersion = String(newVersion);
+    }
+    this.compiler.compiled = null;
+    this.compiler.plan = null;
+    this.lastSampleResult = null;
+    this.currentGlossKey = null;
   }
 
   async init() {
@@ -50,6 +89,9 @@ export class StudioAvatarBridge {
       this.controller = new AvatarPanelController('view-side-avatar');
       window.avatarController = this.controller;
 
+      // Conectar hook de pre-actualización de 60 FPS para muestreo continuo de SequenceCompiler
+      this.controller.onPreUpdateCallback = (delta) => this.onEngineFrame(delta);
+
       // 2. Acoplar al PiP inicialmente
       if (this.controller && this.controller.engine) {
         this.dockToPip();
@@ -61,6 +103,10 @@ export class StudioAvatarBridge {
 
     this.subscribeAppState();
     this.subscribeSidebarTabs();
+
+    if (window.appState?.state?.project) {
+      this.preloadProjectSigns(window.appState.state.project);
+    }
   }
 
   /**
@@ -134,8 +180,9 @@ export class StudioAvatarBridge {
   subscribeAppState() {
     if (!window.appState) return;
 
-    // 1. Sincronización en tiempo real por reloj de reproducción
+    // 1. Sincronización en tiempo real por reloj de reproducción o salto (seek)
     window.appState.subscribe('timeupdate', ({ time }) => {
+      this._extendedTailActive = false;
       this.onTimeUpdate(time);
     });
 
@@ -143,12 +190,30 @@ export class StudioAvatarBridge {
     window.appState.subscribe('playbackStateChanged', (payload) => {
       if (!this.controller || this.isExportingDeterministic) return;
       const isPlaying = (typeof payload === 'object' && payload !== null) ? Boolean(payload.isPlaying) : Boolean(payload);
+      this.isManualPreviewActive = false;
+
       if (!isPlaying) {
+        const currentTime = Number(window.appState.state?.playback?.currentTime) || 0;
+        const duration = Number(window.appState.state?.playback?.duration) ||
+          Number(window.appState.state?.project?.media_info?.duration_seconds) || 0;
+        const seqEnd = this.getSequenceEndTime(duration);
+
+        // Política "se extiende el PiP": si el video llegó al final pero el avatar
+        // aún tiene desfase acumulado (<= 1.0s + retorno a reposo), continuar animando el PiP
+        if (this.fluidMode && duration > 0 && currentTime >= duration - 0.05 && seqEnd > currentTime + 0.03) {
+          this._extendedTailActive = true;
+          this._extendedTailTime = currentTime;
+          return;
+        }
+        this._extendedTailActive = false;
         this.controller.pause();
-      } else if (typeof this.controller.resume === 'function') {
-        this.controller.resume();
-      } else if (this.controller.player) {
-        this.controller.player.resume();
+      } else {
+        this._extendedTailActive = false;
+        if (typeof this.controller.resume === 'function') {
+          this.controller.resume();
+        } else if (this.controller.player) {
+          this.controller.player.resume();
+        }
       }
     });
 
@@ -161,14 +226,29 @@ export class StudioAvatarBridge {
       }
     });
 
-    // 4. Carga y limpieza de proyecto
+    // 4. Carga, edición y limpieza de proyecto
     window.appState.subscribe('projectLoaded', (project) => {
       this.currentGlossKey = null;
+      this.isManualPreviewActive = false;
+      this._extendedTailActive = false;
       this.preloadProjectSigns(project);
     });
 
+    const handleProjectMutation = () => {
+      const proj = window.appState?.state?.project;
+      if (proj) {
+        proj.__sequentialGlossesNormalized = false;
+        this.preloadProjectSigns(proj);
+      }
+    };
+
+    window.appState.subscribe('glossesChanged', handleProjectMutation);
+    window.appState.subscribe('segmentsChanged', handleProjectMutation);
+    window.appState.subscribe('sentenceUpdated', handleProjectMutation);
+
     window.appState.subscribe('projectCleared', () => {
-      this.currentGlossKey = null;
+      this._extendedTailActive = false;
+      this.clearClipCache();
       if (this.controller) {
         this.controller.stop();
       }
@@ -204,6 +284,225 @@ export class StudioAvatarBridge {
         });
       }
     });
+  }
+
+  /**
+   * Sincroniza los clips actualmente disponibles en caché hacia this.clipMap y recompila el plan de secuencia.
+   * @param {Object} [project]
+   * @returns {Object|null} Plan compilado por SequenceCompiler
+   */
+  rebuildSequencePlan(project = window.appState?.state?.project) {
+    if (!project) {
+      this.compiler.compiled = null;
+      return null;
+    }
+
+    const syncCtrl = this.controller?.syncController;
+    const activeVersion = String(syncCtrl?.preferredVersion || this.controller?.preferredVersion || '2.7');
+    if (this.clipMapVersion !== activeVersion) {
+      this.clipMap.clear();
+      this.clipMapVersion = activeVersion;
+    }
+
+    const allGlosses = project.glosses || [];
+    if (allGlosses.length > 1 && !project.__sequentialGlossesNormalized && window.appState?.resolveOverlappingGlossIntervals) {
+      window.appState.resolveOverlappingGlossIntervals(allGlosses, project.segments || []);
+      project.__sequentialGlossesNormalized = true;
+    }
+
+    const collectGlossName = (g) => {
+      const name = String(g?.gloss || g?.lemma || '').trim().toUpperCase();
+      if (!name) return;
+      let cached = null;
+      if (syncCtrl) {
+        cached = typeof syncCtrl.getCachedClip === 'function'
+          ? syncCtrl.getCachedClip(name, activeVersion)
+          : syncCtrl.clipCache?.get(`${activeVersion}:${name}`);
+      }
+      if (!cached && this.controller?.clips && typeof this.controller.clips[name] === 'object') {
+        cached = this.controller.clips[name];
+      }
+      if (cached && typeof cached === 'object') {
+        this.clipMap.set(name, cached);
+      }
+    };
+
+    for (const g of allGlosses) {
+      collectGlossName(g);
+    }
+    if (Array.isArray(project.segments)) {
+      for (const seg of project.segments) {
+        if (Array.isArray(seg?.glosses)) {
+          for (const g of seg.glosses) {
+            collectGlossName(g);
+          }
+        }
+      }
+    }
+
+    const videoDuration = Number(project.media_info?.duration_seconds) ||
+      Number(window.appState?.state?.playback?.duration) || 0;
+
+    return this.compiler.compile(project, this.clipMap, {
+      maxSpeed: 1.6,
+      minSpeed: 0.70,
+      maxLagSec: 1.0,
+      restGapThresholdSec: 1.5,
+      extendEndForLag: true,
+      videoDuration
+    });
+  }
+
+  /**
+   * Programa una recompilación diferida del plan cuando nuevos clips terminan de descargarse.
+   */
+  scheduleRebuildPlan() {
+    if (this._rebuildTimer) return;
+    this._rebuildTimer = setTimeout(() => {
+      this._rebuildTimer = null;
+      const proj = window.appState?.state?.project;
+      if (proj) {
+        this.rebuildSequencePlan(proj);
+        if (!this.isExportingDeterministic && !this.isManualPreviewActive) {
+          const t = Number(window.appState?.state?.playback?.currentTime) || 0;
+          this.applyFluidSampleAtTime(t);
+        }
+      }
+    }, 20);
+  }
+
+  /**
+   * Devuelve el tiempo final efectivo de la secuencia del avatar (incluyendo extensión de PiP
+   * si el avatar aún tiene lag acumulado al finalizar el video).
+   * @param {number} [fallbackDuration=0]
+   * @returns {number}
+   */
+  getSequenceEndTime(fallbackDuration = 0) {
+    const proj = window.appState?.state?.project;
+    if (proj && !this.compiler.compiled) {
+      this.rebuildSequencePlan(proj);
+    }
+    return this.compiler.getSequenceEndTime(fallbackDuration);
+  }
+
+  /**
+   * Evalúa determinísticamente el compilador en t = timeSec y aplica la pose resultante al modelo 3D.
+   * @param {number} timeSec
+   * @returns {Object|null} Resultado del muestreo
+   */
+  applyFluidSampleAtTime(timeSec) {
+    if (!this.controller || !this.controller.engine?.currentModel) return null;
+    const project = window.appState?.state?.project;
+    if (!project) return null;
+
+    const activeVersion = String(this.controller?.syncController?.preferredVersion || this.controller?.preferredVersion || '2.7');
+    if (!this.compiler.compiled || this.clipMapVersion !== activeVersion) {
+      this.rebuildSequencePlan(project);
+    }
+
+    // Verificar si la glosa nominalmente activa ya está en caché pero aún no en clipMap
+    const nominalEntry = this.resolveActiveGlossEntry(project, timeSec);
+    if (nominalEntry && nominalEntry.gloss) {
+      const gName = String(nominalEntry.gloss.gloss || nominalEntry.gloss.lemma || '').trim().toUpperCase();
+      if (gName && !this.clipMap.has(gName) && this.controller.syncController) {
+        const newlyCached = typeof this.controller.syncController.getCachedClip === 'function'
+          ? this.controller.syncController.getCachedClip(gName, activeVersion)
+          : this.controller.syncController.clipCache?.get(`${activeVersion}:${gName}`);
+        if (newlyCached) {
+          this.clipMap.set(gName, newlyCached);
+          this.rebuildSequencePlan(project);
+        } else if (!this.isExportingDeterministic) {
+          const isSingleLetterHyphenated = gName.includes('-') && gName.split('-').filter(Boolean).every(p => p.trim().length === 1);
+          const isFs = Boolean(nominalEntry.gloss.is_fingerspelling || isSingleLetterHyphenated || nominalEntry.gloss.gloss_type === 'DACTILOLOGÍA');
+          if (!isFs) {
+            this.controller.syncController.loadClipAsync(gName, { version: activeVersion }).then((loaded) => {
+              if (loaded && this.clipMapVersion === activeVersion) {
+                this.clipMap.set(gName, loaded);
+                this.scheduleRebuildPlan();
+              }
+            }).catch(() => {});
+          }
+        }
+      }
+    }
+
+    if (this.controller.player) {
+      this.controller.player.externalPoseControl = true;
+    }
+
+    const sampleResult = this.compiler.sample(timeSec);
+    this.lastSampleResult = sampleResult;
+
+    applyCompiledSampleToModel(
+      this.controller.engine.currentModel,
+      this.controller.isVRMActive,
+      sampleResult
+    );
+
+    // Sincronizar HUD y metadatos de resolución con la seña actualmente ejecutada por el avatar
+    const activeEntry = sampleResult.activeEntry;
+    const glossKey = activeEntry
+      ? `${activeEntry.orderIndex ?? 0}_${activeEntry.gloss}`
+      : (sampleResult.phase === 'transition' ? `trans_${sampleResult.subtype || ''}` : 'idle');
+
+    if (glossKey !== this.currentGlossKey) {
+      this.currentGlossKey = glossKey;
+      const displayGloss = activeEntry?.gloss || sampleResult.activeGloss || 'NEUTRAL';
+      if (this.controller.activeGlossHud) {
+        this.controller.activeGlossHud.textContent = displayGloss;
+      }
+      if (activeEntry?.gloss) {
+        const resMeta = this.getResolutionMetaForGloss(activeEntry.gloss);
+        if (resMeta) {
+          this.controller.lastPlayedResolutionMeta = resMeta;
+        }
+        if (window.glossOverlay && typeof window.glossOverlay.refreshBadgeWarning === 'function') {
+          window.glossOverlay.refreshBadgeWarning(activeEntry.gloss);
+        }
+      } else if (window.glossOverlay && typeof window.glossOverlay.render === 'function' && !this.isExportingDeterministic) {
+        window.glossOverlay.render(timeSec);
+      }
+    }
+
+    return sampleResult;
+  }
+
+  /**
+   * Hook invocado en cada fotograma de 60 FPS de AvatarEngine antes de vrm.update(delta).
+   * Garantiza interpolación suave a 60 FPS durante la reproducción en vivo y durante la
+   * extensión de cola del PiP al final del video.
+   * @param {number} delta
+   */
+  onEngineFrame(delta) {
+    if (!this.fluidMode || this.isExportingDeterministic || this.isManualPreviewActive) return;
+    const project = window.appState?.state?.project;
+    if (!project) return;
+
+    const isPlaying = Boolean(window.appState?.state?.playback?.isPlaying);
+    if (isPlaying) {
+      const videoEl = document.getElementById('main-video-element');
+      let t = Number(window.appState?.state?.playback?.currentTime) || 0;
+      if (videoEl && !videoEl.paused && videoEl.readyState >= 2 && Number.isFinite(videoEl.currentTime)) {
+        t = videoEl.currentTime;
+      }
+      this._extendedTailActive = false;
+      this.applyFluidSampleAtTime(t);
+    } else if (this._extendedTailActive) {
+      const rate = Number(window.appState?.state?.playback?.playbackRate) || 1.0;
+      this._extendedTailTime += Math.max(0, Math.min(delta, 0.1)) * rate;
+      const duration = Number(window.appState?.state?.playback?.duration) ||
+        Number(project.media_info?.duration_seconds) || 0;
+      const seqEnd = this.getSequenceEndTime(duration);
+
+      this.applyFluidSampleAtTime(this._extendedTailTime);
+      if (window.glossOverlay && typeof window.glossOverlay.render === 'function') {
+        window.glossOverlay.render(this._extendedTailTime);
+      }
+
+      if (this._extendedTailTime >= seqEnd) {
+        this._extendedTailActive = false;
+      }
+    }
   }
 
   /**
@@ -264,7 +563,7 @@ export class StudioAvatarBridge {
     if (activeIdx >= 0 && activeIdx + 1 < allGlosses.length) {
       const nextG = allGlosses[activeIdx + 1];
       const nextSt = nextG.start_seconds !== undefined ? nextG.start_seconds : (nextG.start_time !== undefined ? nextG.start_time : 0);
-      if (nextSt - et < 0.25) {
+      if (nextSt - et < 1.5) {
         hasContiguousNextGloss = true;
       }
     }
@@ -280,7 +579,7 @@ export class StudioAvatarBridge {
   }
 
   /**
-   * Devuelve los metadatos de resolución v2.6 (matchType, needsReview, warning, resolvedGloss)
+   * Devuelve los metadatos de resolución (matchType, needsReview, warning, resolvedGloss)
    * para mostrar avisos discretos en el PiP cuando una seña usa aproximación o requiere revisión.
    * @param {string} glossName
    * @returns {Object|null}
@@ -297,7 +596,13 @@ export class StudioAvatarBridge {
    */
   beginDeterministicExport() {
     this.isExportingDeterministic = true;
+    this.isManualPreviewActive = false;
+    this._extendedTailActive = false;
     this.currentGlossKey = null;
+    const project = window.appState?.state?.project;
+    if (project) {
+      this.rebuildSequencePlan(project);
+    }
     if (this.controller && this.controller.engine) {
       const engine = this.controller.engine;
       engine.stop();
@@ -366,7 +671,7 @@ export class StudioAvatarBridge {
   }
 
   /**
-   * Resuelve la glosa activa en el tiempo actual y solicita la animación.
+   * Sincroniza la pose del avatar para el instante dado (reproducción o scrub en la línea de tiempo).
    * @param {number} time
    */
   onTimeUpdate(time) {
@@ -374,6 +679,14 @@ export class StudioAvatarBridge {
     const project = window.appState?.state?.project;
     if (!project) return;
 
+    this.isManualPreviewActive = false;
+
+    if (this.fluidMode) {
+      this.applyFluidSampleAtTime(time);
+      return;
+    }
+
+    // Fallback legado por clip individual (tope máximo 1.6x)
     const entry = this.resolveActiveGlossEntry(project, time);
     const activeGloss = entry ? entry.gloss : null;
 
@@ -386,7 +699,6 @@ export class StudioAvatarBridge {
       const isSingleLetterHyphenated = glossName.includes('-') && glossName.split('-').filter(Boolean).every(p => p.trim().length === 1);
       const isFingerspelling = Boolean(activeGloss.is_fingerspelling || isSingleLetterHyphenated || (activeGloss.gloss_type === 'DACTILOLOGÍA'));
 
-      // Calcular timeScale dinámico para que la seña quepa legiblemente en su ventana sin ser omitida
       const basePlaybackRate = window.appState?.state?.playback?.playbackRate || 1.0;
       let dynamicSpeed = undefined;
       const cachedClip = this.controller.syncController?.getCachedClip
@@ -395,10 +707,9 @@ export class StudioAvatarBridge {
       if (cachedClip && cachedClip.durationMs && entry.slotDurationSec > 0) {
         const clipSec = cachedClip.durationMs / 1000;
         const fitRatio = clipSec / Math.max(0.24, entry.slotDurationSec);
-        dynamicSpeed = Math.max(1.0, Math.min(2.6, fitRatio)) * basePlaybackRate;
+        dynamicSpeed = Math.max(0.70, Math.min(1.6, fitRatio)) * basePlaybackRate;
       }
 
-      // Reproducir seña en avatar con coarticulación SLERP sin regresar a neutral entre señas contiguas
       this.controller.playGloss(glossName, {
         isFingerspelling,
         gloss_type: activeGloss.gloss_type,
@@ -406,7 +717,7 @@ export class StudioAvatarBridge {
         slotDurationSec: entry.slotDurationSec,
         basePlaybackRate,
         coarticulate: true,
-        coarticulationDurationSec: 0.12,
+        coarticulationDurationSec: 0.14,
         returnToNeutralOnEnd: !entry.hasContiguousNextGloss
       }).then(() => {
         if (window.glossOverlay && typeof window.glossOverlay.refreshBadgeWarning === 'function') {
@@ -414,11 +725,10 @@ export class StudioAvatarBridge {
         }
       }).catch(() => {});
     } else {
-      // Fuera de intervalo de seña: volver a reposo neutro (manos abajo, ocultas en PiP)
       if (this.controller.player && this.controller.clips?.NEUTRAL) {
         this.controller.player.play(this.controller.clips.NEUTRAL, {
           coarticulate: true,
-          coarticulationDurationSec: 0.16,
+          coarticulationDurationSec: 0.18,
           returnToNeutralOnEnd: true
         });
       }
@@ -433,7 +743,29 @@ export class StudioAvatarBridge {
    */
   async stepAtVideoTime(videoTimeSec, dt = 1 / 30) {
     if (!this.controller) return;
+    this.isManualPreviewActive = false;
     const project = window.appState?.state?.project;
+
+    if (project && this.fluidMode) {
+      const entry = this.resolveActiveGlossEntry(project, videoTimeSec);
+      if (entry && entry.gloss && this.controller.syncController) {
+        const glossName = String(entry.gloss.gloss || entry.gloss.lemma || '').toUpperCase().trim();
+        const isSingleLetterHyphenated = glossName.includes('-') && glossName.split('-').filter(Boolean).every(p => p.trim().length === 1);
+        const isFingerspelling = Boolean(entry.gloss.is_fingerspelling || isSingleLetterHyphenated || (entry.gloss.gloss_type === 'DACTILOLOGÍA'));
+        if (glossName && !isFingerspelling && !this.clipMap.has(glossName)) {
+          const loaded = await this.controller.syncController.loadClipAsync(glossName);
+          if (loaded) {
+            this.clipMap.set(glossName, loaded);
+            this.rebuildSequencePlan(project);
+          }
+        }
+      }
+
+      this.applyFluidSampleAtTime(videoTimeSec);
+      this.controller.stepDeterministic(dt);
+      return;
+    }
+
     if (project) {
       const entry = this.resolveActiveGlossEntry(project, videoTimeSec);
       const activeGloss = entry ? entry.gloss : null;
@@ -455,7 +787,7 @@ export class StudioAvatarBridge {
           let dynamicSpeed = undefined;
           if (cachedClip && cachedClip.durationMs && entry.slotDurationSec > 0) {
             const clipSec = cachedClip.durationMs / 1000;
-            dynamicSpeed = Math.max(1.0, Math.min(2.6, clipSec / Math.max(0.24, entry.slotDurationSec)));
+            dynamicSpeed = Math.max(0.70, Math.min(1.6, clipSec / Math.max(0.24, entry.slotDurationSec)));
           }
           await this.controller.playGloss(glossName, {
             isFingerspelling,
@@ -464,13 +796,13 @@ export class StudioAvatarBridge {
             slotDurationSec: entry.slotDurationSec,
             basePlaybackRate: 1.0,
             coarticulate: true,
-            coarticulationDurationSec: 0.12,
+            coarticulationDurationSec: 0.14,
             returnToNeutralOnEnd: !entry.hasContiguousNextGloss
           });
         } else if (this.controller.player && this.controller.clips?.NEUTRAL) {
           this.controller.player.play(this.controller.clips.NEUTRAL, {
             coarticulate: true,
-            coarticulationDurationSec: 0.16,
+            coarticulationDurationSec: 0.18,
             returnToNeutralOnEnd: true
           });
         }
@@ -481,7 +813,8 @@ export class StudioAvatarBridge {
   }
 
   /**
-   * Precarga en segundo plano todas las señas léxicas de la transcripción (incluyendo compuestas con guión como PRO1-PL o MÁS-DE) para cero latencia.
+   * Precarga en segundo plano todas las señas léxicas de la transcripción (incluyendo compuestas
+   * con guión como PRO1-PL o MÁS-DE) y compila el plan de secuencia fluida para cero latencia.
    */
   async preloadProjectSigns(project) {
     if (!project || !this.controller?.syncController) return;
@@ -490,12 +823,53 @@ export class StudioAvatarBridge {
       window.appState.resolveOverlappingGlossIntervals(glosses, project.segments || []);
       project.__sequentialGlossesNormalized = true;
     }
+
+    // Compilación inicial rápida con los clips ya presentes en caché
+    this.rebuildSequencePlan(project);
+
+    const uniqueNames = new Set();
     for (const g of glosses) {
-      const name = (g.gloss || g.lemma || '').trim();
+      const name = String(g?.gloss || g?.lemma || '').trim().toUpperCase();
       const isSingleLetterHyphenated = name.includes('-') && name.split('-').filter(Boolean).every(p => p.trim().length === 1);
       if (name && !isSingleLetterHyphenated && g.gloss_type !== 'DACTILOLOGÍA') {
-        this.controller.syncController.loadClipAsync(name).catch(() => {});
+        uniqueNames.add(name);
       }
+    }
+    if (Array.isArray(project.segments)) {
+      for (const seg of project.segments) {
+        if (Array.isArray(seg?.glosses)) {
+          for (const g of seg.glosses) {
+            const name = String(g?.gloss || g?.lemma || '').trim().toUpperCase();
+            const isSingleLetterHyphenated = name.includes('-') && name.split('-').filter(Boolean).every(p => p.trim().length === 1);
+            if (name && !isSingleLetterHyphenated && g.gloss_type !== 'DACTILOLOGÍA') {
+              uniqueNames.add(name);
+            }
+          }
+        }
+      }
+    }
+
+    const targetVersion = String(this.controller?.syncController?.preferredVersion || this.controller?.preferredVersion || '2.7');
+    const loadPromises = [];
+    for (const name of uniqueNames) {
+      const p = this.controller.syncController.loadClipAsync(name, { version: targetVersion })
+        .then((clip) => {
+          if (clip && this.clipMapVersion === targetVersion) {
+            this.clipMap.set(name, clip);
+            this.scheduleRebuildPlan();
+          }
+          return clip;
+        })
+        .catch(() => null);
+      loadPromises.push(p);
+    }
+
+    await Promise.all(loadPromises);
+    if (this.clipMapVersion !== targetVersion) return;
+    this.rebuildSequencePlan(project);
+    if (!this.isExportingDeterministic && !this.isManualPreviewActive) {
+      const currTime = Number(window.appState?.state?.playback?.currentTime) || 0;
+      this.applyFluidSampleAtTime(currTime);
     }
   }
 

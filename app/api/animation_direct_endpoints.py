@@ -19,6 +19,7 @@ import logging
 import os
 import re
 import shutil
+import sys
 import unicodedata
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -26,18 +27,36 @@ from typing import Any, Dict, List, Optional, Tuple
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
 
+_DICCIONARIO_LSEC_DIR = Path(r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC")
+if _DICCIONARIO_LSEC_DIR.is_dir() and str(_DICCIONARIO_LSEC_DIR) not in sys.path:
+    sys.path.insert(0, str(_DICCIONARIO_LSEC_DIR))
+
+try:
+    import lsec_non_manual_standard as lsec_cnm
+except Exception:
+    lsec_cnm = None  # type: ignore
+
 logger = logging.getLogger(__name__)
 
 animation_router = APIRouter(prefix="/api/v1/animations", tags=["Animaciones Directas 1:1 (VRM)"])
 
 # Directorios candidatos para localizar las animaciones generadas (100% disco local)
-# Versión 2.6 corregida preferida, con fallback a versión 2.5
+# Versión 2.7 estandarizada preferida, con fallback a versión 2.6 corregida y versión 2.5
 CANDIDATE_PATHS = [
     Path(os.environ.get("LSEC_ANIMATIONS_DIR", "")) if os.environ.get("LSEC_ANIMATIONS_DIR") else None,
+    Path(r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC\senas_vrm_standardized_v2.7"),
+    Path(r"c:\Users\brana\Desktop\TIC Software\senas_vrm_standardized_v2.7"),
     Path(r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC\senas_vrm_direct_v2.6"),
     Path(r"c:\Users\brana\Desktop\TIC Software\senas_vrm_direct_v2.6"),
     Path(r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC\senas_vrm_direct"),
     Path(r"c:\Users\brana\Desktop\TIC Software\senas_vrm_direct"),
+    Path(r"c:\Users\brana\Desktop\TIC Software\_archive\Diccionario LSEC\senas_vrm_direct"),
+]
+
+V27_CANDIDATE_PATHS = [
+    Path(os.environ.get("LSEC_ANIMATIONS_V27_DIR", "")) if os.environ.get("LSEC_ANIMATIONS_V27_DIR") else None,
+    Path(r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC\senas_vrm_standardized_v2.7"),
+    Path(r"c:\Users\brana\Desktop\TIC Software\senas_vrm_standardized_v2.7"),
 ]
 
 V26_CANDIDATE_PATHS = [
@@ -50,6 +69,7 @@ V25_CANDIDATE_PATHS = [
     Path(os.environ.get("LSEC_ANIMATIONS_DIR", "")) if os.environ.get("LSEC_ANIMATIONS_DIR") else None,
     Path(r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC\senas_vrm_direct"),
     Path(r"c:\Users\brana\Desktop\TIC Software\senas_vrm_direct"),
+    Path(r"c:\Users\brana\Desktop\TIC Software\_archive\Diccionario LSEC\senas_vrm_direct"),
 ]
 
 # Directorios candidatos para videos originales Ultra HD e ilustraciones (100% disco local)
@@ -59,10 +79,40 @@ UHD_CANDIDATE_PATHS = [
     Path(r"c:\Users\brana\Desktop\TIC Software\senas_ultra_hd"),
 ]
 
+# Directorios candidatos de respaldo para videos originales sanos del corpus (100% disco local)
+SENAS_CANDIDATE_PATHS = [
+    Path(os.environ.get("LSEC_SENAS_DIR", "")) if os.environ.get("LSEC_SENAS_DIR") else None,
+    Path(r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC\senas"),
+    Path(r"c:\Users\brana\Desktop\TIC Software\senas"),
+]
+
 _resolved_dir: Optional[Path] = None
 _cached_signs: Optional[List[str]] = None
 _cached_metadata: Optional[Dict[str, Dict[str, Any]]] = None
 _cached_ordered_items: Optional[List[Dict[str, Any]]] = None
+_video_health_cache: Dict[Tuple[str, float, int], bool] = {}
+_dir_norm_map_cache: Dict[str, Dict[str, List[Path]]] = {}
+_v27_stroke_index_cache: Optional[Dict[str, Any]] = None
+_v27_stroke_norm_map: Optional[Dict[str, Dict[str, Any]]] = None
+
+
+def _get_norm_dir_map(base_dir: Path) -> Dict[str, List[Path]]:
+    """Construye y cachea un índice O(1) de nombre normalizado -> carpetas dentro de base_dir."""
+    key = str(base_dir.resolve())
+    if key in _dir_norm_map_cache:
+        return _dir_norm_map_cache[key]
+    mapping: Dict[str, List[Path]] = {}
+    try:
+        with os.scandir(str(base_dir)) as it:
+            for entry in it:
+                if entry.is_dir() and not entry.name.startswith("."):
+                    nk = normalize_text(entry.name)
+                    if nk:
+                        mapping.setdefault(nk, []).append(Path(entry.path))
+    except Exception:
+        pass
+    _dir_norm_map_cache[key] = mapping
+    return mapping
 
 
 def normalize_text(text: str) -> str:
@@ -74,6 +124,68 @@ def normalize_text(text: str) -> str:
     s = "".join(c for c in s if not unicodedata.combining(c))
     s = re.sub(r"[^a-z0-9]", "", s)
     return s
+
+
+def get_v27_dir() -> Optional[Path]:
+    """Devuelve el directorio base de animaciones directas VRM v2.7 estandarizadas si existe."""
+    for candidate in V27_CANDIDATE_PATHS:
+        if candidate and candidate.is_dir():
+            return candidate
+    return None
+
+
+def get_v27_stroke_index() -> Dict[str, Any]:
+    """Carga y cachea en memoria el índice de trazos activos precalculado (stroke_index.json) para v2.7."""
+    global _v27_stroke_index_cache, _v27_stroke_norm_map
+    if _v27_stroke_index_cache is not None:
+        return _v27_stroke_index_cache
+
+    candidates: List[Path] = []
+    v27_dir = get_v27_dir()
+    if v27_dir:
+        candidates.append(v27_dir / "stroke_index.json")
+    local_data_idx = Path(__file__).resolve().parent.parent / "data" / "stroke_index_v27.json"
+    candidates.append(local_data_idx)
+
+    for idx_path in candidates:
+        if idx_path and idx_path.is_file():
+            try:
+                payload = json.loads(idx_path.read_text(encoding="utf-8"))
+                if isinstance(payload, dict) and isinstance(payload.get("signs"), dict):
+                    _v27_stroke_index_cache = payload
+                    norm_map: Dict[str, Dict[str, Any]] = {}
+                    for k, v in payload["signs"].items():
+                        if isinstance(v, dict):
+                            nk = normalize_text(k)
+                            if nk and nk not in norm_map:
+                                norm_map[nk] = v
+                    _v27_stroke_norm_map = norm_map
+                    logger.info("✓ Índice de trazos v2.7 cargado (%d señas) desde %s", len(payload["signs"]), idx_path)
+                    return _v27_stroke_index_cache
+            except Exception as exc:
+                logger.warning("Error leyendo stroke_index.json en %s: %s", idx_path, exc)
+
+    _v27_stroke_index_cache = {"version": "2.7", "totalSigns": 0, "summary": {}, "signs": {}}
+    _v27_stroke_norm_map = {}
+    return _v27_stroke_index_cache
+
+
+def get_sign_stroke_entry(sign_name: Optional[str]) -> Optional[Dict[str, Any]]:
+    """Obtiene la entrada de trazo activo y poses de ancla para una seña del catálogo v2.7."""
+    if not sign_name:
+        return None
+    idx_payload = get_v27_stroke_index()
+    signs_map = idx_payload.get("signs") or {}
+    if not signs_map:
+        return None
+    clean = unicodedata.normalize("NFC", sign_name.strip())
+    if clean in signs_map:
+        return signs_map[clean]
+    if sign_name in signs_map:
+        return signs_map[sign_name]
+    if _v27_stroke_norm_map:
+        return _v27_stroke_norm_map.get(normalize_text(clean))
+    return None
 
 
 def get_v26_dir() -> Optional[Path]:
@@ -89,33 +201,334 @@ def get_v25_dir() -> Path:
     for candidate in V25_CANDIDATE_PATHS:
         if candidate and candidate.is_dir():
             return candidate
+    archive_fallback = Path(r"c:\Users\brana\Desktop\TIC Software\_archive\Diccionario LSEC\senas_vrm_direct")
+    if archive_fallback.is_dir():
+        return archive_fallback
     return Path(r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC\senas_vrm_direct")
 
 
 def get_animations_dir() -> Path:
-    """Devuelve el directorio base de animaciones directas VRM (catálogo completo)."""
+    """Devuelve el directorio base de animaciones directas VRM (v2.7 preferente, con fallback a v2.6 -> v2.5 / _archive)."""
     global _resolved_dir
     if _resolved_dir and _resolved_dir.is_dir():
         return _resolved_dir
 
+    v27 = get_v27_dir()
+    if v27 and v27.is_dir():
+        _resolved_dir = v27
+        logger.info("✓ Directorio de animaciones directas VRM resuelto en (v2.7 primario): %s", _resolved_dir)
+        return _resolved_dir
+
+    v26 = get_v26_dir()
+    if v26 and v26.is_dir():
+        _resolved_dir = v26
+        logger.info("✓ Directorio de animaciones directas VRM resuelto en (v2.6 fallback): %s", _resolved_dir)
+        return _resolved_dir
+
     _resolved_dir = get_v25_dir()
-    logger.info("✓ Directorio de animaciones directas VRM resuelto en: %s", _resolved_dir)
+    logger.info("✓ Directorio de animaciones directas VRM resuelto en (v2.5 fallback): %s", _resolved_dir)
     return _resolved_dir
 
 
 def get_uhd_dir() -> Optional[Path]:
     """Devuelve el directorio base de señas Ultra HD."""
+    env_dir = os.environ.get("LSEC_UHD_DIR")
+    if env_dir:
+        p = Path(env_dir)
+        return p if p.is_dir() else None
     for candidate in UHD_CANDIDATE_PATHS:
         if candidate and candidate.is_dir():
             return candidate
     return None
 
 
+def get_senas_dir() -> Optional[Path]:
+    """Devuelve el directorio base del corpus original de señas (fallback sano)."""
+    env_dir = os.environ.get("LSEC_SENAS_DIR")
+    if env_dir:
+        p = Path(env_dir)
+        return p if p.is_dir() else None
+    for candidate in SENAS_CANDIDATE_PATHS:
+        if candidate and candidate.is_dir():
+            return candidate
+    return None
+
+
+def _is_video_stream_healthy(video_path: Path) -> bool:
+    """
+    Verifica rápidamente que un archivo de video local sea íntegro y reproducible
+    (cajas ISO-BMFF íntegras en MP4, primer cuadro decodificable, demuxeado completo
+    desde el paquete #0 sin truncamiento y paquetes NAL H.264 íntegros).
+    Cachea el resultado por (ruta, mtime, tamaño).
+    """
+    try:
+        if not video_path or not video_path.is_file():
+            return False
+        st = video_path.stat()
+        file_size = st.st_size
+        if file_size < 1024:
+            return False
+        cache_key = (str(video_path), st.st_mtime, file_size)
+        if cache_key in _video_health_cache:
+            return _video_health_cache[cache_key]
+    except Exception:
+        return False
+
+    import struct
+    healthy = True
+    try:
+        if video_path.suffix.lower() == ".mp4":
+            with video_path.open("rb") as f:
+                head = f.read(min(file_size, 65536))
+                if b"moov" not in head and file_size <= 65536:
+                    healthy = False
+                elif b"moof" not in head:
+                    # MP4 estándar no fragmentado: validar cajas ISO-BMFF de nivel superior
+                    if head.count(b"moov") > 1:
+                        healthy = False
+                    else:
+                        pos = 0
+                        moov_count = 0
+                        mdat_count = 0
+                        while pos + 8 <= file_size:
+                            f.seek(pos)
+                            hdr = f.read(16)
+                            if len(hdr) < 8:
+                                break
+                            bsz, btype = struct.unpack(">I4s", hdr[:8])
+                            if bsz == 1 and len(hdr) >= 16:
+                                bsz = struct.unpack(">Q", hdr[8:16])[0]
+                            elif bsz == 0:
+                                bsz = file_size - pos
+                            if bsz < 8 or pos + bsz > file_size:
+                                healthy = False
+                                break
+                            if btype == b"moov":
+                                moov_count += 1
+                            elif btype == b"mdat":
+                                mdat_count += 1
+                            pos += bsz
+                        if moov_count != 1 or mdat_count < 1:
+                            healthy = False
+
+        if healthy:
+            import av
+            codec = ""
+            expected_frames = 0
+            expected_duration_sec = 0.0
+            with av.open(str(video_path), mode="r", timeout=3.0) as container:
+                if not container.streams.video:
+                    healthy = False
+                else:
+                    vs = container.streams.video[0]
+                    codec = vs.codec_context.name or ""
+                    expected_frames = vs.frames or 0
+                    if vs.duration is not None and vs.time_base is not None:
+                        expected_duration_sec = float(vs.duration * vs.time_base)
+                    elif container.duration is not None:
+                        expected_duration_sec = float(container.duration) / 1_000_000.0
+                    first_frame = next(container.decode(video=0), None)
+                    if first_frame is None:
+                        healthy = False
+
+            if healthy:
+                # Abrir contenedor fresco para demuxear desde el paquete #0 sin omitir paquetes de lookahead
+                with av.open(str(video_path), mode="r", timeout=3.0) as c2:
+                    vs2 = c2.streams.video[0]
+                    tb2 = float(vs2.time_base) if vs2.time_base is not None else 0.0
+                    total_pkts = 0
+                    max_pts_sec = 0.0
+                    for pkt in c2.demux(video=0):
+                        if pkt.dts is None and pkt.pts is None:
+                            continue
+                        total_pkts += 1
+                        pts_val = pkt.pts if pkt.pts is not None else pkt.dts
+                        if pts_val is not None and tb2 > 0:
+                            end_t = float(pts_val + (pkt.duration or 0)) * tb2
+                            if end_t > max_pts_sec:
+                                max_pts_sec = end_t
+                        b = bytes(pkt)
+                        n = len(b)
+                        if n == 0:
+                            healthy = False
+                            break
+                        if codec == "h264" and b[:4] != b"\x00\x00\x00\x01" and b[:3] != b"\x00\x00\x01":
+                            pos = 0
+                            while pos < n:
+                                if pos + 4 > n:
+                                    healthy = False
+                                    break
+                                nal_sz = struct.unpack(">I", b[pos : pos + 4])[0]
+                                if nal_sz <= 0 or pos + 4 + nal_sz > n:
+                                    healthy = False
+                                    break
+                                pos += 4 + nal_sz
+                            if not healthy:
+                                break
+                    if healthy:
+                        if total_pkts == 0:
+                            healthy = False
+                        elif expected_frames > 0 and total_pkts < expected_frames:
+                            healthy = False
+                        elif expected_duration_sec > 0.5 and max_pts_sec > 0 and max_pts_sec < expected_duration_sec * 0.75:
+                            healthy = False
+    except ImportError:
+        healthy = True
+    except Exception:
+        healthy = False
+
+    _video_health_cache[cache_key] = healthy
+    return healthy
+
+
+_cached_catalog_mtime: float = 0.0
+_cached_handshape_schema_mtime: float = 0.0
+_cached_handshape_schema: Optional[Dict[str, Any]] = None
+
+_MAIN_CM_IDS = {
+    *[f"configuracion_manual_{i}" for i in range(1, 10)],
+    "configuracion_manual_rostro",
+    "configuracion_manual_*",
+}
+
+
+def get_configuracion_manual_dir() -> Optional[Path]:
+    """Devuelve el directorio local de láminas y variantes de Configuración Manual (I a IX, Rostro y *)."""
+    candidates = [
+        Path(r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC\configuracion_manual"),
+        Path(__file__).resolve().parent.parent.parent.parent / "Diccionario LSEC" / "configuracion_manual",
+    ]
+    for c in candidates:
+        if c.is_dir():
+            return c
+    return None
+
+
+def _load_handshape_schema() -> Dict[str, Any]:
+    """Carga el esquema de las 9 configuraciones manuales + Rostro + * y sus sub-variantes."""
+    global _cached_handshape_schema, _cached_handshape_schema_mtime
+    cm_dir = get_configuracion_manual_dir()
+    if cm_dir:
+        schema_file = cm_dir / "esquema_variantes.json"
+        if schema_file.is_file():
+            try:
+                mtime = schema_file.stat().st_mtime
+                if _cached_handshape_schema is not None and _cached_handshape_schema_mtime == mtime:
+                    return _cached_handshape_schema
+                _cached_handshape_schema = json.loads(schema_file.read_text(encoding="utf-8"))
+                _cached_handshape_schema_mtime = mtime
+                return _cached_handshape_schema
+            except Exception as exc:
+                logger.warning("Error leyendo esquema_variantes.json: %s", exc)
+    if _cached_handshape_schema is not None:
+        return _cached_handshape_schema
+    _cached_handshape_schema = {}
+    return _cached_handshape_schema
+
+
+def _enrich_item_with_handshape_meta(item: Dict[str, Any]) -> Dict[str, Any]:
+    """Asegura que un ítem de seña contenga metadata completa de Configuración Manual, sub-variante y URLs."""
+    schema = _load_handshape_schema()
+    cats = [str(c) for c in (item.get("categorias") or [])]
+
+    cm_id = item.get("hand_configuration") or item.get("configuracion_manual")
+    if not cm_id or cm_id not in _MAIN_CM_IDS:
+        cm_id = next((c for c in cats if c in _MAIN_CM_IDS), "configuracion_manual_*")
+    item["hand_configuration"] = cm_id
+
+    alfa = item.get("alphabetical_group")
+    if not alfa:
+        alfa = next((c for c in cats if c.startswith("alfa-")), None)
+    item["alphabetical_group"] = alfa
+
+    cm_meta = schema.get(cm_id) or {}
+    roman = cm_meta.get("roman") or ("*" if cm_id.endswith("*") else cm_id.replace("configuracion_manual_", "").upper())
+    color_hex = cm_meta.get("color_hex") or "#64748B"
+    sheet_img = cm_meta.get("sheet_image")
+    sheet_url = f"/configuracion-manual/{sheet_img}" if sheet_img else None
+
+    v_id = item.get("hand_variant") or item.get("configuracion_manual_variante")
+    if not v_id:
+        v_id = next(
+            (c for c in cats if c.startswith(f"{cm_id}_") and c not in _MAIN_CM_IDS),
+            "configuracion_manual_*_sin_recuadro" if cm_id == "configuracion_manual_*" else f"{cm_id}_base",
+        )
+    item["hand_variant"] = v_id
+
+    v_meta: Dict[str, Any] = {}
+    for v in cm_meta.get("variants") or []:
+        if v.get("variant_id") == v_id:
+            v_meta = v
+            break
+    if not v_meta and (cm_meta.get("variants") or []):
+        v_meta = cm_meta["variants"][0]
+
+    v_short = item.get("hand_variant_key") or item.get("configuracion_manual_variante_key") or v_meta.get("short_key") or "base"
+    v_label = item.get("hand_variant_label") or item.get("configuracion_manual_variante_label") or v_meta.get("label") or f"{roman}-{v_short.upper()}"
+    v_img_rel = v_meta.get("image_file")
+    v_img_url = f"/configuracion-manual/{v_img_rel}" if v_img_rel else None
+
+    is_face_only = bool(
+        cm_id == "configuracion_manual_rostro"
+        or cm_meta.get("face_only")
+        or item.get("face_only")
+        or item.get("solo_rostro")
+    )
+    arms_rest = bool(
+        is_face_only
+        or cm_meta.get("arms_in_rest_pose")
+        or item.get("arms_in_rest_pose")
+        or item.get("brazos_en_reposo")
+    )
+
+    item["hand_variant_key"] = v_short
+    item["hand_variant_label"] = v_label
+    item["face_only"] = is_face_only
+    item["arms_in_rest_pose"] = arms_rest
+
+    if lsec_cnm is not None:
+        cnm_cls = lsec_cnm.classify_sign_non_manual(
+            sign_name=str(item.get("sign") or item.get("palabra") or ""),
+            slug=str(item.get("slug") or ""),
+            palabra=str(item.get("palabra") or item.get("sign") or ""),
+            hand_configuration=cm_id,
+            hand_variant=v_id,
+            solo_rostro=is_face_only,
+            extra_metadata=item,
+        )
+        item["has_explicit_facial_expression"] = cnm_cls["hasExplicitFacialExpression"]
+        item["default_neutral_facial_mode"] = cnm_cls["defaultNeutralMode"]
+        item["facial_archetype"] = cnm_cls["archetype"]
+        item["facial_archetype_label"] = cnm_cls["archetypeLabel"]
+        item["non_manual_standard"] = cnm_cls
+    else:
+        item["has_explicit_facial_expression"] = is_face_only
+        item["default_neutral_facial_mode"] = not is_face_only
+        item["facial_archetype"] = "plea_empathy" if is_face_only else "neutral"
+        item["facial_archetype_label"] = "Expresión Facial" if is_face_only else "Neutral (Por Defecto)"
+
+    item["hand_configuration_meta"] = {
+        "id": cm_id,
+        "number": cm_meta.get("number"),
+        "roman": roman,
+        "name": cm_meta.get("name") or cm_id,
+        "color_hex": color_hex,
+        "sheet_image": sheet_img,
+        "sheet_url": sheet_url,
+        "variant_id": v_id,
+        "variant_key": v_short,
+        "variant_label": v_label,
+        "variant_description": v_meta.get("description") or v_label,
+        "variant_image_url": v_img_url,
+        "face_only": is_face_only,
+        "arms_in_rest_pose": arms_rest,
+    }
+    return item
+
+
 def _load_catalog_cache():
-    """Carga y cachea la lista ordenada según catalogo_lsec.json y metadata enriquecida."""
-    global _cached_signs, _cached_metadata, _cached_ordered_items
-    if _cached_signs is not None and _cached_metadata is not None:
-        return
+    """Carga y cachea la lista ordenada según catalogo_lsec.json y metadata enriquecida (normalizada en NFC y sin duplicados)."""
+    global _cached_signs, _cached_metadata, _cached_ordered_items, _cached_catalog_mtime
 
     base_dir = get_animations_dir()
     ordered_json = base_dir / "catalogo_ordenado.json"
@@ -124,6 +537,23 @@ def _load_catalog_cache():
         parent_ordered = base_dir.parent / "catalogo_ordenado_vrm.json"
         if parent_ordered.is_file():
             ordered_json = parent_ordered
+
+    current_mtime = 0.0
+    if ordered_json.is_file():
+        try:
+            current_mtime = ordered_json.stat().st_mtime
+        except OSError:
+            current_mtime = 0.0
+
+    schema = _load_handshape_schema()
+    effective_mtime = current_mtime + _cached_handshape_schema_mtime
+
+    if (
+        _cached_signs is not None
+        and _cached_metadata is not None
+        and _cached_catalog_mtime == effective_mtime
+    ):
+        return
 
     signs_list: List[str] = []
     meta_dict: Dict[str, Dict[str, Any]] = {}
@@ -135,15 +565,25 @@ def _load_catalog_cache():
                 data = json.load(f)
             raw_signs = data.get("signs", [])
             for item in raw_signs:
-                s_name = item.get("sign")
-                if s_name:
-                    signs_list.append(s_name)
-                    meta_dict[s_name] = item
-                    ordered_items.append(item)
+                raw_name = item.get("sign")
+                if not raw_name:
+                    continue
+                s_name = unicodedata.normalize("NFC", str(raw_name).strip())
+                if not s_name or s_name in meta_dict:
+                    continue
+                norm_item = dict(item)
+                norm_item["sign"] = s_name
+                if "palabra" in norm_item and isinstance(norm_item["palabra"], str):
+                    norm_item["palabra"] = unicodedata.normalize("NFC", norm_item["palabra"].strip())
+                _enrich_item_with_handshape_meta(norm_item)
+                signs_list.append(s_name)
+                meta_dict[s_name] = norm_item
+                ordered_items.append(norm_item)
             _cached_signs = signs_list
             _cached_metadata = meta_dict
             _cached_ordered_items = ordered_items
-            logger.info("✓ Cargadas %d señas ordenadas desde %s", len(_cached_signs), ordered_json)
+            _cached_catalog_mtime = effective_mtime
+            logger.info("✓ Cargadas %d señas ordenadas (NFC únicas) desde %s", len(_cached_signs), ordered_json)
             return
         except Exception as exc:
             logger.warning("Error leyendo %s: %s", ordered_json, exc)
@@ -155,22 +595,24 @@ def _load_catalog_cache():
             with open(csv_file, "r", encoding="utf-8", errors="replace") as f:
                 reader = csv.DictReader(f)
                 for idx, row in enumerate(reader, start=1):
-                    sign = row.get("sign", "").strip()
+                    raw_sign = row.get("sign", "").strip()
+                    sign = unicodedata.normalize("NFC", raw_sign)
                     if sign and sign not in meta_dict:
                         signs_list.append(sign)
-                        item_meta = {
+                        palabra_nfc = unicodedata.normalize("NFC", (row.get("palabra") or sign).strip())
+                        item_meta = _enrich_item_with_handshape_meta({
                             "sign": sign,
                             "catalog_index": int(row.get("catalog_index", idx)) if row.get("catalog_index") else idx,
                             "slug": row.get("slug", ""),
-                            "palabra": row.get("palabra", sign),
+                            "palabra": palabra_nfc,
                             "qa": row,
-                        }
+                        })
                         meta_dict[sign] = item_meta
                         ordered_items.append(item_meta)
             _cached_signs = signs_list
             _cached_metadata = meta_dict
             _cached_ordered_items = ordered_items
-            logger.info("✓ Indexadas %d señas desde qa_summary.csv", len(_cached_signs))
+            logger.info("✓ Indexadas %d señas únicas (NFC) desde qa_summary.csv", len(_cached_signs))
             return
         except Exception as exc:
             logger.warning("Error leyendo qa_summary.csv: %s", exc)
@@ -178,18 +620,18 @@ def _load_catalog_cache():
     # Fallback 2: listdir directo
     try:
         raw = [
-            name for name in os.listdir(base_dir)
+            unicodedata.normalize("NFC", name) for name in os.listdir(base_dir)
             if not name.startswith(".") and not name.endswith(".csv") and not name.endswith(".json")
             and (base_dir / name).is_dir()
         ]
-        signs_list = sorted(raw, key=lambda s: s.lower())
+        signs_list = sorted(set(raw), key=lambda s: s.lower())
         for idx, s in enumerate(signs_list, start=1):
-            meta_dict[s] = {"sign": s, "catalog_index": idx, "palabra": s}
+            meta_dict[s] = _enrich_item_with_handshape_meta({"sign": s, "catalog_index": idx, "palabra": s})
             ordered_items.append(meta_dict[s])
         _cached_signs = signs_list
         _cached_metadata = meta_dict
         _cached_ordered_items = ordered_items
-        logger.info("✓ Indexadas %d señas mediante listdir", len(_cached_signs))
+        logger.info("✓ Indexadas %d señas únicas (NFC) mediante listdir", len(_cached_signs))
     except Exception as exc:
         logger.warning("Error listando directorio %s: %s", base_dir, exc)
         _cached_signs = []
@@ -209,12 +651,16 @@ def get_sign_metadata(sign_name: str) -> Optional[Dict[str, Any]]:
     if not _cached_metadata:
         return None
 
-    # Búsqueda exacta
+    sign_nfc = unicodedata.normalize("NFC", sign_name)
+
+    # Búsqueda exacta (NFC o literal)
+    if sign_nfc in _cached_metadata:
+        return _cached_metadata[sign_nfc]
     if sign_name in _cached_metadata:
         return _cached_metadata[sign_name]
 
     # Búsqueda insensible a mayúsculas y acentos
-    norm_target = normalize_text(sign_name)
+    norm_target = normalize_text(sign_nfc)
     for name, meta in _cached_metadata.items():
         if (
             normalize_text(name) == norm_target
@@ -225,42 +671,134 @@ def get_sign_metadata(sign_name: str) -> Optional[Dict[str, Any]]:
 
     # Búsqueda en info.json dentro de la carpeta local de la seña
     base_dir = get_animations_dir()
-    info_file = base_dir / sign_name / "info.json"
-    if info_file.is_file():
-        try:
-            with open(info_file, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            pass
+    for candidate_name in (sign_nfc, sign_name, unicodedata.normalize("NFD", sign_nfc)):
+        info_file = base_dir / candidate_name / "info.json"
+        if info_file.is_file():
+            try:
+                with open(info_file, "r", encoding="utf-8") as f:
+                    info_obj = json.load(f)
+                return _enrich_item_with_handshape_meta(info_obj)
+            except Exception:
+                pass
 
     return None
 
 
-@animation_router.get("/list", summary="Lista todas las señas con animación directa 1:1 en orden oficial del catálogo")
+def _cm_sort_key(cm_id: Optional[str]) -> int:
+    if not cm_id:
+        return 99
+    if cm_id.endswith("rostro"):
+        return 10
+    if cm_id.endswith("*"):
+        return 11
+    m = re.search(r"(\d+)$", cm_id)
+    return int(m.group(1)) if m else 99
+
+
+def _variant_sort_key(v_key: Optional[str]) -> int:
+    if not v_key or v_key in ("base", "sin_recuadro"):
+        return 0
+    m = re.search(r"(\d+)$", str(v_key))
+    return int(m.group(1)) if m else 99
+
+
+@animation_router.get("/list", summary="Lista todas las señas con animación directa 1:1 con filtros de Configuración Manual, Sub-variante y Letra")
 async def list_animations(
     q: Optional[str] = Query(None, description="Término de búsqueda opcional"),
+    hand_config: Optional[str] = Query(None, description="Filtrar por Configuración Manual (ej. configuracion_manual_3, configuracion_manual_rostro o configuracion_manual_*)"),
+    hand_variant: Optional[str] = Query(None, description="Filtrar por sub-variante (ej. configuracion_manual_3_v2 o configuracion_manual_rostro_base)"),
+    alfa: Optional[str] = Query(None, description="Filtrar por letra inicial del catálogo (ej. alfa-a)"),
+    category: Optional[str] = Query(None, description="Filtrar por categoría arbitraria en info.json"),
+    sort_by: Optional[str] = Query("catalog", description="Ordenamiento: 'catalog' (defecto), 'hand_config', 'alfa'"),
+    version: Optional[str] = Query(None, description="Versión preferida: '2.7', '2.6' o '2.5'"),
     limit: int = Query(5000, ge=1, le=10000, description="Límite de resultados devueltos"),
     offset: int = Query(0, ge=0, description="Desplazamiento para paginación"),
 ) -> Dict[str, Any]:
     """
-    Retorna la lista de señas directas 1:1 estrictamente ordenadas según
-    catalogo_lsec.json, incluyendo metadata para verificación y reproducción Ultra HD.
+    Retorna la lista de señas directas 1:1 ordenadas según catalogo_lsec.json (o por configuración manual),
+    incluyendo metadata de Configuración Manual (I–IX, Rostro y *), sub-variante y letra para verificación.
     """
     _load_catalog_cache()
     all_signs = _cached_signs or []
     all_items = _cached_ordered_items or []
 
-    if q and q.strip():
-        term = normalize_text(q)
-        filtered_pairs = [
-            (s, it) for s, it in zip(all_signs, all_items)
-            if term in normalize_text(s) or term in normalize_text(it.get("palabra", ""))
-        ]
-        filtered_signs = [p[0] for p in filtered_pairs]
-        filtered_items = [p[1] for p in filtered_pairs]
+    v27_dir = get_v27_dir()
+    v26_dir = get_v26_dir()
+    eff_version = version or ("2.7" if v27_dir else ("2.6" if v26_dir else "2.5"))
+    if eff_version == "2.7" and v27_dir:
+        pipeline_ver = "2.7_Estandarizado"
+    elif eff_version == "2.6" and v26_dir:
+        pipeline_ver = "2.6_Directo_1a1_corregido"
     else:
-        filtered_signs = all_signs
-        filtered_items = all_items
+        pipeline_ver = "2.5_Directo_1a1"
+
+    # Normalizar parámetros de filtro
+    hc_filter = hand_config.strip() if hand_config and hand_config.strip() else None
+    if hc_filter and hc_filter.isdigit():
+        hc_filter = f"configuracion_manual_{hc_filter}"
+    elif hc_filter and hc_filter.lower() in ("rostro", "face"):
+        hc_filter = "configuracion_manual_rostro"
+    elif hc_filter == "*":
+        hc_filter = "configuracion_manual_*"
+
+    hv_filter = hand_variant.strip() if hand_variant and hand_variant.strip() else None
+    alfa_filter = alfa.strip().lower() if alfa and alfa.strip() else None
+    if alfa_filter and len(alfa_filter) == 1 and alfa_filter.isalpha():
+        alfa_filter = f"alfa-{alfa_filter}"
+    cat_filter = category.strip().lower() if category and category.strip() else None
+    q_term = normalize_text(q) if (q and q.strip()) else None
+
+    filtered_pairs: List[Tuple[str, Dict[str, Any]]] = []
+    for s, it in zip(all_signs, all_items):
+        if hc_filter and it.get("hand_configuration") != hc_filter:
+            continue
+        if hv_filter and it.get("hand_variant") != hv_filter and it.get("hand_variant_key") != hv_filter:
+            continue
+        if alfa_filter:
+            it_alfa = (it.get("alphabetical_group") or "").lower()
+            it_cats = [str(c).lower() for c in (it.get("categorias") or [])]
+            if it_alfa != alfa_filter and alfa_filter not in it_cats:
+                continue
+        if cat_filter:
+            it_cats = [str(c).lower() for c in (it.get("categorias") or [])]
+            if cat_filter not in it_cats:
+                continue
+        if q_term:
+            if q_term not in normalize_text(s) and q_term not in normalize_text(it.get("palabra", "")):
+                continue
+        filtered_pairs.append((s, it))
+
+    if sort_by == "hand_config":
+        filtered_pairs.sort(
+            key=lambda pair: (
+                _cm_sort_key(pair[1].get("hand_configuration")),
+                _variant_sort_key(pair[1].get("hand_variant_key")),
+                str(pair[1].get("alphabetical_group") or "zzz"),
+                int(pair[1].get("catalog_index") or 999999),
+            )
+        )
+    elif sort_by == "alfa":
+        filtered_pairs.sort(
+            key=lambda pair: (
+                str(pair[1].get("alphabetical_group") or "zzz"),
+                int(pair[1].get("catalog_index") or 999999),
+            )
+        )
+
+    filtered_signs = [p[0] for p in filtered_pairs]
+    filtered_items = [p[1] for p in filtered_pairs]
+
+    # Calcular facetas sobre el conjunto filtrado para poblar selectores dinámicos
+    cm_facets: Dict[str, int] = {}
+    variant_facets: Dict[str, int] = {}
+    alfa_facets: Dict[str, int] = {}
+    for _, it in filtered_pairs:
+        cm_k = it.get("hand_configuration") or "configuracion_manual_*"
+        hv_k = it.get("hand_variant") or f"{cm_k}_base"
+        al_k = it.get("alphabetical_group") or "sin-alfa"
+        cm_facets[cm_k] = cm_facets.get(cm_k, 0) + 1
+        variant_facets[hv_k] = variant_facets.get(hv_k, 0) + 1
+        alfa_facets[al_k] = alfa_facets.get(al_k, 0) + 1
 
     total = len(filtered_signs)
     paged_signs = filtered_signs[offset : offset + limit]
@@ -271,17 +809,145 @@ async def list_animations(
         "offset": offset,
         "limit": limit,
         "query": q,
+        "version": eff_version,
+        "pipeline_version": pipeline_ver,
+        "filters": {
+            "hand_config": hc_filter,
+            "hand_variant": hv_filter,
+            "alfa": alfa_filter,
+            "category": cat_filter,
+            "sort_by": sort_by or "catalog",
+        },
+        "facets": {
+            "by_hand_configuration": cm_facets,
+            "by_hand_variant": variant_facets,
+            "by_alphabet": alfa_facets,
+        },
         "order": "Catálogo Oficial Diccionario LSEC (CONADIS)",
         "signs": paged_signs,
         "items": paged_items,
     }
 
 
+@animation_router.get("/handshapes", summary="Obtiene el catálogo jerárquico de Configuraciones Manuales LSEC (I–IX, Rostro y *) y sus sub-variantes")
+async def get_handshapes_catalog(
+    include_signs: bool = Query(False, description="Incluir el listado completo de señas dentro de cada configuración y sub-variante"),
+) -> Dict[str, Any]:
+    """
+    Devuelve la estructura oficial de las 9 Configuraciones Manuales (I a IX) + 'Rostro' + '*',
+    sus colores oficiales, URLs de las láminas completas y de los recortes de sub-variantes,
+    junto con el conteo exacto de señas por configuración, sub-variante y letra alfabética.
+    """
+    _load_catalog_cache()
+    schema = _load_handshape_schema()
+    all_items = _cached_ordered_items or []
+
+    all_cm_keys = [f"configuracion_manual_{i}" for i in range(1, 10)] + ["configuracion_manual_rostro", "configuracion_manual_*"]
+    configurations: List[Dict[str, Any]] = []
+    cm_lookup: Dict[str, Dict[str, Any]] = {}
+
+    for cm_key in all_cm_keys:
+        cm_meta = schema.get(cm_key) or {
+            "id": cm_key,
+            "number": None if cm_key.endswith("*") else (10 if cm_key.endswith("rostro") else int(cm_key.split("_")[-1])),
+            "roman": "*" if cm_key.endswith("*") else ("ROSTRO" if cm_key.endswith("rostro") else cm_key.split("_")[-1]),
+            "name": cm_key,
+            "color_hex": "#64748B",
+            "sheet_image": None if cm_key.endswith("*") else f"{cm_key}.jpg",
+            "variants": [],
+        }
+        sheet_img = cm_meta.get("sheet_image")
+        sheet_url = f"/configuracion-manual/{sheet_img}" if sheet_img else None
+
+        variants_list: List[Dict[str, Any]] = []
+        variants_map: Dict[str, Dict[str, Any]] = {}
+        for v in cm_meta.get("variants") or []:
+            v_id = v["variant_id"]
+            v_img = v.get("image_file")
+            v_entry: Dict[str, Any] = {
+                "variant_id": v_id,
+                "short_key": v.get("short_key") or "base",
+                "label": v.get("label") or v_id,
+                "description": v.get("description") or "",
+                "image_file": v_img,
+                "image_url": f"/configuracion-manual/{v_img}" if v_img else None,
+                "total_signs": 0,
+            }
+            if include_signs:
+                v_entry["signs"] = []
+            variants_list.append(v_entry)
+            variants_map[v_id] = v_entry
+
+        cfg_entry: Dict[str, Any] = {
+            "id": cm_key,
+            "number": cm_meta.get("number"),
+            "roman": cm_meta.get("roman"),
+            "name": cm_meta.get("name"),
+            "color_hex": cm_meta.get("color_hex"),
+            "sheet_image": sheet_img,
+            "sheet_url": sheet_url,
+            "face_only": bool(cm_meta.get("face_only") or cm_key == "configuracion_manual_rostro"),
+            "arms_in_rest_pose": bool(cm_meta.get("arms_in_rest_pose") or cm_key == "configuracion_manual_rostro"),
+            "total_signs": 0,
+            "variants_count": len(variants_list),
+            "by_alphabet": {},
+            "variants": variants_list,
+            "_variants_map": variants_map,
+        }
+        if include_signs:
+            cfg_entry["signs"] = []
+        configurations.append(cfg_entry)
+        cm_lookup[cm_key] = cfg_entry
+
+    global_alfa_counts: Dict[str, int] = {}
+    for it in all_items:
+        cm_key = it.get("hand_configuration") or "configuracion_manual_*"
+        if cm_key not in cm_lookup:
+            cm_key = "configuracion_manual_*"
+        cfg = cm_lookup[cm_key]
+        cfg["total_signs"] += 1
+
+        alfa = it.get("alphabetical_group") or "sin-alfa"
+        cfg["by_alphabet"][alfa] = cfg["by_alphabet"].get(alfa, 0) + 1
+        global_alfa_counts[alfa] = global_alfa_counts.get(alfa, 0) + 1
+
+        v_id = it.get("hand_variant") or f"{cm_key}_base"
+        v_map = cfg["_variants_map"]
+        v_target = v_map.get(v_id)
+        if v_target is None and v_map:
+            v_target = next(iter(v_map.values()))
+        if v_target is not None:
+            v_target["total_signs"] += 1
+            if include_signs:
+                v_target["signs"].append(it["sign"])
+
+        if include_signs:
+            cfg["signs"].append(it["sign"])
+
+    for cfg in configurations:
+        cfg.pop("_variants_map", None)
+
+    return {
+        "total_signs": len(all_items),
+        "total_configurations": len(configurations),
+        "total_handshape_variants": sum(len(c["variants"]) for c in configurations if c["id"] != "configuracion_manual_*"),
+        "by_alphabet": dict(sorted(global_alfa_counts.items())),
+        "configurations": configurations,
+    }
+
+
 @animation_router.get("/stats", summary="Estadísticas globales de cobertura y QA del pipeline 1:1")
-async def animation_stats(version: Optional[str] = Query(None, description="Versión preferida: '2.6' o '2.5'")) -> Dict[str, Any]:
+async def animation_stats(version: Optional[str] = Query(None, description="Versión preferida: '2.7', '2.6' o '2.5'")) -> Dict[str, Any]:
+    v27_dir = get_v27_dir()
     v26_dir = get_v26_dir()
-    v25_dir = get_animations_dir()
-    target_dir = v26_dir if (version == "2.6" and v26_dir) else v25_dir
+    v25_dir = get_v25_dir()
+    eff_version = version or ("2.7" if v27_dir else ("2.6" if v26_dir else "2.5"))
+    if eff_version == "2.7" and v27_dir:
+        target_dir = v27_dir
+    elif eff_version == "2.6" and v26_dir:
+        target_dir = v26_dir
+    else:
+        target_dir = v25_dir
     all_signs = get_available_signs()
     summary_csv = target_dir / "qa_summary.csv"
 
@@ -303,7 +969,12 @@ async def animation_stats(version: Optional[str] = Query(None, description="Vers
         except Exception as exc:
             logger.warning("Error leyendo qa_summary.csv: %s", exc)
 
-    ver_tag = "2.6_Directo_1a1_corregido" if (version == "2.6" and v26_dir) else "2.5_Directo_1a1"
+    if eff_version == "2.7" and v27_dir:
+        ver_tag = "2.7_Estandarizado"
+    elif eff_version == "2.6" and v26_dir:
+        ver_tag = "2.6_Directo_1a1_corregido"
+    else:
+        ver_tag = "2.5_Directo_1a1"
 
     v26_approved = 0
     v26_needs_review = 0
@@ -318,6 +989,26 @@ async def animation_stats(version: Optional[str] = Query(None, description="Vers
         except Exception:
             pass
 
+    v27_approved = 0
+    v27_needs_review = 0
+    v27_standardized = 0
+    v27_skipped = 0
+    if v27_dir and (v27_dir / "qa_summary.csv").is_file():
+        try:
+            with open(v27_dir / "qa_summary.csv", "r", encoding="utf-8", errors="replace") as fp:
+                for row in csv.DictReader(fp):
+                    if row.get("needs_review") == "True":
+                        v27_needs_review += 1
+                    else:
+                        v27_approved += 1
+                    h_status = (row.get("hand_std_status") or "").strip()
+                    if h_status == "STANDARDIZED":
+                        v27_standardized += 1
+                    elif h_status:
+                        v27_skipped += 1
+        except Exception:
+            pass
+
     return {
         "total_signs": len(all_signs),
         "directory": str(target_dir),
@@ -325,19 +1016,31 @@ async def animation_stats(version: Optional[str] = Query(None, description="Vers
         "needs_review": needs_review,
         "fps_distribution": fps_counts,
         "pipeline_version": ver_tag,
+        "version_active": eff_version,
+        "active_default_version": "2.7" if v27_dir else ("2.6" if v26_dir else "2.5"),
         "order": "Catálogo Oficial Diccionario LSEC (CONADIS)",
+        "v27_stats": {
+            "available": bool(v27_dir),
+            "approved": v27_approved,
+            "needs_review": v27_needs_review,
+            "standardized": v27_standardized,
+            "skipped": v27_skipped,
+            "total": v27_approved + v27_needs_review,
+            "version": "2.7_Estandarizado",
+            "directory": str(v27_dir) if v27_dir else None,
+        },
         "v26_stats": {
             "available": bool(v26_dir),
             "approved": v26_approved,
             "needs_review": v26_needs_review,
             "total": v26_approved + v26_needs_review,
-            "version": "2.6_Directo_1a1_corregido"
-        }
+            "version": "2.6_Directo_1a1_corregido",
+        },
     }
 
 
 # ==============================================================================
-# RESOLUTOR LÉXICO V2.6 SOBRE LAS 5,061 CARPETAS REALES EN DISCO
+# RESOLUTOR LÉXICO V2.7 / V2.6 SOBRE LAS CARPETAS REALES EN DISCO
 # ==============================================================================
 
 _v26_lexical_index: Optional[Dict[str, Any]] = None
@@ -501,33 +1204,52 @@ def parse_sign_title_tokens(folder_name: str) -> Tuple[List[str], List[str]]:
 
 
 def _build_v26_lexical_index() -> Dict[str, Any]:
-    """Construye y cachea el índice completo sobre las 5,061 carpetas reales de v2.6 y v2.5."""
+    """Construye y cachea el índice completo sobre las carpetas reales de v2.7, v2.6 y v2.5."""
     global _v26_lexical_index
     if _v26_lexical_index is not None:
         return _v26_lexical_index
 
+    v27_dir = get_v27_dir()
     v26_dir = get_v26_dir()
-    v25_dir = get_animations_dir()
+    v25_dir = get_v25_dir()
 
-    # 1. Leer qa_summary.csv de v2.6 para obtener needs_review y métricas de las 5,061 señas
+    # 1. Leer qa_summary.csv de v2.6 y enriquecer con v2.7 para obtener needs_review y métricas
     qa_map: Dict[str, Dict[str, Any]] = {}
     qa_norm_map: Dict[str, Dict[str, Any]] = {}
-    if v26_dir and (v26_dir / "qa_summary.csv").is_file():
-        try:
-            with open(v26_dir / "qa_summary.csv", "r", encoding="utf-8", errors="replace") as f:
-                for row in csv.DictReader(f):
-                    s_name = unicodedata.normalize("NFC", (row.get("sign") or "").strip())
-                    if s_name:
-                        qa_map[s_name] = row
-                        qa_norm_map[normalize_text(s_name)] = row
-        except Exception as exc:
-            logger.warning("No se pudo leer qa_summary.csv de v2.6: %s", exc)
+    for qa_src_dir in (v26_dir, v27_dir):
+        if qa_src_dir and (qa_src_dir / "qa_summary.csv").is_file():
+            try:
+                with open(qa_src_dir / "qa_summary.csv", "r", encoding="utf-8", errors="replace") as f:
+                    for row in csv.DictReader(f):
+                        s_name = unicodedata.normalize("NFC", (row.get("sign") or "").strip())
+                        if s_name:
+                            merged_row = dict(qa_map.get(s_name, {}))
+                            merged_row.update({k: v for k, v in row.items() if v is not None and v != ""})
+                            qa_map[s_name] = merged_row
+                            qa_norm_map[normalize_text(s_name)] = merged_row
+            except Exception as exc:
+                logger.warning("No se pudo leer qa_summary.csv de %s: %s", qa_src_dir, exc)
 
-    # 2. Escanear carpetas reales en v2.6 y v2.5
+    # 2. Escanear carpetas reales en v2.7, v2.6 y v2.5
+    v27_folders: Dict[str, Path] = {}
     v26_folders: Dict[str, Path] = {}
     v25_folders: Dict[str, Path] = {}
+    raw_v27_count = 0
     raw_v26_count = 0
     raw_v25_count = 0
+
+    if v27_dir and v27_dir.is_dir():
+        try:
+            for entry in os.scandir(v27_dir):
+                if entry.is_dir() and not entry.name.startswith("."):
+                    anim_p = Path(entry.path) / "animation.json"
+                    if anim_p.is_file():
+                        raw_v27_count += 1
+                        nfc_name = unicodedata.normalize("NFC", entry.name)
+                        if nfc_name not in v27_folders or unicodedata.is_normalized("NFC", entry.name):
+                            v27_folders[nfc_name] = Path(entry.path)
+        except Exception as exc:
+            logger.warning("Error escaneando v27_dir: %s", exc)
 
     if v26_dir and v26_dir.is_dir():
         try:
@@ -556,7 +1278,7 @@ def _build_v26_lexical_index() -> Dict[str, Any]:
         except Exception as exc:
             logger.warning("Error escaneando v25_dir: %s", exc)
 
-    all_canonical_names = sorted(set(v26_folders.keys()) | set(v25_folders.keys()))
+    all_canonical_names = sorted(set(v27_folders.keys()) | set(v26_folders.keys()) | set(v25_folders.keys()))
 
     exact_map: Dict[str, str] = {}
     head_map: Dict[str, List[str]] = {}
@@ -584,6 +1306,7 @@ def _build_v26_lexical_index() -> Dict[str, Any]:
                 part_map.setdefault(np, []).append(canonical)
 
     _v26_lexical_index = {
+        "v27_folders": v27_folders,
         "v26_folders": v26_folders,
         "v25_folders": v25_folders,
         "qa_map": qa_map,
@@ -591,13 +1314,16 @@ def _build_v26_lexical_index() -> Dict[str, Any]:
         "exact_map": exact_map,
         "head_map": head_map,
         "part_map": part_map,
+        "total_v27": raw_v27_count,
+        "unique_v27": len(v27_folders),
         "total_v26": raw_v26_count,
         "unique_v26": len(v26_folders),
         "total_v25": raw_v25_count,
         "unique_v25": len(v25_folders),
     }
     logger.info(
-        "✓ Índice léxico v2.6 construido: %d carpetas v2.6 (%d únicas NFC), %d exactas, %d cabeceras, %d partes",
+        "✓ Índice léxico v2.7/v2.6 construido: %d carpetas v2.7, %d carpetas v2.6 (%d únicas NFC), %d exactas, %d cabeceras, %d partes",
+        raw_v27_count,
         raw_v26_count,
         len(v26_folders),
         len(exact_map),
@@ -737,11 +1463,11 @@ def _is_fingerspelling_gloss(gloss: str) -> bool:
 
 def resolve_gloss_to_sign(
     gloss: str,
-    version: Optional[str] = "2.6",
+    version: Optional[str] = "2.7",
     include_animation: bool = False,
 ) -> Dict[str, Any]:
     """
-    Resuelve una glosa LSEC contra las 5,061 carpetas reales del catálogo v2.6 (con respaldo v2.5).
+    Resuelve una glosa LSEC contra las carpetas reales del catálogo v2.7 (con respaldo v2.6 -> v2.5).
     Nunca lanza HTTPException 404; devuelve estructura trazable con:
       found, gloss, resolved_gloss, sign, match_type, status, needs_review, warning,
       version_served, is_fingerspelling, qa, animation (opcional).
@@ -766,6 +1492,7 @@ def resolve_gloss_to_sign(
     exact_map: Dict[str, str] = idx["exact_map"]
     head_map: Dict[str, List[str]] = idx["head_map"]
     part_map: Dict[str, List[str]] = idx["part_map"]
+    v27_folders: Dict[str, Path] = idx.get("v27_folders", {})
     v26_folders: Dict[str, Path] = idx["v26_folders"]
     v25_folders: Dict[str, Path] = idx["v25_folders"]
     qa_map: Dict[str, Dict[str, Any]] = idx["qa_map"]
@@ -796,7 +1523,7 @@ def resolve_gloss_to_sign(
     # Nivel 1: Coincidencia exacta con el nombre de carpeta (o preferencia de homónimo directo)
     if norm_g in _PREFERRED_HOMONYMS:
         pref = _PREFERRED_HOMONYMS[norm_g]
-        if pref in v26_folders or pref in v25_folders:
+        if pref in v27_folders or pref in v26_folders or pref in v25_folders:
             resolved_sign = pref
             match_type = "exact" if normalize_text(pref) == norm_g else "compound"
             status_label = "EXACT" if match_type == "exact" else "VARIANT"
@@ -850,7 +1577,7 @@ def resolve_gloss_to_sign(
     if not resolved_sign and norm_g in _LSEC_LEXICAL_ALIASES:
         alias_target, alias_mtype = _LSEC_LEXICAL_ALIASES[norm_g]
         nt = normalize_text(alias_target)
-        if alias_target in v26_folders or alias_target in v25_folders:
+        if alias_target in v27_folders or alias_target in v26_folders or alias_target in v25_folders:
             resolved_sign = alias_target
             match_type = alias_mtype
             status_label = "ALIAS" if alias_mtype == "synonym" else "APPROXIMATE"
@@ -907,22 +1634,32 @@ def resolve_gloss_to_sign(
             "match_type": "none",
             "status": "MISSING",
             "needs_review": False,
-            "warning": f"Sin animación en catálogo v2.6 para '{clean_gloss}'",
+            "warning": f"Sin animación en catálogo v2.7/v2.6 para '{clean_gloss}'",
             "version_served": None,
             "is_fingerspelling": False,
             "qa": None,
             "animation": None,
         }
 
-    # Localizar archivo animation.json en v2.6 (preferido) o v2.5
+    # Localizar archivo animation.json según la versión solicitada (por defecto 2.7 -> 2.6 -> 2.5)
     anim_path: Optional[Path] = None
-    version_served = "2.6"
+    version_served = "2.7"
     if version == "2.5":
         if resolved_sign in v25_folders:
             anim_path = v25_folders[resolved_sign] / "animation.json"
             version_served = "2.5"
-    else:
+    elif version == "2.6":
         if resolved_sign in v26_folders:
+            anim_path = v26_folders[resolved_sign] / "animation.json"
+            version_served = "2.6"
+        elif resolved_sign in v25_folders:
+            anim_path = v25_folders[resolved_sign] / "animation.json"
+            version_served = "2.5"
+    else:
+        if resolved_sign in v27_folders:
+            anim_path = v27_folders[resolved_sign] / "animation.json"
+            version_served = "2.7"
+        elif resolved_sign in v26_folders:
             anim_path = v26_folders[resolved_sign] / "animation.json"
             version_served = "2.6"
         elif resolved_sign in v25_folders:
@@ -954,11 +1691,36 @@ def resolve_gloss_to_sign(
     elif needs_review:
         warning_msg = f"⚠ Revisión: {resolved_sign}"
 
+    stroke_entry: Optional[Dict[str, Any]] = get_sign_stroke_entry(resolved_sign) if version_served == "2.7" else None
+
     anim_payload: Optional[Dict[str, Any]] = None
     if include_animation:
         try:
             with open(anim_path, "r", encoding="utf-8") as f:
                 anim_payload = json.load(f)
+            if isinstance(anim_payload, dict):
+                cat_meta = get_sign_metadata(resolved_sign)
+                if lsec_cnm is not None and not anim_payload.get("metadata", {}).get("nonManualStandard"):
+                    lsec_cnm.standardize_animation_dict(
+                        anim_payload, sign_name=resolved_sign, catalog_entry=cat_meta
+                    )
+                meta = anim_payload.setdefault("metadata", {})
+                meta["version_served"] = version_served
+                meta["resolved_sign"] = resolved_sign
+                meta["match_type"] = match_type
+                meta["status_label"] = status_label
+                meta["needs_review"] = needs_review
+                if version_served == "2.7":
+                    meta["pipelineVersion"] = "2.7_Estandarizado"
+                    if stroke_entry:
+                        meta["stroke"] = stroke_entry
+                    if cat_meta and isinstance(cat_meta.get("hand_standardization"), dict):
+                        h_std = dict(cat_meta["hand_standardization"])
+                        if isinstance(meta.get("handStandardization"), dict):
+                            h_std.update(meta["handStandardization"])
+                        if "distance_reduction_pct" in h_std and "reduction_pct" not in h_std:
+                            h_std["reduction_pct"] = h_std["distance_reduction_pct"]
+                        meta["handStandardization"] = h_std
         except Exception as exc:
             logger.warning("Error leyendo animation.json en %s: %s", anim_path, exc)
 
@@ -974,32 +1736,100 @@ def resolve_gloss_to_sign(
         "version_served": version_served,
         "is_fingerspelling": False,
         "anim_path": str(anim_path),
+        "stroke": stroke_entry,
         "qa": {
             "needs_review": needs_review,
             "review_reasons": qa_row.get("review_reasons", ""),
             "duration": float(qa_row.get("duration", 0.0) or 0.0),
             "fps": float(qa_row.get("fps", 60.0) or 60.0),
             "frames": int(float(qa_row.get("frames", 0) or 0)),
+            "hand_std_status": qa_row.get("hand_std_status", ""),
+            "bimanual_mode": qa_row.get("bimanual_mode", ""),
+            "frames_modified": int(float(qa_row.get("frames_modified", 0) or 0)),
         },
         "animation": anim_payload,
     }
 
 
-@animation_router.get("/resolve/{gloss}", summary="Resuelve una glosa LSEC en el catálogo v2.6 de 5,061 señas sin lanzar 404")
+@animation_router.get("/non-manual-standard", summary="Obtiene el estándar auditable de Componentes No Manuales (CNM) y sus excepciones explícitas")
+async def get_non_manual_standard() -> Dict[str, Any]:
+    manifest_path = _DICCIONARIO_LSEC_DIR / "configuracion_manual" / "estandar_componentes_no_manuales.json"
+    if manifest_path.is_file():
+        try:
+            return json.loads(manifest_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            logger.warning("Error leyendo estandar_componentes_no_manuales.json: %s", exc)
+    if lsec_cnm is not None:
+        return lsec_cnm.build_manifest_and_update_dataset(_DICCIONARIO_LSEC_DIR, update_v26_files=False)
+    raise HTTPException(status_code=404, detail="Manifiesto de estándar CNM no disponible.")
+
+
+@animation_router.get("/stroke-index", summary="Consulta el índice precalculado de trazos activos (stroke_index.json) para el catálogo v2.7")
+async def get_stroke_index_endpoint(
+    q: Optional[str] = Query(None, description="Filtro opcional por nombre de seña"),
+    signs: Optional[str] = Query(None, description="Lista separada por comas de señas o glosas a consultar"),
+    limit: int = Query(100, ge=1, le=5000, description="Máximo de entradas a devolver"),
+    summary_only: bool = Query(False, description="Devolver únicamente las estadísticas globales del índice"),
+) -> Dict[str, Any]:
+    idx_data = get_v27_stroke_index()
+    all_signs_map: Dict[str, Any] = idx_data.get("signs") or {}
+    if summary_only:
+        return {
+            "version": idx_data.get("version", "2.7"),
+            "totalSigns": idx_data.get("totalSigns", len(all_signs_map)),
+            "summary": idx_data.get("summary", {}),
+        }
+
+    selected: Dict[str, Any] = {}
+    if signs:
+        for raw_token in signs.split(","):
+            tok = raw_token.strip()
+            if not tok:
+                continue
+            entry = get_sign_stroke_entry(tok)
+            if not entry:
+                res = resolve_gloss_to_sign(tok, version="2.7", include_animation=False)
+                if res.get("found") and res.get("resolved_gloss"):
+                    entry = get_sign_stroke_entry(res["resolved_gloss"])
+            if entry:
+                selected[tok] = entry
+    elif q:
+        nq = normalize_text(q)
+        for s_name, s_entry in all_signs_map.items():
+            if nq in normalize_text(s_name):
+                selected[s_name] = s_entry
+                if len(selected) >= limit:
+                    break
+    else:
+        for s_name, s_entry in all_signs_map.items():
+            selected[s_name] = s_entry
+            if len(selected) >= limit:
+                break
+
+    return {
+        "version": idx_data.get("version", "2.7"),
+        "totalSigns": idx_data.get("totalSigns", len(all_signs_map)),
+        "returnedSigns": len(selected),
+        "summary": idx_data.get("summary", {}),
+        "signs": selected,
+    }
+
+
+@animation_router.get("/resolve/{gloss}", summary="Resuelve una glosa LSEC en el catálogo v2.7/v2.6 sin lanzar 404")
 async def resolve_single_gloss(
     gloss: str,
-    version: Optional[str] = Query("2.6", description="Versión preferida: '2.6' o '2.5'"),
+    version: Optional[str] = Query("2.7", description="Versión preferida: '2.7', '2.6' o '2.5'"),
     include_animation: bool = Query(True, description="Incluir el JSON completo de animation.json"),
 ) -> Dict[str, Any]:
-    res = resolve_gloss_to_sign(gloss, version=version or "2.6", include_animation=include_animation)
+    res = resolve_gloss_to_sign(gloss, version=version or "2.7", include_animation=include_animation)
     res.pop("anim_path", None)
     return res
 
 
-@animation_router.post("/resolve", summary="Resuelve un lote de glosas LSEC contra las 5,061 señas v2.6 sin 404")
+@animation_router.post("/resolve", summary="Resuelve un lote de glosas LSEC contra el catálogo v2.7/v2.6 sin 404")
 async def resolve_batch_glosses(payload: Dict[str, Any]) -> Dict[str, Any]:
     raw_glosses = payload.get("glosses") or []
-    version = payload.get("version") or "2.6"
+    version = payload.get("version") or "2.7"
     include_animation = bool(payload.get("include_animation", False))
 
     results: Dict[str, Dict[str, Any]] = {}
@@ -1047,45 +1877,72 @@ async def resolve_batch_glosses(payload: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @animation_router.get("/{sign_name}", summary="Obtiene el archivo animation.json de una seña específica")
-async def get_sign_animation(sign_name: str, version: Optional[str] = Query(None, description="Versión preferida: '2.6' o '2.5'")):
+async def get_sign_animation(sign_name: str, version: Optional[str] = Query(None, description="Versión preferida: '2.7', '2.6' o '2.5'")):
     clean_name = sign_name.strip()
+    v27_dir = get_v27_dir()
     v26_dir = get_v26_dir()
-    v25_dir = get_animations_dir()
+    v25_dir = get_v25_dir()
 
     if version == "2.5":
         search_dirs = [v25_dir]
+    elif version == "2.6":
+        search_dirs = [d for d in (v26_dir, v25_dir) if d]
     else:
-        search_dirs = [v26_dir, v25_dir] if v26_dir else [v25_dir]
+        search_dirs = [d for d in (v27_dir, v26_dir, v25_dir) if d]
 
     anim_file: Optional[Path] = None
     resolved_name: str = clean_name
-    version_served: str = "2.5" if version == "2.5" else ("2.6" if v26_dir else "2.5")
+    if version == "2.5":
+        version_served = "2.5"
+    elif version == "2.6":
+        version_served = "2.6" if v26_dir else "2.5"
+    else:
+        version_served = "2.7" if v27_dir else ("2.6" if v26_dir else "2.5")
     match_type: str = "exact"
     status_label: str = "EXACT"
     needs_review: bool = False
     warning_msg: Optional[str] = None
 
+    name_variants = list(dict.fromkeys([
+        clean_name,
+        unicodedata.normalize("NFC", clean_name),
+        unicodedata.normalize("NFD", clean_name),
+    ]))
+
     for bdir in search_dirs:
         if not bdir or not bdir.is_dir():
             continue
-        cand = bdir / clean_name / "animation.json"
-        if cand.is_file():
-            anim_file = cand
-            resolved_name = clean_name
-            version_served = "2.6" if (v26_dir and bdir == v26_dir) else "2.5"
+        for variant in name_variants:
+            cand = bdir / variant / "animation.json"
+            if cand.is_file():
+                anim_file = cand
+                resolved_name = unicodedata.normalize("NFC", variant)
+                if v27_dir and bdir == v27_dir:
+                    version_served = "2.7"
+                elif v26_dir and bdir == v26_dir:
+                    version_served = "2.6"
+                else:
+                    version_served = "2.5"
+                break
+        if anim_file:
             break
 
-    # Usar el resolutor léxico completo v2.6 sobre las 5,061 carpetas si no hubo match directo por ruta
-    res = resolve_gloss_to_sign(clean_name, version=version or "2.6", include_animation=False)
+    # Usar el resolutor léxico completo v2.7/v2.6 sobre las carpetas si no hubo match directo por ruta
+    res = resolve_gloss_to_sign(clean_name, version=version or "2.7", include_animation=False)
     if res.get("found") and res.get("anim_path"):
         if not anim_file:
             anim_file = Path(res["anim_path"])
-        resolved_name = res.get("resolved_gloss") or resolved_name
-        version_served = res.get("version_served") or version_served
-        match_type = res.get("match_type") or match_type
-        status_label = res.get("status") or status_label
-        needs_review = bool(res.get("needs_review", False))
-        warning_msg = res.get("warning")
+            resolved_name = res.get("resolved_gloss") or resolved_name
+            version_served = res.get("version_served") or version_served
+            match_type = res.get("match_type") or match_type
+            status_label = res.get("status") or status_label
+            needs_review = bool(res.get("needs_review", False))
+            warning_msg = res.get("warning")
+        elif res.get("match_type") == "exact":
+            resolved_name = res.get("resolved_gloss") or resolved_name
+            status_label = res.get("status") or status_label
+            needs_review = bool(res.get("needs_review", False))
+            warning_msg = res.get("warning")
 
     if not anim_file or not anim_file.is_file():
         raise HTTPException(
@@ -1095,7 +1952,7 @@ async def get_sign_animation(sign_name: str, version: Optional[str] = Query(None
 
     safe_name = re.sub(r"[^a-zA-Z0-9_\-]", "_", resolved_name)
     headers = {
-        "Cache-Control": "public, max-age=3600",
+        "Cache-Control": "no-cache",
         "X-Sign-Resolved": unicodedata.normalize("NFKD", resolved_name).encode("ascii", "ignore").decode("ascii"),
         "X-Sign-Version": str(version_served),
         "X-Sign-Status": str(status_label),
@@ -1105,6 +1962,44 @@ async def get_sign_animation(sign_name: str, version: Optional[str] = Query(None
     if warning_msg:
         headers["X-Sign-Warning"] = unicodedata.normalize("NFKD", warning_msg).encode("ascii", "ignore").decode("ascii")
 
+    try:
+        raw_data = json.loads(anim_file.read_text(encoding="utf-8"))
+        if isinstance(raw_data, dict):
+            cat_meta = get_sign_metadata(resolved_name)
+            if lsec_cnm is not None and not raw_data.get("metadata", {}).get("nonManualStandard"):
+                lsec_cnm.standardize_animation_dict(raw_data, sign_name=resolved_name, catalog_entry=cat_meta)
+            meta = raw_data.setdefault("metadata", {})
+            meta["version_served"] = version_served
+            meta["resolved_sign"] = resolved_name
+            meta["requested_gloss"] = clean_name
+            meta["match_type"] = match_type
+            meta["status_label"] = status_label
+            meta["needs_review"] = needs_review
+            meta["warning"] = warning_msg
+            if version_served == "2.7":
+                meta["pipelineVersion"] = "2.7_Estandarizado"
+                stroke_entry = get_sign_stroke_entry(resolved_name)
+                if stroke_entry:
+                    meta["stroke"] = stroke_entry
+                    headers["X-Sign-Stroke-Window"] = f"{stroke_entry.get('strokeStart', 0.0)}-{stroke_entry.get('strokeEnd', 0.0)}"
+                if cat_meta and isinstance(cat_meta.get("hand_standardization"), dict):
+                    h_std = dict(cat_meta["hand_standardization"])
+                    if isinstance(meta.get("handStandardization"), dict):
+                        h_std.update(meta["handStandardization"])
+                    if "distance_reduction_pct" in h_std and "reduction_pct" not in h_std:
+                        h_std["reduction_pct"] = h_std["distance_reduction_pct"]
+                    meta["handStandardization"] = h_std
+            cnm_std = meta.get("nonManualStandard", {})
+            headers["X-Sign-Facial-Archetype"] = str(cnm_std.get("archetype", "neutral"))
+            headers["X-Sign-Explicit-Expression"] = "true" if cnm_std.get("hasExplicitFacialExpression") else "false"
+            hand_std = meta.get("handStandardization", {})
+            if isinstance(hand_std, dict) and hand_std:
+                headers["X-Sign-Hand-Standardization"] = str(hand_std.get("status", ""))
+                headers["X-Sign-Hand-Template"] = str(hand_std.get("template_id") or (cat_meta.get("hand_variant") if cat_meta else "") or "")
+            return JSONResponse(content=raw_data, headers=headers)
+    except Exception as exc:
+        logger.warning("Aviso normalizando metadata al vuelo para %s: %s", resolved_name, exc)
+
     return FileResponse(
         path=str(anim_file),
         media_type="application/json",
@@ -1113,25 +2008,52 @@ async def get_sign_animation(sign_name: str, version: Optional[str] = Query(None
     )
 
 
-@animation_router.get("/{sign_name}/qa", summary="Obtiene las métricas de QA de una seña específica")
-async def get_sign_qa(sign_name: str, version: Optional[str] = Query(None, description="Versión preferida: '2.6' o '2.5'")):
+@animation_router.get("/{sign_name}/stroke", summary="Obtiene la ventana de trazo activo y poses de ancla precalculadas (v2.7) de una seña")
+async def get_sign_stroke_endpoint(sign_name: str):
     clean_name = sign_name.strip()
+    stroke_entry = get_sign_stroke_entry(clean_name)
+    if not stroke_entry:
+        res = resolve_gloss_to_sign(clean_name, version="2.7", include_animation=False)
+        if res.get("found") and res.get("version_served") == "2.7" and res.get("resolved_gloss"):
+            stroke_entry = get_sign_stroke_entry(res["resolved_gloss"])
+    if not stroke_entry:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Índice de trazo activo (v2.7) no encontrado para '{sign_name}'.",
+        )
+    return JSONResponse(content=stroke_entry)
+
+
+@animation_router.get("/{sign_name}/qa", summary="Obtiene las métricas de QA de una seña específica")
+async def get_sign_qa(sign_name: str, version: Optional[str] = Query(None, description="Versión preferida: '2.7', '2.6' o '2.5'")):
+    clean_name = sign_name.strip()
+    v27_dir = get_v27_dir()
     v26_dir = get_v26_dir()
-    v25_dir = get_animations_dir()
+    v25_dir = get_v25_dir()
 
     if version == "2.5":
         search_dirs = [v25_dir]
+    elif version == "2.6":
+        search_dirs = [d for d in (v26_dir, v25_dir) if d]
     else:
-        search_dirs = [v26_dir, v25_dir] if v26_dir else [v25_dir]
+        search_dirs = [d for d in (v27_dir, v26_dir, v25_dir) if d]
 
     qa_file: Optional[Path] = None
+    name_variants = list(dict.fromkeys([
+        clean_name,
+        unicodedata.normalize("NFC", clean_name),
+        unicodedata.normalize("NFD", clean_name),
+    ]))
 
     for bdir in search_dirs:
         if not bdir or not bdir.is_dir():
             continue
-        cand = bdir / clean_name / "qa.json"
-        if cand.is_file():
-            qa_file = cand
+        for variant in name_variants:
+            cand = bdir / variant / "qa.json"
+            if cand.is_file():
+                qa_file = cand
+                break
+        if qa_file:
             break
 
     if not qa_file:
@@ -1141,9 +2063,12 @@ async def get_sign_qa(sign_name: str, version: Optional[str] = Query(None, descr
                 for bdir in search_dirs:
                     if not bdir or not bdir.is_dir():
                         continue
-                    cand = bdir / candidate / "qa.json"
-                    if cand.is_file():
-                        qa_file = cand
+                    for variant in (candidate, unicodedata.normalize("NFD", candidate)):
+                        cand = bdir / variant / "qa.json"
+                        if cand.is_file():
+                            qa_file = cand
+                            break
+                    if qa_file:
                         break
                 if qa_file:
                     break
@@ -1166,11 +2091,12 @@ async def get_sign_info(sign_name: str):
     if meta:
         return JSONResponse(content=meta)
 
-    # Buscar directamente archivo info.json en disco
-    base_dir = get_animations_dir()
-    info_file = base_dir / clean_name / "info.json"
-    if info_file.is_file():
-        return FileResponse(path=str(info_file), media_type="application/json")
+    # Buscar directamente archivo info.json en disco (NFC o NFD) en v2.7 -> v2.6 -> v2.5
+    for base_dir in [d for d in (get_v27_dir(), get_v26_dir(), get_v25_dir()) if d]:
+        for variant in (clean_name, unicodedata.normalize("NFC", clean_name), unicodedata.normalize("NFD", clean_name)):
+            info_file = base_dir / variant / "info.json"
+            if info_file.is_file():
+                return FileResponse(path=str(info_file), media_type="application/json")
 
     raise HTTPException(status_code=404, detail=f"Ficha lingüística no encontrada para '{sign_name}'.")
 
@@ -1179,71 +2105,127 @@ async def get_sign_info(sign_name: str):
 async def get_sign_video(sign_name: str, request: Request):
     """
     Busca y sirve en streaming el video MP4 de la seña original Ultra HD para comparación
-    directa con la animación del avatar 3D.
+    directa con la animación del avatar 3D. Si el archivo en senas_ultra_hd/ no existe o
+    presenta corrupción de bitstream, aplica fallback automático hacia Diccionario LSEC/senas/.
     """
     clean_name = sign_name.strip()
     meta = get_sign_metadata(clean_name)
 
-    # Nombres candidatos para la carpeta del video en senas_ultra_hd
-    candidates = [clean_name]
+    # Nombres candidatos para la carpeta del video en senas_ultra_hd y senas
+    candidates: List[str] = [clean_name]
     if meta:
-        if meta.get("palabra"):
-            candidates.append(meta["palabra"])
-        if meta.get("slug"):
-            candidates.append(meta["slug"])
+        for k in ("sign", "palabra", "slug"):
+            val = meta.get(k)
+            if val and val not in candidates:
+                candidates.append(val)
 
-    # Rutas base a examinar (100% disco local)
-    search_dirs: List[Path] = [
-        p for p in [
+    res = resolve_gloss_to_sign(clean_name, include_animation=False)
+    if res.get("found") and res.get("resolved_gloss"):
+        rg = res["resolved_gloss"]
+        if rg not in candidates:
+            candidates.append(rg)
+        rg_base = re.sub(r"__\d+$", "", rg).strip()
+        if rg_base and rg_base not in candidates:
+            candidates.append(rg_base)
+
+    uhd_dirs: List[Path] = []
+    if os.environ.get("LSEC_UHD_DIR"):
+        env_uhd = get_uhd_dir()
+        if env_uhd:
+            uhd_dirs.append(env_uhd)
+    else:
+        for p in [
             get_uhd_dir(),
             Path(r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC\senas_ultra_hd"),
             Path(r"c:\Users\brana\Desktop\TIC Software\senas_ultra_hd"),
-        ] if p is not None
-    ]
+        ]:
+            if p is not None and p not in uhd_dirs:
+                uhd_dirs.append(p)
 
-    target_video: Optional[Path] = None
+    fallback_dirs: List[Path] = []
+    if os.environ.get("LSEC_SENAS_DIR"):
+        env_senas = get_senas_dir()
+        if env_senas:
+            fallback_dirs.append(env_senas)
+    else:
+        for p in [
+            get_senas_dir(),
+            Path(r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC\senas"),
+            Path(r"c:\Users\brana\Desktop\TIC Software\senas"),
+        ]:
+            if p is not None and p not in fallback_dirs:
+                fallback_dirs.append(p)
 
-    for s_dir in search_dirs:
-        if not s_dir.is_dir():
-            continue
+    def _find_healthy_video_in_dirs(dirs: List[Path], filenames: Tuple[str, ...]) -> Optional[Path]:
+        expanded_cands: List[str] = []
+        for c in candidates:
+            if not c:
+                continue
+            for v in (c, unicodedata.normalize("NFC", c), unicodedata.normalize("NFD", c)):
+                if v not in expanded_cands:
+                    expanded_cands.append(v)
+        norm_candidates = [normalize_text(c) for c in candidates if c and normalize_text(c)]
+        for s_dir in dirs:
+            if not s_dir.is_dir():
+                continue
 
-        # 1. Búsqueda directa por candidato exacto
-        for cand in candidates:
-            v_path = s_dir / cand / "video.mp4"
-            if v_path.is_file():
-                target_video = v_path
-                break
-        if target_video:
-            break
+            checked_paths: set[str] = set()
 
-        # 2. Búsqueda por nombre normalizado
-        norm_candidates = {normalize_text(c) for c in candidates}
-        try:
-            for sub in s_dir.iterdir():
-                if sub.is_dir() and normalize_text(sub.name) in norm_candidates:
-                    v_path = sub / "video.mp4"
+            # 1. Búsqueda directa por candidato exacto (incluyendo variantes NFC y NFD)
+            for cand in expanded_cands:
+                for fname in filenames:
+                    v_path = s_dir / cand / fname
                     if v_path.is_file():
-                        target_video = v_path
-                        break
-        except Exception:
-            pass
+                        checked_paths.add(str(v_path.resolve()))
+                        if _is_video_stream_healthy(v_path):
+                            return v_path
+                        logger.warning("Video dañado detectado en %s; buscando respaldo sano.", v_path)
 
-        if target_video:
-            break
+            # 2. Búsqueda O(1) por nombre normalizado cacheado
+            norm_map = _get_norm_dir_map(s_dir)
+            for nc in norm_candidates:
+                for sub in norm_map.get(nc, ()):
+                    for fname in filenames:
+                        v_path = sub / fname
+                        if v_path.is_file():
+                            rp = str(v_path.resolve())
+                            if rp in checked_paths:
+                                continue
+                            checked_paths.add(rp)
+                            if _is_video_stream_healthy(v_path):
+                                return v_path
+                            logger.warning("Video dañado detectado en %s; buscando respaldo sano.", v_path)
+        return None
+
+    target_video: Optional[Path] = _find_healthy_video_in_dirs(uhd_dirs, ("video.mp4",))
+    source_tier = "ultra_hd"
+
+    if target_video is None:
+        target_video = _find_healthy_video_in_dirs(fallback_dirs, ("video.mp4", "video.webm", "video.mkv"))
+        if target_video is not None:
+            source_tier = "fallback_senas"
 
     if target_video and target_video.is_file():
         safe_name = re.sub(r"[^a-zA-Z0-9_\-]", "_", clean_name)
+        ext = target_video.suffix.lower()
+        media_type = "video/mp4"
+        if ext == ".webm":
+            media_type = "video/webm"
+        elif ext == ".mkv":
+            media_type = "video/x-matroska"
+
         return FileResponse(
             path=str(target_video),
-            media_type="video/mp4",
-            filename=f"{safe_name}_original_uhd.mp4",
+            media_type=media_type,
+            filename=f"{safe_name}_original_uhd{ext or '.mp4'}",
             headers={
                 "Accept-Ranges": "bytes",
                 "Cache-Control": "public, max-age=7200",
+                "X-Video-Source": source_tier,
             },
         )
 
-    # Si no existe archivo MP4 local, verificar si hay enlace oficial de YouTube
+    # Si no existe archivo de video local sano, verificar si hay enlace oficial de YouTube
     yt_url = meta.get("video_url") if meta else None
     yt_id = meta.get("video_id") if meta else None
 
@@ -1268,32 +2250,48 @@ async def get_sign_illustration(sign_name: str):
     clean_name = sign_name.strip()
     meta = get_sign_metadata(clean_name)
 
-    candidates = [clean_name]
+    base_candidates = [clean_name]
     if meta:
-        if meta.get("palabra"):
-            candidates.append(meta["palabra"])
-        if meta.get("slug"):
-            candidates.append(meta["slug"])
+        for k in ("sign", "palabra", "slug"):
+            val = meta.get(k)
+            if val and val not in base_candidates:
+                base_candidates.append(val)
 
-    search_dirs: List[Path] = [
-        p for p in [
-            get_animations_dir(),
-            get_uhd_dir(),
-            Path(r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC\senas_vrm_direct"),
-            Path(r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC\senas_ultra_hd"),
-            Path(r"c:\Users\brana\Desktop\TIC Software\senas_ultra_hd"),
-        ] if p is not None
+    candidates: List[str] = []
+    for c in base_candidates:
+        if not c:
+            continue
+        for v in (c, unicodedata.normalize("NFC", c), unicodedata.normalize("NFD", c)):
+            if v not in candidates:
+                candidates.append(v)
+
+    raw_search_dirs: List[Optional[Path]] = [
+        get_animations_dir(),
+        get_v27_dir(),
+        get_uhd_dir(),
+        get_senas_dir(),
+        get_v26_dir(),
+        Path(r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC\senas_vrm_direct"),
+        Path(r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC\senas_ultra_hd"),
+        Path(r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC\senas"),
+        Path(r"c:\Users\brana\Desktop\TIC Software\senas_ultra_hd"),
+        Path(r"c:\Users\brana\Desktop\TIC Software\senas"),
     ]
+    search_dirs: List[Path] = []
+    for p in raw_search_dirs:
+        if p is not None and p not in search_dirs:
+            search_dirs.append(p)
 
     target_img: Optional[Path] = None
+    norm_candidates = [normalize_text(c) for c in base_candidates if c and normalize_text(c)]
 
     for s_dir in search_dirs:
         if not s_dir.is_dir():
             continue
 
-        # 1. Búsqueda directa por candidato exacto
+        # 1. Búsqueda directa por candidato exacto (NFC y NFD)
         for cand in candidates:
-            for ext in ["ilustracion.png", "ilustracion.jpg", "ilustracion.jpeg", "ilustracion.webp"]:
+            for ext in ("ilustracion.png", "ilustracion.jpg", "ilustracion.jpeg", "ilustracion.webp"):
                 p = s_dir / cand / ext
                 if p.is_file():
                     target_img = p
@@ -1303,20 +2301,19 @@ async def get_sign_illustration(sign_name: str):
         if target_img:
             break
 
-        # 2. Búsqueda por nombre normalizado
-        norm_candidates = {normalize_text(c) for c in candidates}
-        try:
-            for sub in s_dir.iterdir():
-                if sub.is_dir() and normalize_text(sub.name) in norm_candidates:
-                    for ext in ["ilustracion.png", "ilustracion.jpg", "ilustracion.jpeg", "ilustracion.webp"]:
-                        p = sub / ext
-                        if p.is_file():
-                            target_img = p
-                            break
-                    if target_img:
+        # 2. Búsqueda O(1) por nombre normalizado cacheado
+        norm_map = _get_norm_dir_map(s_dir)
+        for nc in norm_candidates:
+            for sub in norm_map.get(nc, ()):
+                for ext in ("ilustracion.png", "ilustracion.jpg", "ilustracion.jpeg", "ilustracion.webp"):
+                    p = sub / ext
+                    if p.is_file():
+                        target_img = p
                         break
-        except Exception:
-            pass
+                if target_img:
+                    break
+            if target_img:
+                break
         if target_img:
             break
 
@@ -1474,15 +2471,20 @@ animation_direct_alias_router = APIRouter(
     prefix="/api/animations-direct",
     tags=["Animaciones Directas 1:1 (Alias)"],
 )
+animation_direct_alias_router.add_api_route("/non-manual-standard", get_non_manual_standard, methods=["GET"])
+animation_direct_alias_router.add_api_route("/stroke-index", get_stroke_index_endpoint, methods=["GET"])
 animation_direct_alias_router.add_api_route("/resolve/{gloss}", resolve_single_gloss, methods=["GET"])
 animation_direct_alias_router.add_api_route("/resolve", resolve_batch_glosses, methods=["POST"])
 animation_direct_alias_router.add_api_route("/stats", animation_stats, methods=["GET"])
 animation_direct_alias_router.add_api_route("/list", list_animations, methods=["GET"])
+animation_direct_alias_router.add_api_route("/handshapes", get_handshapes_catalog, methods=["GET"])
 animation_direct_alias_router.add_api_route("/finalize-export-mp4", finalize_export_mp4, methods=["POST"])
 animation_direct_alias_router.add_api_route("/{sign_name}", get_sign_animation, methods=["GET"])
+animation_direct_alias_router.add_api_route("/{sign_name}/stroke", get_sign_stroke_endpoint, methods=["GET"])
 animation_direct_alias_router.add_api_route("/{sign_name}/qa", get_sign_qa, methods=["GET"])
 animation_direct_alias_router.add_api_route("/{sign_name}/info", get_sign_info, methods=["GET"])
 animation_direct_alias_router.add_api_route("/{sign_name}/video", get_sign_video, methods=["GET"])
 animation_direct_alias_router.add_api_route("/{sign_name}/illustration", get_sign_illustration, methods=["GET"])
 animation_direct_alias_router.add_api_route("/{sign_name}/ilustracion", get_sign_illustration, methods=["GET"])
+
 
