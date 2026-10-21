@@ -188,7 +188,7 @@ lsec_translator_prototype/
 Todos bajo el prefijo `/api/v1` (más el alias `/api/animations-direct` para el motor 3D).
 
 1. **Estado del sistema:** `GET /api/v1/health` — endpoint liveness que devuelve `200` si la API responde. El campo `status` distingue `ok` y `degraded`; `services` informa la disponibilidad de `asr`, `nlp` y `storage`, mientras `checks` separa el modelo ASR cargado y la persistencia SQLite.
-2. **Transcripción y Pipeline completo:** `POST /api/v1/transcribe` y `POST /api/v1/pipeline` (mp4, mov, avi, mkv, webm, wav, mp3, ogg, flac).
+2. **Transcripción y Pipeline completo:** `POST /api/v1/transcribe` y `POST /api/v1/pipeline` (mp4, mov, avi, mkv, webm, wav, mp3, ogg, flac). Las cargas tienen validación de extensión/cabecera y un límite de `MAX_UPLOAD_SIZE_MB` (100 MB por defecto).
 3. **Traducción Español → LSEC:** `POST /api/v1/translate` (`mode=detailed|legacy|debug`, `budget=compact|medium|expanded`).
 4. **Animaciones VRM estandarizadas v2.7 (compatibilidad v2.6/v2.5) y Exportación MP4:**
    - `GET /api/v1/animations/list?q=&limit=` y `GET /api/v1/animations/stats`: Catálogo de 4.143 señas VRM ordenadas según `catalogo_lsec.json`.

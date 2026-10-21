@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 from typing import List
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -65,7 +65,13 @@ class Settings(BaseSettings):
     app_host: str = "0.0.0.0"
     app_port: int = 8000
     app_debug: bool = False
-    cors_origins: List[str] = ["http://localhost:3000", "http://localhost:8080"]
+    cors_origins: List[str] = [
+        "http://localhost:3000",
+        "http://localhost:8080",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:8080",
+    ]
+    max_upload_size_mb: int = Field(default=100, ge=1, le=2048)
 
     # --- Versionado público ---
     # La versión del sistema identifica la distribución integrada. Las versiones
@@ -94,10 +100,16 @@ class Settings(BaseSettings):
             try:
                 parsed = json.loads(v)
                 if isinstance(parsed, list):
-                    return parsed
+                    origins = parsed
+                else:
+                    origins = [v.strip()]
             except (json.JSONDecodeError, TypeError):
-                return [origin.strip() for origin in v.split(",") if origin.strip()]
-        return v  # type: ignore[return-value]
+                origins = [origin.strip() for origin in v.split(",") if origin.strip()]
+        else:
+            origins = v
+        if "*" in origins:
+            raise ValueError("CORS_ORIGINS no puede usar '*' con credenciales habilitadas.")
+        return origins
 
 
 def external_path(value: str, relative_default: str) -> Path:

@@ -10,7 +10,6 @@ from __future__ import annotations
 import logging
 import os
 import sqlite3
-import shutil
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -29,6 +28,9 @@ from app.services.nlp_service import LSECTranslatorService
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1", tags=["LSEC Pipeline"])
+
+_ALLOWED_UPLOAD_EXTENSIONS = {".wav", ".mp3", ".ogg", ".flac", ".webm", ".mp4", ".mov", ".avi", ".mkv"}
+_UPLOAD_CHUNK_SIZE = 1024 * 1024
 
 # ============================================================
 # Instancias de servicios (inyectadas desde main.py via lifespan)
@@ -86,6 +88,39 @@ def validate_media_magic_bytes(file_path: str) -> bool:
         return False
     except OSError:
         return False
+
+
+async def _save_upload_to_temp(file: UploadFile) -> str:
+    """Guarda una carga multimedia acotada y devuelve su ruta temporal."""
+    suffix = Path(file.filename or "").suffix.lower()
+    if suffix not in _ALLOWED_UPLOAD_EXTENSIONS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Extensión multimedia no soportada.",
+        )
+
+    max_bytes = settings.max_upload_size_mb * 1024 * 1024
+    total_bytes = 0
+    tmp_path: str | None = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+            tmp_path = tmp.name
+            while chunk := await file.read(_UPLOAD_CHUNK_SIZE):
+                total_bytes += len(chunk)
+                if total_bytes > max_bytes:
+                    raise HTTPException(
+                        status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                        detail=f"El archivo supera el límite de {settings.max_upload_size_mb} MB.",
+                    )
+                tmp.write(chunk)
+        return tmp_path
+    except (OSError, HTTPException):
+        if tmp_path:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+        raise
 
 
 def set_services(
@@ -217,10 +252,7 @@ async def transcribe_audio(
 
     tmp_path = None
     try:
-        suffix = Path(file.filename or "audio.wav").suffix or ".wav"
-        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-            tmp_path = tmp.name
-            shutil.copyfileobj(file.file, tmp)
+        tmp_path = await _save_upload_to_temp(file)
 
         if not os.path.exists(tmp_path) or os.path.getsize(tmp_path) == 0:
             raise HTTPException(
@@ -328,10 +360,7 @@ async def full_pipeline(
 
     tmp_path = None
     try:
-        suffix = Path(file.filename or "audio.wav").suffix or ".wav"
-        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-            tmp_path = tmp.name
-            shutil.copyfileobj(file.file, tmp)
+        tmp_path = await _save_upload_to_temp(file)
 
         if not os.path.exists(tmp_path) or os.path.getsize(tmp_path) == 0:
             raise HTTPException(
