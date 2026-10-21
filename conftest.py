@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import importlib.util
+
 import pytest
 
 
@@ -33,6 +35,15 @@ _LIVE_SERVER_FILES = {
     "test_adversarial_backend.py",
     "test_adversarial_browser_stress.py",
 }
+
+
+def pytest_ignore_collect(collection_path, config: pytest.Config) -> bool:
+    """Evita importar pruebas E2E al ejecutar perfiles sin Playwright."""
+    if collection_path.name not in _E2E_FILES:
+        return False
+    if "unit" not in config.getoption("-m", default=""):
+        return False
+    return importlib.util.find_spec("playwright") is None
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
