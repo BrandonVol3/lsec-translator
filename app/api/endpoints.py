@@ -7,6 +7,7 @@ ejecución del pipeline completo y gestión del flujo de revisión lingüística
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import sqlite3
@@ -266,7 +267,7 @@ async def transcribe_audio(
                 detail="Formato multimedia no reconocido o cabecera inválida. Formatos soportados: mp4, mov, avi, mkv, webm, wav, mp3, ogg, flac.",
             )
 
-        result = _asr_service.transcribe_file(tmp_path)
+        result = await asyncio.to_thread(_asr_service.transcribe_file, tmp_path)
         logger.info("Audio transcrito: '%s...'", result.text[:80])
         return result
 
@@ -374,7 +375,7 @@ async def full_pipeline(
                 detail="Formato multimedia no reconocido o cabecera inválida. Formatos soportados: mp4, mov, avi, mkv, webm, wav, mp3, ogg, flac.",
             )
 
-        transcription = _asr_service.transcribe_file(tmp_path)
+        transcription = await asyncio.to_thread(_asr_service.transcribe_file, tmp_path)
         gloss_output = await _nlp_service.translate_to_gloss(
             text=transcription.text,
             mode=mode,

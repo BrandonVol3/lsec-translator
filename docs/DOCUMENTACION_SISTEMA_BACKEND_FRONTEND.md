@@ -76,7 +76,7 @@ Utiliza `pydantic_settings.BaseSettings` para cargar variables de entorno con va
 
 ### `app/main.py` — Punto de Entrada y Lifespan
 - **Inyección de DLLs CUDA:** En Windows, detecta dinámicamente los directorios `Lib/site-packages/nvidia/*/bin` del entorno virtual y los añade al `PATH` y a `os.add_dll_directory` para habilitar la aceleración por GPU sin configuraciones manuales del sistema.
-- **`lifespan(app: FastAPI)`:** Inicializa `WhisperASRService` (carga lazy), `LSECTranslatorService` y `LocalStorageService` (SQLite), inyectándolos en los routers REST y WebSocket.
+- **`lifespan(app: FastAPI)`:** Inicializa `WhisperASRService` (carga lazy), `LSECTranslatorService` y `LocalStorageService` (SQLite), inyectándolos en los routers REST y WebSocket. Las llamadas bloqueantes de Whisper se delegan a workers mediante `asyncio.to_thread` para no bloquear el event loop.
 - **Montaje de Estáticos y Routers:**
   - Monta `/static` (`app/static`), `/avatar` (`../Avatar/` con el modelo `.vrm`) y `/media` (videos de prueba en modo debug).
   - Registra `api_router`, `annotation_router`, `dictionary_router`, `animation_router` (`/api/v1/animations`), `animation_direct_alias_router` (`/api/animations-direct`) y `ws_router`.

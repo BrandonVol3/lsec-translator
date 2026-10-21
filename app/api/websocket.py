@@ -9,6 +9,7 @@ espaciales al renderizador 3D (Unreal Engine 5 / MetaHuman).
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import time
@@ -102,7 +103,7 @@ async def _process_audio_chunk(
 
     try:
         # Paso 1: Transcripción ASR
-        transcription = _asr_service.transcribe_buffer(audio_data)
+        transcription = await asyncio.to_thread(_asr_service.transcribe_buffer, audio_data)
 
         # Notificar transcripción al cliente
         trans_msg = WebSocketMessage(
