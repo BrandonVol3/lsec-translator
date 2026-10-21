@@ -43,6 +43,16 @@ class Settings(BaseSettings):
     app_debug: bool = False
     cors_origins: List[str] = ["http://localhost:3000", "http://localhost:8080"]
 
+    # --- Versionado público ---
+    # La versión del sistema identifica la distribución integrada. Las versiones
+    # del motor, esquema y API se mantienen separadas por compatibilidad.
+    system_version: str = "2.7.0"
+    api_version: str = "2.0.0"
+    engine_version: str = "2.1.1"
+    output_schema_version: str = "2.1"
+    grammar_engine_version: str = "0.1.0"
+    default_animation_version: str = "2.7"
+
     # --- Diccionario Oficial LSEC (CONADIS) ---
     # Ruta al catálogo; si está vacía se resuelve automáticamente (data/ → ../Diccionario LSEC/).
     lsec_dictionary_catalog_path: str = ""

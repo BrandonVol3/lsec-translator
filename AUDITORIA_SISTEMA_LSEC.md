@@ -1,7 +1,7 @@
 # AUDITORÍA INTEGRAL DE EXTREMO A EXTREMO — SISTEMA LSEC STUDIO
 
 **Fecha del Informe**: 2026-10-17  
-**Versión del Sistema**: LSEC Studio 2.1.1 / Prototipo LSEC Translator 0.1.0 (FastAPI API v2.0.0)  
+**Matriz de versiones**: Sistema LSEC Translator 2.7.0 / API 2.0.0 / Motor lingüístico 2.1.1 / Esquema 2.1 / LSEC Studio 2.1.1 / VRM v2.7 estandarizado (compatibilidad v2.6 y v2.5)
 **Ubicación del Repositorio**: `c:\Users\brana\Desktop\TIC Software\lsec_translator_prototype`  
 **Responsable Técnico**: Equipo de Aseguramiento de Calidad y Arquitectura de Software LSEC  
 **Modo de Ejecución**: 100 % Local / Estrictamente Offline (`HF_HUB_OFFLINE="1"`, `TRANSFORMERS_OFFLINE="1"`)  
@@ -79,7 +79,7 @@ El servidor detecta dinámicamente la aceleración por hardware mediante `app/se
     "nlp": true,
     "storage": true
   },
-  "version": "2.0.0",
+  "version": "2.7.0",
   "hardware": {
     "device": "cuda",
     "compute_type": "float16",
@@ -237,7 +237,7 @@ Mediante instrumentación directa con Playwright en Chromium local, se verificó
 
 #### 3. Calibrador de Avatar VRM (`http://127.0.0.1:8000/avatarconfig`)
 - **Controles de Calibración**: Visor 3D centrado en el modelo VRM 1.0, navegación bidireccional mediante botón `'Volver a Studio'`.
-- **Selector de Versiones**: Conmutador de catálogos v2.6 / v2.5 activo.
+- **Selector de Versiones**: Conmutador de catálogos v2.7 / v2.6 / v2.5 activo, con v2.7 como opción predeterminada.
 - **Inspección Ósea y Blendshapes**: Visualización de los 52 blendshapes ARKit y comparador con videos Ultra HD.
 
 #### 4. Documentación OpenAPI (`http://127.0.0.1:8000/docs`)
@@ -399,7 +399,7 @@ A continuación se detalla la verificación rigurosa de cada criterio establecid
 ### 7.1 Verificación de Backend (R1)
 | Criterio de Aceptación | Estado | Evidencia de Verificación Objetiva |
 |---|---|---|
-| **Salud del Servidor**: El servidor levanta en `http://127.0.0.1:8000` y `GET /api/v1/health` responde HTTP `200` y estado saludable. | **CUMPLIDO** | `GET /api/v1/health` responde HTTP 200 con `{"status": "ok", "version": "2.0.0"}` y telemetría `device: "cuda"`, `compute_type: "float16"`. Verificado mediante sondeo automatizado y en `test_root_and_avatar_endpoints.py`. |
+| **Salud del Servidor**: El servidor levanta en `http://127.0.0.1:8000` y `GET /api/v1/health` responde HTTP `200` y estado saludable. | **CUMPLIDO** | `GET /api/v1/health` responde HTTP 200 con `{"status": "ok", "version": "2.7.0", "api_version": "2.0.0"}` y telemetría de hardware. Verificado mediante sondeo automatizado y en `test_root_and_avatar_endpoints.py`. |
 | **Contratos de API `/api/v1/*`**: Endpoints de traducción a glosas, catálogo/activos y avatar responden códigos válidos y esquemas conformes. | **CUMPLIDO** | `/api/v1/translate` responde en ~45ms con esquema `GlossOutput`; `/api/v1/animations/list` entrega 4.142 señas v2.6; `/api/v1/dictionary/search` valida contra CONADIS; `/avatar/LSEC-Interpreter-Female.vrm` entrega 13.9 MB de binario glTF válido. |
 | **Suite de Backend sin Fallos**: La suite automatizada (`pytest`) se ejecuta íntegramente con **0 fallos** (`0 failed, 0 errors`). | **CUMPLIDO** | Las 23 suites de backend ejecutaron **408 tests**, con **408 pasados (100%)**, 0 fallidos, 0 errores, en un tiempo acumulado de 3 minutos y 9 segundos. |
 

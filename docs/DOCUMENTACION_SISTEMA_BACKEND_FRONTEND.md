@@ -1,9 +1,9 @@
-# Arquitectura Integral del Sistema LSEC Translator Prototype (v2.2 / Pipeline VRM v2.5–v2.6)
+# Arquitectura Integral del Sistema LSEC Translator Prototype 2.7.0
 ## Documentación Técnica Detallada: Backend, Pipeline Cinemático 3D y Frontend
 
 Este documento presenta el desglose técnico exhaustivo de los tres subsistemas que conforman el ecosistema **LSEC Translator** hasta su última versión (octubre de 2026):
 1. **El Backend** (motor lingüístico de 7 etapas, ASR con Faster-Whisper, reglas formales LSEC/FENASEC, Diccionario Oficial CONADIS, servidor de animaciones VRM 1:1, codificador determinista MP4 con PyAV, validación de 13 invariantes y MLOps).
-2. **El Pipeline de Visión por Computadora y Cinemática 3D (`Diccionario LSEC` v2.5–v2.6)** (mejora de video Ultra HD a 60 FPS, captura multimodal con HaMeR + DWPose + RTMW3D + MediaPipe, retargeting matemático 1:1 MANO→VRM y post-procesamiento biomecánico Stage C con IK analítica de 2 huesos para 4.143 señas).
+2. **El Pipeline de Visión por Computadora y Cinemática 3D (`Diccionario LSEC` v2.7; compatibilidad v2.6/v2.5)** (mejora de video Ultra HD a 60 FPS, captura multimodal con HaMeR + DWPose + RTMW3D + MediaPipe, retargeting matemático 1:1 MANO→VRM y post-procesamiento biomecánico Stage C con IK analítica de 2 huesos para 4.143 señas).
 3. **El Frontend** (estación de trabajo audiovisual *LSEC Studio*, motor 3D WebGL con Three.js + `@pixiv/three-vrm`, reproductor autónomo `/viewer`, línea de tiempo multitrack en Canvas y compositor de video).
 
 ---
@@ -115,7 +115,7 @@ Utiliza `pydantic_settings.BaseSettings` para cargar variables de entorno con va
 
 ---
 
-# PARTE 2: PIPELINE DE VISIÓN 3D Y CINEMÁTICA VRM (`Diccionario LSEC` v2.5–v2.6)
+# PARTE 2: PIPELINE DE VISIÓN 3D Y CINEMÁTICA VRM (`Diccionario LSEC` v2.7; compatibilidad v2.6/v2.5)
 
 El subsistema ubicado en [`Diccionario LSEC/`](file:///c:/Users/brana/Desktop/TIC%20Software/Diccionario%20LSEC/) convierte los videos del Diccionario Oficial CONADIS en el catálogo de **4.143 animaciones 3D VRM 1:1** consumidas por el backend y el visor WebGL.
 

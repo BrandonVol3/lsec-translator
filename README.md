@@ -1,6 +1,23 @@
-# LSEC Translator Architecture 2.2 & Pipeline Cinemático VRM v2.5–v2.6
+# LSEC Translator 2.7.0 — Arquitectura y Pipeline Cinemático VRM
 
-> Sistema Híbrido 100 % Offline de Transcripción Inteligente (ASR), Motor Gramatical de 7 Etapas (Español → Glosas LSEC), Animación 3D 1:1 en Avatar VRM (4.143 señas), Estación Audiovisual Bilingüe (*LSEC Studio*), Plataforma de Anotación Nativa y Pipeline MLOps para la Lengua de Señas Ecuatoriana (LSEC).
+> Sistema híbrido 100 % offline de transcripción inteligente (ASR), motor lingüístico de 7 etapas (Español → glosas LSEC), animación 3D 1:1 en avatar VRM, estación audiovisual bilingüe (*LSEC Studio*), plataforma de anotación nativa y pipeline MLOps para la Lengua de Señas Ecuatoriana (LSEC).
+
+## Matriz oficial de versiones
+
+| Componente | Versión vigente | Alcance |
+| :--- | :--- | :--- |
+| Sistema integrado | **2.7.0** | Versión pública de esta distribución |
+| API HTTP/WebSocket | **2.0.0** | Contrato de servicio `/api/v1` y `/ws/pipeline` |
+| Motor lingüístico | **2.1.1** | Normalización, análisis discursivo, planificación y validación LSEC |
+| Esquema de salida | **2.1** | Contrato `GlossOutput` y metadatos de traducción |
+| Motor de gramática | **0.1.0** | Identificador del componente formal de reglas |
+| Animaciones predeterminadas | **2.7 estandarizada** | Catálogo VRM preferido |
+| Animaciones compatibles | **2.6 corregida**, **2.5 directa 1:1** | Versiones históricas seleccionables explícitamente |
+| LSEC Studio | **2.1.1** | Interfaz audiovisual web |
+
+La versión del sistema identifica la integración completa. Las versiones de API,
+motor lingüístico, esquema y animación son independientes para conservar
+compatibilidad y trazabilidad.
 
 ---
 
@@ -23,7 +40,7 @@
 | **1. Backend Web & Persistencia** | `Python 3.10+`, `FastAPI`, `Uvicorn`, `Pydantic v2`, `pydantic-settings`, `SQLite3`, `HTTPX` | Servidor ASGI asíncrono (REST + WebSockets), validación estricta de contratos de datos y base de datos local 100 % offline con fallback en memoria. |
 | **2. Reconocimiento de Voz (ASR) & Video** | `Faster-Whisper`, `CTranslate2` (`FP16`/`INT8`), `CUDA 12.x`, `PyAV (av)` + `libx264` + `AAC` | Transcripción acústica neuronal con marcas de tiempo por palabra y codificación determinista de video MP4 a **30.0 FPS constantes** (`/finalize-export-mp4`). |
 | **3. Motor PLN Híbrido & Gramática LSEC** | `spaCy` (`es_core_news_md` / `sm`), 7 Etapas Lingüísticas, 22 Reglas LSEC, 4 Reglas FENASEC, Catálogo CONADIS (**4.252 señas**), 13 Invariantes | Limpieza de disfluencias, normalización ecuatoriana/quichuismos, MWEs, segmentación proposicional, análisis morfosintáctico, reordenamiento `TIEMPO + TÓPICO + SOV` y validación estructural. |
-| **4. Visión 3D & Cinemática (`Diccionario LSEC` v2.5–v2.6)** | `PyTorch`, `HaMeR`, `MANO (smplx)`, `DWPose` / `RTMW3D` (`rtmlib` + `onnxruntime-gpu`), `MediaPipe Face` (52 ARKit Blendshapes), `OpenCV`, `NumPy`, `SciPy` | Mejora de video 15→60 FPS Ultra HD (`video_enhancer.py`), extracción 3D de manos en $\text{SO}(3)$, retargeting directo 1:1 (`v2.5`) y post-procesamiento Stage C (`v2.6`) con IK analítica de 2 huesos anti-penetración sobre **4.143 señas VRM**. |
+| **4. Visión 3D & Cinemática (`Diccionario LSEC` v2.7)** | `PyTorch`, `HaMeR`, `MANO (smplx)`, `DWPose` / `RTMW3D` (`rtmlib` + `onnxruntime-gpu`), `MediaPipe Face` (52 ARKit Blendshapes), `OpenCV`, `NumPy`, `SciPy` | Catálogo VRM estandarizado v2.7 como versión predeterminada, con compatibilidad v2.6 corregida y v2.5 directa 1:1. Incluye mejora de video, extracción 3D, retargeting, Stage C e IK analítica anti-penetración. |
 | **5. Frontend NLE, Motor 3D WebGL & QA** | `Vanilla HTML5/CSS3/ES6+`, `Three.js`, `@pixiv/three-vrm`, `VRM 1.0 Humanoid` (54 huesos), `HTML5 Canvas 2D`, `MediaRecorder`, `Pytest`, `Playwright` | Estación audiovisual *LSEC Studio* (`/studio`), reproductor 3D autónomo (`/viewer`), línea de tiempo multipista a 60 FPS, intérprete 3D PiP y suite con **358+ pruebas automatizadas**. |
 
 ---
@@ -57,7 +74,8 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000
 | `WHISPER_MODEL_PATH` | `data/models/whisper` | Pesos locales de Whisper (modo 100 % offline) |
 | `LSEC_DATABASE_PATH` | `data/lsec_database.sqlite` | Base SQLite local (logs de traducción y revisiones) |
 | `LSEC_DICTIONARY_*` | ver sección del Diccionario | Catálogo CONADIS, marcado de no verificadas y frases |
-| `LSEC_ANIMATIONS_V26_DIR` / `LSEC_ANIMATIONS_DIR` | autodetección en `../Diccionario LSEC/` | Directorios de animaciones VRM 1:1 (`senas_vrm_direct_v2.6` / `senas_vrm_direct`) |
+| `LSEC_ANIMATIONS_V27_DIR` | autodetección en `../Diccionario LSEC/` | Directorio preferido de animaciones VRM estandarizadas v2.7 |
+| `LSEC_ANIMATIONS_V26_DIR` / `LSEC_ANIMATIONS_DIR` | autodetección en `../Diccionario LSEC/` | Directorios compatibles de animaciones v2.6/v2.5 |
 | `APP_HOST` / `APP_PORT` / `APP_DEBUG` | `0.0.0.0` / `8000` / `false` | Servidor (con `APP_DEBUG=true` se sirve `/media` con los videos de prueba) |
 
 ---
@@ -87,13 +105,13 @@ graph TD
         C2 --> C3["StructuralValidator (13 Invariantes LSEC 2.1.1)"]
     end
 
-    subgraph ANIMATION_AND_MLOPS["4. Animación 3D VRM (v2.5-v2.6), Exportación y MLOps"]
+    subgraph ANIMATION_AND_MLOPS["4. Animación 3D VRM (v2.7; compatibilidad v2.6/v2.5), Exportación y MLOps"]
         C3 --> D1{"Evaluación de Estado"}
         D1 -- "Incertidumbre / No verificado" --> D2["ActiveLearningService (Priorización de Cola)"]
         D2 --> D3["Plataforma de Anotación y Validación Sorda Nativa"]
         D3 --> D4["DatasetValidator (Auditoría de Fugas SHA-256) & MLOpsPipeline"]
         D1 -- "Aprobado / Reproducción" --> E1["LSEC Studio (/studio) & Visor 3D (/viewer)"]
-        VRM_CAT["Catálogo 4.143 Señas VRM 1:1 (HaMeR + DWPose + Stage C v2.6)"] --> E1
+        VRM_CAT["Catálogo VRM v2.7 estandarizado (compatibilidad v2.6/v2.5)"] --> E1
         E1 --> EXP["Exportación Compuesta MP4 30 FPS (Canvas + MediaRecorder + PyAV H.264/AAC)"]
     end
 ```
@@ -158,7 +176,7 @@ Todos bajo el prefijo `/api/v1` (más el alias `/api/animations-direct` para el 
 1. **Estado del sistema:** `GET /api/v1/health` — estado de `asr`, `nlp` y `storage` (SQLite local).
 2. **Transcripción y Pipeline completo:** `POST /api/v1/transcribe` y `POST /api/v1/pipeline` (mp4, mov, avi, mkv, webm, wav, mp3, ogg, flac).
 3. **Traducción Español → LSEC:** `POST /api/v1/translate` (`mode=detailed|legacy|debug`, `budget=compact|medium|expanded`).
-4. **Animaciones Directas 1:1 (VRM v2.6 / v2.5) y Exportación MP4:**
+4. **Animaciones VRM estandarizadas v2.7 (compatibilidad v2.6/v2.5) y Exportación MP4:**
    - `GET /api/v1/animations/list?q=&limit=` y `GET /api/v1/animations/stats`: Catálogo de 4.143 señas VRM ordenadas según `catalogo_lsec.json`.
    - `GET /api/v1/animations/resolve/{gloss}` y `POST /api/v1/animations/resolve`: Resolución de glosas a animaciones 3D.
    - `GET /api/v1/animations/{sign_name}`, `/{sign_name}/qa`, `/{sign_name}/info`, `/{sign_name}/video`, `/{sign_name}/illustration`: Datos cinemáticos, video MP4 Ultra HD e ilustración oficial.

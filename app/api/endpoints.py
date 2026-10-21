@@ -20,6 +20,7 @@ from fastapi import APIRouter, File, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel, Field
 
 from app.core.schemas import GlossOutput, TranscriptionResult, TranslationMode
+from app.config import settings
 from app.services.asr_service import WhisperASRService
 from app.services.storage_service import LocalStorageService
 from app.services.nlp_service import LSECTranslatorService
@@ -119,7 +120,11 @@ class HealthResponse(BaseModel):
     """Respuesta del health check."""
     status: str
     services: Dict[str, bool]
-    version: str = "2.0.0"
+    version: str = settings.system_version
+    api_version: str = settings.api_version
+    engine_version: str = settings.engine_version
+    output_schema_version: str = settings.output_schema_version
+    default_animation_version: str = settings.default_animation_version
     hardware: Optional[Dict[str, Any]] = None
 
 
@@ -164,7 +169,11 @@ async def health_check() -> HealthResponse:
             "nlp": _nlp_service is not None,
             "storage": _storage_service is not None and _storage_service.is_connected,
         },
-        version="2.0.0",
+        version=settings.system_version,
+        api_version=settings.api_version,
+        engine_version=settings.engine_version,
+        output_schema_version=settings.output_schema_version,
+        default_animation_version=settings.default_animation_version,
         hardware=hw,
     )
 

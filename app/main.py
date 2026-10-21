@@ -135,7 +135,7 @@ app = FastAPI(
         "a Lengua de Señas Ecuatoriana (LSEC). "
         "Pipeline: Whisper ASR → NLP basado en reglas (glosas LSEC) → WebSocket → LSEC Studio."
     ),
-    version="0.1.0",
+    version=settings.system_version,
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=lifespan,
@@ -212,7 +212,11 @@ async def root_endpoint(request: Request):
     """Sirve metadata JSON por defecto o la interfaz web si se solicita explícitamente text/html."""
     info_payload = {
         "name": "LSEC Translator Prototype",
-        "version": "0.1.0",
+        "version": settings.system_version,
+        "api_version": settings.api_version,
+        "engine_version": settings.engine_version,
+        "output_schema_version": settings.output_schema_version,
+        "default_animation_version": settings.default_animation_version,
         "description": "Sistema de Traducción a Lengua de Señas Ecuatoriana",
         "docs": "/docs",
         "websocket": "/ws/pipeline",
@@ -265,7 +269,11 @@ async def api_info() -> dict:
     """Endpoint de información del sistema en formato JSON."""
     return {
         "name": "LSEC Translator Prototype",
-        "version": "0.1.0",
+        "version": settings.system_version,
+        "api_version": settings.api_version,
+        "engine_version": settings.engine_version,
+        "output_schema_version": settings.output_schema_version,
+        "default_animation_version": settings.default_animation_version,
         "description": "Sistema de Traducción a Lengua de Señas Ecuatoriana",
         "docs": "/docs",
         "websocket": "/ws/pipeline",
@@ -279,5 +287,4 @@ async def api_info() -> dict:
             "viewer": "/viewer",
         },
     }
-
 

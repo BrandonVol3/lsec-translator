@@ -1,6 +1,6 @@
 # Documento de Arquitectura, Tecnologías, Funciones y Características del Sistema LSEC Translator
 
-> **Versión del Sistema:** LSEC Translator Architecture 2.2 / LSEC Studio 2.1.1 / Pipeline Cinemático VRM v2.5–v2.6  
+> **Matriz de versiones:** Sistema 2.7.0 / API 2.0.0 / Motor lingüístico 2.1.1 / Esquema 2.1 / LSEC Studio 2.1.1 / VRM v2.7 estandarizado (compatibilidad v2.6 y v2.5)
 > **Área:** Tecnologías de la Información y Comunicación (TIC) — Procesamiento de Lenguaje Natural, Visión por Computadora, Animación 3D y Accesibilidad  
 > **Fecha:** Octubre 2026  
 > **Entorno:** Backend (Python 3.10+, FastAPI, Faster-Whisper/CTranslate2, spaCy, PyAV, SQLite) · Pipeline 3D (PyTorch, HaMeR, MANO, DWPose/RTMW3D, MediaPipe, SciPy/NumPy) · Frontend (Vanilla Web Standards ES6+, Three.js, `@pixiv/three-vrm`, HTML5 Canvas 2D, MediaRecorder)
@@ -15,7 +15,7 @@ A diferencia de aproximaciones tradicionales basadas en mapeos ingenuos palabra 
 1. **Backend Web Asíncrono y Persistencia Local:** API REST y WebSockets de baja latencia sobre `FastAPI` y `Uvicorn`, con contratos de datos en `Pydantic v2` y almacenamiento local en `SQLite3`.
 2. **Ingesta Acústica y Codificación Multimedia:** Transcripción neuronal con marcas de tiempo por palabra mediante `Faster-Whisper` (`CTranslate2`) y codificación determinista de video MP4 (`H.264 + AAC` a 30.0 FPS constantes) mediante `PyAV` (`FFmpeg`).
 3. **Motor Híbrido de PLN y Gramática LSEC de 7 Etapas:** Limpieza del español oral, normalización de modismos ecuatorianos/quichuismos, detección de locuciones multipalabra (MWE), segmentación proposicional, análisis morfosintáctico con `spaCy`, motor de 22 reglas gramaticales formales (`TIEMPO + TÓPICO + SOV`), 4 reglas post-planificación de la **FENASEC**, cascada léxica sobre las **4.252 señas del Diccionario Oficial CONADIS "Gabriel Román"** y auditoría de **13 invariantes estructurales**.
-4. **Pipeline de Visión por Computadora y Cinemática 3D (`Diccionario LSEC` v2.5–v2.6):** Super-resolución e interpolación temporal 15→60 FPS (`video_enhancer.py`), extracción multimodal en GPU con **HaMeR** (matrices de rotación 3D $\text{SO}(3)$ del modelo **MANO** para las 15 falanges y muñeca), **DWPose / RTMW3D** (133 puntos de cuerpo completo) y **MediaPipe Face Landmarker** (52 blendshapes ARKit), seguido de retargeting directo 1:1 (`v2.5`) y post-procesamiento biomecánico con cinemática inversa (IK) analítica de 2 huesos anti-penetración (`v2.6`) para **4.143 señas VRM**.
+4. **Pipeline de Visión por Computadora y Cinemática 3D (`Diccionario LSEC` v2.7):** Catálogo VRM estandarizado v2.7 como versión predeterminada, con compatibilidad v2.6 corregida y v2.5 directa 1:1. Incluye super-resolución e interpolación temporal 15→60 FPS (`video_enhancer.py`), extracción multimodal en GPU con **HaMeR**, **DWPose / RTMW3D** y **MediaPipe Face Landmarker**, seguido de post-procesamiento biomecánico con IK analítica anti-penetración para **4.143 señas VRM**.
 5. **Estación de Trabajo Audiovisual (*LSEC Studio*) y Motor 3D WebGL:** Interfaz de usuario profesional tipo editor no lineal (NLE) y reproductor 3D autónomo (`/viewer`) construidos con **Vanilla ES6+**, **HTML5 Canvas 2D** y **Three.js + `@pixiv/three-vrm`**, acompañados de una plataforma de validación nativa sorda y barrera criptográfica antifugas **SHA-256**.
 
 ---
@@ -44,7 +44,7 @@ A diferencia de aproximaciones tradicionales basadas en mapeos ingenuos palabra 
 | **Motor Gramatical Formal LSEC y Reglas FENASEC** | 22 Reglas LSEC + 4 Reglas FENASEC | [`app/lsec_grammar/registry.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/lsec_grammar/registry.py) y [`fenasec_rules.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/services/fenasec_rules.py) aplican el orden `TIEMPO + TÓPICO + SOV`, elisión de cópulas/artículos, transferencia funcional de preposiciones, deixis *pro-drop*, negación incorporada (`NO-SABER`), verbos direccionales (`[1->2]`) e intensidad (`++`). |
 | **Servicio de Diccionario Oficial CONADIS** | **4.252 señas** (`catalogo_lsec.json`) | [`dictionary_service.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/services/dictionary_service.py) indexa el Diccionario Oficial "Gabriel Román", detecta frases multipalabra oficiales y clasifica cada glosa en una cascada de verificación (`VERIFICADO_CONADIS`, `LEXICON_LOCAL`, `DACTILOLOGIA`, `NO_VERIFICADO`). |
 
-### 2.3 Pilar 4: Visión por Computadora, Deep Learning y Cinemática 3D (`Diccionario LSEC` v2.5–v2.6)
+### 2.3 Pilar 4: Visión por Computadora, Deep Learning y Cinemática 3D (`Diccionario LSEC` v2.7; compatibilidad v2.6/v2.5)
 
 | Componente / Librería | Versión | Rol y Justificación Técnica |
 | :--- | :--- | :--- |
@@ -216,7 +216,7 @@ El validador estructural ([`StructuralValidator`](file:///c:/Users/brana/Desktop
 
 ### 7.2 Endpoints de Animaciones 3D VRM 1:1 y Exportación MP4 ([`app/api/animation_direct_endpoints.py`](file:///c:/Users/brana/Desktop/TIC%20Software/lsec_translator_prototype/app/api/animation_direct_endpoints.py))
 Disponibles bajo `/api/v1/animations` y el alias `/api/animations-direct`:
-- **`GET /api/v1/animations/list?q=&limit=`** y **`GET /api/v1/animations/stats`**: Catálogo ordenado y estadísticas de las 4.143 señas VRM (`v2.6` / `v2.5`).
+- **`GET /api/v1/animations/list?q=&limit=`** y **`GET /api/v1/animations/stats`**: Catálogo ordenado y estadísticas de las 4.143 señas VRM v2.7 estandarizadas, con compatibilidad v2.6/v2.5.
 - **`GET /api/v1/animations/resolve/{gloss}`** y **`POST /api/v1/animations/resolve`**: Resolución de glosas LSEC a clips de animación 3D.
 - **`GET /api/v1/animations/{sign_name}`**, **`/{sign_name}/qa`**, **`/{sign_name}/info`**, **`/{sign_name}/video`**, **`/{sign_name}/illustration`**: Entrega del `animation.json`, métricas QA, ficha lingüística, video MP4 Ultra HD e ilustración oficial.
 - **`POST /api/v1/animations/finalize-export-mp4`**: Codificación determinista a MP4 (`H.264 + AAC` a 30.0 FPS constantes) mediante `PyAV`.
