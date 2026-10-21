@@ -78,6 +78,20 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000
 | `LSEC_ANIMATIONS_V26_DIR` / `LSEC_ANIMATIONS_DIR` | autodetección en `../Diccionario LSEC/` | Directorios compatibles de animaciones v2.6/v2.5 |
 | `APP_HOST` / `APP_PORT` / `APP_DEBUG` | `0.0.0.0` / `8000` / `false` | Servidor (con `APP_DEBUG=true` se sirve `/media` con los videos de prueba) |
 
+### Código y activos externos
+
+El código, las pruebas, los esquemas y los datos lingüísticos pequeños están
+versionados en este repositorio. El entorno virtual, los secretos, los pesos de
+modelos, el avatar VRM y los catálogos multimedia grandes se mantienen fuera de
+Git. Consulta [Repositorio y activos externos](docs/REPOSITORIO_Y_ASSETS.md)
+para conocer los perfiles mínimo, ASR y completo, las rutas esperadas y la
+política de publicación.
+
+La instalación completa requiere activos externos en `..\Avatar\` y
+`..\Diccionario LSEC\`. Sin ellos, el backend y la traducción de texto pueden
+funcionar, pero la reproducción VRM, las referencias Ultra HD y algunas rutas
+de exportación no estarán disponibles.
+
 ---
 
 ## 🏗️ Arquitectura Integral del Pipeline LSEC
