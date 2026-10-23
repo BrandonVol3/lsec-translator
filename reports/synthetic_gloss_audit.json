@@ -1,0 +1,830 @@
+[
+  {
+    "id": 1,
+    "transcription": "La Universidad Polit?cnica ofrece carreras de tecnolog?a y ciencias para j?venes de todo el Ecuador.",
+    "glosses": [
+      "UNIVERSIDAD",
+      "CARRERA",
+      "VARIOS",
+      "TECNOLOGA",
+      "CIENCIA",
+      "VARIOS",
+      "JVENES",
+      "ECUADOR",
+      "TODO",
+      "POLITCNICAR",
+      "OFRECER"
+    ],
+    "warnings": [
+      "UNVERIFIED_LEXICAL_SIGN",
+      "UNVERIFIED_LEXICAL_SIGN",
+      "UNVERIFIED_LEXICAL_SIGN",
+      "MISSING_SEMANTIC_PARTICIPANTS"
+    ],
+    "unresolved_avatar": [
+      {
+        "gloss": "JVENES",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      },
+      {
+        "gloss": "POLITCNICAR",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      },
+      {
+        "gloss": "TECNOLOGA",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      }
+    ],
+    "approximate_avatar": [],
+    "fingerspelling": []
+  },
+  {
+    "id": 2,
+    "transcription": "M?s de 3.200 estudiantes participan en los cursos de innovaci?n y desarrollo sostenible.",
+    "glosses": [
+      "M-S",
+      "ESTUDIANTE",
+      "TRES",
+      "MIL",
+      "DOSCIENTOS",
+      "CURSO",
+      "VARIOS",
+      "INNOVACIN",
+      "SOSTENIBILIDAD",
+      "DESTACAR",
+      "PARTICIPAR",
+      "DESARROLLAR"
+    ],
+    "warnings": [
+      "UNVERIFIED_LEXICAL_SIGN",
+      "SEMANTIC_CONTENT_LEAK"
+    ],
+    "unresolved_avatar": [
+      {
+        "gloss": "INNOVACIN",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      }
+    ],
+    "approximate_avatar": [
+      {
+        "gloss": "DESTACAR",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "Importante",
+        "match_type": "synonym"
+      },
+      {
+        "gloss": "SOSTENIBILIDAD",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "Cuidar",
+        "match_type": "synonym"
+      }
+    ],
+    "fingerspelling": [
+      "M-S"
+    ]
+  },
+  {
+    "id": 3,
+    "transcription": "Te invitamos a formar parte de la comunidad acad?mica y construir tu futuro profesional.",
+    "glosses": [
+      "PRO1-PL",
+      "FUTURO",
+      "PROFESIONAL",
+      "PARTE",
+      "COMUNIDAD",
+      "ACADMICA",
+      "PRO2",
+      "FORMAR",
+      "INVITAR[1-PL->2]",
+      "CONSTRUIR"
+    ],
+    "warnings": [
+      "UNVERIFIED_LEXICAL_SIGN"
+    ],
+    "unresolved_avatar": [
+      {
+        "gloss": "ACADMICA",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      }
+    ],
+    "approximate_avatar": [
+      {
+        "gloss": "FORMAR",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "Formación, Manualidad",
+        "match_type": "lemma"
+      },
+      {
+        "gloss": "PRO1-PL",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "Nosotros(as)",
+        "match_type": "synonym"
+      },
+      {
+        "gloss": "PRO2",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "Tú",
+        "match_type": "synonym"
+      }
+    ],
+    "fingerspelling": []
+  },
+  {
+    "id": 4,
+    "transcription": "Hoy inicia el proceso de admisi?n para el periodo 2027A con 60 preguntas y un tiempo promedio de 90 minutos.",
+    "glosses": [
+      "HOY",
+      "PROCESO",
+      "ADMISIN",
+      "PERIODO",
+      "PREGUNTA",
+      "60",
+      "TIEMPO",
+      "PROMEDIO",
+      "MINUTO",
+      "90",
+      "2027A",
+      "CON",
+      "INICIAR"
+    ],
+    "warnings": [
+      "UNVERIFIED_LEXICAL_SIGN",
+      "UNVERIFIED_LEXICAL_SIGN",
+      "UNVERIFIED_LEXICAL_SIGN",
+      "UNVERIFIED_LEXICAL_SIGN"
+    ],
+    "unresolved_avatar": [
+      {
+        "gloss": "2027A",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      },
+      {
+        "gloss": "ADMISIN",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      }
+    ],
+    "approximate_avatar": [
+      {
+        "gloss": "60",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "Sesenta",
+        "match_type": "synonym"
+      },
+      {
+        "gloss": "90",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "Noventa",
+        "match_type": "synonym"
+      },
+      {
+        "gloss": "HOY",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "Ahora",
+        "match_type": "synonym"
+      },
+      {
+        "gloss": "INICIAR",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "Comenzar, Empezar",
+        "match_type": "synonym"
+      },
+      {
+        "gloss": "PERIODO",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "Período de tiempo, Transcurrir",
+        "match_type": "synonym"
+      }
+    ],
+    "fingerspelling": []
+  },
+  {
+    "id": 5,
+    "transcription": "La UPEC registra alrededor de 2.800 aspirantes que est?n opcionando para un cupo en la oferta acad?mica.",
+    "glosses": [
+      "U-P-E-C",
+      "ASPIRANTE",
+      "DOS",
+      "MIL",
+      "OCHOCIENTOS",
+      "CUPO",
+      "ACADMICO",
+      "OFERTA",
+      "ALREDEDOR",
+      "ESTN",
+      "REGISTRAR",
+      "OPCIONAR"
+    ],
+    "warnings": [
+      "UNVERIFIED_LEXICAL_SIGN",
+      "UNVERIFIED_LEXICAL_SIGN",
+      "UNVERIFIED_LEXICAL_SIGN",
+      "UNVERIFIED_LEXICAL_SIGN",
+      "UNVERIFIED_LEXICAL_SIGN",
+      "UNVERIFIED_LEXICAL_SIGN",
+      "UNVERIFIED_LEXICAL_SIGN",
+      "UNVERIFIED_LEXICAL_SIGN"
+    ],
+    "unresolved_avatar": [
+      {
+        "gloss": "ACADMICO",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      },
+      {
+        "gloss": "ALREDEDOR",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      },
+      {
+        "gloss": "CUPO",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      },
+      {
+        "gloss": "ESTN",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      },
+      {
+        "gloss": "OFERTA",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      }
+    ],
+    "approximate_avatar": [
+      {
+        "gloss": "ASPIRANTE",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "Aspirar",
+        "match_type": "synonym"
+      },
+      {
+        "gloss": "OPCIONAR",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "Alternativa, Opción",
+        "match_type": "synonym"
+      },
+      {
+        "gloss": "REGISTRAR",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "Registro Civil",
+        "match_type": "synonym"
+      }
+    ],
+    "fingerspelling": [
+      "U-P-E-C"
+    ]
+  },
+  {
+    "id": 6,
+    "transcription": "No solo formamos profesionales, tambi?n ciudadanos responsables que transforman su comunidad.",
+    "glosses": [
+      "PROFESIONAL",
+      "PRO1-PL",
+      "VARIOS",
+      "SOLAMENTE-NO",
+      "FORMAR",
+      "ADEMÁS",
+      "TAMBIN",
+      "CIUDADANO",
+      "RESPONSABLE",
+      "VARIOS",
+      "COMUNIDAD",
+      "PRO3",
+      "TRANSFORMAR"
+    ],
+    "warnings": [
+      "UNVERIFIED_LEXICAL_SIGN",
+      "MISSING_SEMANTIC_PARTICIPANTS"
+    ],
+    "unresolved_avatar": [
+      {
+        "gloss": "TAMBIN",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      }
+    ],
+    "approximate_avatar": [
+      {
+        "gloss": "FORMAR",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "Formación, Manualidad",
+        "match_type": "lemma"
+      },
+      {
+        "gloss": "PRO1-PL",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "Nosotros(as)",
+        "match_type": "synonym"
+      },
+      {
+        "gloss": "PRO3",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "El, Ella",
+        "match_type": "synonym"
+      },
+      {
+        "gloss": "SOLAMENTE-NO",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "Solo",
+        "match_type": "synonym"
+      }
+    ],
+    "fingerspelling": []
+  },
+  {
+    "id": 7,
+    "transcription": "Desde el primer d?a te acompa?amos con excelencia, confianza e innovaci?n tecnol?gica.",
+    "glosses": [
+      "PRO1-PL",
+      "DESDE",
+      "DA",
+      "PRIMERO",
+      "PRO2",
+      "EXCELENCIA",
+      "CONFIANZA",
+      "CON",
+      "INNOVACIN",
+      "TECNOLGICO",
+      "ACOMPAAR"
+    ],
+    "warnings": [
+      "UNVERIFIED_LEXICAL_SIGN",
+      "UNVERIFIED_LEXICAL_SIGN",
+      "UNVERIFIED_LEXICAL_SIGN"
+    ],
+    "unresolved_avatar": [
+      {
+        "gloss": "ACOMPAAR",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      },
+      {
+        "gloss": "DA",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      },
+      {
+        "gloss": "INNOVACIN",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      },
+      {
+        "gloss": "TECNOLGICO",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      }
+    ],
+    "approximate_avatar": [
+      {
+        "gloss": "EXCELENCIA",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "Excelente",
+        "match_type": "lemma"
+      },
+      {
+        "gloss": "PRIMERO",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "Primer",
+        "match_type": "lemma"
+      },
+      {
+        "gloss": "PRO1-PL",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "Nosotros(as)",
+        "match_type": "synonym"
+      },
+      {
+        "gloss": "PRO2",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "Tú",
+        "match_type": "synonym"
+      }
+    ],
+    "fingerspelling": []
+  },
+  {
+    "id": 8,
+    "transcription": "M?s de 4.500 graduados ya lograron sus metas y ahora crean nuevas oportunidades.",
+    "glosses": [
+      "AHORA",
+      "MS",
+      "GRADUADO",
+      "CUATRO",
+      "MIL",
+      "CINCO",
+      "CIENTOS",
+      "META",
+      "VARIOS",
+      "OPORTUNIDAD",
+      "NUEVO",
+      "VARIOS",
+      "YA",
+      "PRO3",
+      "LOGRAR",
+      "CREAR"
+    ],
+    "warnings": [
+      "UNVERIFIED_LEXICAL_SIGN",
+      "UNVERIFIED_LEXICAL_SIGN",
+      "UNVERIFIED_LEXICAL_SIGN"
+    ],
+    "unresolved_avatar": [
+      {
+        "gloss": "CIENTOS",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      },
+      {
+        "gloss": "CINCO",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      },
+      {
+        "gloss": "MS",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      }
+    ],
+    "approximate_avatar": [
+      {
+        "gloss": "PRO3",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "El, Ella",
+        "match_type": "synonym"
+      }
+    ],
+    "fingerspelling": []
+  },
+  {
+    "id": 9,
+    "transcription": "Para m?s informaci?n comun?cate al WhatsApp 098 765 43 210 o al correo admisiones@upec.edu.ec.",
+    "glosses": [
+      "MS",
+      "INFORMACIN",
+      "COMUNCAR",
+      "WHATSAPP",
+      "098",
+      "765",
+      "43",
+      "210",
+      "CORREO",
+      "ADMISIONES@UPECEDUEC"
+    ],
+    "warnings": [
+      "UNVERIFIED_LEXICAL_SIGN",
+      "UNVERIFIED_LEXICAL_SIGN",
+      "UNVERIFIED_LEXICAL_SIGN",
+      "UNVERIFIED_LEXICAL_SIGN",
+      "UNVERIFIED_LEXICAL_SIGN",
+      "UNVERIFIED_LEXICAL_SIGN"
+    ],
+    "unresolved_avatar": [
+      {
+        "gloss": "098",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      },
+      {
+        "gloss": "210",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      },
+      {
+        "gloss": "43",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      },
+      {
+        "gloss": "765",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      },
+      {
+        "gloss": "ADMISIONES@UPECEDUEC",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      },
+      {
+        "gloss": "COMUNCAR",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      },
+      {
+        "gloss": "INFORMACIN",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      },
+      {
+        "gloss": "MS",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      },
+      {
+        "gloss": "WHATSAPP",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      }
+    ],
+    "approximate_avatar": [
+      {
+        "gloss": "CORREO",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "Correo electrónico",
+        "match_type": "synonym"
+      }
+    ],
+    "fingerspelling": []
+  },
+  {
+    "id": 10,
+    "transcription": "El campus de Tulc?n y la sede de Cayambe trabajan juntos para fortalecer la educaci?n p?blica.",
+    "glosses": [
+      "CAMPUS",
+      "T-U-L-C-N",
+      "SEDE",
+      "C-A-Y-A-M-B-E",
+      "JUNTO",
+      "VARIOS",
+      "EDUCACIN",
+      "PBLICA",
+      "PROPÓSITO",
+      "TRABAJAR",
+      "FORTALECER"
+    ],
+    "warnings": [
+      "UNVERIFIED_LEXICAL_SIGN",
+      "UNVERIFIED_LEXICAL_SIGN",
+      "UNVERIFIED_LEXICAL_SIGN",
+      "UNVERIFIED_LEXICAL_SIGN",
+      "UNVERIFIED_LEXICAL_SIGN"
+    ],
+    "unresolved_avatar": [
+      {
+        "gloss": "EDUCACIN",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      },
+      {
+        "gloss": "FORTALECER",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      },
+      {
+        "gloss": "PBLICA",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      },
+      {
+        "gloss": "PROPÓSITO",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      },
+      {
+        "gloss": "SEDE",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      }
+    ],
+    "approximate_avatar": [
+      {
+        "gloss": "CAMPUS",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "Universidad",
+        "match_type": "synonym"
+      },
+      {
+        "gloss": "JUNTO",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "Juntar, Juntos",
+        "match_type": "lemma"
+      }
+    ],
+    "fingerspelling": [
+      "C-A-Y-A-M-B-E",
+      "T-U-L-C-N"
+    ]
+  },
+  {
+    "id": 11,
+    "transcription": "Decide sobre tu futuro y haz posible hoy lo que imaginas para tu vida profesional.",
+    "glosses": [
+      "FUTURO",
+      "DECIDIR",
+      "PRO2",
+      "SOBRE",
+      "HOY",
+      "PRO2",
+      "IMAGINAR",
+      "ESO",
+      "REALIDAD",
+      "HACER"
+    ],
+    "warnings": [
+      "UNVERIFIED_LEXICAL_SIGN",
+      "SOURCE_CONTENT_DROPPED"
+    ],
+    "unresolved_avatar": [],
+    "approximate_avatar": [
+      {
+        "gloss": "ESO",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "Este",
+        "match_type": "synonym"
+      },
+      {
+        "gloss": "HOY",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "Ahora",
+        "match_type": "synonym"
+      },
+      {
+        "gloss": "PRO2",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "Tú",
+        "match_type": "synonym"
+      },
+      {
+        "gloss": "REALIDAD",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "Real",
+        "match_type": "lemma"
+      }
+    ],
+    "fingerspelling": []
+  },
+  {
+    "id": 12,
+    "transcription": "La evaluaci?n comienza a las 8 y cuarto; cada aspirante debe responder las preguntas en una hora.",
+    "glosses": [
+      "8",
+      "CUARTO",
+      "EVALUACIN",
+      "COMENZAR",
+      "ASPIRANTE",
+      "PREGUNTA",
+      "VARIOS",
+      "HORA",
+      "DEBER",
+      "RESPONDER"
+    ],
+    "warnings": [
+      "UNVERIFIED_LEXICAL_SIGN",
+      "UNVERIFIED_LEXICAL_SIGN",
+      "UNVERIFIED_LEXICAL_SIGN",
+      "UNVERIFIED_LEXICAL_SIGN",
+      "UNVERIFIED_LEXICAL_SIGN"
+    ],
+    "unresolved_avatar": [
+      {
+        "gloss": "CUARTO",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      },
+      {
+        "gloss": "EVALUACIN",
+        "found": false,
+        "fingerspelling": false,
+        "resolved_gloss": null,
+        "match_type": "none"
+      }
+    ],
+    "approximate_avatar": [
+      {
+        "gloss": "8",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "Ocho",
+        "match_type": "synonym"
+      },
+      {
+        "gloss": "ASPIRANTE",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "Aspirar",
+        "match_type": "synonym"
+      },
+      {
+        "gloss": "DEBER",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "Deberes",
+        "match_type": "synonym"
+      },
+      {
+        "gloss": "HORA",
+        "found": true,
+        "fingerspelling": false,
+        "resolved_gloss": "¿Qué hora es",
+        "match_type": "synonym"
+      }
+    ],
+    "fingerspelling": []
+  }
+]

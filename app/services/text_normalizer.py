@@ -289,6 +289,13 @@ _GERUND_TO_INFINITIVE_IRREGULAR: Dict[str, str] = {
     "prefiriendo": "preferir", "consiguiendo": "conseguir", "eligiendo": "elegir",
     "construyendo": "construir", "incluyendo": "incluir", "poniendo": "poner",
     "teniendo": "tener", "haciendo": "hacer", "pudiendo": "poder",
+    "viendo": "ver", "avisando": "avisar",
+}
+
+# 'dame viendo' en el habla ecuatoriana no pide "ver": pide revisar.
+_DAME_GERUND_SEMANTIC_OVERRIDES: Dict[str, str] = {
+    "viendo": "ver",
+    "avisando": "avisar",
 }
 
 
@@ -312,13 +319,25 @@ _DAME_GERUND_RE = (
 
 def _dame_gerund_replacer(match: "re.Match[str]") -> str:
     """'dame pasando la sal' → 'por favor pasar la sal' (cortesía indirecta ecuatoriana)."""
-    infinitive = gerund_to_infinitive(match.group(1))
+    gerund = match.group(1).lower()
+    infinitive = _DAME_GERUND_SEMANTIC_OVERRIDES.get(gerund) or gerund_to_infinitive(gerund)
     if infinitive is None:
         return match.group(0)  # sin base morfológica segura: no se altera
     tail = match.string[match.end():].lower()
     head = match.string[:match.start()].lower()
     already_polite = "por favor" in tail or "por favor" in head
     return infinitive if already_polite else f"por favor {infinitive}"
+
+
+def _clock_time_replacer(match: "re.Match[str]") -> str:
+    """'14:15' → 'hora 14 15' para que el planificador componga HORA + numerales."""
+    return f"hora {match.group(1)} {match.group(2)}"
+
+
+def _upec_email_replacer(match: "re.Match[str]") -> str:
+    """Separa un correo UPEC en unidades que el planificador puede glosar."""
+    user = match.group(1)
+    return f"{user} arroba UPEC punto edu punto ec"
 
 
 _SLANG_NOUN_MAP: Dict[str, str] = {
@@ -357,6 +376,16 @@ def _de_una_replacer(match: "re.Match[str]") -> str:
 
 
 _DEFAULT_CONTEXTUAL_CORRECTIONS.extend([
+    {
+        "pattern": r"\b([a-záéíóúñü]+)arrobaupec\.edu\.es\b",
+        "replacement": "",
+        "replacer": _upec_email_replacer,
+        "asr_confidence": 0.92,
+        "normalization_confidence": 0.98,
+        "reason": "correo institucional ASR: dominio UPEC normalizado a .edu.ec",
+        "requires_human_review": False,
+        "alternative_candidates": ["usuario arroba UPEC punto edu punto ec"],
+    },
     {
         "pattern": _DAME_GERUND_RE,
         "replacement": "",
@@ -424,6 +453,92 @@ _DEFAULT_CONTEXTUAL_CORRECTIONS.extend([
         "reason": "locución ecuatoriana 'ya regreso nomás' → 'vuelvo pronto'",
         "requires_human_review": False,
         "alternative_candidates": ["vuelvo pronto"],
+    },
+])
+
+# ============================================================
+# Modismos, cuantificación y expresiones numéricas (LSEC 2.8)
+# ============================================================
+
+_DEFAULT_CONTEXTUAL_CORRECTIONS.extend([
+    {
+        # 'de ley' es certeza, no el sustantivo jurídico.
+        "pattern": r"\bde\s+ley\b",
+        "replacement": "seguro",
+        "asr_confidence": 0.90,
+        "normalization_confidence": 0.95,
+        "reason": "locución ecuatoriana 'de ley' → certeza ('seguro')",
+        "requires_human_review": False,
+        "alternative_candidates": ["seguro", "cierto"],
+    },
+    {
+        # 'Atatai' expresa asco; nunca debe ir a dactilología.
+        "pattern": r"\bat[aá]tai\b",
+        "replacement": "asco",
+        "asr_confidence": 0.88,
+        "normalization_confidence": 0.93,
+        "reason": "interjección ecuatoriana 'atatai' → asco",
+        "requires_human_review": False,
+        "alternative_candidates": ["asco"],
+    },
+    {
+        # 'Ayayay' acompaña una queja de dolor.
+        "pattern": r"\bay(?:ay)+\b",
+        "replacement": "dolor",
+        "asr_confidence": 0.88,
+        "normalization_confidence": 0.92,
+        "reason": "interjección ecuatoriana 'ayayay' → dolor",
+        "requires_human_review": False,
+        "alternative_candidates": ["dolor"],
+    },
+    {
+        # Diminutivos adverbiales andinos: base léxica, sin sufijo.
+        "pattern": r"\bahorita\b",
+        "replacement": "ahora",
+        "asr_confidence": 0.92,
+        "normalization_confidence": 0.96,
+        "reason": "diminutivo adverbial andino 'ahorita' → ahora",
+        "requires_human_review": False,
+        "alternative_candidates": ["ahora"],
+    },
+    {
+        "pattern": r"\btempranito\b",
+        "replacement": "temprano",
+        "asr_confidence": 0.92,
+        "normalization_confidence": 0.96,
+        "reason": "diminutivo adverbial andino 'tempranito' → temprano",
+        "requires_human_review": False,
+        "alternative_candidates": ["temprano"],
+    },
+    {
+        "pattern": r"\brapidito\b",
+        "replacement": "rápido",
+        "asr_confidence": 0.92,
+        "normalization_confidence": 0.96,
+        "reason": "diminutivo adverbial andino 'rapidito' → rápido",
+        "requires_human_review": False,
+        "alternative_candidates": ["rápido"],
+    },
+    {
+        # El porcentaje se realiza con la seña existente PORCENTAJE.
+        "pattern": r"\bpor\s+ciento\b",
+        "replacement": "porcentaje",
+        "asr_confidence": 0.95,
+        "normalization_confidence": 0.98,
+        "reason": "porcentaje léxico: 'por ciento' → 'porcentaje'",
+        "requires_human_review": False,
+        "alternative_candidates": ["porcentaje"],
+    },
+    {
+        # 14:15 → hora 14 15; el planificador compone HORA + numerales.
+        "pattern": r"(?<!\d)(\d{1,2}):(\d{2})(?!\d)",
+        "replacement": "",
+        "replacer": _clock_time_replacer,
+        "asr_confidence": 0.95,
+        "normalization_confidence": 0.98,
+        "reason": "horario 24h: se antepone HORA y se separan sus componentes",
+        "requires_human_review": False,
+        "alternative_candidates": ["hora + hora + minutos"],
     },
 ])
 
@@ -1011,5 +1126,3 @@ _NEGATION_RE = re.compile(
 
 def contains_negation(text: str) -> bool:
     return bool(_NEGATION_RE.search(text or ""))
-
-

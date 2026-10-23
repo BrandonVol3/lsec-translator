@@ -1134,6 +1134,47 @@ _LSEC_LEXICAL_ALIASES: Dict[str, Tuple[str, str]] = {
     "primero": ("Primer", "lemma"),
     "primera": ("Primer", "lemma"),
     "4500": ("Mil", "synonym"),
+    # Valores numéricos frecuentes: se resuelven contra la forma léxica
+    # disponible, manteniendo la glosa fuente para la línea de tiempo.
+    "8": ("Ocho", "synonym"),
+    "60": ("Sesenta", "synonym"),
+    "3000": ("Tres mil", "synonym"),
+    "3200": ("Tres mil", "synonym"),
+    "2800": ("Dos mil", "synonym"),
+    "90": ("Noventa", "synonym"),
+    "cientos": ("Cien", "synonym"),
+    "ciento": ("Cien", "synonym"),
+    "joven": ("Joven, Juventud", "synonym"),
+    "jovenes": ("Joven, Juventud", "synonym"),
+    "inscribete": ("Inscribir", "synonym"),
+    "inscribirse": ("Inscribir", "synonym"),
+    "inscribir": ("Inscribir", "synonym"),
+    "tecnologico": ("Tecnología", "synonym"),
+    "tecnologia": ("Tecnología", "synonym"),
+    "evaluacion": ("Examinar, Evaluar", "synonym"),
+    "aspirante": ("Aspirar", "synonym"),
+    "periodo": ("Período de tiempo, Transcurrir", "synonym"),
+    "deber": ("Deberes", "synonym"),
+    "hora": ("¿Qué hora es", "synonym"),
+    "informacion": ("Extraer información", "synonym"),
+    "iniciar": ("Empezar", "synonym"),
+    "registrar": ("Registro Civil", "synonym"),
+    "opcionar": ("Alternativa, Opción", "synonym"),
+    "oferta": ("Ofrecer", "synonym"),
+    "taller": ("Curso", "synonym"),
+    "dificil": ("Difícil", "synonym"),
+    "diseno": ("Dibujar", "synonym"),
+    "dominar": ("Saber", "synonym"),
+    "constante": ("Siempre", "synonym"),
+    "integracion": ("Integrar", "synonym"),
+    "modalidad": ("Forma", "synonym"),
+    "presencial": ("En presencia", "synonym"),
+    "desarrollo": ("Desarrollar", "synonym"),
+    "sostenible": ("Cuidar", "synonym"),
+    "semipresencial": ("En presencia", "synonym"),
+    # Contacto electrónico compuesto generado por la transcripción ASR.
+    "seartesarrobaupecedues": ("Correo electrónico", "synonym"),
+    "correo": ("Correo electrónico", "synonym"),
     # Vocabulario académico e institucional frecuente (ej. 1.mp4)
     "academico": ("Carrera, Estudios", "synonym"),
     "academica": ("Carrera, Estudios", "synonym"),
@@ -1168,6 +1209,71 @@ _LSEC_LEXICAL_ALIASES: Dict[str, Tuple[str, str]] = {
     "cercano": ("Cerca", "lemma"),
     "cercana": ("Cerca", "lemma"),
     "cercania": ("Cerca", "lemma"),
+    # ------------------------------------------------------------------
+    # Vocabulario de los Videos 11-20 (v2.8). Solo se mapea a señas REALES
+    # del catálogo v2.7; si una equivalencia no es segura se deja sin alias.
+    # ------------------------------------------------------------------
+    # Porcentajes y medidas
+    "porcentaje": ("Porcentaje", "synonym"),
+    "porciento": ("Porcentaje", "synonym"),
+    "lugar": ("Local, Lugar", "synonym"),
+    "puntaje": ("Punto", "synonym"),
+    "promedio": ("Promedio", "synonym"),
+    "minimo": ("Mínimo", "synonym"),
+    # Términos académicos e institucionales
+    "ingenieria": ("Ingeniero(a)", "synonym"),
+    "computacion": ("Computadora", "synonym"),
+    "enfermeria": ("Enfermera", "synonym"),
+    "agropecuaria": ("Agricultor(a), Agricultura", "synonym"),
+    "inicial": ("Primer", "synonym"),
+    "exterior": ("Fuera", "synonym"),
+    "comercio": ("Comerciar, Compartir", "synonym"),
+    "nivelacion": ("Comenzar, Empezar", "synonym"),
+    "cronograma": ("Horario, Cronograma", "synonym"),
+    "semestre": ("Semestre", "synonym"),
+    "facultad": ("Facultad", "synonym"),
+    "secretaria": ("Secretario(a)", "synonym"),
+    "coordinador": ("Coordinador(a)", "synonym"),
+    "rector": ("Rector(a)", "synonym"),
+    "directora": ("Director(a)", "synonym"),
+    "docente": ("Docente", "synonym"),
+    "becario": ("Beca", "synonym"),
+    "matricula": ("Matrícula", "synonym"),
+    "certificado": ("Certificado, Certificar", "synonym"),
+    "comprobante": ("Certificado, Certificar", "synonym"),
+    "carpeta": ("Carpeta", "synonym"),
+    "requisito": ("Requisito", "synonym"),
+    # Verbos y adjetivos frecuentes
+    "preferir": ("Preferir", "synonym"),
+    "solicitar": ("Solicitud", "synonym"),
+    "reunir": ("Reunirse, Reunión", "synonym"),
+    "fortalecer": ("Fuerte, Fuerza, Poder", "synonym"),
+    "legalizar": ("Poder legal", "synonym"),
+    "financiar": ("Banco, Una institución financiera", "synonym"),
+    "postular": ("Inscribir, Inscripción", "synonym"),
+    "debatir": ("Discutir", "synonym"),
+    "cubrir": ("Cubrir", "synonym"),
+    "alcanzar": ("Alcanzar", "synonym"),
+    "preocupar": ("Preocuparse", "synonym"),
+    "fallar": ("Falla", "synonym"),
+    "plataforma": ("Computadora", "approximate"),
+    "tarea": ("Oficio, Trabajo", "synonym"),
+    "internet": ("Computadora", "approximate"),
+    "duda": ("Dudar", "synonym"),
+    "dificultad": ("Difícil", "synonym"),
+    "rendimiento": ("Mejor, Mejorar", "approximate"),
+    "bienestar": ("Salud, Saludable", "synonym"),
+    "movilidad": ("Movilización, Transporte, Viático", "synonym"),
+    "entusiasmo": ("Emoción, Entusiasmarse, Simpático", "synonym"),
+    "equipamiento": ("Equipo", "synonym"),
+    "intercultural": ("Cultura", "approximate"),
+    "linguistico": ("Lingüista", "synonym"),
+    "linguistica": ("Lingüista", "synonym"),
+    "antiguedad": ("Antiguo(a)", "synonym"),
+    "prestigio": ("Importante", "approximate"),
+    "frontera": ("Frontera", "synonym"),
+    "mutuamente": ("Juntar, Juntos", "synonym"),
+    "alguien": ("Algunos(as)", "approximate"),
 }
 
 
@@ -1525,6 +1631,12 @@ def resolve_gloss_to_sign(
             "qa": None,
             "animation": None,
         }
+    # Las marcas direccionales son metadatos de ejecución, no parte del
+    # nombre del clip. El avatar debe resolver INVITAR, EXPLICAR, etc.
+    # y conservar la dirección en la glosa mostrada.
+    base_gloss_match = re.match(r"^(.+?)\[[^\]]+\]$", clean_gloss)
+    lookup_gloss = base_gloss_match.group(1).strip() if base_gloss_match else clean_gloss
+
     idx = _build_v26_lexical_index()
     exact_map: Dict[str, str] = idx["exact_map"]
     head_map: Dict[str, List[str]] = idx["head_map"]
@@ -1536,7 +1648,7 @@ def resolve_gloss_to_sign(
     qa_norm_map: Dict[str, Dict[str, Any]] = idx["qa_norm_map"]
 
     # 0. Dactilología explícita (ej. C-A-Y-A-M-B-E, T-U-L-C-Á-N, U-P-E-C, G-U-A-Y-A-Q-U-I-L)
-    if _is_fingerspelling_gloss(clean_gloss):
+    if _is_fingerspelling_gloss(lookup_gloss):
         return {
             "found": False,
             "gloss": clean_gloss,
@@ -1552,7 +1664,7 @@ def resolve_gloss_to_sign(
             "animation": None,
         }
 
-    norm_g = normalize_text(clean_gloss)
+    norm_g = normalize_text(lookup_gloss)
     resolved_sign: Optional[str] = None
     match_type: str = "none"
     status_label: str = "MISSING"
@@ -1586,7 +1698,7 @@ def resolve_gloss_to_sign(
         try:
             from app.services.dictionary_service import get_dictionary_service
             dict_svc = get_dictionary_service()
-            entry = dict_svc.lookup_gloss(clean_gloss)
+            entry = dict_svc.lookup_gloss(lookup_gloss)
             if entry:
                 for cand_title in [entry.title, entry.head_word] + list(entry.synonyms or []):
                     nc = normalize_text(cand_title)
@@ -1629,7 +1741,7 @@ def resolve_gloss_to_sign(
 
     # Nivel 5: Derivación morfológica (lemas verbales, nominalizaciones, plurales, género)
     if not resolved_sign:
-        for morph_norm in _generate_morphological_candidates(clean_gloss):
+        for morph_norm in _generate_morphological_candidates(lookup_gloss):
             if morph_norm in _PREFERRED_HOMONYMS:
                 resolved_sign = _PREFERRED_HOMONYMS[morph_norm]
                 match_type = "lemma"
@@ -1652,8 +1764,8 @@ def resolve_gloss_to_sign(
                 break
 
     # Nivel 6: Descomposición de glosas compuestas con guion (ej. MÁS-DE -> MÁS)
-    if not resolved_sign and "-" in clean_gloss:
-        sub_tokens = [t.strip() for t in clean_gloss.split("-") if len(t.strip()) >= 2]
+    if not resolved_sign and "-" in lookup_gloss:
+        sub_tokens = [t.strip() for t in lookup_gloss.split("-") if len(t.strip()) >= 2]
         for sub_tok in sub_tokens:
             sub_res = resolve_gloss_to_sign(sub_tok, version=version, include_animation=False)
             if sub_res.get("found"):
@@ -1671,7 +1783,7 @@ def resolve_gloss_to_sign(
             "match_type": "none",
             "status": "MISSING",
             "needs_review": False,
-            "warning": f"Sin animación en catálogo v2.7/v2.6 para '{clean_gloss}'",
+            "warning": f"Sin animación en catálogo v2.7/v2.6 para '{lookup_gloss}'",
             "version_served": None,
             "is_fingerspelling": False,
             "qa": None,

@@ -1,0 +1,5688 @@
+{
+  "audit": "LSEC v2.8 Phase 3 - deterministic calibration sample",
+  "generatedAt": "2026-10-21T23:21:31.835840+00:00",
+  "sampling": {
+    "seed": 20261021,
+    "method": "All CRITICAL plus deterministic random sample of 50 HIGH, 50 MEDIUM, 50 LOW",
+    "targetPerGroup": {
+      "CRITICAL": "all",
+      "HIGH": 50,
+      "MEDIUM": 50,
+      "LOW": 50
+    },
+    "totalSelected": 175
+  },
+  "policy": {
+    "catalogModified": false,
+    "codeModified": false,
+    "manualReviewCompleted": false,
+    "purpose": "Calibration sample for measuring automatic triage precision before batch corrections."
+  },
+  "reviewRubric": {
+    "visualAgainstSource": "PASS|FAIL|UNCLEAR",
+    "avatarFidelity": "PASS|FAIL|UNCLEAR",
+    "abruptRotation": "PASS|FAIL|UNCLEAR",
+    "handPenetration": "PASS|FAIL|UNCLEAR",
+    "handConfiguration": "PASS|FAIL|UNCLEAR",
+    "nonManualExpression": "PASS|FAIL|UNCLEAR|NOT_APPLICABLE",
+    "sourceQuality": "CLEAR|BLURRY|OCCLUDED|MISSING",
+    "decision": "ACCEPT|AUTO_FIX_CANDIDATE|MANUAL_FIX|QUARANTINE|INSUFFICIENT_SOURCE",
+    "errorCodes": [
+      "HAND_ORIENTATION",
+      "FINGER_OCCLUSION",
+      "WRIST_JUMP",
+      "HAND_PENETRATION",
+      "FACIAL_UNCERTAINTY",
+      "WRONG_DOMINANT_HAND",
+      "CONTACT_MISSED",
+      "SOURCE_UNCLEAR",
+      "NO_AVATAR_MOTION"
+    ]
+  },
+  "summary": {
+    "selectedByRisk": {
+      "CRITICAL": 25,
+      "HIGH": 50,
+      "MEDIUM": 50,
+      "LOW": 50
+    },
+    "reviewed": 5,
+    "accepted": 1,
+    "autoFixCandidates": 1,
+    "manualFixes": 3,
+    "quarantined": 0,
+    "insufficientSource": 0
+  },
+  "items": [
+    {
+      "sampleId": "P3-CRI-001",
+      "risk": "CRITICAL",
+      "signId": "Archivar",
+      "confidence": 0.5381,
+      "strokeDurationSec": 3.85,
+      "maxBoundarySpeedDegPerSec": 609.64,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Archivar\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PASS",
+        "avatarFidelity": "FAIL",
+        "abruptRotation": "PASS",
+        "handPenetration": "PASS",
+        "handConfiguration": "UNCLEAR",
+        "nonManualExpression": "PASS",
+        "sourceQuality": "BLURRY",
+        "decision": "AUTO_FIX_CANDIDATE",
+        "errorCodes": [
+          "FINGER_OCCLUSION"
+        ],
+        "notes": "La se?a coincide en general con el video, pero el movimiento de los dedos no es exacto. Al terminar, despu?s de caer a reposo, los brazos adoptan una pose extra?a; se propone corregir t?cnicamente la pose final sin alterar la se?a."
+      }
+    },
+    {
+      "sampleId": "P3-CRI-002",
+      "risk": "CRITICAL",
+      "signId": "Bilingüe, Bilingüisimo",
+      "confidence": 0.5188,
+      "strokeDurationSec": 0.4,
+      "maxBoundarySpeedDegPerSec": 295.5,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "VERY_SHORT_STROKE_LT_0_8S",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Bilingüe, Bilingüisimo\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "FAIL",
+        "avatarFidelity": "FAIL",
+        "abruptRotation": "PASS",
+        "handPenetration": "PASS",
+        "handConfiguration": "FAIL",
+        "nonManualExpression": "PASS",
+        "sourceQuality": "CLEAR",
+        "decision": "MANUAL_FIX",
+        "errorCodes": [
+          "NO_AVATAR_MOTION"
+        ],
+        "notes": "La fuente es suficientemente clara, pero el avatar no reproduce ning?n movimiento. La animaci?n presenta un fallo funcional y requiere correcci?n manual o regeneraci?n; la configuraci?n manual tampoco puede considerarse fiel en la reproducci?n actual."
+      }
+    },
+    {
+      "sampleId": "P3-CRI-003",
+      "risk": "CRITICAL",
+      "signId": "Broma pesada",
+      "confidence": 0.7498,
+      "strokeDurationSec": 1.5167,
+      "maxBoundarySpeedDegPerSec": 0.0,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": true
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "FACE_ONLY",
+        "SOURCE_LINK_NOT_RESOLVED"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Broma pesada\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PASS",
+        "avatarFidelity": "PASS",
+        "abruptRotation": "PASS",
+        "handPenetration": "PASS",
+        "handConfiguration": "PASS",
+        "nonManualExpression": "PASS",
+        "sourceQuality": "CLEAR",
+        "decision": "ACCEPT",
+        "errorCodes": [],
+        "notes": "Se?a facial revisada a 0.5x: el avatar reproduce la expresi?n y mantiene los brazos en reposo sin anomal?as observables."
+      }
+    },
+    {
+      "sampleId": "P3-CRI-004",
+      "risk": "CRITICAL",
+      "signId": "Capitán (ana), Vocal",
+      "confidence": 0.505,
+      "strokeDurationSec": 0.4,
+      "maxBoundarySpeedDegPerSec": 618.91,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "VERY_SHORT_STROKE_LT_0_8S",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Capitán (ana), Vocal\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "FAIL",
+        "avatarFidelity": "FAIL",
+        "abruptRotation": "PASS",
+        "handPenetration": "FAIL",
+        "handConfiguration": "PASS",
+        "nonManualExpression": "PASS",
+        "sourceQuality": "CLEAR",
+        "decision": "MANUAL_FIX",
+        "errorCodes": [
+          "NO_AVATAR_MOTION",
+          "HAND_PENETRATION"
+        ],
+        "notes": "La configuraci?n manual V/V5 coincide, pero el avatar no reproduce correctamente el movimiento y se observa penetraci?n de manos. Requiere correcci?n manual."
+      }
+    },
+    {
+      "sampleId": "P3-CRI-005",
+      "risk": "CRITICAL",
+      "signId": "Característica",
+      "confidence": 0.4298,
+      "strokeDurationSec": 4.0,
+      "maxBoundarySpeedDegPerSec": 98.16,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Característica\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "FAIL",
+        "avatarFidelity": "FAIL",
+        "abruptRotation": "PASS",
+        "handPenetration": "PASS",
+        "handConfiguration": "PASS",
+        "nonManualExpression": "PASS",
+        "sourceQuality": "CLEAR",
+        "decision": "MANUAL_FIX",
+        "errorCodes": [
+          "CONTACT_MISSED",
+          "NO_AVATAR_MOTION"
+        ],
+        "notes": "La configuraci?n manual I-V6 coincide y no se observa penetraci?n ni giro brusco, pero el avatar no reproduce correctamente el contacto/movimiento del video. Requiere correcci?n manual."
+      }
+    },
+    {
+      "sampleId": "P3-CRI-006",
+      "risk": "CRITICAL",
+      "signId": "Chupar, Succionar",
+      "confidence": 0.8767,
+      "strokeDurationSec": 2.4,
+      "maxBoundarySpeedDegPerSec": 0.0,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": true
+      },
+      "automaticIssues": [
+        "FACE_ONLY",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Chupar, Succionar\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-CRI-007",
+      "risk": "CRITICAL",
+      "signId": "Cien",
+      "confidence": 0.5343,
+      "strokeDurationSec": 2.7167,
+      "maxBoundarySpeedDegPerSec": 267.59,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Cien\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-CRI-008",
+      "risk": "CRITICAL",
+      "signId": "Convención",
+      "confidence": 0.505,
+      "strokeDurationSec": 0.5,
+      "maxBoundarySpeedDegPerSec": 442.67,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "VERY_SHORT_STROKE_LT_0_8S",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Convención\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-CRI-009",
+      "risk": "CRITICAL",
+      "signId": "Cooperar, Cooperación",
+      "confidence": 0.505,
+      "strokeDurationSec": 1.05,
+      "maxBoundarySpeedDegPerSec": 0.0,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Cooperar, Cooperación\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-CRI-010",
+      "risk": "CRITICAL",
+      "signId": "Cállate",
+      "confidence": 0.505,
+      "strokeDurationSec": 0.5,
+      "maxBoundarySpeedDegPerSec": 391.02,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "VERY_SHORT_STROKE_LT_0_8S",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Cállate\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-CRI-011",
+      "risk": "CRITICAL",
+      "signId": "Célula",
+      "confidence": 0.5604,
+      "strokeDurationSec": 1.0834,
+      "maxBoundarySpeedDegPerSec": 360.72,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Célula\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-CRI-012",
+      "risk": "CRITICAL",
+      "signId": "Célula (1)",
+      "confidence": 0.5403,
+      "strokeDurationSec": 0.75,
+      "maxBoundarySpeedDegPerSec": 401.72,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "VERY_SHORT_STROKE_LT_0_8S",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Célula (1)\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-CRI-013",
+      "risk": "CRITICAL",
+      "signId": "Denunciar",
+      "confidence": 0.585,
+      "strokeDurationSec": 10.6333,
+      "maxBoundarySpeedDegPerSec": 573.13,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "VERY_LONG_STROKE_GT_8S",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Denunciar\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-CRI-014",
+      "risk": "CRITICAL",
+      "signId": "Escupir",
+      "confidence": 0.733,
+      "strokeDurationSec": 2.95,
+      "maxBoundarySpeedDegPerSec": 0.0,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": true
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "FACE_ONLY",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Escupir\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-CRI-015",
+      "risk": "CRITICAL",
+      "signId": "Estreñido(a), Estreñimiento",
+      "confidence": 0.505,
+      "strokeDurationSec": 0.8,
+      "maxBoundarySpeedDegPerSec": 0.0,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Estreñido(a), Estreñimiento\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-CRI-016",
+      "risk": "CRITICAL",
+      "signId": "Ladrón(a)",
+      "confidence": 0.4531,
+      "strokeDurationSec": 3.9333,
+      "maxBoundarySpeedDegPerSec": 0.0,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": true
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "FACE_ONLY",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Ladrón(a)\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-CRI-017",
+      "risk": "CRITICAL",
+      "signId": "Linterna",
+      "confidence": 0.5403,
+      "strokeDurationSec": 10.7333,
+      "maxBoundarySpeedDegPerSec": 154.18,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "VERY_LONG_STROKE_GT_8S",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Linterna\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-CRI-018",
+      "risk": "CRITICAL",
+      "signId": "Malecón",
+      "confidence": 0.5923,
+      "strokeDurationSec": 3.5333,
+      "maxBoundarySpeedDegPerSec": 160.17,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Malecón\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-CRI-019",
+      "risk": "CRITICAL",
+      "signId": "Pingüino",
+      "confidence": 0.469,
+      "strokeDurationSec": 5.4667,
+      "maxBoundarySpeedDegPerSec": 44.4,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Pingüino\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-CRI-020",
+      "risk": "CRITICAL",
+      "signId": "Por favor",
+      "confidence": 0.722,
+      "strokeDurationSec": 2.2333,
+      "maxBoundarySpeedDegPerSec": 0.0,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": true
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "FACE_ONLY",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Por favor\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-CRI-021",
+      "risk": "CRITICAL",
+      "signId": "Puré",
+      "confidence": 0.4321,
+      "strokeDurationSec": 5.7833,
+      "maxBoundarySpeedDegPerSec": 340.47,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Puré\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-CRI-022",
+      "risk": "CRITICAL",
+      "signId": "Soplar",
+      "confidence": 0.8009,
+      "strokeDurationSec": 3.0166,
+      "maxBoundarySpeedDegPerSec": 0.0,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": true
+      },
+      "automaticIssues": [
+        "FACE_ONLY",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Soplar\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-CRI-023",
+      "risk": "CRITICAL",
+      "signId": "Tachuela",
+      "confidence": 0.56,
+      "strokeDurationSec": 5.9667,
+      "maxBoundarySpeedDegPerSec": 231.38,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Tachuela\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-CRI-024",
+      "risk": "CRITICAL",
+      "signId": "Tuerca",
+      "confidence": 0.5783,
+      "strokeDurationSec": 4.2167,
+      "maxBoundarySpeedDegPerSec": 418.75,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Tuerca\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-CRI-025",
+      "risk": "CRITICAL",
+      "signId": "Área",
+      "confidence": 0.4295,
+      "strokeDurationSec": 6.6,
+      "maxBoundarySpeedDegPerSec": 100.96,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Área\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-001",
+      "risk": "HIGH",
+      "signId": "Almacén, Local",
+      "confidence": 0.99,
+      "strokeDurationSec": 0.65,
+      "maxBoundarySpeedDegPerSec": 198.85,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "VERY_SHORT_STROKE_LT_0_8S",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Almacén, Local\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-002",
+      "risk": "HIGH",
+      "signId": "Analizar, Análisis",
+      "confidence": 0.6037,
+      "strokeDurationSec": 0.85,
+      "maxBoundarySpeedDegPerSec": 702.79,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Analizar, Análisis\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-003",
+      "risk": "HIGH",
+      "signId": "Anular",
+      "confidence": 0.6825,
+      "strokeDurationSec": 2.9334,
+      "maxBoundarySpeedDegPerSec": 562.47,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Anular\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-004",
+      "risk": "HIGH",
+      "signId": "Asociación De Manabí",
+      "confidence": 0.6825,
+      "strokeDurationSec": 2.8,
+      "maxBoundarySpeedDegPerSec": 104.01,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Asociación De Manabí\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-005",
+      "risk": "HIGH",
+      "signId": "Audífono",
+      "confidence": 0.9305,
+      "strokeDurationSec": 0.4834,
+      "maxBoundarySpeedDegPerSec": 593.17,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": true,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "VERY_SHORT_STROKE_LT_0_8S",
+        "ONE_HANDED",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Audífono\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-006",
+      "risk": "HIGH",
+      "signId": "Bastonera, Cachiporrera",
+      "confidence": 0.6825,
+      "strokeDurationSec": 2.6834,
+      "maxBoundarySpeedDegPerSec": 708.96,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Bastonera, Cachiporrera\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-007",
+      "risk": "HIGH",
+      "signId": "Batalla",
+      "confidence": 0.6825,
+      "strokeDurationSec": 13.2166,
+      "maxBoundarySpeedDegPerSec": 476.15,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "VERY_LONG_STROKE_GT_8S",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Batalla\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-008",
+      "risk": "HIGH",
+      "signId": "Bien",
+      "confidence": 0.6825,
+      "strokeDurationSec": 3.05,
+      "maxBoundarySpeedDegPerSec": 871.46,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": true,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "ONE_HANDED",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Bien\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-009",
+      "risk": "HIGH",
+      "signId": "Billón",
+      "confidence": 0.6121,
+      "strokeDurationSec": 3.7667,
+      "maxBoundarySpeedDegPerSec": 813.88,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Billón\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-010",
+      "risk": "HIGH",
+      "signId": "Calefacción, Calefactor",
+      "confidence": 0.6825,
+      "strokeDurationSec": 5.0333,
+      "maxBoundarySpeedDegPerSec": 712.03,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Calefacción, Calefactor\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-011",
+      "risk": "HIGH",
+      "signId": "Cangrejo, Cáncer",
+      "confidence": 0.9251,
+      "strokeDurationSec": 0.6,
+      "maxBoundarySpeedDegPerSec": 109.99,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "VERY_SHORT_STROKE_LT_0_8S",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Cangrejo, Cáncer\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-012",
+      "risk": "HIGH",
+      "signId": "Cartón",
+      "confidence": 0.77,
+      "strokeDurationSec": 0.75,
+      "maxBoundarySpeedDegPerSec": 813.87,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "VERY_SHORT_STROKE_LT_0_8S",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Cartón\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-013",
+      "risk": "HIGH",
+      "signId": "Castaño",
+      "confidence": 0.9458,
+      "strokeDurationSec": 0.4833,
+      "maxBoundarySpeedDegPerSec": 140.88,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "VERY_SHORT_STROKE_LT_0_8S",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Castaño\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-014",
+      "risk": "HIGH",
+      "signId": "Cebra",
+      "confidence": 0.6825,
+      "strokeDurationSec": 4.5834,
+      "maxBoundarySpeedDegPerSec": 723.63,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Cebra\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-015",
+      "risk": "HIGH",
+      "signId": "Celebración, Celebrar",
+      "confidence": 0.92,
+      "strokeDurationSec": 0.55,
+      "maxBoundarySpeedDegPerSec": 225.3,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "VERY_SHORT_STROKE_LT_0_8S",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Celebración, Celebrar\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-016",
+      "risk": "HIGH",
+      "signId": "Certifíqueme este cheque",
+      "confidence": 0.7125,
+      "strokeDurationSec": 0.4,
+      "maxBoundarySpeedDegPerSec": 531.46,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "VERY_SHORT_STROKE_LT_0_8S",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Certifíqueme este cheque\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-017",
+      "risk": "HIGH",
+      "signId": "Chuta",
+      "confidence": 0.6825,
+      "strokeDurationSec": 4.5,
+      "maxBoundarySpeedDegPerSec": 387.83,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Chuta\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-018",
+      "risk": "HIGH",
+      "signId": "Científico(a)",
+      "confidence": 0.6825,
+      "strokeDurationSec": 4.2,
+      "maxBoundarySpeedDegPerSec": 245.83,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Científico(a)\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-019",
+      "risk": "HIGH",
+      "signId": "Corazón",
+      "confidence": 0.99,
+      "strokeDurationSec": 0.4833,
+      "maxBoundarySpeedDegPerSec": 436.87,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "VERY_SHORT_STROKE_LT_0_8S",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Corazón\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-020",
+      "risk": "HIGH",
+      "signId": "Corazón, Un músculo",
+      "confidence": 0.8565,
+      "strokeDurationSec": 0.4,
+      "maxBoundarySpeedDegPerSec": 612.67,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": true,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "VERY_SHORT_STROKE_LT_0_8S",
+        "ONE_HANDED",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Corazón, Un músculo\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-021",
+      "risk": "HIGH",
+      "signId": "Cristóbal Colón",
+      "confidence": 0.99,
+      "strokeDurationSec": 0.4167,
+      "maxBoundarySpeedDegPerSec": 817.01,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "VERY_SHORT_STROKE_LT_0_8S",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Cristóbal Colón\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-022",
+      "risk": "HIGH",
+      "signId": "Cuadrón",
+      "confidence": 0.99,
+      "strokeDurationSec": 0.7833,
+      "maxBoundarySpeedDegPerSec": 132.52,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "VERY_SHORT_STROKE_LT_0_8S",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Cuadrón\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-023",
+      "risk": "HIGH",
+      "signId": "Cumpleaños",
+      "confidence": 0.99,
+      "strokeDurationSec": 0.4333,
+      "maxBoundarySpeedDegPerSec": 412.08,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "VERY_SHORT_STROKE_LT_0_8S",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Cumpleaños\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-024",
+      "risk": "HIGH",
+      "signId": "Césped, Hierba",
+      "confidence": 0.99,
+      "strokeDurationSec": 0.4,
+      "maxBoundarySpeedDegPerSec": 608.19,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "VERY_SHORT_STROKE_LT_0_8S",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Césped, Hierba\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-025",
+      "risk": "HIGH",
+      "signId": "Círculo",
+      "confidence": 0.99,
+      "strokeDurationSec": 0.4333,
+      "maxBoundarySpeedDegPerSec": 849.48,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": true,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "VERY_SHORT_STROKE_LT_0_8S",
+        "ONE_HANDED",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Círculo\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-026",
+      "risk": "HIGH",
+      "signId": "Enfermo, Adicto",
+      "confidence": 0.6825,
+      "strokeDurationSec": 5.15,
+      "maxBoundarySpeedDegPerSec": 351.6,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Enfermo, Adicto\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-027",
+      "risk": "HIGH",
+      "signId": "Escalera china",
+      "confidence": 0.6825,
+      "strokeDurationSec": 3.05,
+      "maxBoundarySpeedDegPerSec": 540.48,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Escalera china\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-028",
+      "risk": "HIGH",
+      "signId": "Espátula",
+      "confidence": 0.99,
+      "strokeDurationSec": 0.4167,
+      "maxBoundarySpeedDegPerSec": 888.22,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": true,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "VERY_SHORT_STROKE_LT_0_8S",
+        "ONE_HANDED",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Espátula\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-029",
+      "risk": "HIGH",
+      "signId": "Fréjol",
+      "confidence": 0.7328,
+      "strokeDurationSec": 4.2333,
+      "maxBoundarySpeedDegPerSec": 319.5,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Fréjol\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-030",
+      "risk": "HIGH",
+      "signId": "Galaxia",
+      "confidence": 0.6825,
+      "strokeDurationSec": 3.2833,
+      "maxBoundarySpeedDegPerSec": 691.01,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Galaxia\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-031",
+      "risk": "HIGH",
+      "signId": "Gastronomía",
+      "confidence": 0.6648,
+      "strokeDurationSec": 3.6166,
+      "maxBoundarySpeedDegPerSec": 913.2,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "BOUNDARY_VELOCITY_GT_900_DEG_S",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Gastronomía\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-032",
+      "risk": "HIGH",
+      "signId": "Hasta",
+      "confidence": 0.6825,
+      "strokeDurationSec": 3.4666,
+      "maxBoundarySpeedDegPerSec": 817.66,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Hasta\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-033",
+      "risk": "HIGH",
+      "signId": "Indorfútbol",
+      "confidence": 0.6186,
+      "strokeDurationSec": 4.7333,
+      "maxBoundarySpeedDegPerSec": 574.99,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Indorfútbol\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-034",
+      "risk": "HIGH",
+      "signId": "Llave",
+      "confidence": 0.92,
+      "strokeDurationSec": 2.1667,
+      "maxBoundarySpeedDegPerSec": 1309.24,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "BOUNDARY_VELOCITY_GT_1200_DEG_S",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Llave\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-035",
+      "risk": "HIGH",
+      "signId": "Marino(a)",
+      "confidence": 0.8325,
+      "strokeDurationSec": 4.1333,
+      "maxBoundarySpeedDegPerSec": 2433.43,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "BOUNDARY_VELOCITY_GT_1200_DEG_S",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Marino(a)\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-036",
+      "risk": "HIGH",
+      "signId": "Medidor de luz",
+      "confidence": 0.7142,
+      "strokeDurationSec": 2.85,
+      "maxBoundarySpeedDegPerSec": 305.11,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Medidor de luz\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-037",
+      "risk": "HIGH",
+      "signId": "Nadador(a), Natación",
+      "confidence": 0.6825,
+      "strokeDurationSec": 3.9,
+      "maxBoundarySpeedDegPerSec": 410.03,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Nadador(a), Natación\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-038",
+      "risk": "HIGH",
+      "signId": "Ocupado(a)",
+      "confidence": 0.6825,
+      "strokeDurationSec": 3.3,
+      "maxBoundarySpeedDegPerSec": 801.78,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Ocupado(a)\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-039",
+      "risk": "HIGH",
+      "signId": "Ola",
+      "confidence": 0.6825,
+      "strokeDurationSec": 2.7,
+      "maxBoundarySpeedDegPerSec": 709.35,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Ola\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-040",
+      "risk": "HIGH",
+      "signId": "Once",
+      "confidence": 0.6081,
+      "strokeDurationSec": 4.0,
+      "maxBoundarySpeedDegPerSec": 15.56,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Once\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-041",
+      "risk": "HIGH",
+      "signId": "Papa, Cura",
+      "confidence": 0.6825,
+      "strokeDurationSec": 2.9167,
+      "maxBoundarySpeedDegPerSec": 873.27,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Papa, Cura\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-042",
+      "risk": "HIGH",
+      "signId": "Pastel, Torta",
+      "confidence": 0.6825,
+      "strokeDurationSec": 2.9667,
+      "maxBoundarySpeedDegPerSec": 872.38,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Pastel, Torta\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-043",
+      "risk": "HIGH",
+      "signId": "Peor",
+      "confidence": 0.6825,
+      "strokeDurationSec": 3.1667,
+      "maxBoundarySpeedDegPerSec": 175.18,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Peor\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-044",
+      "risk": "HIGH",
+      "signId": "Qué me importa, Quemeimportista",
+      "confidence": 0.6825,
+      "strokeDurationSec": 4.4667,
+      "maxBoundarySpeedDegPerSec": 383.73,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Qué me importa, Quemeimportista\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-045",
+      "risk": "HIGH",
+      "signId": "Rápido(a), De velocidad",
+      "confidence": 0.6825,
+      "strokeDurationSec": 3.0334,
+      "maxBoundarySpeedDegPerSec": 734.17,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Rápido(a), De velocidad\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-046",
+      "risk": "HIGH",
+      "signId": "Sanción",
+      "confidence": 0.6825,
+      "strokeDurationSec": 5.35,
+      "maxBoundarySpeedDegPerSec": 308.5,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Sanción\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-047",
+      "risk": "HIGH",
+      "signId": "Tennis",
+      "confidence": 0.6825,
+      "strokeDurationSec": 2.8,
+      "maxBoundarySpeedDegPerSec": 342.02,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": true,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "ONE_HANDED",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Tennis\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-048",
+      "risk": "HIGH",
+      "signId": "Territorio",
+      "confidence": 0.6825,
+      "strokeDurationSec": 3.95,
+      "maxBoundarySpeedDegPerSec": 177.33,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Territorio\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-049",
+      "risk": "HIGH",
+      "signId": "Tsunami",
+      "confidence": 0.6825,
+      "strokeDurationSec": 5.6833,
+      "maxBoundarySpeedDegPerSec": 429.19,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Tsunami\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-HIG-050",
+      "risk": "HIGH",
+      "signId": "Vacuna",
+      "confidence": 0.6825,
+      "strokeDurationSec": 3.0666,
+      "maxBoundarySpeedDegPerSec": 441.04,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "LOW_CONFIDENCE_LT_075",
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Vacuna\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-001",
+      "risk": "MEDIUM",
+      "signId": "Angosto(a)",
+      "confidence": 0.8325,
+      "strokeDurationSec": 2.7666,
+      "maxBoundarySpeedDegPerSec": 454.93,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Angosto(a)\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-002",
+      "risk": "MEDIUM",
+      "signId": "Ansioso(a)",
+      "confidence": 0.8325,
+      "strokeDurationSec": 3.35,
+      "maxBoundarySpeedDegPerSec": 635.81,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Ansioso(a)\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-003",
+      "risk": "MEDIUM",
+      "signId": "Asambleísta",
+      "confidence": 0.8325,
+      "strokeDurationSec": 3.5834,
+      "maxBoundarySpeedDegPerSec": 246.66,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Asambleísta\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-004",
+      "risk": "MEDIUM",
+      "signId": "Ballena",
+      "confidence": 0.8325,
+      "strokeDurationSec": 3.1833,
+      "maxBoundarySpeedDegPerSec": 695.25,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Ballena\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-005",
+      "risk": "MEDIUM",
+      "signId": "Barrera",
+      "confidence": 0.8325,
+      "strokeDurationSec": 3.6667,
+      "maxBoundarySpeedDegPerSec": 377.83,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Barrera\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-006",
+      "risk": "MEDIUM",
+      "signId": "Bueno(a)",
+      "confidence": 0.8325,
+      "strokeDurationSec": 3.3333,
+      "maxBoundarySpeedDegPerSec": 301.65,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Bueno(a)\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-007",
+      "risk": "MEDIUM",
+      "signId": "Bélgica",
+      "confidence": 0.8325,
+      "strokeDurationSec": 3.35,
+      "maxBoundarySpeedDegPerSec": 212.46,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Bélgica\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-008",
+      "risk": "MEDIUM",
+      "signId": "Camioneta",
+      "confidence": 0.8325,
+      "strokeDurationSec": 4.3333,
+      "maxBoundarySpeedDegPerSec": 191.44,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Camioneta\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-009",
+      "risk": "MEDIUM",
+      "signId": "Canal",
+      "confidence": 0.8325,
+      "strokeDurationSec": 4.0833,
+      "maxBoundarySpeedDegPerSec": 83.4,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": true,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "ONE_HANDED",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Canal\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-010",
+      "risk": "MEDIUM",
+      "signId": "Colombia",
+      "confidence": 0.8325,
+      "strokeDurationSec": 4.35,
+      "maxBoundarySpeedDegPerSec": 58.7,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Colombia\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-011",
+      "risk": "MEDIUM",
+      "signId": "Complejo(a), Complicarse, Complicado(a)",
+      "confidence": 0.92,
+      "strokeDurationSec": 2.3,
+      "maxBoundarySpeedDegPerSec": 237.6,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Complejo(a), Complicarse, Complicado(a)\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-012",
+      "risk": "MEDIUM",
+      "signId": "Copa",
+      "confidence": 0.8325,
+      "strokeDurationSec": 4.5333,
+      "maxBoundarySpeedDegPerSec": 150.24,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Copa\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-013",
+      "risk": "MEDIUM",
+      "signId": "Costa Rica",
+      "confidence": 0.8325,
+      "strokeDurationSec": 4.2666,
+      "maxBoundarySpeedDegPerSec": 56.8,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Costa Rica\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-014",
+      "risk": "MEDIUM",
+      "signId": "Cuerpazo",
+      "confidence": 0.92,
+      "strokeDurationSec": 2.1167,
+      "maxBoundarySpeedDegPerSec": 800.41,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Cuerpazo\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-015",
+      "risk": "MEDIUM",
+      "signId": "Curita",
+      "confidence": 0.8325,
+      "strokeDurationSec": 2.6666,
+      "maxBoundarySpeedDegPerSec": 184.96,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Curita\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-016",
+      "risk": "MEDIUM",
+      "signId": "Cómoda",
+      "confidence": 0.8325,
+      "strokeDurationSec": 2.7334,
+      "maxBoundarySpeedDegPerSec": 212.95,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Cómoda\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-017",
+      "risk": "MEDIUM",
+      "signId": "Darse por vencido(a)",
+      "confidence": 0.92,
+      "strokeDurationSec": 1.7,
+      "maxBoundarySpeedDegPerSec": 890.27,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Darse por vencido(a)\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-018",
+      "risk": "MEDIUM",
+      "signId": "Dia",
+      "confidence": 0.9155,
+      "strokeDurationSec": 1.85,
+      "maxBoundarySpeedDegPerSec": 338.72,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Dia\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-019",
+      "risk": "MEDIUM",
+      "signId": "El Salvador",
+      "confidence": 0.92,
+      "strokeDurationSec": 1.55,
+      "maxBoundarySpeedDegPerSec": 713.77,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": true,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "ONE_HANDED",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\El Salvador\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-020",
+      "risk": "MEDIUM",
+      "signId": "Emergencia",
+      "confidence": 0.8325,
+      "strokeDurationSec": 2.9834,
+      "maxBoundarySpeedDegPerSec": 205.36,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Emergencia\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-021",
+      "risk": "MEDIUM",
+      "signId": "Especificar, Especifico(a)",
+      "confidence": 0.8325,
+      "strokeDurationSec": 3.7333,
+      "maxBoundarySpeedDegPerSec": 181.83,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Especificar, Especifico(a)\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-022",
+      "risk": "MEDIUM",
+      "signId": "Hablar",
+      "confidence": 0.7625,
+      "strokeDurationSec": 2.6833,
+      "maxBoundarySpeedDegPerSec": 300.87,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Hablar\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-023",
+      "risk": "MEDIUM",
+      "signId": "Inundación, Inundarse",
+      "confidence": 0.8325,
+      "strokeDurationSec": 3.7834,
+      "maxBoundarySpeedDegPerSec": 601.78,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Inundación, Inundarse\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-024",
+      "risk": "MEDIUM",
+      "signId": "Laboratorio",
+      "confidence": 0.8325,
+      "strokeDurationSec": 3.85,
+      "maxBoundarySpeedDegPerSec": 236.29,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Laboratorio\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-025",
+      "risk": "MEDIUM",
+      "signId": "Langosta",
+      "confidence": 0.7625,
+      "strokeDurationSec": 2.95,
+      "maxBoundarySpeedDegPerSec": 480.12,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Langosta\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-026",
+      "risk": "MEDIUM",
+      "signId": "Llanta",
+      "confidence": 0.92,
+      "strokeDurationSec": 1.9166,
+      "maxBoundarySpeedDegPerSec": 773.29,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": true,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "ONE_HANDED",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Llanta\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-027",
+      "risk": "MEDIUM",
+      "signId": "Malo(a)",
+      "confidence": 0.8325,
+      "strokeDurationSec": 5.5834,
+      "maxBoundarySpeedDegPerSec": 293.81,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Malo(a)\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-028",
+      "risk": "MEDIUM",
+      "signId": "Minero",
+      "confidence": 0.8325,
+      "strokeDurationSec": 4.6,
+      "maxBoundarySpeedDegPerSec": 188.29,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Minero\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-029",
+      "risk": "MEDIUM",
+      "signId": "Nieto(a)",
+      "confidence": 0.8325,
+      "strokeDurationSec": 3.0333,
+      "maxBoundarySpeedDegPerSec": 856.06,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Nieto(a)\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-030",
+      "risk": "MEDIUM",
+      "signId": "No me convences",
+      "confidence": 0.92,
+      "strokeDurationSec": 2.15,
+      "maxBoundarySpeedDegPerSec": 227.87,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": true,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "ONE_HANDED",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\No me convences\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-031",
+      "risk": "MEDIUM",
+      "signId": "Noruega",
+      "confidence": 0.92,
+      "strokeDurationSec": 1.4833,
+      "maxBoundarySpeedDegPerSec": 531.53,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Noruega\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-032",
+      "risk": "MEDIUM",
+      "signId": "Nutrir, Nutrición",
+      "confidence": 0.8325,
+      "strokeDurationSec": 4.15,
+      "maxBoundarySpeedDegPerSec": 181.55,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Nutrir, Nutrición\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-033",
+      "risk": "MEDIUM",
+      "signId": "Opuesto(a)",
+      "confidence": 0.92,
+      "strokeDurationSec": 1.4667,
+      "maxBoundarySpeedDegPerSec": 867.51,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Opuesto(a)\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-034",
+      "risk": "MEDIUM",
+      "signId": "Palestina",
+      "confidence": 0.8325,
+      "strokeDurationSec": 3.45,
+      "maxBoundarySpeedDegPerSec": 177.25,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Palestina\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-035",
+      "risk": "MEDIUM",
+      "signId": "Piso, Superficie sobre la que se pisa",
+      "confidence": 0.8325,
+      "strokeDurationSec": 4.2834,
+      "maxBoundarySpeedDegPerSec": 62.74,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": true,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "ONE_HANDED",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Piso, Superficie sobre la que se pisa\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-036",
+      "risk": "MEDIUM",
+      "signId": "Planchar, Plancha",
+      "confidence": 0.8325,
+      "strokeDurationSec": 3.85,
+      "maxBoundarySpeedDegPerSec": 245.33,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Planchar, Plancha\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-037",
+      "risk": "MEDIUM",
+      "signId": "Por favor, necesito información",
+      "confidence": 0.8325,
+      "strokeDurationSec": 3.4666,
+      "maxBoundarySpeedDegPerSec": 331.49,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Por favor, necesito información\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-038",
+      "risk": "MEDIUM",
+      "signId": "Proyección, Proyectar",
+      "confidence": 0.8325,
+      "strokeDurationSec": 2.8334,
+      "maxBoundarySpeedDegPerSec": 735.48,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Proyección, Proyectar\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-039",
+      "risk": "MEDIUM",
+      "signId": "Proyecto, Plan",
+      "confidence": 0.92,
+      "strokeDurationSec": 2.2667,
+      "maxBoundarySpeedDegPerSec": 500.42,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Proyecto, Plan\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-040",
+      "risk": "MEDIUM",
+      "signId": "Páramo",
+      "confidence": 0.8325,
+      "strokeDurationSec": 3.5,
+      "maxBoundarySpeedDegPerSec": 595.47,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Páramo\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-041",
+      "risk": "MEDIUM",
+      "signId": "Quintal",
+      "confidence": 0.92,
+      "strokeDurationSec": 2.3834,
+      "maxBoundarySpeedDegPerSec": 346.73,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Quintal\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-042",
+      "risk": "MEDIUM",
+      "signId": "Robot",
+      "confidence": 0.8325,
+      "strokeDurationSec": 2.9167,
+      "maxBoundarySpeedDegPerSec": 301.2,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Robot\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-043",
+      "risk": "MEDIUM",
+      "signId": "Rumiñahui",
+      "confidence": 0.8325,
+      "strokeDurationSec": 3.5,
+      "maxBoundarySpeedDegPerSec": 98.46,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Rumiñahui\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-044",
+      "risk": "MEDIUM",
+      "signId": "Seguro de vida",
+      "confidence": 0.8325,
+      "strokeDurationSec": 2.7333,
+      "maxBoundarySpeedDegPerSec": 301.99,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Seguro de vida\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-045",
+      "risk": "MEDIUM",
+      "signId": "Suegro(a)",
+      "confidence": 0.92,
+      "strokeDurationSec": 2.6,
+      "maxBoundarySpeedDegPerSec": 275.49,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Suegro(a)\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-046",
+      "risk": "MEDIUM",
+      "signId": "Sueño",
+      "confidence": 0.8325,
+      "strokeDurationSec": 2.8334,
+      "maxBoundarySpeedDegPerSec": 369.11,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Sueño\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-047",
+      "risk": "MEDIUM",
+      "signId": "Vertical",
+      "confidence": 0.8325,
+      "strokeDurationSec": 3.0834,
+      "maxBoundarySpeedDegPerSec": 143.92,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Vertical\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-048",
+      "risk": "MEDIUM",
+      "signId": "Zigzag",
+      "confidence": 0.8325,
+      "strokeDurationSec": 3.65,
+      "maxBoundarySpeedDegPerSec": 133.49,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Zigzag\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-049",
+      "risk": "MEDIUM",
+      "signId": "¿Cómo está",
+      "confidence": 0.92,
+      "strokeDurationSec": 2.5167,
+      "maxBoundarySpeedDegPerSec": 229.52,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\¿Cómo está\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-MED-050",
+      "risk": "MEDIUM",
+      "signId": "Ídolo",
+      "confidence": 0.8325,
+      "strokeDurationSec": 4.2,
+      "maxBoundarySpeedDegPerSec": 389.88,
+      "flags": {
+        "repeatedStroke": true,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "REPEATED_STROKE",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Ídolo\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-001",
+      "risk": "LOW",
+      "signId": "Aire",
+      "confidence": 0.99,
+      "strokeDurationSec": 1.9667,
+      "maxBoundarySpeedDegPerSec": 718.78,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Aire\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-002",
+      "risk": "LOW",
+      "signId": "Alemania",
+      "confidence": 0.99,
+      "strokeDurationSec": 1.8667,
+      "maxBoundarySpeedDegPerSec": 690.92,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Alemania\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-003",
+      "risk": "LOW",
+      "signId": "Algunos(as)",
+      "confidence": 0.99,
+      "strokeDurationSec": 2.6,
+      "maxBoundarySpeedDegPerSec": 702.45,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Algunos(as)\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-004",
+      "risk": "LOW",
+      "signId": "Alucinar, Alucinación",
+      "confidence": 0.99,
+      "strokeDurationSec": 2.4667,
+      "maxBoundarySpeedDegPerSec": 192.4,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Alucinar, Alucinación\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-005",
+      "risk": "LOW",
+      "signId": "Ansiedad",
+      "confidence": 0.9125,
+      "strokeDurationSec": 2.6166,
+      "maxBoundarySpeedDegPerSec": 811.22,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Ansiedad\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-006",
+      "risk": "LOW",
+      "signId": "Bien hecho",
+      "confidence": 0.99,
+      "strokeDurationSec": 2.1833,
+      "maxBoundarySpeedDegPerSec": 312.74,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Bien hecho\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-007",
+      "risk": "LOW",
+      "signId": "Boina",
+      "confidence": 0.99,
+      "strokeDurationSec": 1.5167,
+      "maxBoundarySpeedDegPerSec": 780.09,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Boina\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-008",
+      "risk": "LOW",
+      "signId": "Brocha",
+      "confidence": 0.85,
+      "strokeDurationSec": 2.0666,
+      "maxBoundarySpeedDegPerSec": 312.33,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Brocha\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-009",
+      "risk": "LOW",
+      "signId": "Cebolla",
+      "confidence": 0.99,
+      "strokeDurationSec": 2.4333,
+      "maxBoundarySpeedDegPerSec": 246.28,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Cebolla\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-010",
+      "risk": "LOW",
+      "signId": "Cine",
+      "confidence": 0.9656,
+      "strokeDurationSec": 1.7667,
+      "maxBoundarySpeedDegPerSec": 417.48,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": true,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "ONE_HANDED",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Cine\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-011",
+      "risk": "LOW",
+      "signId": "Clip",
+      "confidence": 0.99,
+      "strokeDurationSec": 1.7333,
+      "maxBoundarySpeedDegPerSec": 265.94,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Clip\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-012",
+      "risk": "LOW",
+      "signId": "Combinar",
+      "confidence": 0.9125,
+      "strokeDurationSec": 3.45,
+      "maxBoundarySpeedDegPerSec": 281.7,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Combinar\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-013",
+      "risk": "LOW",
+      "signId": "Comer",
+      "confidence": 0.9125,
+      "strokeDurationSec": 4.7333,
+      "maxBoundarySpeedDegPerSec": 185.22,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": true,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "ONE_HANDED",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Comer\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-014",
+      "risk": "LOW",
+      "signId": "Compás",
+      "confidence": 0.99,
+      "strokeDurationSec": 2.4666,
+      "maxBoundarySpeedDegPerSec": 173.72,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Compás\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-015",
+      "risk": "LOW",
+      "signId": "Copiar, Fotocopiadora, Fotocopiar",
+      "confidence": 0.9125,
+      "strokeDurationSec": 2.9667,
+      "maxBoundarySpeedDegPerSec": 353.09,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Copiar, Fotocopiadora, Fotocopiar\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-016",
+      "risk": "LOW",
+      "signId": "Cuartearse",
+      "confidence": 0.9125,
+      "strokeDurationSec": 2.9833,
+      "maxBoundarySpeedDegPerSec": 317.52,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Cuartearse\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-017",
+      "risk": "LOW",
+      "signId": "De aquí en adelante, Durante",
+      "confidence": 0.9125,
+      "strokeDurationSec": 3.0666,
+      "maxBoundarySpeedDegPerSec": 170.74,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\De aquí en adelante, Durante\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-018",
+      "risk": "LOW",
+      "signId": "Demasiado",
+      "confidence": 0.99,
+      "strokeDurationSec": 1.75,
+      "maxBoundarySpeedDegPerSec": 540.91,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Demasiado\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-019",
+      "risk": "LOW",
+      "signId": "Diccionario",
+      "confidence": 0.9125,
+      "strokeDurationSec": 4.0333,
+      "maxBoundarySpeedDegPerSec": 83.84,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Diccionario\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-020",
+      "risk": "LOW",
+      "signId": "Escondidas",
+      "confidence": 0.99,
+      "strokeDurationSec": 2.2,
+      "maxBoundarySpeedDegPerSec": 714.26,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Escondidas\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-021",
+      "risk": "LOW",
+      "signId": "Espíritu santo",
+      "confidence": 0.9125,
+      "strokeDurationSec": 3.1334,
+      "maxBoundarySpeedDegPerSec": 217.25,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Espíritu santo\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-022",
+      "risk": "LOW",
+      "signId": "Feminismo, Feminista",
+      "confidence": 0.99,
+      "strokeDurationSec": 2.0167,
+      "maxBoundarySpeedDegPerSec": 271.62,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": true,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "ONE_HANDED",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Feminismo, Feminista\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-023",
+      "risk": "LOW",
+      "signId": "Investigador",
+      "confidence": 0.99,
+      "strokeDurationSec": 2.4,
+      "maxBoundarySpeedDegPerSec": 524.72,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Investigador\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-024",
+      "risk": "LOW",
+      "signId": "Ir",
+      "confidence": 0.99,
+      "strokeDurationSec": 2.35,
+      "maxBoundarySpeedDegPerSec": 216.43,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": true,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "ONE_HANDED",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Ir\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-025",
+      "risk": "LOW",
+      "signId": "MIES (Ministerio de Inclusión Económica y Social)",
+      "confidence": 0.85,
+      "strokeDurationSec": 2.4334,
+      "maxBoundarySpeedDegPerSec": 701.17,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\MIES (Ministerio de Inclusión Económica y Social)\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-026",
+      "risk": "LOW",
+      "signId": "Malpensado(a)",
+      "confidence": 0.99,
+      "strokeDurationSec": 2.0833,
+      "maxBoundarySpeedDegPerSec": 428.19,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Malpensado(a)\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-027",
+      "risk": "LOW",
+      "signId": "Marcadores de colores",
+      "confidence": 0.9125,
+      "strokeDurationSec": 5.6167,
+      "maxBoundarySpeedDegPerSec": 514.32,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Marcadores de colores\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-028",
+      "risk": "LOW",
+      "signId": "Marco",
+      "confidence": 0.9125,
+      "strokeDurationSec": 3.1167,
+      "maxBoundarySpeedDegPerSec": 264.55,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Marco\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-029",
+      "risk": "LOW",
+      "signId": "Masturbación masculina",
+      "confidence": 0.99,
+      "strokeDurationSec": 1.3,
+      "maxBoundarySpeedDegPerSec": 259.99,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": true,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "ONE_HANDED",
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Masturbación masculina\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-030",
+      "risk": "LOW",
+      "signId": "Mayúscula",
+      "confidence": 0.99,
+      "strokeDurationSec": 2.2333,
+      "maxBoundarySpeedDegPerSec": 221.3,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Mayúscula\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-031",
+      "risk": "LOW",
+      "signId": "Metro",
+      "confidence": 0.99,
+      "strokeDurationSec": 2.4,
+      "maxBoundarySpeedDegPerSec": 704.44,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Metro\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-032",
+      "risk": "LOW",
+      "signId": "Necesita un garante solvente",
+      "confidence": 0.9125,
+      "strokeDurationSec": 3.7166,
+      "maxBoundarySpeedDegPerSec": 341.95,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Necesita un garante solvente\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-033",
+      "risk": "LOW",
+      "signId": "Oro",
+      "confidence": 0.9125,
+      "strokeDurationSec": 4.2,
+      "maxBoundarySpeedDegPerSec": 51.4,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Oro\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-034",
+      "risk": "LOW",
+      "signId": "Oso de anteojos",
+      "confidence": 0.9125,
+      "strokeDurationSec": 4.0334,
+      "maxBoundarySpeedDegPerSec": 275.1,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Oso de anteojos\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-035",
+      "risk": "LOW",
+      "signId": "Panamá",
+      "confidence": 0.99,
+      "strokeDurationSec": 1.7167,
+      "maxBoundarySpeedDegPerSec": 319.13,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Panamá\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-036",
+      "risk": "LOW",
+      "signId": "Parecer",
+      "confidence": 0.99,
+      "strokeDurationSec": 1.95,
+      "maxBoundarySpeedDegPerSec": 335.03,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Parecer\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-037",
+      "risk": "LOW",
+      "signId": "Perforar",
+      "confidence": 0.99,
+      "strokeDurationSec": 2.0833,
+      "maxBoundarySpeedDegPerSec": 372.43,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Perforar\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-038",
+      "risk": "LOW",
+      "signId": "Perímetro",
+      "confidence": 0.9125,
+      "strokeDurationSec": 2.6333,
+      "maxBoundarySpeedDegPerSec": 371.25,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Perímetro\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-039",
+      "risk": "LOW",
+      "signId": "Pobre",
+      "confidence": 0.99,
+      "strokeDurationSec": 2.6,
+      "maxBoundarySpeedDegPerSec": 626.47,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Pobre\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-040",
+      "risk": "LOW",
+      "signId": "Promedio",
+      "confidence": 0.99,
+      "strokeDurationSec": 2.4166,
+      "maxBoundarySpeedDegPerSec": 696.99,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Promedio\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-041",
+      "risk": "LOW",
+      "signId": "Roncar",
+      "confidence": 0.9125,
+      "strokeDurationSec": 2.8667,
+      "maxBoundarySpeedDegPerSec": 201.84,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Roncar\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-042",
+      "risk": "LOW",
+      "signId": "Separar",
+      "confidence": 0.99,
+      "strokeDurationSec": 2.3833,
+      "maxBoundarySpeedDegPerSec": 216.59,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Separar\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-043",
+      "risk": "LOW",
+      "signId": "Sexólogo(a)",
+      "confidence": 0.9125,
+      "strokeDurationSec": 2.6834,
+      "maxBoundarySpeedDegPerSec": 265.15,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Sexólogo(a)\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-044",
+      "risk": "LOW",
+      "signId": "Sombra",
+      "confidence": 0.9125,
+      "strokeDurationSec": 3.5834,
+      "maxBoundarySpeedDegPerSec": 185.74,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Sombra\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-045",
+      "risk": "LOW",
+      "signId": "Sortear, Sorteo",
+      "confidence": 0.9125,
+      "strokeDurationSec": 3.45,
+      "maxBoundarySpeedDegPerSec": 243.19,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Sortear, Sorteo\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-046",
+      "risk": "LOW",
+      "signId": "Suave",
+      "confidence": 0.99,
+      "strokeDurationSec": 2.4833,
+      "maxBoundarySpeedDegPerSec": 506.36,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Suave\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-047",
+      "risk": "LOW",
+      "signId": "Subrayar",
+      "confidence": 0.99,
+      "strokeDurationSec": 1.8,
+      "maxBoundarySpeedDegPerSec": 878.1,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Subrayar\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-048",
+      "risk": "LOW",
+      "signId": "Sánduche",
+      "confidence": 0.99,
+      "strokeDurationSec": 2.4834,
+      "maxBoundarySpeedDegPerSec": 633.48,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Sánduche\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-049",
+      "risk": "LOW",
+      "signId": "Todopoderoso",
+      "confidence": 0.9125,
+      "strokeDurationSec": 3.6167,
+      "maxBoundarySpeedDegPerSec": 228.72,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Todopoderoso\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    },
+    {
+      "sampleId": "P3-LOW-050",
+      "risk": "LOW",
+      "signId": "Tumor",
+      "confidence": 0.99,
+      "strokeDurationSec": 2.4667,
+      "maxBoundarySpeedDegPerSec": 561.01,
+      "flags": {
+        "repeatedStroke": false,
+        "oneHanded": false,
+        "tooShort": false,
+        "faceOnly": false
+      },
+      "automaticIssues": [
+        "SOURCE_LINK_NOT_RESOLVED",
+        "SOURCE_CORRECTIONS_PRESENT"
+      ],
+      "animationPath": "c:\\Users\\brana\\Desktop\\TIC Software\\Diccionario LSEC\\senas_vrm_standardized_v2.7\\Tumor\\animation.json",
+      "manualReview": {
+        "visualAgainstSource": "PENDING",
+        "avatarFidelity": "PENDING",
+        "abruptRotation": "PENDING",
+        "handPenetration": "PENDING",
+        "handConfiguration": "PENDING",
+        "nonManualExpression": "PENDING",
+        "sourceQuality": "PENDING",
+        "decision": "PENDING",
+        "errorCodes": [],
+        "notes": ""
+      }
+    }
+  ]
+}

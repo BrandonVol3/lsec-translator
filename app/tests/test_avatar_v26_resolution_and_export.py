@@ -74,6 +74,15 @@ def test_all_1mp4_glosses_resolve_without_404_or_omission():
             assert results[critical]["found"] is True, f"Glosa crítica {critical} no resuelta"
             assert results[critical]["version_served"] == "2.6"
 
+    # Las marcas direccionales pertenecen a la ejecución, no al nombre del clip.
+    directional = client.get(
+        "/api/animations-direct/resolve/INVITAR%5B1-PL-%3E2%5D?version=2.6&include_animation=false"
+    )
+    assert directional.status_code == 200
+    directional_data = directional.json()
+    assert directional_data["found"] is True
+    assert directional_data["resolved_gloss"]
+
     # Verificar desambiguación de homónimos (CARRERA -> Carrera, Estudios, NO Carrera, De autos)
     assert results["CARRERA"]["resolved_gloss"] == "Carrera, Estudios"
     assert results["HOY"]["resolved_gloss"] == "Ahora"
@@ -409,5 +418,4 @@ def test_vrm_loader_52_arkit_bindings_and_selector_sync():
             assert r_info.status_code == 200, f"Fallo /info en {form} para {raw_sign}"
             r_vid = client.get(f"/api/v1/animations/{q_sign}/video", headers={"Range": "bytes=0-255"})
             assert r_vid.status_code in (200, 206), f"Fallo /video en {form} para {raw_sign}"
-
 

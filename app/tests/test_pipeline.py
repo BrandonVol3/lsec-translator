@@ -778,7 +778,7 @@ class TestDiscourseTranslationEngine:
         result = await nlp_service.translate_to_gloss(text)
         glosses = [g.gloss for g in result.glosses]
 
-        assert "4500" in glosses or "4.500" in glosses or any("4500" in g for g in glosses)
+        assert all(gloss in glosses for gloss in ("CUATRO", "MIL", "CINCO", "CIENTOS"))
         assert "GRADUADO" in glosses
         # Verificar que no exista VARIOS después de 4500 o GRADUADO
         assert "VARIOS" not in glosses, f"No debe haber VARIOS con numeral explícito. Obtenido: {glosses}"
@@ -991,12 +991,13 @@ class TestLSEC20Features:
 
     @pytest.mark.asyncio
     async def test_number_4500_preservation_and_no_varios(self, nlp_service) -> None:
-        """Verifica que 4.500 preserve la relación numérica y NO genere VARIOS."""
+        """Verifica la composición posicional de 4.500 y que no genere VARIOS."""
         text = "Más de 4.500 graduados ya lo hicieron."
         result = await nlp_service.translate_to_gloss(text)
         glosses = [g.gloss for g in result.glosses]
 
-        assert "4500" in glosses
+        assert all(gloss in glosses for gloss in ("CUATRO", "MIL", "CINCO", "CIENTOS"))
+        assert "4500" not in glosses
         assert "MÁS-DE" in glosses or "SUPERAR" in glosses
         assert "VARIOS" not in glosses
 
@@ -1164,7 +1165,8 @@ class TestUPECComprehensiveIntegration:
         # 22. Preparación separada de tecnología
         assert "PREPARAR" in glosses or "EXCELENCIA" in glosses or "TECNOLOGÍA" in glosses or "DESDE" in glosses or "DÍA-PRIMERO" in glosses or len(result.discourse_blocks) >= 5
         # 23 y 24. 4500 asociado a graduados sin VARIOS
-        assert "4500" in glosses and "GRADUADO" in glosses
+        assert all(gloss in glosses for gloss in ("CUATRO", "MIL", "CINCO", "CIENTOS"))
+        assert "GRADUADO" in glosses
         # 25. 'lo' no produce PRO3 personal
         assert "LOGRAR" in glosses
         # 26. 'liberan' queda marcado para revisión contextual
@@ -1185,4 +1187,3 @@ class TestUPECComprehensiveIntegration:
         assert len(result.translation_plans) > 0
         assert len(result.spatial_operations) > 0
         assert result.timing_plan is not None
-

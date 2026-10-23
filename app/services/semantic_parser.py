@@ -52,6 +52,28 @@ class SpanishVerbLexicon:
     """Inventario y análisis morfológico determinista de formas verbales en español."""
 
     KNOWN_VERB_FORMS: Dict[str, str] = {
+        # Formas frecuentes de los videos institucionales 4-10.
+        "aprendes": "aprender", "aprende": "aprender", "aprendemos": "aprender",
+        "aprendí": "aprender", "aprendió": "aprender",
+        "implemento": "implementar", "implementó": "implementar",
+        "implementan": "implementar", "implementamos": "implementar",
+        "inicio": "iniciar", "inició": "iniciar", "inician": "iniciar",
+        "iniciamos": "iniciar", "iniciará": "iniciar",
+        "realizamos": "realizar", "realizaremos": "realizar", "realizarán": "realizar",
+        "responderá": "responder", "responderán": "responder",
+        "revisan": "revisar", "revisamos": "revisar",
+        "escríbenos": "escribir", "escribenos": "escribir",
+        "inscribirte": "inscribir", "inscríbete": "inscribir", "inscribete": "inscribir",
+        "invitarles": "invitar", "invítales": "invitar",
+        # preferir (spaCy devuelve el lema truncado "prefier")
+        "prefiero": "preferir", "prefieres": "preferir", "prefiere": "preferir",
+        "preferimos": "preferir", "preferís": "preferir", "prefieren": "preferir",
+        "preferí": "preferir", "preferiste": "preferir", "prefirió": "preferir",
+        "prefirieron": "preferir", "prefiriendo": "preferir", "preferido": "preferir",
+        # graduar con clítico (spaCy lematiza "graduarnos" como "graduarno")
+        "graduarme": "graduar", "graduarte": "graduar", "graduarse": "graduar",
+        "graduarnos": "graduar", "graduarlos": "graduar", "graduarlas": "graduar",
+        "graduaron": "graduar", "graduando": "graduar", "graduado": "graduar",
         # comer
         "como": "comer", "comes": "comer", "come": "comer", "comemos": "comer", "coméis": "comer", "comen": "comer",
         "comí": "comer", "comiste": "comer", "comió": "comer", "comimos": "comer", "comieron": "comer", "comiendo": "comer", "comido": "comer",
@@ -260,6 +282,11 @@ class SpanishVerbLexicon:
         "tráeme": ("traer", "me"), "tráelo": ("traer", "lo"), "tráela": ("traer", "la"),
         "tráigame": ("traer", "me"), "tráigalo": ("traer", "lo"),
         "óyeme": ("oír", "me"), "mírame": ("mirar", "me"), "míralo": ("mirar", "lo"),
+        # El regex genérico de imperativos producía la base truncada "pider".
+        "pídeselo": ("pedir", "selo"), "pideselo": ("pedir", "selo"),
+        "pídesela": ("pedir", "sela"), "pidesela": ("pedir", "sela"),
+        "pídemelo": ("pedir", "melo"), "pidemelo": ("pedir", "melo"),
+        "pídeselos": ("pedir", "selos"), "pídeselas": ("pedir", "selas"),
     }
 
     _IRREGULAR_FUTURE_STEMS: Dict[str, str] = {

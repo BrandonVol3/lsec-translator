@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import os
 import sys
+import json
+from pathlib import Path
 
 # Inyectar librerías dinámicas de CUDA en Windows
 if sys.platform == "win32":
@@ -32,7 +34,7 @@ import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.annotation_endpoints import (
@@ -184,6 +186,35 @@ if os.path.exists(static_dir):
 
 # Montar carpeta de modelos VRM desde la carpeta Avatar del proyecto
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+@app.get("/api/v1/phase3/sample", tags=["Quality"])
+async def phase3_sample_endpoint():
+    """Returns the official v2.8 phase 3 calibration sample metadata."""
+    report_path = Path(project_root) / "reports" / "v28_phase3_calibration_sample.json"
+    if not report_path.is_file():
+        raise HTTPException(status_code=404, detail="No se encontró la muestra de calibración de fase 3.")
+    try:
+        with report_path.open("r", encoding="utf-8") as report_file:
+            report = json.load(report_file)
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.error("No se pudo leer la muestra de fase 3: %s", exc)
+        raise HTTPException(status_code=500, detail="No se pudo leer la muestra de calibración de fase 3.") from exc
+    return {
+        "audit": report.get("audit"),
+        "totalSelected": report.get("sampling", {}).get("totalSelected", 0),
+        "items": [
+            {
+                "sampleId": item.get("sampleId"),
+                "signId": item.get("signId"),
+                "risk": item.get("risk"),
+                "decision": item.get("manualReview", {}).get("decision", "PENDING"),
+            }
+            for item in report.get("items", [])
+        ],
+    }
+
+
 avatar_dir = external_path(settings.lsec_avatar_dir, "Avatar")
 if os.path.exists(avatar_dir):
     logger.info("✓ Montando /avatar desde: %s", avatar_dir)
