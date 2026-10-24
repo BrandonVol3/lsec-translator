@@ -219,7 +219,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnExportMp4 = document.getElementById('btn-step3-export-mp4');
   if (btnExportMp4) {
     btnExportMp4.addEventListener('click', () => {
-      if (window.modalsController && typeof window.modalsController.openExportModal === 'function') {
+      if (window.modalsController && typeof window.modalsController.openCompositeVideoExportDialog === 'function') {
+        window.modalsController.openCompositeVideoExportDialog();
+      } else if (window.modalsController && typeof window.modalsController.openExportModal === 'function') {
         window.modalsController.openExportModal();
       }
     });

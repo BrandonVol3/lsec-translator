@@ -58,18 +58,29 @@ def test_stepper_action_and_export_modal_without_errors():
         }""")
         page.wait_for_timeout(300)
 
-        # 3. Hacer clic en el botón del stepper #btn-step-action
-        btn_action = page.locator("#btn-step-action")
-        expect(btn_action).to_be_visible()
-        btn_action.click()
-        page.wait_for_timeout(400)
+        # 3. Avanzar desde Ventana 1 -> Ventana 2 -> Ventana 3 con los botones del Wizard
+        page.evaluate("() => window.appState.setStage('preparar')")
+        page.wait_for_timeout(300)
+        btn_step1 = page.locator("#btn-step1-process-lsec")
+        expect(btn_step1).to_be_visible()
+        btn_step1.click()
+        page.wait_for_timeout(300)
 
-        # Verificar que el paso sea 'completed'
-        step = page.evaluate("() => window.appState.state.workspace.workflowStep")
-        assert step == "completed"
+        stage = page.evaluate("() => window.appState.state.workspace.stage")
+        assert stage == "traducir"
 
-        # 4. Volver a hacer clic en #btn-step-action (ahora debe abrir el diálogo de exportación)
-        btn_action.click()
+        btn_step2 = page.locator("#btn-step2-confirm-glosses")
+        expect(btn_step2).to_be_visible()
+        btn_step2.click()
+        page.wait_for_timeout(300)
+
+        stage = page.evaluate("() => window.appState.state.workspace.stage")
+        assert stage == "revisar"
+
+        # 4. Hacer clic en #btn-export-modal para abrir el diálogo general de exportación
+        btn_export_modal = page.locator("#btn-export-modal")
+        expect(btn_export_modal).to_be_visible()
+        btn_export_modal.click()
         page.wait_for_timeout(500)
 
         # Verificar que el modal de exportación se abrió
@@ -83,10 +94,10 @@ def test_stepper_action_and_export_modal_without_errors():
         btn_close.click()
         page.wait_for_timeout(300)
 
-        # 6. Probar botón superior #btn-top-export
-        btn_top_export = page.locator("#btn-top-export")
-        expect(btn_top_export).to_be_visible()
-        btn_top_export.click()
+        # 6. Probar botón de Ventana 3 #btn-step3-export-mp4
+        btn_step3_export = page.locator("#btn-step3-export-mp4")
+        expect(btn_step3_export).to_be_visible()
+        btn_step3_export.click()
         page.wait_for_timeout(500)
         expect(modal_backdrop).to_have_class(re.compile(r"open"))
 

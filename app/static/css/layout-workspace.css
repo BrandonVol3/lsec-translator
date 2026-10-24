@@ -376,7 +376,8 @@
   justify-content: center;
 }
 
-.video-player-wrapper.active {
+.video-player-wrapper.active,
+#step3-video-slot .video-player-wrapper {
   display: flex;
 }
 

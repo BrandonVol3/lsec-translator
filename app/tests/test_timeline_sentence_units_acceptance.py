@@ -654,20 +654,20 @@ class TestTimelineSentenceUnitsAcceptance:
         assert len(u2["review_reasons"]) >= 1
 
     def test_html_and_js_integration_integrity(self):
-        """Verifica que index.html y los componentes JS declaran e importan los recursos correctamente."""
+        """Verifica que index.html y los componentes JS declaran e importan los recursos correctamente en el Wizard de 3 ventanas."""
         with open("app/static/index.html", "r", encoding="utf-8") as f:
             html_content = f.read()
 
-        # Cabeceras de pista actualizadas
-        assert "1. Frases (Español)" in html_content
-        assert "2. Glosas LSEC (Frase)" in html_content
+        # Cabeceras paralelas de la Ventana 2 (Transcripción vs Glosas LSEC)
+        assert "TRANSCRIPCIÓN OBTENIDA - WHISPER" in html_content
+        assert "CONTRAPARTE EN GLOSAS LSEC" in html_content
 
-        # Importación de sentence-engine.js antes de timeline.js
+        # Importación de sentence-engine.js antes de linguistic-comparison-view.js
         idx_engine = html_content.find('src="/static/js/components/sentence-engine.js"')
-        idx_timeline = html_content.find('src="/static/js/components/timeline.js"')
+        idx_comp = html_content.find('src="/static/js/components/linguistic-comparison-view.js')
         assert idx_engine != -1, "sentence-engine.js debe estar importado en index.html"
-        assert idx_timeline != -1, "timeline.js debe estar importado en index.html"
-        assert idx_engine < idx_timeline, "sentence-engine.js debe cargarse antes de timeline.js"
+        assert idx_comp != -1, "linguistic-comparison-view.js debe estar importado en index.html"
+        assert idx_engine < idx_comp, "sentence-engine.js debe cargarse antes de linguistic-comparison-view.js"
 
         # Verificar que sentence-engine.js exporta SentenceGroupingEngine
         with open("app/static/js/components/sentence-engine.js", "r", encoding="utf-8") as f:
@@ -675,7 +675,7 @@ class TestTimelineSentenceUnitsAcceptance:
         assert "class SentenceGroupingEngine" in engine_js
         assert "buildSentenceUnits" in engine_js
 
-        # Verificar que timeline.js renderiza las pistas de frases
+        # Verificar que timeline.js mantiene el contrato de unidades de frase en segundo plano
         with open("app/static/js/components/timeline.js", "r", encoding="utf-8") as f:
             timeline_js = f.read()
         assert "renderTrackSentencesES" in timeline_js

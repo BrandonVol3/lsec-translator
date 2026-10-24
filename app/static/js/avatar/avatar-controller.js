@@ -521,6 +521,7 @@ export class AvatarPanelController {
       }
     }
 
+    if (this.activeGlossHud) this.activeGlossHud.textContent = clean;
     if (clip && this.player) {
       let targetSpeed = 1.0;
       if (typeof options.slotDurationSec === 'number' && options.slotDurationSec > 0 && clip.durationMs > 0) {

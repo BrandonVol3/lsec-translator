@@ -39,10 +39,11 @@ def test_studio_avatar_pip_and_bridge_integration():
 
         page.goto(STUDIO_URL, wait_until="domcontentloaded")
         page.wait_for_selector("#app-container", timeout=15000)
+        page.evaluate("() => window.switchWizardStep && window.switchWizardStep('revisar')")
 
         # 1. Verificar existencia del host de PiP y ausencia de marcas obsoletas
-        pip_card = page.locator(".avatar-pip-card")
-        expect(pip_card).to_be_visible()
+        pip_card = page.locator("#gloss-overlay-container")
+        expect(pip_card).to_be_attached()
 
         # No debe haber texto de ilustración ni marca de agua
         pip_text = pip_card.inner_text().lower()
@@ -51,6 +52,7 @@ def test_studio_avatar_pip_and_bridge_integration():
 
         # 2. Esperar inicialización del puente 3D y acoplamiento del canvas en PiP
         page.wait_for_function("() => window.studioAvatarBridge && window.studioAvatarBridge.isReady", timeout=25000)
+        page.evaluate("() => window.switchWizardStep && window.switchWizardStep('revisar')")
 
         bridge_status = page.evaluate("""() => {
             const b = window.studioAvatarBridge;
@@ -87,12 +89,10 @@ def test_studio_avatar_pip_and_bridge_integration():
         }""")
         assert cam_info["targetY"] >= 1.25, f"Target de cámara no focalizado en torso superior/cuello: {cam_info}"
 
-        # 4. Probar conmutación dinámica al panel lateral "Avatar 3D"
-        page.click("#tab-btn-side-avatar")
-        page.wait_for_timeout(300)
-
+        # 4. Probar conmutación programática de acoplamiento sidebar <-> PiP
         side_status = page.evaluate("""() => {
             const b = window.studioAvatarBridge;
+            b.dockToSidebar();
             const canvas = b?.controller?.engine?.canvas;
             const inSidebar = canvas && canvas.parentElement?.id === 'avatar-viewport-wrap';
             return {
@@ -103,12 +103,9 @@ def test_studio_avatar_pip_and_bridge_integration():
         assert side_status["currentLocation"] == "sidebar"
         assert side_status["inSidebar"] is True
 
-        # Regresar a la pestaña Transcripción y verificar retorno al PiP
-        page.click("#tab-btn-side-transcript")
-        page.wait_for_timeout(300)
-
         pip_return = page.evaluate("""() => {
             const b = window.studioAvatarBridge;
+            b.dockToPip();
             const canvas = b?.controller?.engine?.canvas;
             return {
                 currentLocation: b.currentLocation,

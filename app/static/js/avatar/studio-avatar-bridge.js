@@ -1,24 +1,6 @@
 /**
  * LSEC Studio ⇄ LSEC Avatar — Puente de Integración 3D (studio-avatar-bridge.js)
- * 
- * Conecta reactivamente el estado central de Studio (appState) con el motor 3D
- * de LSEC Avatar (AvatarPanelController, Three.js, VRM 1.0, Pipeline v2.7/v2.6 Oficial)
- * y el Compilador de Secuencias Fluidas (SequenceCompiler):
- * 
- * 1. PiP Minimalista sobre el reproductor de video:
- *    - Fondo sólido contrastante (#20242b) calibrado para contrastar con la ropa oscura.
- *    - Encuadre estricto de torso a cabeza (preset 'pip_bust').
- *    - Ocultamiento de manos en reposo (las manos descansan bajo el borde inferior).
- * 2. Secuencias Fluidas de Señas (SequenceCompiler):
- *    - Evaluación determinista pura pose(t) compartida por reproducción en vivo (60 FPS),
- *      scrub de línea de tiempo y exportación de video cuadro por cuadro (30 FPS).
- *    - Cero retorno a reposo entre señas de una oración (umbral de pausa > 1.5 s).
- *    - Coarticulación C^1 (Hermite + minimum-jerk en so(3)) con anticipación dactilar.
- *    - Velocidad máxima 1.6x, lag máximo controlado de 1.0 s y extensión del PiP al final del video.
- * 3. Glosas letra por letra / dactilología pendientes:
- *    - Si la glosa es deletreada, el avatar permanece en pose de reposo neutro sin bloquear.
- * 4. Gestión dinámica de canvas entre el PiP y la pestaña lateral "Avatar 3D".
- * 5. Captura síncrona de fotogramas 3D para el exportador de video (CompositeVideoExporter).
+ * Conecta el estado central (appState) con AvatarPanelController y SequenceCompiler.
  */
 
 import { AvatarPanelController } from './avatar-controller.js?v=2.4.0';
@@ -27,14 +9,12 @@ import { SequenceCompiler, applyCompiledSampleToModel } from './sequence-compile
 export class StudioAvatarBridge {
   constructor() {
     this.controller = null;
-    this.currentLocation = 'pip'; // 'pip' | 'sidebar'
+    this.currentLocation = 'pip';
     this.pipHost = null;
     this.sidebarContainer = null;
     this.currentGlossKey = null;
     this.isReady = false;
     this.solidBgColor = '#20242b';
-
-    // Motor de compilación de secuencia fluida (pose(t) determinista)
     this.fluidMode = true;
     this.compiler = new SequenceCompiler({
       maxSpeed: 1.6,
@@ -50,19 +30,12 @@ export class StudioAvatarBridge {
     this._extendedTailActive = false;
     this._extendedTailTime = 0;
     this._rebuildTimer = null;
-
     this.init();
   }
 
-  /**
-   * Limpia la caché de clips compilados cuando cambia la versión del catálogo ('2.7' | '2.6' | '2.5')
-   * o se reinicia el proyecto.
-   */
   clearClipCache(newVersion = null) {
     this.clipMap.clear();
-    if (newVersion) {
-      this.clipMapVersion = String(newVersion);
-    }
+    if (newVersion) this.clipMapVersion = String(newVersion);
     this.compiler.compiled = null;
     this.compiler.plan = null;
     this.lastSampleResult = null;
@@ -73,26 +46,18 @@ export class StudioAvatarBridge {
     if (document.readyState === 'loading') {
       await new Promise(res => document.addEventListener('DOMContentLoaded', res));
     }
-
-    // Esperar a que el host de PiP esté en el DOM (creado por GlossOverlayController)
     let retries = 0;
     while (!document.getElementById('avatar-pip-canvas-host') && retries < 40) {
       await new Promise(r => setTimeout(r, 50));
       retries++;
     }
-
     this.pipHost = document.getElementById('avatar-pip-canvas-host');
     this.sidebarContainer = document.getElementById('view-side-avatar');
 
     try {
-      // 1. Inicializar AvatarPanelController usando el contenedor lateral
       this.controller = new AvatarPanelController('view-side-avatar');
       window.avatarController = this.controller;
-
-      // Conectar hook de pre-actualización de 60 FPS para muestreo continuo de SequenceCompiler
       this.controller.onPreUpdateCallback = (delta) => this.onEngineFrame(delta);
-
-      // 2. Acoplar al PiP inicialmente
       if (this.controller && this.controller.engine) {
         this.dockToPip();
         this.isReady = true;
@@ -103,15 +68,11 @@ export class StudioAvatarBridge {
 
     this.subscribeAppState();
     this.subscribeSidebarTabs();
-
     if (window.appState?.state?.project) {
       this.preloadProjectSigns(window.appState.state.project);
     }
   }
 
-  /**
-   * Acopla el canvas WebGL al PiP minimalista sobre el video.
-   */
   dockToPip() {
     if (!this.controller || !this.controller.engine) return;
     this.pipHost = document.getElementById('avatar-pip-canvas-host');
@@ -123,7 +84,6 @@ export class StudioAvatarBridge {
       const glossesEnabled = window.appState?.state?.overlays?.glossesEnabled !== false;
       pipContainer.style.display = glossesEnabled ? 'flex' : 'none';
     }
-
     if (this.pipHost && canvas && canvas.parentElement !== this.pipHost) {
       this.pipHost.appendChild(canvas);
       canvas.style.width = '100%';
@@ -131,7 +91,6 @@ export class StudioAvatarBridge {
       canvas.style.display = 'block';
       canvas.style.borderRadius = '6px';
     }
-
     this.currentLocation = 'pip';
     this.controller.setClearColor(this.solidBgColor);
     if (!this.isExportingDeterministic) {
@@ -144,9 +103,6 @@ export class StudioAvatarBridge {
     }
   }
 
-  /**
-   * Acopla el canvas WebGL a la pestaña lateral de inspección "Avatar 3D".
-   */
   dockToSidebar() {
     if (!this.controller || !this.controller.engine) return;
     const sidebarViewport = document.getElementById('avatar-viewport-wrap');
@@ -160,12 +116,10 @@ export class StudioAvatarBridge {
       canvas.style.display = 'block';
       canvas.style.borderRadius = '0px';
     }
-
     if (pipContainer) {
       pipContainer.dataset.hiddenBySidebar = 'true';
       pipContainer.style.display = 'none';
     }
-
     this.currentLocation = 'sidebar';
     if (!this.isExportingDeterministic) {
       this.controller.setCameraPreset('medium');
@@ -179,27 +133,18 @@ export class StudioAvatarBridge {
 
   subscribeAppState() {
     if (!window.appState) return;
-
-    // 1. Sincronización en tiempo real por reloj de reproducción o salto (seek)
     window.appState.subscribe('timeupdate', ({ time }) => {
       this._extendedTailActive = false;
       this.onTimeUpdate(time);
     });
-
-    // 2. Play / Pause (appState emits boolean or { isPlaying })
     window.appState.subscribe('playbackStateChanged', (payload) => {
       if (!this.controller || this.isExportingDeterministic) return;
       const isPlaying = (typeof payload === 'object' && payload !== null) ? Boolean(payload.isPlaying) : Boolean(payload);
       this.isManualPreviewActive = false;
-
       if (!isPlaying) {
         const currentTime = Number(window.appState.state?.playback?.currentTime) || 0;
-        const duration = Number(window.appState.state?.playback?.duration) ||
-          Number(window.appState.state?.project?.media_info?.duration_seconds) || 0;
+        const duration = Number(window.appState.state?.playback?.duration) || Number(window.appState.state?.project?.media_info?.duration_seconds) || 0;
         const seqEnd = this.getSequenceEndTime(duration);
-
-        // Política "se extiende el PiP": si el video llegó al final pero el avatar
-        // aún tiene desfase acumulado (<= 1.0s + retorno a reposo), continuar animando el PiP
         if (this.fluidMode && duration > 0 && currentTime >= duration - 0.05 && seqEnd > currentTime + 0.03) {
           this._extendedTailActive = true;
           this._extendedTailTime = currentTime;
@@ -209,31 +154,21 @@ export class StudioAvatarBridge {
         this.controller.pause();
       } else {
         this._extendedTailActive = false;
-        if (typeof this.controller.resume === 'function') {
-          this.controller.resume();
-        } else if (this.controller.player) {
-          this.controller.player.resume();
-        }
+        if (typeof this.controller.resume === 'function') this.controller.resume();
+        else if (this.controller.player) this.controller.player.resume();
       }
     });
-
-    // 3. Velocidad de reproducción (appState emits number or { playbackRate })
     window.appState.subscribe('playbackRateChanged', (payload) => {
       if (!this.controller) return;
       const rate = (typeof payload === 'object' && payload !== null) ? Number(payload.playbackRate) : Number(payload);
-      if (Number.isFinite(rate) && rate > 0) {
-        this.controller.setSpeed(rate);
-      }
+      if (Number.isFinite(rate) && rate > 0) this.controller.setSpeed(rate);
     });
-
-    // 4. Carga, edición y limpieza de proyecto
     window.appState.subscribe('projectLoaded', (project) => {
       this.currentGlossKey = null;
       this.isManualPreviewActive = false;
       this._extendedTailActive = false;
       this.preloadProjectSigns(project);
     });
-
     const handleProjectMutation = () => {
       const proj = window.appState?.state?.project;
       if (proj) {
@@ -241,17 +176,13 @@ export class StudioAvatarBridge {
         this.preloadProjectSigns(proj);
       }
     };
-
     window.appState.subscribe('glossesChanged', handleProjectMutation);
     window.appState.subscribe('segmentsChanged', handleProjectMutation);
     window.appState.subscribe('sentenceUpdated', handleProjectMutation);
-
     window.appState.subscribe('projectCleared', () => {
       this._extendedTailActive = false;
       this.clearClipCache();
-      if (this.controller) {
-        this.controller.stop();
-      }
+      if (this.controller) this.controller.stop();
     });
   }
 
@@ -259,30 +190,14 @@ export class StudioAvatarBridge {
     const checkTab = () => {
       const avatarView = document.getElementById('view-side-avatar');
       if (avatarView && avatarView.style.display !== 'none') {
-        if (this.currentLocation !== 'sidebar') {
-          this.dockToSidebar();
-        }
-      } else {
-        if (this.currentLocation !== 'pip') {
-          this.dockToPip();
-        }
+        if (this.currentLocation !== 'sidebar') this.dockToSidebar();
+      } else if (this.currentLocation !== 'pip') {
+        this.dockToPip();
       }
     };
-
-    const tabBtns = [
-      'tab-btn-side-transcript',
-      'tab-btn-side-inspector',
-      'tab-btn-side-subtitles',
-      'tab-btn-side-avatar'
-    ];
-
-    tabBtns.forEach(id => {
+    ['tab-btn-side-transcript', 'tab-btn-side-inspector', 'tab-btn-side-subtitles', 'tab-btn-side-avatar'].forEach(id => {
       const el = document.getElementById(id);
-      if (el) {
-        el.addEventListener('click', () => {
-          setTimeout(checkTab, 50);
-        });
-      }
+      if (el) el.addEventListener('click', () => setTimeout(checkTab, 50));
     });
   }
 
@@ -628,9 +543,12 @@ export class StudioAvatarBridge {
     }
   }
 
-  /**
-   * Finaliza el modo de exportación determinista, restaura el encuadre previo y reanuda el bucle rAF en vivo.
-   */
+  handleResize() {
+    if (this.controller && this.controller.engine) {
+      this.controller.engine.onResize();
+    }
+  }
+
   endDeterministicExport() {
     this.isExportingDeterministic = false;
     this.currentGlossKey = null;
@@ -641,44 +559,29 @@ export class StudioAvatarBridge {
       } else {
         engine.exportLockSize = null;
       }
-
       if (this._preExportCameraState) {
         const saved = this._preExportCameraState;
         this._preExportCameraState = null;
-        if (saved.preset) {
-          this.controller.setCameraPreset(saved.preset);
-        }
-        if (saved.position && engine.camera) {
-          engine.camera.position.copy(saved.position);
-        }
-        if (saved.target && engine.controls) {
-          engine.controls.target.copy(saved.target);
-        }
+        if (saved.preset) this.controller.setCameraPreset(saved.preset);
+        if (saved.position && engine.camera) engine.camera.position.copy(saved.position);
+        if (saved.target && engine.controls) engine.controls.target.copy(saved.target);
         if (saved.fov && engine.camera) {
           engine.camera.fov = saved.fov;
           engine.camera.updateProjectionMatrix();
         }
-        if (engine.controls) {
-          engine.controls.update();
-        }
+        if (engine.controls) engine.controls.update();
       } else {
         this.controller.setCameraPreset(this.currentLocation === 'sidebar' ? 'medium' : 'pip_bust');
       }
-
       engine.onResize();
       engine.start();
     }
   }
 
-  /**
-   * Sincroniza la pose del avatar para el instante dado (reproducción o scrub en la línea de tiempo).
-   * @param {number} time
-   */
   onTimeUpdate(time) {
     if (!this.controller || this.isExportingDeterministic) return;
     const project = window.appState?.state?.project;
     if (!project) return;
-
     this.isManualPreviewActive = false;
 
     if (this.fluidMode) {
@@ -686,10 +589,8 @@ export class StudioAvatarBridge {
       return;
     }
 
-    // Fallback legado por clip individual (tope máximo 1.6x)
     const entry = this.resolveActiveGlossEntry(project, time);
     const activeGloss = entry ? entry.gloss : null;
-
     const glossKey = activeGloss ? (activeGloss.id || `${entry.index}_${activeGloss.gloss || activeGloss.lemma}`) : 'idle';
     if (glossKey === this.currentGlossKey) return;
     this.currentGlossKey = glossKey;
@@ -698,15 +599,13 @@ export class StudioAvatarBridge {
       const glossName = (activeGloss.gloss || activeGloss.lemma || '').toUpperCase().trim();
       const isSingleLetterHyphenated = glossName.includes('-') && glossName.split('-').filter(Boolean).every(p => p.trim().length === 1);
       const isFingerspelling = Boolean(activeGloss.is_fingerspelling || isSingleLetterHyphenated || (activeGloss.gloss_type === 'DACTILOLOGÍA'));
-
       const basePlaybackRate = window.appState?.state?.playback?.playbackRate || 1.0;
       let dynamicSpeed = undefined;
       const cachedClip = this.controller.syncController?.getCachedClip
         ? this.controller.syncController.getCachedClip(glossName)
         : this.controller.syncController?.clipCache?.get(glossName);
       if (cachedClip && cachedClip.durationMs && entry.slotDurationSec > 0) {
-        const clipSec = cachedClip.durationMs / 1000;
-        const fitRatio = clipSec / Math.max(0.24, entry.slotDurationSec);
+        const fitRatio = (cachedClip.durationMs / 1000) / Math.max(0.24, entry.slotDurationSec);
         dynamicSpeed = Math.max(0.70, Math.min(1.6, fitRatio)) * basePlaybackRate;
       }
 
@@ -724,23 +623,15 @@ export class StudioAvatarBridge {
           window.glossOverlay.refreshBadgeWarning(glossName);
         }
       }).catch(() => {});
-    } else {
-      if (this.controller.player && this.controller.clips?.NEUTRAL) {
-        this.controller.player.play(this.controller.clips.NEUTRAL, {
-          coarticulate: true,
-          coarticulationDurationSec: 0.18,
-          returnToNeutralOnEnd: true
-        });
-      }
+    } else if (this.controller.player && this.controller.clips?.NEUTRAL) {
+      this.controller.player.play(this.controller.clips.NEUTRAL, {
+        coarticulate: true,
+        coarticulationDurationSec: 0.18,
+        returnToNeutralOnEnd: true
+      });
     }
   }
 
-  /**
-   * Avanza el avatar determinísticamente para un instante de video dado y un delta fijo dt (ej. 1/30 s).
-   * Usado por el exportador offline cuadro por cuadro a 30 FPS constantes.
-   * @param {number} videoTimeSec
-   * @param {number} dt
-   */
   async stepAtVideoTime(videoTimeSec, dt = 1 / 30) {
     if (!this.controller) return;
     this.isManualPreviewActive = false;
@@ -760,7 +651,6 @@ export class StudioAvatarBridge {
           }
         }
       }
-
       this.applyFluidSampleAtTime(videoTimeSec);
       this.controller.stepDeterministic(dt);
       return;
@@ -770,14 +660,12 @@ export class StudioAvatarBridge {
       const entry = this.resolveActiveGlossEntry(project, videoTimeSec);
       const activeGloss = entry ? entry.gloss : null;
       const glossKey = activeGloss ? (activeGloss.id || `${entry.index}_${activeGloss.gloss || activeGloss.lemma}`) : 'idle';
-
       if (glossKey !== this.currentGlossKey) {
         this.currentGlossKey = glossKey;
         if (activeGloss) {
           const glossName = (activeGloss.gloss || activeGloss.lemma || '').toUpperCase().trim();
           const isSingleLetterHyphenated = glossName.includes('-') && glossName.split('-').filter(Boolean).every(p => p.trim().length === 1);
           const isFingerspelling = Boolean(activeGloss.is_fingerspelling || isSingleLetterHyphenated || (activeGloss.gloss_type === 'DACTILOLOGÍA'));
-
           if (!isFingerspelling && this.controller.syncController) {
             await this.controller.syncController.loadClipAsync(glossName);
           }
@@ -786,8 +674,7 @@ export class StudioAvatarBridge {
             : this.controller.syncController?.clipCache?.get(glossName);
           let dynamicSpeed = undefined;
           if (cachedClip && cachedClip.durationMs && entry.slotDurationSec > 0) {
-            const clipSec = cachedClip.durationMs / 1000;
-            dynamicSpeed = Math.max(0.70, Math.min(1.6, clipSec / Math.max(0.24, entry.slotDurationSec)));
+            dynamicSpeed = Math.max(0.70, Math.min(1.6, (cachedClip.durationMs / 1000) / Math.max(0.24, entry.slotDurationSec)));
           }
           await this.controller.playGloss(glossName, {
             isFingerspelling,
@@ -808,14 +695,9 @@ export class StudioAvatarBridge {
         }
       }
     }
-
     this.controller.stepDeterministic(dt);
   }
 
-  /**
-   * Precarga en segundo plano todas las señas léxicas de la transcripción (incluyendo compuestas
-   * con guión como PRO1-PL o MÁS-DE) y compila el plan de secuencia fluida para cero latencia.
-   */
   async preloadProjectSigns(project) {
     if (!project || !this.controller?.syncController) return;
     const glosses = project.glosses || [];
@@ -823,36 +705,20 @@ export class StudioAvatarBridge {
       window.appState.resolveOverlappingGlossIntervals(glosses, project.segments || []);
       project.__sequentialGlossesNormalized = true;
     }
-
-    // Compilación inicial rápida con los clips ya presentes en caché
     this.rebuildSequencePlan(project);
 
     const uniqueNames = new Set();
-    for (const g of glosses) {
+    const addIfLexical = (g) => {
       const name = String(g?.gloss || g?.lemma || '').trim().toUpperCase();
-      const isSingleLetterHyphenated = name.includes('-') && name.split('-').filter(Boolean).every(p => p.trim().length === 1);
-      if (name && !isSingleLetterHyphenated && g.gloss_type !== 'DACTILOLOGÍA') {
-        uniqueNames.add(name);
-      }
-    }
-    if (Array.isArray(project.segments)) {
-      for (const seg of project.segments) {
-        if (Array.isArray(seg?.glosses)) {
-          for (const g of seg.glosses) {
-            const name = String(g?.gloss || g?.lemma || '').trim().toUpperCase();
-            const isSingleLetterHyphenated = name.includes('-') && name.split('-').filter(Boolean).every(p => p.trim().length === 1);
-            if (name && !isSingleLetterHyphenated && g.gloss_type !== 'DACTILOLOGÍA') {
-              uniqueNames.add(name);
-            }
-          }
-        }
-      }
-    }
+      const isFs = name.includes('-') && name.split('-').filter(Boolean).every(p => p.trim().length === 1);
+      if (name && !isFs && g.gloss_type !== 'DACTILOLOGÍA') uniqueNames.add(name);
+    };
+    glosses.forEach(addIfLexical);
+    (project.segments || []).forEach(seg => (seg?.glosses || []).forEach(addIfLexical));
 
     const targetVersion = String(this.controller?.syncController?.preferredVersion || this.controller?.preferredVersion || '2.7');
-    const loadPromises = [];
-    for (const name of uniqueNames) {
-      const p = this.controller.syncController.loadClipAsync(name, { version: targetVersion })
+    await Promise.all(Array.from(uniqueNames).map(name =>
+      this.controller.syncController.loadClipAsync(name, { version: targetVersion })
         .then((clip) => {
           if (clip && this.clipMapVersion === targetVersion) {
             this.clipMap.set(name, clip);
@@ -860,36 +726,24 @@ export class StudioAvatarBridge {
           }
           return clip;
         })
-        .catch(() => null);
-      loadPromises.push(p);
-    }
-
-    await Promise.all(loadPromises);
+        .catch(() => null)
+    ));
     if (this.clipMapVersion !== targetVersion) return;
     this.rebuildSequencePlan(project);
     if (!this.isExportingDeterministic && !this.isManualPreviewActive) {
-      const currTime = Number(window.appState?.state?.playback?.currentTime) || 0;
-      this.applyFluidSampleAtTime(currTime);
+      this.applyFluidSampleAtTime(Number(window.appState?.state?.playback?.currentTime) || 0);
     }
   }
 
-  /**
-   * Captura el frame actual renderizado (para exportador de video).
-   * @returns {HTMLCanvasElement|null}
-   */
   captureFrame() {
     return this.controller ? this.controller.captureFrame() : null;
   }
 
-  /**
-   * Obtiene el elemento canvas WebGL activo.
-   */
   getCanvas() {
     return this.controller?.engine?.canvas || null;
   }
 }
 
-// Instancia global del puente
 if (typeof window !== 'undefined') {
   window.StudioAvatarBridge = StudioAvatarBridge;
   window.studioAvatarBridge = new StudioAvatarBridge();

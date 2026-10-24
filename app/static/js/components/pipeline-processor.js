@@ -682,79 +682,23 @@ class PipelineProcessor {
       validationMeta.unresolved_items = unresolvedItems;
     }
 
-    const discourseBlocks = (glossOut.discourse_blocks || []).map((b, idx) => {
-      const blockGlosses = glosses.filter(g => (b.gloss_ids || []).includes(g.id));
-      let start = b.start_seconds ?? b.start_time;
-      let end = b.end_seconds ?? b.end_time;
-      if ((start === undefined || isNaN(start)) && blockGlosses.length > 0) {
-        start = Math.min(...blockGlosses.map(g => g.start_seconds));
-        end = Math.max(...blockGlosses.map(g => g.end_seconds));
-      }
-      if (start === undefined || isNaN(start)) {
-        start = idx * 5.0;
-        end = (idx + 1) * 5.0;
-      }
-      return {
-        id: b.id !== undefined ? `b_${b.id}` : `b_${idx + 1}`,
-        label: b.label || b.topic || `Bloque ${idx + 1}`,
-        start_seconds: start,
-        end_seconds: end,
-        start_time: start,
-        end_time: end,
-        start: start,
-        end: end,
-        color: b.color || 'var(--primary)',
-        discourse_function: b.discourse_function || b.rst_relation || 'NARRATIVE',
-        rst_relation: b.rst_relation || b.discourse_function || 'ELABORATION'
-      };
-    });
-
-    const nonManualSpans = (glossOut.non_manual_spans || []).map((s, idx) => {
-      const spanGlosses = glosses.filter(g => (s.gloss_ids || []).includes(g.id));
-      let start = s.start_seconds ?? s.start_time;
-      let end = s.end_seconds ?? s.end_time;
-      if ((start === undefined || isNaN(start)) && spanGlosses.length > 0) {
-        start = Math.min(...spanGlosses.map(g => g.start_seconds));
-        end = Math.max(...spanGlosses.map(g => g.end_seconds));
-      }
-      if (start === undefined || isNaN(start)) {
-        start = idx * 2.5;
-        end = (idx + 1) * 2.5;
-      }
-      return {
-        id: s.id || `span_${idx + 1}`,
-        expression: s.facial_expression || s.expression || 'Facial',
-        facial_expression: s.facial_expression || s.expression || 'Facial',
-        intensity: s.intensity || 'MODERATE',
-        label: s.label || s.expression || 'No-Manual',
-        start_seconds: start,
-        end_seconds: end,
-        start_time: start,
-        end_time: end,
-        start: start,
-        end: end
-      };
-    });
-
-    const spatialOps = (glossOut.spatial_operations || []).map((op, idx) => {
-      let start = op.time_seconds ?? op.start_time ?? op.start_seconds;
-      if (start === undefined || isNaN(start)) {
-        const trig = glosses.find(g => g.id === op.operation_trigger_gloss_id);
-        if (trig) start = trig.start_seconds;
-      }
-      if (start === undefined || isNaN(start)) {
-        start = idx * 3.0;
-      }
-      return {
-        id: op.id || `op_${idx + 1}`,
-        referent_label: op.referent_label || op.referent_id || op.target_space || `Espacio ${idx + 1}`,
-        target_space: op.target_space || op.location || 'CENTRO',
-        type: op.type || op.operation_type || 'ESTABLECER_LOCUS',
-        time_seconds: start,
-        start_time: start,
-        start_seconds: start
-      };
-    });
+    const discourseBlocks = (glossOut.discourse_blocks || []).map((b, idx) => ({
+      id: b.id !== undefined ? `b_${b.id}` : `b_${idx + 1}`,
+      label: b.label || b.topic || `Bloque ${idx + 1}`,
+      start_seconds: b.start_seconds ?? b.start_time ?? idx * 5.0,
+      end_seconds: b.end_seconds ?? b.end_time ?? (idx + 1) * 5.0
+    }));
+    const nonManualSpans = (glossOut.non_manual_spans || []).map((s, idx) => ({
+      id: s.id || `span_${idx + 1}`,
+      expression: s.facial_expression || s.expression || 'Facial',
+      start_seconds: s.start_seconds ?? s.start_time ?? idx * 2.5,
+      end_seconds: s.end_seconds ?? s.end_time ?? (idx + 1) * 2.5
+    }));
+    const spatialOps = (glossOut.spatial_operations || []).map((op, idx) => ({
+      id: op.id || `op_${idx + 1}`,
+      target_space: op.target_space || op.location || 'CENTRO',
+      start_seconds: op.time_seconds ?? op.start_time ?? idx * 3.0
+    }));
 
     return {
       session_id: String(glossOut.session_id || `lsec_${Date.now()}`),
@@ -784,63 +728,33 @@ class PipelineProcessor {
     };
   }
 
-  // ============================================================
-  // Interfaz de Progreso del Pipeline
-  // ============================================================
+  async runPipelineForCurrentVideo() {
+    const videoEl = document.getElementById('main-video-element');
+    if (this.cachedVideoFile) {
+      return this.processVideo(this.cachedVideoFile, videoEl);
+    }
+    return this.translateProjectGlosses();
+  }
 
   showProgressModal(filename, title = 'Procesando Video Audiovisual LSEC', steps = null) {
     let modal = document.getElementById('pipeline-progress-modal');
-    const defaultSteps = [
+    const stepsToRender = (steps && steps.length > 0) ? steps : [
       '1. Extracción de pista de audio y metadatos...',
       '2. Transcripción acústica Whisper ASR...',
       '3. Normalización lingüística y segmentación...'
     ];
-    const stepsToRender = steps && steps.length > 0 ? steps : defaultSteps;
-
-    const stepsHtml = stepsToRender.map((s, idx) => `
-      <div class="pipeline-step-row" id="step-${idx + 1}">
-        <span class="step-icon">•</span>
-        <span class="step-text">${s}</span>
-      </div>
-    `).join('');
+    const stepsHtml = stepsToRender.map((s, idx) => `<div class="pipeline-step-row" id="step-${idx + 1}"><span class="step-icon">•</span> <span class="step-text">${s}</span></div>`).join('');
 
     if (!modal) {
       modal = document.createElement('div');
       modal.id = 'pipeline-progress-modal';
       modal.className = 'modal-backdrop open';
-      modal.innerHTML = `
-        <div class="modal-dialog" style="max-width:520px;">
-          <div class="modal-header">
-            <h3 style="font-size:0.95rem; font-weight:700; display:flex; align-items:center; gap:8px;" id="pipeline-modal-title">
-              <span class="pulse-dot" style="width:8px; height:8px; border-radius:50%; background:var(--primary);"></span>
-              <span>${title}</span>
-            </h3>
-          </div>
-          <div class="modal-body" style="padding:16px;">
-            <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:12px;" id="pipeline-modal-filename">
-              Archivo: <strong>${filename}</strong>
-            </div>
-
-            <div style="width:100%; height:6px; background:var(--bg-surface-3); border-radius:var(--radius-full); overflow:hidden; margin-bottom:16px;">
-              <div id="pipeline-progress-fill" style="width:0%; height:100%; background:var(--primary); transition:width 300ms ease;"></div>
-            </div>
-
-            <div id="pipeline-steps-list" style="display:flex; flex-direction:column; gap:8px;">
-              ${stepsHtml}
-            </div>
-          </div>
-        </div>
-      `;
+      modal.innerHTML = `<div class="modal-dialog" style="max-width:520px;"><div class="modal-header"><h3 id="pipeline-modal-title">${title}</h3></div><div class="modal-body" style="padding:16px;"><div id="pipeline-modal-filename">Archivo: <strong>${filename}</strong></div><div style="width:100%;height:6px;background:var(--bg-surface-3);margin:12px 0;"><div id="pipeline-progress-fill" style="width:0%;height:100%;background:var(--primary);"></div></div><div id="pipeline-steps-list">${stepsHtml}</div></div></div>`;
       document.body.appendChild(modal);
     } else {
       modal.classList.add('open');
       const titleEl = document.getElementById('pipeline-modal-title');
-      if (titleEl) {
-        titleEl.innerHTML = `
-          <span class="pulse-dot" style="width:8px; height:8px; border-radius:50%; background:var(--primary);"></span>
-          <span>${title}</span>
-        `;
-      }
+      if (titleEl) titleEl.textContent = title;
       const fnEl = document.getElementById('pipeline-modal-filename');
       if (fnEl) fnEl.innerHTML = `Archivo: <strong>${filename}</strong>`;
       const listEl = document.getElementById('pipeline-steps-list');
@@ -852,22 +766,10 @@ class PipelineProcessor {
   updateStep(stepNum, status, text) {
     const el = document.getElementById(`step-${stepNum}`);
     if (!el) return;
-
-    if (status === 'active') {
-      el.style.color = 'var(--text-primary)';
-      el.style.fontWeight = '600';
-      el.querySelector('.step-icon').textContent = '>';
-      if (text) el.querySelector('.step-text').textContent = text;
-    } else if (status === 'completed') {
-      el.style.color = 'var(--lsec-green)';
-      el.style.fontWeight = '500';
-      el.querySelector('.step-icon').textContent = 'ok';
-      if (text) el.querySelector('.step-text').textContent = text;
-    } else {
-      el.style.color = 'var(--text-muted)';
-      el.style.fontWeight = 'normal';
-      el.querySelector('.step-icon').textContent = '•';
-    }
+    const icon = el.querySelector('.step-icon');
+    const txt = el.querySelector('.step-text');
+    if (icon) icon.textContent = status === 'completed' ? '✓' : (status === 'active' ? '>' : '•');
+    if (txt && text) txt.textContent = text;
   }
 
   setProgress(percent) {
@@ -881,7 +783,7 @@ class PipelineProcessor {
   }
 
   showError(msg) {
-    alert(msg);
+    if (typeof window.showToast === 'function') window.showToast(msg, 'error');
     this.hideProgressModal();
   }
 
@@ -890,7 +792,6 @@ class PipelineProcessor {
   }
 }
 
-// Exportar globalmente
 if (typeof window !== 'undefined') {
   window.PipelineProcessor = PipelineProcessor;
   window.pipelineProcessor = new PipelineProcessor();
