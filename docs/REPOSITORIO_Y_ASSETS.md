@@ -13,8 +13,8 @@ El archivo `.env` y `venv/` están excluidos mediante [`.gitignore`](../.gitigno
 
 | Área | Ubicación | Propósito |
 | :--- | :--- | :--- |
-| Backend | [`app/`](../app/) | FastAPI, servicios ASR/PLN, persistencia, API y WebSocket |
-| Frontend | [`app/static/`](../app/static/) | LSEC Studio, visor VRM y configuración del avatar |
+| Backend (API y Servicios Modulares SRP `< 800` l.) | [`app/api/`](../app/api/), [`app/services/`](../app/services/) | FastAPI, routers delgados (`animation_direct_endpoints.py`), servicios de catálogo/resolución/video (`animation_*`), motor lingüístico modular (`discourse_*`, `semantic_*`), ASR, persistencia SQLite y WebSocket |
+| Frontend Modular (`< 800` l.) | [`app/static/`](../app/static/) | LSEC Studio (`index.html`), visor VRM (`viewer.html` + `js/viewer-*.js`), calibrador (`avatarconfig.html` + `js/avatarconfig-*.js`), estado (`js/state/`), motor 3D (`js/avatar/`) y sistema CSS (`css/*.css`) |
 | Datos lingüísticos | [`data/`](../data/) | SQLite, lexicones, corpus piloto y guías |
 | Índice VRM | [`app/data/stroke_index_v27.json`](../app/data/stroke_index_v27.json) | Índice de trazos de la versión v2.7 |
 | Pruebas | [`app/tests/`](../app/tests/) | Pruebas unitarias, integración y E2E |

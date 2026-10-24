@@ -41,7 +41,7 @@ compatibilidad y trazabilidad.
 | **2. Reconocimiento de Voz (ASR) & Video** | `Faster-Whisper`, `CTranslate2` (`FP16`/`INT8`), `CUDA 12.x`, `PyAV (av)` + `libx264` + `AAC` | Transcripción acústica neuronal con marcas de tiempo por palabra y codificación determinista de video MP4 a **30.0 FPS constantes** (`/finalize-export-mp4`). |
 | **3. Motor PLN Híbrido & Gramática LSEC** | `spaCy` (`es_core_news_md` / `sm`), 7 Etapas Lingüísticas, 22 Reglas LSEC, 4 Reglas FENASEC, Catálogo CONADIS (**4.252 señas**), 13 Invariantes | Limpieza de disfluencias, normalización ecuatoriana/quichuismos, MWEs, segmentación proposicional, análisis morfosintáctico, reordenamiento `TIEMPO + TÓPICO + SOV` y validación estructural. |
 | **4. Visión 3D & Cinemática (`Diccionario LSEC` v2.7)** | `PyTorch`, `HaMeR`, `MANO (smplx)`, `DWPose` / `RTMW3D` (`rtmlib` + `onnxruntime-gpu`), `MediaPipe Face` (52 ARKit Blendshapes), `OpenCV`, `NumPy`, `SciPy` | Catálogo VRM estandarizado v2.7 como versión predeterminada, con compatibilidad v2.6 corregida y v2.5 directa 1:1. Incluye mejora de video, extracción 3D, retargeting, Stage C e IK analítica anti-penetración. |
-| **5. Frontend NLE, Motor 3D WebGL & QA** | `Vanilla HTML5/CSS3/ES6+`, `Three.js`, `@pixiv/three-vrm`, `VRM 1.0 Humanoid` (54 huesos), `HTML5 Canvas 2D`, `MediaRecorder`, `Pytest`, `Playwright` | Estación audiovisual *LSEC Studio* (`/studio`), reproductor 3D autónomo (`/viewer`), línea de tiempo multipista a 60 FPS, intérprete 3D PiP y suite con **358+ pruebas automatizadas**. |
+| **5. Frontend NLE, Motor 3D WebGL & QA** | `Vanilla HTML5/CSS3/ES6+`, `Three.js`, `@pixiv/three-vrm`, `VRM 1.0 Humanoid` (54 huesos), `HTML5 Canvas 2D`, `MediaRecorder`, `Pytest`, `Playwright` | Estación audiovisual *LSEC Studio* (`/studio`), reproductor 3D autónomo (`/viewer`), línea de tiempo multipista a 60 FPS, intérprete 3D PiP y suite con **444 pruebas automatizadas (408 pytest + 24 Playwright + 12 Node.js)**. |
 
 ---
 
@@ -150,7 +150,9 @@ graph TD
 
 ---
 
-## 📁 Estructura del Proyecto
+## 📁 Estructura del Proyecto (Arquitectura Modular v2.8 — SRP `< 800` líneas)
+
+Todos los módulos del backend y del frontend cumplen el **Principio de Responsabilidad Única (SRP)** con un umbral máximo de `< 800` líneas por archivo, preservando el **Patrón Fachada** en los puntos de entrada históricos para 100 % de retrocompatibilidad en imports y suites de prueba:
 
 ```
 lsec_translator_prototype/
@@ -159,7 +161,7 @@ lsec_translator_prototype/
 │   ├── config.py                            # Configuración y variables de entorno (pydantic-settings)
 │   ├── api/
 │   │   ├── endpoints.py                     # REST (/health, /transcribe, /translate, /pipeline, /review/*)
-│   │   ├── animation_direct_endpoints.py    # REST (/animations/*, /animations-direct/*, /finalize-export-mp4)
+│   │   ├── animation_direct_endpoints.py    # Controlador HTTP delgado (280 l.) y fachada (/animations/*, /finalize-export-mp4)
 │   │   ├── annotation_endpoints.py          # REST (/dataset/*, /annotations/*, /mlops/benchmark)
 │   │   ├── dictionary_endpoints.py          # REST (/dictionary/search, /{slug}, /stats)
 │   │   └── websocket.py                     # Streaming bidireccional (/ws/pipeline)
@@ -174,11 +176,23 @@ lsec_translator_prototype/
 │   │   ├── text_normalizer.py               # Etapa 2: Modismos ecuatorianos, quichuismos y reparación ASR
 │   │   ├── mwe_detector.py                  # Etapa 3: Expresiones multipalabra
 │   │   ├── discourse_segmenter.py           # Etapa 4: Segmentación proposicional
-│   │   ├── semantic_parser.py               # Etapa 5A: SpanishVerbLexicon & SemanticRoleExtractor
+│   │   ├── semantic_parser.py               # Etapa 5A (Fachada, 306 l.): Orquestador SemanticParser
+│   │   ├── semantic_constants.py            # Etapa 5A (364 l.): Inventarios verbales, homógrafos y enclíticos
+│   │   ├── semantic_verb_morphology.py      # Etapa 5A (462 l.): SpanishVerbLexicon & ModalityDetector
+│   │   ├── semantic_role_extractor.py       # Etapa 5A (635 l.): PredicateDetector & SemanticRoleExtractor
+│   │   ├── semantic_domain_templates.py     # Etapa 5A (642 l.): Plantillas semánticas institucionales
 │   │   ├── linguistic_analyzer.py           # Etapa 5A: Pro-drop, negación, tiempo/aspecto y preposiciones
-│   │   ├── discourse_planner.py             # Etapa 5B: DiscoursePlanner & ConceptTraceability
+│   │   ├── discourse_planner.py             # Etapa 5B (Fachada, 596 l.): Orquestador DiscoursePlanner
+│   │   ├── discourse_lexicon.py             # Etapa 5B (449 l.): Lexicón estático, listas POS y numerales v2.8
+│   │   ├── discourse_morphosyntax.py        # Etapa 5B (537 l.): Contexto nominal, perífrasis y saneamiento
+│   │   ├── discourse_spacy_reorder.py       # Etapa 5B (716 l.): Frases CONADIS y reordenamiento SOV con spaCy
+│   │   ├── discourse_gloss_emitter.py       # Etapa 5B (644 l.): Emisión de GlossItem, posnominales y FENASEC
+│   │   ├── discourse_plan_builder.py        # Etapa 5B (657 l.): Loci espaciales, NonManualSpan y TranslationPlan
 │   │   ├── fenasec_rules.py                 # Etapa 6: Reglas FENASEC (cortesía, negación, direccionales, ++)
 │   │   ├── dictionary_service.py            # Etapa 7: Diccionario Oficial CONADIS (4.252 señas) + cascada
+│   │   ├── animation_catalog_service.py     # Catálogos VRM (v2.7/v2.6/v2.5), caché NFC y stroke_index (798 l.)
+│   │   ├── animation_lexical_resolver.py    # Índice léxico CONADIS, homónimos y derivación morfológica (789 l.)
+│   │   ├── animation_media_service.py       # Integridad de video, streaming y codificación MP4 PyAV (680 l.)
 │   │   ├── duplicate_resolver.py            # Resolución de glosas duplicadas
 │   │   ├── metadata_linker.py               # Enlace de IDs proposición / glosa / locus
 │   │   ├── alignment_service.py             # SourceAlignmentService (Deixis vs Correferencia)
@@ -190,10 +204,25 @@ lsec_translator_prototype/
 │   │   ├── mlops_pipeline.py                # MLOpsPipeline (Evaluación Frozen Test)
 │   │   ├── nlp_service.py                   # LSECTranslatorService (Orquestador de las 7 etapas)
 │   │   └── storage_service.py               # LocalStorageService (SQLite, 100% offline)
-│   ├── static/                              # LSEC Studio (index.html), Visor 3D (viewer.html), avatarconfig.html, js/
-│   └── tests/                               # Suite pytest (358 pruebas unitarias/integración + E2E Playwright)
+│   ├── static/                              # Frontend Modular (< 800 líneas por archivo)
+│   │   ├── index.html                       # Estación NLE LSEC Studio (/studio)
+│   │   ├── viewer.html                      # Visor 3D 1:1 desacoplado (/viewer, 337 l.)
+│   │   ├── avatarconfig.html                # Calibrador VRM desacoplado (/avatarconfig, 390 l.)
+│   │   ├── css/                             # Sistema de diseño modular: app.css (523 l.) + 6 hojas Studio + viewer.css + avatarconfig.css
+│   │   └── js/
+│   │       ├── app.js                       # Inicializador global de LSEC Studio
+│   │       ├── state.js                     # Fachada LSECStateStore (758 l.)
+│   │       ├── state/                       # state-project-hydration.js, state-gloss-mutations.js, state-persistence-styles.js
+│   │       ├── viewer-mano-rig.js           # Rig paramétrico MANO y cámara macro para /viewer (409 l.)
+│   │       ├── viewer-main.js               # Controlador principal del Visor 3D /viewer (716 l.)
+│   │       ├── avatarconfig-helpers.js      # Helpers de formato, métricas y UI para /avatarconfig (545 l.)
+│   │       ├── avatarconfig-main.js         # Controlador principal del Calibrador /avatarconfig (792 l.)
+│   │       ├── avatar/                      # Motor 3D: sign-clip-factory.js (+2 submódulos), avatar-controller.js (+2), sequence-compiler.js (+2), etc.
+│   │       └── components/                  # Componentes NLE (timeline.js, video-exporter.js, transcript-window.js, etc.)
+│   └── tests/                               # Suite automatizada: 408 tests pytest + 24 Playwright E2E + 12 Node.js
 ├── data/                                    # Lexicones, guía de anotación v1.0, corpus piloto y base SQLite
-├── docs/                                    # Documentación técnica detallada del backend y frontend
+├── docs/                                    # Documentación técnica detallada del backend, frontend y activos
+├── AUDITORIA_SISTEMA_LSEC.md                # Informe de auditoría integral extremo a extremo
 ├── run_studio.bat                           # Lanzador portable (Windows)
 ├── requirements.txt
 └── README.md
@@ -237,6 +266,9 @@ venv\Scripts\activate
 
 # Suite completa sin las pruebas E2E del navegador (no requieren servidor)
 pytest -q --deselect app/tests/test_lsec_avatar_vrm_validation.py -k "not playwright"
+
+# Suite de validación cinemática y de esquemas ES6 (Node.js)
+node app/tests/test_avatar_import_validation.mjs
 ```
 
-**Resultado actual:** **358 pruebas aprobadas, 0 fallos**.
+**Resultado actual:** **408 pruebas de backend aprobadas (`pytest`), 24 pruebas E2E (`Playwright`) y 12 validaciones JS (`Node.js`) — Total: 444 pruebas, 0 fallos**.

@@ -495,7 +495,7 @@ node app/tests/test_avatar_import_validation.mjs
 
 ## 9. Conclusión Final de Auditoría
 
-El sistema **LSEC Studio** (`lsec_translator_prototype`) ha demostrado un grado de madurez, resiliencia y cumplimiento normativo sobresaliente. La arquitectura modular adoptada permite una separación estricta entre el frontend SPA (con Three.js vendoreado y renderizado determinista de 30 FPS) y el backend FastAPI (con un motor de traducción determinista basado en reglas FENASEC y resolución jerárquica sobre el catálogo v2.6 de 4.142 señas).
+El sistema **LSEC Studio** (`lsec_translator_prototype`) ha demostrado un grado de madurez, resiliencia y cumplimiento normativo sobresaliente. La arquitectura modular adoptada (conforme a **ISO/IEC 25010** y el **Principio de Responsabilidad Única — SRP**, donde los 10 antiguos archivos monolíticos fueron desacoplados en **44 módulos cohesivos `< 800` líneas** bajo el **Patrón Fachada**) permite una separación estricta entre el frontend SPA (con Three.js vendoreado, vistas HTML/CSS/JS desacopladas y renderizado determinista de 30 FPS) y el backend FastAPI (con servicios modulares de catálogo/resolución/video en `animation_*`, motor lingüístico desacoplado en `discourse_*` y `semantic_*`, y resolución jerárquica sobre los catálogos VRM `v2.7`/`v2.6`/`v2.5`).
 
 Todas las anomalías detectadas durante el proceso de auditoría fueron corregidas proactivamente en su causa raíz sin generar regresiones en el comportamiento funcional ni en la cobertura de pruebas.
 
