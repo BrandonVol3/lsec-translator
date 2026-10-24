@@ -96,9 +96,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (stageLabel) {
         stageLabel.textContent = 'Video + Subtítulos + Avatar 3D LSEC';
       }
-      if (window.studioAvatarBridge && typeof window.studioAvatarBridge.handleResize === 'function') {
-        setTimeout(() => window.studioAvatarBridge.handleResize(), 60);
-      }
+      setTimeout(() => {
+        if (window.studioAvatarBridge?.controller?.engine?.onResize) {
+          window.studioAvatarBridge.controller.engine.onResize();
+        }
+      }, 60);
     } else if (slot1) {
       if (videoZone.parentElement !== slot1) {
         slot1.appendChild(videoZone);
@@ -174,9 +176,27 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   const btnChangeVideo = document.getElementById('btn-stage-change-video');
+  const btnUploadVideo = document.getElementById('btn-upload-video');
+  const videoDropzone = document.getElementById('video-dropzone');
   const fileUploadInput = document.getElementById('file-upload-input');
   if (btnChangeVideo && fileUploadInput) {
     btnChangeVideo.addEventListener('click', () => fileUploadInput.click());
+  }
+  if (btnUploadVideo && fileUploadInput) {
+    btnUploadVideo.addEventListener('click', () => fileUploadInput.click());
+  }
+  if (videoDropzone && fileUploadInput) {
+    videoDropzone.addEventListener('click', () => fileUploadInput.click());
+  }
+
+  const btnLoadDemo = document.getElementById('btn-load-demo');
+  if (btnLoadDemo) {
+    btnLoadDemo.addEventListener('click', () => {
+      if (typeof DEMO_PROJECT_DATA !== 'undefined' && typeof appState !== 'undefined') {
+        appState.loadProject(JSON.parse(JSON.stringify(DEMO_PROJECT_DATA)));
+        showToast('Proyecto de demostración cargado en LSEC Studio.', 'success');
+      }
+    });
   }
 
   const btnStep2Back = document.getElementById('btn-step2-back');
@@ -276,8 +296,11 @@ document.addEventListener('DOMContentLoaded', () => {
       timeBadge.textContent = `${String(mins).padStart(2, '0')}:${secs}`;
     }
 
-    const activeSeg = segments.find(s => t >= s.start_time && t <= s.end_time) || segments[0] || null;
-    const activeGloss = allGlosses.find(g => t >= g.start_time && t <= g.end_time) || null;
+    const getStart = (item) => Number(item?.start_time ?? item?.start_seconds ?? 0);
+    const getEnd = (item) => Number(item?.end_time ?? item?.end_seconds ?? 0);
+
+    const activeSeg = segments.find(s => t >= getStart(s) && t <= getEnd(s)) || segments[0] || null;
+    const activeGloss = allGlosses.find(g => t >= getStart(g) && t <= getEnd(g)) || null;
 
     const wordEl = document.getElementById('live-current-sign-word');
     const typeEl = document.getElementById('live-current-sign-type');
@@ -304,7 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const sentenceBox = document.getElementById('live-current-sentence-box');
     if (sentenceBox) {
       sentenceBox.textContent = activeSeg
-        ? (activeSeg.normalized_text || activeSeg.raw_text || 'Oración sin texto')
+        ? (activeSeg.normalized_text || activeSeg.original_text || activeSeg.raw_text || 'Oración sin texto')
         : 'Reproduce el video o selecciona una oración.';
     }
 
@@ -312,7 +335,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (rackEl) {
       rackEl.innerHTML = '';
       const segGlosses = activeSeg
-        ? allGlosses.filter(g => g.segment_id === activeSeg.id)
+        ? allGlosses.filter(g => g.segment_id === activeSeg.id || (getStart(g) >= getStart(activeSeg) - 0.1 && getEnd(g) <= getEnd(activeSeg) + 0.1))
         : [];
       const itemsToRender = segGlosses.length > 0
         ? segGlosses
@@ -331,8 +354,10 @@ document.addEventListener('DOMContentLoaded', () => {
           <span class="gloss-chip-badge-tag">${info.label === 'Dactilología' ? 'DACTIL.' : (info.label === 'Editada Manualmente' ? 'EDITADA' : 'CONADIS')}</span>
         `;
         chip.addEventListener('click', () => {
-          if (typeof g.start_time === 'number') {
-            appState.setCurrentTime(g.start_time, true);
+          const gStart = getStart(g);
+          appState.setCurrentTime(gStart, true);
+          if (window.avatarController && typeof window.avatarController.playGloss === 'function') {
+            window.avatarController.playGloss(String(g.gloss || g));
           }
         });
         rackEl.appendChild(chip);
@@ -349,11 +374,13 @@ document.addEventListener('DOMContentLoaded', () => {
         rowBtn.className = 'btn btn-sm';
         rowBtn.style.justifyContent = 'flex-start';
         rowBtn.style.textAlign = 'left';
-        rowBtn.innerHTML = `<strong>#${i + 1}</strong> <span>${(seg.normalized_text || seg.raw_text || '').slice(0, 52)}</span>`;
+        const segText = seg.normalized_text || seg.original_text || seg.raw_text || '';
+        rowBtn.innerHTML = `<strong>#${i + 1}</strong> <span>${segText.slice(0, 52)}</span>`;
         rowBtn.addEventListener('click', () => {
-          appState.setCurrentTime(Number(seg.start_time) || 0, true);
+          const sTime = getStart(seg);
+          appState.setCurrentTime(sTime, true);
           appState.selectItem('segment', seg.id, seg);
-          renderStep3LiveSignMonitor(Number(seg.start_time) || 0);
+          renderStep3LiveSignMonitor(sTime);
         });
         listEl.appendChild(rowBtn);
       });
@@ -369,11 +396,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     appState.subscribe('projectLoaded', () => {
+      const dropzone = document.getElementById('video-dropzone');
+      const playerWrap = document.getElementById('video-player-wrapper');
+      if (dropzone) dropzone.style.display = 'none';
+      if (playerWrap) playerWrap.classList.add('active');
+
       const listEl = document.getElementById('live-all-sentences-list');
       if (listEl) listEl.dataset.renderedCount = '';
       const titleEl = document.getElementById('project-title-display');
-      if (titleEl && appState.state.project?.title) {
-        titleEl.textContent = appState.state.project.title;
+      const pName = appState.state.project?.title || appState.state.project?.project_name || appState.state.project?.media_info?.filename;
+      if (titleEl && pName) {
+        titleEl.textContent = pName;
+      }
+      if (window.transcriptWindow && typeof window.transcriptWindow.renderSegments === 'function') {
+        window.transcriptWindow.renderSegments();
+      }
+      if (window.linguisticComparisonView && typeof window.linguisticComparisonView.renderAll === 'function') {
+        window.linguisticComparisonView.renderAll();
       }
       renderStep3LiveSignMonitor();
     });

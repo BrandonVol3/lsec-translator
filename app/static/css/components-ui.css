@@ -4,7 +4,8 @@
    ============================================================ */
 
 /* --- BOTONES TÁCTILES CON RELIEVE INFERIOR (DESIGN.md) --- */
-.btn {
+.btn,
+button.btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -14,8 +15,8 @@
   font-family: var(--font-display);
   font-size: 0.84rem;
   font-weight: 800;
-  border: 2px solid var(--color-border-subtle);
-  border-bottom: 4px solid var(--color-border-strong);
+  border: 2px solid var(--color-border-subtle) !important;
+  border-bottom: 4px solid var(--color-border-strong) !important;
   background-color: var(--color-card-white);
   color: var(--color-text-primary);
   cursor: pointer;
@@ -24,15 +25,17 @@
   white-space: nowrap;
 }
 
-.btn:hover:not(:disabled) {
+.btn:hover:not(:disabled),
+button.btn:hover:not(:disabled) {
   background-color: var(--color-surface-sky);
-  border-color: var(--color-accent-cobalt);
-  border-bottom-color: var(--color-accent-cobalt-dark);
+  border-color: var(--color-accent-cobalt) !important;
+  border-bottom-color: var(--color-accent-cobalt-dark) !important;
 }
 
-.btn:active:not(:disabled) {
+.btn:active:not(:disabled),
+button.btn:active:not(:disabled) {
   transform: translateY(2px);
-  border-bottom-width: 2px;
+  border-bottom-width: 2px !important;
 }
 
 .btn:disabled {
@@ -40,39 +43,44 @@
   cursor: not-allowed;
 }
 
-.btn-primary {
-  background-color: var(--color-primary-emerald);
-  color: #ffffff;
-  border-color: var(--color-primary-emerald-dark);
-  border-bottom: 4px solid var(--color-primary-emerald-dark);
+.btn.btn-primary,
+button.btn-primary {
+  background-color: var(--color-primary-emerald) !important;
+  color: #ffffff !important;
+  border: 2px solid var(--color-primary-emerald-dark) !important;
+  border-bottom: 4px solid var(--color-primary-emerald-dark) !important;
 }
 
-.btn-primary:hover:not(:disabled) {
-  background-color: #0ea572;
-  color: #ffffff;
-  border-color: #047857;
-  border-bottom-color: #047857;
+.btn.btn-primary:hover:not(:disabled),
+button.btn-primary:hover:not(:disabled) {
+  background-color: #0ea572 !important;
+  color: #ffffff !important;
+  border-color: #047857 !important;
+  border-bottom-color: #047857 !important;
 }
 
-.btn-cobalt {
-  background-color: var(--color-accent-cobalt);
-  color: #ffffff;
-  border-color: var(--color-accent-cobalt-dark);
-  border-bottom: 4px solid var(--color-accent-cobalt-dark);
+.btn.btn-cobalt,
+button.btn-cobalt {
+  background-color: var(--color-accent-cobalt) !important;
+  color: #ffffff !important;
+  border: 2px solid var(--color-accent-cobalt-dark) !important;
+  border-bottom: 4px solid var(--color-accent-cobalt-dark) !important;
 }
 
-.btn-cobalt:hover:not(:disabled) {
-  background-color: #0369a1;
-  color: #ffffff;
-  border-color: #075985;
-  border-bottom-color: #075985;
+.btn.btn-cobalt:hover:not(:disabled),
+button.btn-cobalt:hover:not(:disabled) {
+  background-color: #0369a1 !important;
+  color: #ffffff !important;
+  border-color: #075985 !important;
+  border-bottom-color: #075985 !important;
 }
 
-.btn-amber {
-  background-color: var(--color-warning-amber);
-  color: #ffffff;
-  border-color: var(--color-warning-amber-dark);
-  border-bottom: 4px solid var(--color-warning-amber-dark);
+.btn.btn-amber,
+button.btn-amber {
+  background-color: var(--color-warning-amber) !important;
+  color: #ffffff !important;
+  border: 2px solid var(--color-warning-amber-dark) !important;
+  border-bottom: 4px solid var(--color-warning-amber-dark) !important;
 }
 
 .btn-tactile-cta {
