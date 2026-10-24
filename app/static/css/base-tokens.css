@@ -1,0 +1,234 @@
+/* ============================================================
+   LSEC STUDIO 2.1.1 — ESTACIÓN DE TRABAJO LINGÜÍSTICA Y AUDIOVISUAL
+   Sistema de diseño sobrio, editorial y accesible.
+   Inspirado en el concepto de "Espacio Lingüístico".
+   Sin glassmorphism, sin gradientes decorativos, sin exceso de badges.
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  /* --- PALETA BASE OFICIAL --- */
+  --bg-app: #111210;              /* Fondo grafito neutro */
+  --bg-surface: #191B18;          /* Superficie principal de paneles y tarjetas */
+  --bg-surface-active: #232620;   /* Superficie activa / hover / seleccionado */
+  --bg-surface-subtle: #151714;   /* Fondos secundarios, timeline y dock */
+
+  /* --- ALIAS Y SUPERFICIES COMPLEMENTARIAS (A-04) --- */
+  --bg-base: var(--bg-surface-subtle);
+  --bg-card: var(--bg-surface-subtle);
+  --bg-surface-2: var(--bg-surface-subtle);
+  --bg-surface-3: var(--bg-surface-active);
+
+  /* --- BORDES Y LÍNEAS FINAS --- */
+  --border-subtle: rgba(242, 241, 236, 0.08);
+  --border-medium: rgba(242, 241, 236, 0.16);
+  --border-strong: rgba(242, 241, 236, 0.28);
+
+  /* --- TEXTO Y JERARQUÍA --- */
+  --text-primary: #F2F1EC;        /* Texto principal de alto contraste */
+  --text-secondary: #AAAFA5;      /* Texto secundario, subtítulos y etiquetas */
+  --text-muted: #74796F;          /* Metadatos, atajos y números de apoyo */
+  --text-inverse: #111210;        /* Texto sobre acentos claros */
+
+  /* --- ACCIÓN Y FOCO --- */
+  --action-primary: #B7D36B;      /* Verde lima apagado para acciones clave */
+  --action-primary-hover: #A5C358;
+  --action-primary-text: #111210;
+  --action-primary-glow: rgba(183, 211, 107, 0.16);
+  --primary: var(--action-primary);
+  --focus: #D6F285;               /* Anillo de foco de alta visibilidad (WCAG AA) */
+
+  /* --- ESTADOS SEMÁNTICOS (4 ESTADOS PRINCIPALES) --- */
+  --status-draft: #74796F;        /* Borrador / Generado automáticamente */
+  --status-review: #D8A84E;       /* Revisar / Advertencia */
+  --status-corrected: #69AFC6;    /* Corregido / Información */
+  --status-validated: #70B58C;    /* Validado / Aprobado humano */
+  --status-error: #E26D5A;        /* Error bloqueante */
+
+  --lsec-yellow: var(--status-review);
+  --lsec-green: var(--status-validated);
+  --lsec-red-bg: rgba(226, 109, 90, 0.14);
+  --lsec-yellow-bg: rgba(216, 168, 78, 0.14);
+
+  /* --- ESPACIO LINGÜÍSTICO Y LOCI --- */
+  --locus-center: #B7D36B;
+  --locus-left: #69AFC6;
+  --locus-right: #D8A84E;
+  --locus-high: #9D84B7;
+  --locus-low: #70B58C;
+
+  /* --- TIPOGRAFÍA --- */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-base: var(--font-sans);
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* --- DIMENSIONES Y RADIOS --- */
+  --header-height: 48px;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+
+  /* --- TRANSICIONES Y SOMBRAS MÍNIMAS --- */
+  --transition-fast: 120ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+
+  --z-base: 1;
+  --z-overlay: 10;
+  --z-header: 50;
+  --z-modal: 100;
+  --z-tooltip: 110;
+}
+
+/* --- TEMA CLARO ACCESIBLE --- */
+[data-theme="light"] {
+  color-scheme: light;
+  --bg-app: #F5F4EE;
+  --bg-surface: #FFFFFF;
+  --bg-surface-active: #EAE8DF;
+  --bg-surface-subtle: #EFEFE8;
+
+  --border-subtle: rgba(17, 18, 16, 0.10);
+  --border-medium: rgba(17, 18, 16, 0.20);
+  --border-strong: rgba(17, 18, 16, 0.35);
+
+  --text-primary: #111210;
+  --text-secondary: #52564E;
+  --text-muted: #797E75;
+  --text-inverse: #F2F1EC;
+
+  --action-primary: #7A9933;
+  --action-primary-hover: #698528;
+  --action-primary-text: #FFFFFF;
+  --action-primary-glow: rgba(122, 153, 51, 0.16);
+  --focus: #7A9933;
+}
+
+/* --- TEMA ALTO CONTRASTE (WCAG AAA) --- */
+[data-theme="high-contrast"],
+[data-theme="high_contrast"] {
+  color-scheme: dark;
+  --bg-app: #000000;
+  --bg-surface: #0A0A0A;
+  --bg-surface-active: #1A1A1A;
+  --bg-surface-subtle: #080808;
+
+  --border-subtle: #666666;
+  --border-medium: #999999;
+  --border-strong: #FFFFFF;
+
+  --text-primary: #FFFFFF;
+  --text-secondary: #DDDDDD;
+  --text-muted: #AAAAAA;
+
+  --action-primary: #D6F285;
+  --action-primary-text: #000000;
+  --action-primary-glow: rgba(214, 242, 133, 0.25);
+  --focus: #FFFFFF;
+}
+
+/* ============================================================
+   RESETEO BÁSICO Y ACCESIBILIDAD
+   ============================================================ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--border-strong);
+  border-radius: 3px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--text-muted);
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+html[data-font-scale="large"] {
+  font-size: 15.5px;
+}
+
+html[data-font-scale="xlarge"] {
+  font-size: 17px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+body.reduced-motion *,
+body.reduced-motion *::before,
+body.reduced-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+select option {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.speed-select {
+  background: var(--bg-surface-subtle);
+  color: var(--text-primary);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  min-height: 28px;
+  transition: border-color var(--transition-fast);
+}
+
+.speed-select:focus {
+  border-color: var(--action-primary);
+  outline: none;
+}
+
