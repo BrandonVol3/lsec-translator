@@ -89,7 +89,7 @@ class LSECStateStore {
       // 4. Espacio de Trabajo y 3 Etapas Principales
       workspace: {
         stage: 'preparar', // 'preparar' | 'traducir' | 'revisar'
-        theme: 'dark', // 'dark' | 'light' | 'high-contrast'
+        theme: 'light', // 'light' | 'high-contrast' | 'dark'
         fontSizeScale: 'normal',
         reducedMotion: false,
         autoScrollTranscript: true,

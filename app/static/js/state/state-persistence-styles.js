@@ -302,8 +302,8 @@ const LSECStatePersistenceStyles = {
 
   loadPreferencesFromStorage() {
     try {
-      const rawTheme = localStorage.getItem('lsec_studio_theme') || 'dark';
-      const savedTheme = rawTheme === 'high_contrast' ? 'high-contrast' : rawTheme;
+      const rawTheme = localStorage.getItem('lsec_studio_theme') || 'light';
+      const savedTheme = rawTheme === 'high_contrast' ? 'high-contrast' : (rawTheme === 'dark' ? 'light' : rawTheme);
       this.state.workspace.theme = savedTheme;
       if (typeof document !== 'undefined' && document.documentElement) {
         document.documentElement.setAttribute('data-theme', savedTheme);
