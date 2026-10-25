@@ -101,12 +101,9 @@ def normalize_key(text: str) -> str:
     """Minúsculas, sin tildes (conserva la ñ), sin puntuación ni guiones y con espacios colapsados."""
     if not text:
         return ""
-    text = html.unescape(text).lower().replace("ñ", _PRIVATE_ENYE)
-    text = unicodedata.normalize("NFD", text)
-    text = "".join(ch for ch in text if unicodedata.category(ch) != "Mn")
-    text = text.replace(_PRIVATE_ENYE, "ñ")
-    text = re.sub(r"[\W_]+", " ", text, flags=re.UNICODE)
-    return " ".join(text.split())
+    text = unicodedata.normalize("NFD", html.unescape(text).lower().replace("ñ", _PRIVATE_ENYE))
+    text = "".join(ch for ch in text if unicodedata.category(ch) != "Mn").replace(_PRIVATE_ENYE, "ñ")
+    return " ".join(re.sub(r"[\W_]+", " ", text, flags=re.UNICODE).split())
 
 
 def _apply_gender(base: str, suffix: str) -> Optional[str]:
@@ -114,30 +111,16 @@ def _apply_gender(base: str, suffix: str) -> Optional[str]:
     words = base.split()
     if not words:
         return None
-    last = words[-1]
-    low = last.lower()
-    suffix = suffix.lower()
+    last, low, suffix = words[-1], words[-1].lower(), suffix.lower()
     new_last: Optional[str] = None
     if suffix == "a":
-        if low.endswith("o"):
-            new_last = last[:-1] + "a"
-        elif low.endswith("e"):
-            new_last = last[:-1] + "a"
-        elif low.endswith("or") or low.endswith("ón") or low.endswith("án") or low.endswith("l") or low.endswith("z"):
-            new_last = last + "a"
-        else:
-            new_last = last + "a"
+        new_last = (last[:-1] + "a") if low.endswith(("o", "e")) else (last + "a")
     elif suffix == "as":
-        if low.endswith("os"):
-            new_last = last[:-2] + "as"
-        elif low.endswith("es"):
-            new_last = last[:-2] + "as"
-        else:
-            new_last = last + "as"
+        new_last = (last[:-2] + "as") if low.endswith(("os", "es")) else (last + "as")
     elif suffix == "ana":
         new_last = (last[:-2] + "ana") if low.endswith("án") else (last + "ana")
     elif suffix in {"ora", "iza", "triz", "es"}:
-        new_last = last + suffix if suffix != "es" else last + "es"
+        new_last = last + suffix
     if not new_last:
         return None
     words[-1] = new_last
@@ -153,46 +136,25 @@ class TitleVariant:
 
 
 def parse_title(palabra: str) -> List[TitleVariant]:
-    """
-    Descompone el título de una entrada en variantes léxicas.
-
-    Separadores: coma, barra '/', guion largo. Paréntesis: sufijo de género -> formas extra;
-    números '(1)' y calificadores '(Costa)' se descartan; en siglas '(Consejo ...)' la expansión
-    se agrega como variante adicional.
-    """
+    """Descompone el título de una entrada en variantes léxicas."""
     raw = html.unescape(palabra or "").replace("\u2013", ",").replace("\u2014", ",")
-    parts = re.split(r"\s*[,/]\s*", raw)
     variants: List[TitleVariant] = []
     seen: Set[str] = set()
-
-    for part in parts:
-        part = part.strip()
-        if not part:
-            continue
+    for part in (p.strip() for p in re.split(r"\s*[,/]\s*", raw) if p.strip()):
         if part.lower() in _STANDALONE_GENDER_SUFFIXES and variants:
-            # "Acobardado, a": el fragmento es un sufijo de género de la variante previa
             prev = variants[-1]
             derived = _apply_gender(prev.text, part)
             if derived and derived not in prev.forms:
                 prev.forms.append(derived)
             continue
         parens = re.findall(r"\(([^)]*)\)", part)
-        base = re.sub(r"\s*\([^)]*\)", "", part).strip()
-        base = base.strip(" .;:")
+        base = re.sub(r"\s*\([^)]*\)", "", part).strip().strip(" .;:")
         if not base:
             continue
-
-        forms: List[str] = [base]
-        qualifiers: List[str] = []
-        extra_variants: List[str] = []
-
+        forms, qualifiers, extra_variants = [base], [], []
         letters = re.sub(r"[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ]", "", base)
         is_acronym = bool(letters) and letters.isupper() and len(letters) >= 2
-
-        for content in parens:
-            c = content.strip()
-            if not c or re.fullmatch(r"\d+", c):
-                continue
+        for c in (cnt.strip() for cnt in parens if cnt.strip() and not re.fullmatch(r"\d+", cnt.strip())):
             if c.lower() in _GENDER_SUFFIXES:
                 derived = _apply_gender(base, c)
                 if derived and derived not in forms:
@@ -201,7 +163,6 @@ def parse_title(palabra: str) -> List[TitleVariant]:
                 extra_variants.append(c)
             else:
                 qualifiers.append(c)
-
         key = normalize_key(base)
         if key and key not in seen:
             seen.add(key)
@@ -211,36 +172,20 @@ def parse_title(palabra: str) -> List[TitleVariant]:
             if ekey and ekey not in seen:
                 seen.add(ekey)
                 variants.append(TitleVariant(text=ev, forms=[ev]))
-
     return variants
 
 
 def to_gloss_form(text: str) -> str:
     """Forma de glosa canónica: MAYÚSCULAS, sin puntuación y con guiones entre palabras ('a diario' -> 'A-DIARIO')."""
-    cleaned = re.sub(r"[¿?¡!.,;:\"“”()]", " ", text)
-    return "-".join(cleaned.upper().split())
+    return "-".join(re.sub(r"[¿?¡!.,;:\"“”()]", " ", text).upper().split())
 
 
 def infer_geolect(title: str, slug: str = "", qualifiers: Optional[Sequence[str]] = None) -> str:
     """Infiere el geolecto ('Sierra' | 'Costa' | 'Nacional') a partir del título, slug o calificadores."""
-    t_low = (title or "").lower()
-    s_low = (slug or "").lower()
-    quals = [q.lower() for q in (qualifiers or ())]
-    if (
-        "sierra" in quals
-        or "(sierra)" in t_low
-        or "en la sierra" in t_low
-        or s_low.endswith("-sierra")
-        or s_low.endswith("-en-la-sierra")
-    ):
+    t_low, s_low, quals = (title or "").lower(), (slug or "").lower(), [q.lower() for q in (qualifiers or ())]
+    if "sierra" in quals or "(sierra)" in t_low or "en la sierra" in t_low or s_low.endswith(("-sierra", "-en-la-sierra")):
         return "Sierra"
-    if (
-        "costa" in quals
-        or "(costa)" in t_low
-        or "en la costa" in t_low
-        or s_low.endswith("-costa")
-        or s_low.endswith("-en-la-costa")
-    ):
+    if "costa" in quals or "(costa)" in t_low or "en la costa" in t_low or s_low.endswith(("-costa", "-en-la-costa")):
         return "Costa"
     return "Nacional"
 
@@ -638,54 +583,26 @@ class LSECDictionaryService:
 
     # ------------------------------------------------------------ consulta
 
-    def find_phrases(
-        self,
-        tokens: Sequence[Tuple[str, str, int, int]],
-        text: str = "",
-    ) -> List["PhraseMatch"]:
-        """
-        Localiza entradas de varias palabras del diccionario en una secuencia de tokens.
-
-        `tokens`: (texto_superficial, lema, inicio_char, fin_char) de los tokens no puntuación,
-        en orden. Solo se aceptan tokens contiguos (sin puntuación ni otros caracteres entre ellos).
-        Búsqueda voraz de izquierda a derecha con la coincidencia más larga; prueba la forma
-        superficial y, si no coincide, la secuencia de lemas (p. ej. "casas grandes" -> "casa grande").
-        """
+    def find_phrases(self, tokens: Sequence[Tuple[str, str, int, int]], text: str = "") -> List["PhraseMatch"]:
+        """Localiza entradas de varias palabras del diccionario en una secuencia de tokens."""
         if not self.available or not self._phrase_keys or len(tokens) < 2:
             return []
         surface = [normalize_key(t[0]) for t in tokens]
         lemmas = [normalize_key(t[1]) or s for t, s in zip(tokens, surface)]
         found: List[PhraseMatch] = []
-        n = len(tokens)
-        i = 0
+        n, i = len(tokens), 0
         while i < n:
             matched = False
             for length in range(min(self._max_phrase_words, n - i), 1, -1):
                 window = range(i, i + length)
-                if text and any(
-                    text[tokens[k][3]:tokens[k + 1][2]].strip() for k in list(window)[:-1]
-                ):
-                    continue  # hay puntuación u otro texto entre los tokens
-                if any(not surface[k] for k in window):
+                if (text and any(text[tokens[k][3]:tokens[k + 1][2]].strip() for k in list(window)[:-1])) or any(not surface[k] for k in window):
                     continue
                 for label, seq in (("surface", surface), ("lemma", lemmas)):
                     key = " ".join(seq[k] for k in window)
-                    if key in self._phrase_keys:
-                        hit = self._find(key)
-                        if hit is None:
-                            continue
+                    hit = self._find(key) if key in self._phrase_keys else None
+                    if hit is not None:
                         idx, form = hit
-                        found.append(
-                            PhraseMatch(
-                                start_token=i,
-                                end_token=i + length,
-                                start_char=tokens[i][2],
-                                end_char=tokens[i + length - 1][3],
-                                entry=self._entries[idx],
-                                matched_form=form,
-                                match_basis=label,
-                            )
-                        )
+                        found.append(PhraseMatch(i, i + length, tokens[i][2], tokens[i + length - 1][3], self._entries[idx], form, label))
                         matched = True
                         break
                 if matched:
@@ -709,8 +626,7 @@ class LSECDictionaryService:
             if idx not in hits or hits[idx].score < score:
                 hits[idx] = SearchHit(self._entries[idx], score, mtype, form)
 
-        exact = self._index.get(qn, [])
-        for prio, idx, form in exact:
+        for prio, idx, form in self._index.get(qn, []):
             add(idx, 1.0 - prio[1] * 0.01, "exact", form)
         for key, rows in self._index.items():
             if key == qn:
@@ -731,28 +647,22 @@ class LSECDictionaryService:
                 ratio = difflib.SequenceMatcher(None, qn, key).ratio()
                 for prio, idx, form in self._index[key]:
                     add(idx, 0.50 * ratio, "fuzzy", form)
-        ordered = sorted(hits.values(), key=lambda h: (-h.score, h.entry.title.lower()))
-        return ordered[: max(1, limit)]
+        return sorted(hits.values(), key=lambda h: (-h.score, h.entry.title.lower()))[: max(1, limit)]
 
     def suggest(self, term: str, limit: int = 3) -> List[str]:
         """Sugerencias léxicas cercanas (glosa) para una palabra ausente del diccionario."""
         key = normalize_key(term)
         if not self.available or len(key) < 4 or " " in key:
             return []
-        cached = self._suggest_cache.get(key)
-        if cached is not None:
-            return cached[:limit]
+        if key in self._suggest_cache:
+            return self._suggest_cache[key][:limit]
         out: List[str] = []
 
         def push(cand_key: str) -> None:
             found = self._find(cand_key)
-            if found is None:
-                return
-            g = to_gloss_form(found[1])
-            if g not in out:
+            if found is not None and (g := to_gloss_form(found[1])) not in out:
                 out.append(g)
 
-        # Diminutivos / aumentativos: perrito -> perro, casita -> casa
         for suffix in ("itos", "itas", "illos", "illas", "ito", "ita", "illo", "illa", "ote", "ota"):
             if key.endswith(suffix) and len(key) - len(suffix) >= 3:
                 stem = key[: -len(suffix)]
@@ -771,32 +681,22 @@ class LSECDictionaryService:
 
     def stats(self) -> Dict[str, Any]:
         entries = self._entries
-        total = len(entries)
         geo_counts: Dict[str, int] = {}
         for e in entries:
             g = e.geolect or "Nacional"
             geo_counts[g] = geo_counts.get(g, 0) + 1
         return {
-            "available": self.available,
-            "catalog_path": str(self.catalog_path) if self.catalog_path else None,
-            "loaded_from": self.loaded_from,
-            "total_signs": total,
-            "total_lexical_keys": len(self._index),
-            "with_video": sum(1 for e in entries if e.video_url),
-            "with_illustration": sum(1 for e in entries if e.illustration_url),
+            "available": self.available, "catalog_path": str(self.catalog_path) if self.catalog_path else None,
+            "loaded_from": self.loaded_from, "total_signs": len(entries), "total_lexical_keys": len(self._index),
+            "with_video": sum(1 for e in entries if e.video_url), "with_illustration": sum(1 for e in entries if e.illustration_url),
             "multi_variant_entries": sum(1 for e in entries if len(e.variants) > 1),
-            "phrases": sum(1 for e in entries if "frases-comunes" in e.categories),
-            "by_geolect": geo_counts,
+            "phrases": sum(1 for e in entries if "frases-comunes" in e.categories), "by_geolect": geo_counts,
         }
 
     # ------------------------------------------------------------ enriquecimiento
 
     def enrich_glosses(
-        self,
-        glosses: Sequence[GlossItem],
-        *,
-        known_glosses: Optional[Iterable[str]] = None,
-        flag_unverified: Optional[bool] = None,
+        self, glosses: Sequence[GlossItem], *, known_glosses: Optional[Iterable[str]] = None, flag_unverified: Optional[bool] = None
     ) -> Dict[str, int]:
         """
         Aplica la cascada de resolución sobre `glosses` (modifica los elementos in situ).
@@ -821,9 +721,8 @@ class LSECDictionaryService:
             meta = self._classify(g, known)
             if meta is None:
                 meta = self._flag_unverified(g, flag_unverified)
-            elif meta.verified_in_conadis:
-                if not g.alternatives and meta.lexical_alternatives:
-                    g.alternatives = [a for a in meta.lexical_alternatives if a != g.gloss.upper()]
+            elif meta.verified_in_conadis and not g.alternatives and meta.lexical_alternatives:
+                g.alternatives = [a for a in meta.lexical_alternatives if a != g.gloss.upper()]
             g.dictionary_metadata = meta
             counts[meta.status] = counts.get(meta.status, 0) + 1
         return counts
@@ -878,28 +777,24 @@ def get_dictionary_service(*, reload: bool = False) -> LSECDictionaryService:
     """Instancia compartida (carga perezosa y segura entre hilos)."""
     global _service_instance
     with _service_lock:
-        if _service_instance is None or reload:
-            _service_instance = LSECDictionaryService()
+        if _service_instance is None or reload: _service_instance = LSECDictionaryService()
         return _service_instance
 
 
 def _main(argv: Optional[Sequence[str]] = None) -> int:  # pragma: no cover - utilidad CLI
     import argparse
-
     parser = argparse.ArgumentParser(description="Utilidades del Diccionario LSEC (CONADIS)")
     parser.add_argument("--build-index", action="store_true", help="Genera data/lsec_dictionary_index.json")
     parser.add_argument("--catalog", default=None, help="Ruta a catalogo_lsec.json")
     parser.add_argument("--lookup", default=None, help="Consulta un término")
     args = parser.parse_args(argv)
     svc = LSECDictionaryService(catalog_path=args.catalog)
-    if args.build_index:
-        print(f"Índice escrito en: {svc.build_index_file()}")
+    if args.build_index: print(f"Índice escrito en: {svc.build_index_file()}")
     if args.lookup:
         m = svc.lookup(args.lookup)
         print(json.dumps(m.to_metadata().model_dump(), ensure_ascii=False, indent=2) if m else "Sin coincidencia")
     print(json.dumps(svc.stats(), ensure_ascii=False, indent=2))
     return 0
-
 
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(_main())

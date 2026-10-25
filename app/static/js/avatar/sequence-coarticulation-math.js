@@ -220,13 +220,13 @@ export function interpolateSO3HermiteC1(q0, q1, w0, w1, durationSec, u) {
     return quatNormalize(quatMultiply(qa, quatExpRad(rVec)));
   }
 
-  // Acotar tangentes escaladas T*w proporcionalmente a deltaNorm para evitar bucles/sobreimpulso
-  const maxTangentNorm = Math.min(1.40, Math.max(0.20, 0.90 * deltaNorm));
+  // Acotar tangentes escaladas T*w proporcionalmente a deltaNorm para evitar bucles/sobreimpulso preservando C¹ exacto
+  const maxTangentNorm = Math.min(2.20, Math.max(0.65, 1.35 * deltaNorm));
   const clampTangent = (w) => {
     if (!Array.isArray(w) || w.length < 3) return [0, 0, 0];
-    const tx = (Number(w[0]) || 0) * T * 0.45;
-    const ty = (Number(w[1]) || 0) * T * 0.45;
-    const tz = (Number(w[2]) || 0) * T * 0.45;
+    const tx = (Number(w[0]) || 0) * T;
+    const ty = (Number(w[1]) || 0) * T;
+    const tz = (Number(w[2]) || 0) * T;
     const mag = Math.hypot(tx, ty, tz);
     if (mag <= maxTangentNorm || mag < 1e-7) return [tx, ty, tz];
     const scale = maxTangentNorm / mag;

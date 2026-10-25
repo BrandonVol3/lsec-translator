@@ -339,4 +339,48 @@ def test_videotrue_reverses_contradictory_templates_and_aligns_2d_trajectories()
     assert (ry_idx - (-11.5)) >= (ry_mid - (-9.5)) - 2.5, "Index y Middle no deben cruzarse lateralmente"
 
 
+def test_v277_palm_flip_guard_somatotopic_locus_and_4decimal_quantization():
+    """
+    Verifica las mejoras de producción `v2.7.7_Production_Ready`:
+    1. `Palm-Flip Guard` en `stabilize_forearm_and_wrist_chain`: detecta y repara mediante SLERP
+       inversiones súbitas de 180° en la normal palmar de corta duración (1 a 10 cuadros).
+    2. Anclaje somatotópico suave (`somatotopic_locus_frames`) en señas con punto de articulación
+       facial/pectoral (ej. «Comer» o «Saber») manteniendo 0.00 cm de penetración y 1:1 fotogramas.
+    3. Cuantización sin pérdida a 4 decimales en `animation.json` sin recortar ni un solo fotograma.
+    """
+    # 1. Prueba sintética de Palm-Flip Guard (inversión de 180° alrededor del eje X durante 3 cuadros)
+    synth_frames = [
+        {
+            "time": round(t / 60.0, 4),
+            "rotations": {
+                "rightLowerArm": [0.0, 0.0, 0.0, 1.0],
+                "rightHand": [1.0, 0.0, 0.0, 0.0] if 8 <= t <= 10 else [0.0, 0.0, 0.0, 1.0],
+            },
+        }
+        for t in range(25)
+    ]
+    w_res = lks.stabilize_forearm_and_wrist_chain(synth_frames, side="right", elev_start=2, elev_end=22)
+    assert w_res["palm_flips_repaired"] == 3
+    for t in range(8, 11):
+        q_lo = np.asarray(synth_frames[t]["rotations"]["rightLowerArm"], dtype=np.float64)
+        q_ha = np.asarray(synth_frames[t]["rotations"]["rightHand"], dtype=np.float64)
+        assert float(abs(q_lo[3])) > 0.95 and float(abs(q_ha[3])) > 0.95
+
+    # 2. Verificar anclaje somatotópico, cuantización a 4 decimales y preservación 1:1 de fotogramas en «Comer»
+    res_co = resolve_gloss_to_sign("Comer", version="2.7", include_animation=True)
+    anim_co = res_co["animation"]
+    stab_co = anim_co["metadata"]["kinematicStabilizer"]
+    assert stab_co["version"] == "2.7.7_Production_Ready"
+    assert stab_co.get("quantizedDecimals") == 4
+    assert stab_co["penetrationResolution"]["max_penetration_after_cm"] == 0.0
+    assert stab_co["video2DAlignment"]["sides"]["right"].get("somatotopic_locus_frames", 0) >= 10
+
+    # Verificar que los cuaterniones estén cuantizados a máximo 4 decimales
+    sample_rots = anim_co["frames"][len(anim_co["frames"]) // 2]["rotations"]
+    for q_vals in sample_rots.values():
+        for x in q_vals:
+            assert abs(float(x) - round(float(x), 4)) <= 1e-6
+
+
+
 

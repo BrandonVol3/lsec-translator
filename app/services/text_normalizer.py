@@ -109,43 +109,12 @@ _DEFAULT_ENTITY_REGISTRY: Dict[str, EntityInfo] = {
         entity_type="organization",
         preferred_gloss="U-P-E-C",
         default_spatial_location="center",
-        aliases=[
-            "Politécnica del Carchi",
-            "Politécnica Carchi",
-            "Universidad Politécnica Estatal del Carchi",
-            "UPEC",
-            "la universidad",
-            "la institución",
-        ],
+        aliases=["Politécnica del Carchi", "Politécnica Carchi", "Universidad Politécnica Estatal del Carchi", "UPEC", "la universidad", "la institución"],
     ),
-    "Tulcán": EntityInfo(
-        full_name="Tulcán",
-        entity_type="location",
-        preferred_gloss="T-U-L-C-Á-N",
-        default_spatial_location="left",
-        aliases=["Tulkán", "Tulkan", "campus Tulcán"],
-    ),
-    "Cayambe": EntityInfo(
-        full_name="Cayambe",
-        entity_type="location",
-        preferred_gloss="C-A-Y-A-M-B-E",
-        default_spatial_location="right",
-        aliases=["Callambe", "Callambé", "campus Cayambe"],
-    ),
-    "Carchi": EntityInfo(
-        full_name="Carchi",
-        entity_type="location",
-        preferred_gloss="CARCHI",
-        default_spatial_location="center",
-        aliases=["Provincia del Carchi", "el Carchi"],
-    ),
-    "Ecuador": EntityInfo(
-        full_name="República del Ecuador",
-        entity_type="location",
-        preferred_gloss="ECUADOR",
-        default_spatial_location="center",
-        aliases=["país", "el Ecuador"],
-    ),
+    "Tulcán": EntityInfo(full_name="Tulcán", entity_type="location", preferred_gloss="T-U-L-C-Á-N", default_spatial_location="left", aliases=["Tulkán", "Tulkan", "campus Tulcán"]),
+    "Cayambe": EntityInfo(full_name="Cayambe", entity_type="location", preferred_gloss="C-A-Y-A-M-B-E", default_spatial_location="right", aliases=["Callambe", "Callambé", "campus Cayambe"]),
+    "Carchi": EntityInfo(full_name="Carchi", entity_type="location", preferred_gloss="CARCHI", default_spatial_location="center", aliases=["Provincia del Carchi", "el Carchi"]),
+    "Ecuador": EntityInfo(full_name="República del Ecuador", entity_type="location", preferred_gloss="ECUADOR", default_spatial_location="center", aliases=["país", "el Ecuador"]),
 }
 
 
@@ -154,123 +123,19 @@ _DEFAULT_ENTITY_REGISTRY: Dict[str, EntityInfo] = {
 # ============================================================
 
 _DEFAULT_CONTEXTUAL_CORRECTIONS: List[Dict[str, Any]] = [
-    {
-        "pattern": r"\bcampos\s+Tulk[aá]n\b",
-        "replacement": "campus Tulcán",
-        "asr_confidence": 0.588,
-        "normalization_confidence": 0.99,
-        "reason": "contextual: universidad tiene campus, no campos agrícolas",
-        "requires_human_review": False,
-        "alternative_candidates": ["campus Tulcán"],
-    },
-    {
-        "pattern": r"\bcampos\s+Tulc[aá]n\b",
-        "replacement": "campus Tulcán",
-        "asr_confidence": 0.650,
-        "normalization_confidence": 0.99,
-        "reason": "contextual: universidad tiene campus, no campos",
-        "requires_human_review": False,
-        "alternative_candidates": ["campus Tulcán"],
-    },
-    {
-        "pattern": r"\bTulk[aá]n\b",
-        "replacement": "Tulcán",
-        "asr_confidence": 0.700,
-        "normalization_confidence": 0.98,
-        "reason": "topónimo oficial Carchi",
-        "requires_human_review": False,
-        "alternative_candidates": ["Tulcán"],
-    },
-    {
-        "pattern": r"\b[Cc]allambe\b",
-        "replacement": "Cayambe",
-        "asr_confidence": 0.720,
-        "normalization_confidence": 0.98,
-        "reason": "topónimo oficial Pichincha",
-        "requires_human_review": False,
-        "alternative_candidates": ["Cayambe"],
-    },
-    {
-        "pattern": r"\bexcelencia\s+cad[eé]nica\b",
-        "replacement": "excelencia académica",
-        "asr_confidence": 0.550,
-        "normalization_confidence": 0.99,
-        "reason": "colocación semántica académica",
-        "requires_human_review": False,
-        "alternative_candidates": ["excelencia académica"],
-    },
-    {
-        "pattern": r"\bcad[eé]nica\b",
-        "replacement": "académica",
-        "asr_confidence": 0.600,
-        "normalization_confidence": 0.97,
-        "reason": "corrección fonética ASR",
-        "requires_human_review": False,
-        "alternative_candidates": ["académica"],
-    },
-    {
-        "pattern": r"\bcadenica\b",
-        "replacement": "académica",
-        "asr_confidence": 0.600,
-        "normalization_confidence": 0.97,
-        "reason": "corrección fonética ASR",
-        "requires_human_review": False,
-        "alternative_candidates": ["académica"],
-    },
-    {
-        "pattern": r"\bya\s+le\s+hicieron\b",
-        "replacement": "ya lo hicieron",
-        "asr_confidence": 0.850,
-        "normalization_confidence": 0.95,
-        "reason": "corrección anafórica pronominal",
-        "requires_human_review": False,
-        "alternative_candidates": ["ya lo hicieron"],
-    },
-    {
-        "pattern": r"\bhas\s+posible\b",
-        "replacement": "haz posible",
-        "asr_confidence": 0.900,
-        "normalization_confidence": 0.99,
-        "reason": "imperativo de hacer",
-        "requires_human_review": False,
-        "alternative_candidates": ["haz posible"],
-    },
-    {
-        "pattern": r"\bqui[eé]n\s+quiere\s+ser\b",
-        "replacement": "quién quieres ser",
-        "asr_confidence": 0.800,
-        "normalization_confidence": 0.93,
-        "reason": "concordancia segunda persona",
-        "requires_human_review": False,
-        "alternative_candidates": ["quién quieres ser"],
-    },
-    {
-        "pattern": r"\bpolit[eé]cnica\s+del\s+carchi\b",
-        "replacement": "Politécnica del Carchi",
-        "asr_confidence": 0.880,
-        "normalization_confidence": 0.95,
-        "reason": "normalización institucional",
-        "requires_human_review": False,
-        "alternative_candidates": ["Politécnica del Carchi"],
-    },
-    {
-        "pattern": r"\bseres\s+humanos\b",
-        "replacement": "seres humanos",
-        "asr_confidence": 0.920,
-        "normalization_confidence": 0.90,
-        "reason": "preservación de locución nominal",
-        "requires_human_review": False,
-        "alternative_candidates": ["seres humanos"],
-    },
-    {
-        "pattern": r"\bcampos\b(?!\s+(?:de|del|magnético|eléctrico|visual))",
-        "replacement": "campus",
-        "asr_confidence": 0.750,
-        "normalization_confidence": 0.85,
-        "reason": "contextual: 'campus' universitario",
-        "requires_human_review": False,
-        "alternative_candidates": ["campus"],
-    },
+    {"pattern": r"\bcampos\s+Tulk[aá]n\b", "replacement": "campus Tulcán", "asr_confidence": 0.588, "normalization_confidence": 0.99, "reason": "contextual: universidad tiene campus, no campos agrícolas", "requires_human_review": False, "alternative_candidates": ["campus Tulcán"]},
+    {"pattern": r"\bcampos\s+Tulc[aá]n\b", "replacement": "campus Tulcán", "asr_confidence": 0.650, "normalization_confidence": 0.99, "reason": "contextual: universidad tiene campus, no campos", "requires_human_review": False, "alternative_candidates": ["campus Tulcán"]},
+    {"pattern": r"\bTulk[aá]n\b", "replacement": "Tulcán", "asr_confidence": 0.700, "normalization_confidence": 0.98, "reason": "topónimo oficial Carchi", "requires_human_review": False, "alternative_candidates": ["Tulcán"]},
+    {"pattern": r"\b[Cc]allambe\b", "replacement": "Cayambe", "asr_confidence": 0.720, "normalization_confidence": 0.98, "reason": "topónimo oficial Pichincha", "requires_human_review": False, "alternative_candidates": ["Cayambe"]},
+    {"pattern": r"\bexcelencia\s+cad[eé]nica\b", "replacement": "excelencia académica", "asr_confidence": 0.550, "normalization_confidence": 0.99, "reason": "colocación semántica académica", "requires_human_review": False, "alternative_candidates": ["excelencia académica"]},
+    {"pattern": r"\bcad[eé]nica\b", "replacement": "académica", "asr_confidence": 0.600, "normalization_confidence": 0.97, "reason": "corrección fonética ASR", "requires_human_review": False, "alternative_candidates": ["académica"]},
+    {"pattern": r"\bcadenica\b", "replacement": "académica", "asr_confidence": 0.600, "normalization_confidence": 0.97, "reason": "corrección fonética ASR", "requires_human_review": False, "alternative_candidates": ["académica"]},
+    {"pattern": r"\bya\s+le\s+hicieron\b", "replacement": "ya lo hicieron", "asr_confidence": 0.850, "normalization_confidence": 0.95, "reason": "corrección anafórica pronominal", "requires_human_review": False, "alternative_candidates": ["ya lo hicieron"]},
+    {"pattern": r"\bhas\s+posible\b", "replacement": "haz posible", "asr_confidence": 0.900, "normalization_confidence": 0.99, "reason": "imperativo de hacer", "requires_human_review": False, "alternative_candidates": ["haz posible"]},
+    {"pattern": r"\bqui[eé]n\s+quiere\s+ser\b", "replacement": "quién quieres ser", "asr_confidence": 0.800, "normalization_confidence": 0.93, "reason": "concordancia segunda persona", "requires_human_review": False, "alternative_candidates": ["quién quieres ser"]},
+    {"pattern": r"\bpolit[eé]cnica\s+del\s+carchi\b", "replacement": "Politécnica del Carchi", "asr_confidence": 0.880, "normalization_confidence": 0.95, "reason": "normalización institucional", "requires_human_review": False, "alternative_candidates": ["Politécnica del Carchi"]},
+    {"pattern": r"\bseres\s+humanos\b", "replacement": "seres humanos", "asr_confidence": 0.920, "normalization_confidence": 0.90, "reason": "preservación de locución nominal", "requires_human_review": False, "alternative_candidates": ["seres humanos"]},
+    {"pattern": r"\bcampos\b(?!\s+(?:de|del|magnético|eléctrico|visual))", "replacement": "campus", "asr_confidence": 0.750, "normalization_confidence": 0.85, "reason": "contextual: 'campus' universitario", "requires_human_review": False, "alternative_candidates": ["campus"]},
 ]
 
 
@@ -376,84 +241,15 @@ def _de_una_replacer(match: "re.Match[str]") -> str:
 
 
 _DEFAULT_CONTEXTUAL_CORRECTIONS.extend([
-    {
-        "pattern": r"\b([a-záéíóúñü]+)arrobaupec\.edu\.es\b",
-        "replacement": "",
-        "replacer": _upec_email_replacer,
-        "asr_confidence": 0.92,
-        "normalization_confidence": 0.98,
-        "reason": "correo institucional ASR: dominio UPEC normalizado a .edu.ec",
-        "requires_human_review": False,
-        "alternative_candidates": ["usuario arroba UPEC punto edu punto ec"],
-    },
-    {
-        "pattern": _DAME_GERUND_RE,
-        "replacement": "",
-        "replacer": _dame_gerund_replacer,
-        "asr_confidence": 0.90,
-        "normalization_confidence": 0.95,
-        "reason": "cortesía indirecta ecuatoriana: 'dame + gerundio' → 'por favor + infinitivo'",
-        "requires_human_review": False,
-        "alternative_candidates": ["por favor + infinitivo"],
-    },
-    {
-        "pattern": r"\b(?:ñaños?|ñañas?|guaguas?)\b",
-        "replacement": "",
-        "replacer": _slang_noun_replacer,
-        "asr_confidence": 0.90,
-        "normalization_confidence": 0.95,
-        "reason": "quechuismo/coloquialismo ecuatoriano → léxico general LSEC",
-        "requires_human_review": False,
-        "alternative_candidates": ["hermano", "niño"],
-    },
-    {
-        # 'pana' (amigo) no debe confundirse con la tela: 'pantalón de pana'.
-        "pattern": r"(?<!de )(?<!la )(?<!una )\bpanas?\b",
-        "replacement": "",
-        "replacer": _slang_noun_replacer,
-        "asr_confidence": 0.90,
-        "normalization_confidence": 0.90,
-        "reason": "coloquialismo ecuatoriano 'pana' → 'amigo'",
-        "requires_human_review": False,
-        "alternative_candidates": ["amigo"],
-    },
-    {
-        "pattern": r"\bachachay\b",
-        "replacement": "frío",
-        "asr_confidence": 0.90,
-        "normalization_confidence": 0.95,
-        "reason": "interjección quechua 'achachay' (¡qué frío!)",
-        "requires_human_review": False,
-        "alternative_candidates": ["frío"],
-    },
-    {
-        "pattern": r"\barrarray\b",
-        "replacement": "calor",
-        "asr_confidence": 0.90,
-        "normalization_confidence": 0.95,
-        "reason": "interjección quechua 'arrarray' (¡qué calor!)",
-        "requires_human_review": False,
-        "alternative_candidates": ["calor"],
-    },
-    {
-        "pattern": r"\bde\s+una\b",
-        "replacement": "",
-        "replacer": _de_una_replacer,
-        "asr_confidence": 0.85,
-        "normalization_confidence": 0.90,
-        "reason": "locución adverbial ecuatoriana 'de una' → 'ahora'",
-        "requires_human_review": False,
-        "alternative_candidates": ["ahora", "de inmediato"],
-    },
-    {
-        "pattern": r"\bya\s+(?:regreso|vuelvo)\s+no\s?m[aá]s\b",
-        "replacement": "vuelvo pronto",
-        "asr_confidence": 0.90,
-        "normalization_confidence": 0.95,
-        "reason": "locución ecuatoriana 'ya regreso nomás' → 'vuelvo pronto'",
-        "requires_human_review": False,
-        "alternative_candidates": ["vuelvo pronto"],
-    },
+    {"pattern": r"\b([a-záéíóúñü]+)arrobaupec\.edu\.es\b", "replacement": "", "replacer": _upec_email_replacer, "asr_confidence": 0.92, "normalization_confidence": 0.98, "reason": "correo institucional ASR: dominio UPEC normalizado a .edu.ec", "requires_human_review": False, "alternative_candidates": ["usuario arroba UPEC punto edu punto ec"]},
+    {"pattern": _DAME_GERUND_RE, "replacement": "", "replacer": _dame_gerund_replacer, "asr_confidence": 0.90, "normalization_confidence": 0.95, "reason": "cortesía indirecta ecuatoriana: 'dame + gerundio' → 'por favor + infinitivo'", "requires_human_review": False, "alternative_candidates": ["por favor + infinitivo"]},
+    {"pattern": r"\b(?:ñaños?|ñañas?|guaguas?)\b", "replacement": "", "replacer": _slang_noun_replacer, "asr_confidence": 0.90, "normalization_confidence": 0.95, "reason": "quechuismo/coloquialismo ecuatoriano → léxico general LSEC", "requires_human_review": False, "alternative_candidates": ["hermano", "niño"]},
+    # 'pana' (amigo) no debe confundirse con la tela: 'pantalón de pana'.
+    {"pattern": r"(?<!de )(?<!la )(?<!una )\bpanas?\b", "replacement": "", "replacer": _slang_noun_replacer, "asr_confidence": 0.90, "normalization_confidence": 0.90, "reason": "coloquialismo ecuatoriano 'pana' → 'amigo'", "requires_human_review": False, "alternative_candidates": ["amigo"]},
+    {"pattern": r"\bachachay\b", "replacement": "frío", "asr_confidence": 0.90, "normalization_confidence": 0.95, "reason": "interjección quechua 'achachay' (¡qué frío!)", "requires_human_review": False, "alternative_candidates": ["frío"]},
+    {"pattern": r"\barrarray\b", "replacement": "calor", "asr_confidence": 0.90, "normalization_confidence": 0.95, "reason": "interjección quechua 'arrarray' (¡qué calor!)", "requires_human_review": False, "alternative_candidates": ["calor"]},
+    {"pattern": r"\bde\s+una\b", "replacement": "", "replacer": _de_una_replacer, "asr_confidence": 0.85, "normalization_confidence": 0.90, "reason": "locución adverbial ecuatoriana 'de una' → 'ahora'", "requires_human_review": False, "alternative_candidates": ["ahora", "de inmediato"]},
+    {"pattern": r"\bya\s+(?:regreso|vuelvo)\s+no\s?m[aá]s\b", "replacement": "vuelvo pronto", "asr_confidence": 0.90, "normalization_confidence": 0.95, "reason": "locución ecuatoriana 'ya regreso nomás' → 'vuelvo pronto'", "requires_human_review": False, "alternative_candidates": ["vuelvo pronto"]},
 ])
 
 # ============================================================
@@ -461,85 +257,20 @@ _DEFAULT_CONTEXTUAL_CORRECTIONS.extend([
 # ============================================================
 
 _DEFAULT_CONTEXTUAL_CORRECTIONS.extend([
-    {
-        # 'de ley' es certeza, no el sustantivo jurídico.
-        "pattern": r"\bde\s+ley\b",
-        "replacement": "seguro",
-        "asr_confidence": 0.90,
-        "normalization_confidence": 0.95,
-        "reason": "locución ecuatoriana 'de ley' → certeza ('seguro')",
-        "requires_human_review": False,
-        "alternative_candidates": ["seguro", "cierto"],
-    },
-    {
-        # 'Atatai' expresa asco; nunca debe ir a dactilología.
-        "pattern": r"\bat[aá]tai\b",
-        "replacement": "asco",
-        "asr_confidence": 0.88,
-        "normalization_confidence": 0.93,
-        "reason": "interjección ecuatoriana 'atatai' → asco",
-        "requires_human_review": False,
-        "alternative_candidates": ["asco"],
-    },
-    {
-        # 'Ayayay' acompaña una queja de dolor.
-        "pattern": r"\bay(?:ay)+\b",
-        "replacement": "dolor",
-        "asr_confidence": 0.88,
-        "normalization_confidence": 0.92,
-        "reason": "interjección ecuatoriana 'ayayay' → dolor",
-        "requires_human_review": False,
-        "alternative_candidates": ["dolor"],
-    },
-    {
-        # Diminutivos adverbiales andinos: base léxica, sin sufijo.
-        "pattern": r"\bahorita\b",
-        "replacement": "ahora",
-        "asr_confidence": 0.92,
-        "normalization_confidence": 0.96,
-        "reason": "diminutivo adverbial andino 'ahorita' → ahora",
-        "requires_human_review": False,
-        "alternative_candidates": ["ahora"],
-    },
-    {
-        "pattern": r"\btempranito\b",
-        "replacement": "temprano",
-        "asr_confidence": 0.92,
-        "normalization_confidence": 0.96,
-        "reason": "diminutivo adverbial andino 'tempranito' → temprano",
-        "requires_human_review": False,
-        "alternative_candidates": ["temprano"],
-    },
-    {
-        "pattern": r"\brapidito\b",
-        "replacement": "rápido",
-        "asr_confidence": 0.92,
-        "normalization_confidence": 0.96,
-        "reason": "diminutivo adverbial andino 'rapidito' → rápido",
-        "requires_human_review": False,
-        "alternative_candidates": ["rápido"],
-    },
-    {
-        # El porcentaje se realiza con la seña existente PORCENTAJE.
-        "pattern": r"\bpor\s+ciento\b",
-        "replacement": "porcentaje",
-        "asr_confidence": 0.95,
-        "normalization_confidence": 0.98,
-        "reason": "porcentaje léxico: 'por ciento' → 'porcentaje'",
-        "requires_human_review": False,
-        "alternative_candidates": ["porcentaje"],
-    },
-    {
-        # 14:15 → hora 14 15; el planificador compone HORA + numerales.
-        "pattern": r"(?<!\d)(\d{1,2}):(\d{2})(?!\d)",
-        "replacement": "",
-        "replacer": _clock_time_replacer,
-        "asr_confidence": 0.95,
-        "normalization_confidence": 0.98,
-        "reason": "horario 24h: se antepone HORA y se separan sus componentes",
-        "requires_human_review": False,
-        "alternative_candidates": ["hora + hora + minutos"],
-    },
+    # 'de ley' es certeza, no el sustantivo jurídico.
+    {"pattern": r"\bde\s+ley\b", "replacement": "seguro", "asr_confidence": 0.90, "normalization_confidence": 0.95, "reason": "locución ecuatoriana 'de ley' → certeza ('seguro')", "requires_human_review": False, "alternative_candidates": ["seguro", "cierto"]},
+    # 'Atatai' expresa asco; nunca debe ir a dactilología.
+    {"pattern": r"\bat[aá]tai\b", "replacement": "asco", "asr_confidence": 0.88, "normalization_confidence": 0.93, "reason": "interjección ecuatoriana 'atatai' → asco", "requires_human_review": False, "alternative_candidates": ["asco"]},
+    # 'Ayayay' acompaña una queja de dolor.
+    {"pattern": r"\bay(?:ay)+\b", "replacement": "dolor", "asr_confidence": 0.88, "normalization_confidence": 0.92, "reason": "interjección ecuatoriana 'ayayay' → dolor", "requires_human_review": False, "alternative_candidates": ["dolor"]},
+    # Diminutivos adverbiales andinos: base léxica, sin sufijo.
+    {"pattern": r"\bahorita\b", "replacement": "ahora", "asr_confidence": 0.92, "normalization_confidence": 0.96, "reason": "diminutivo adverbial andino 'ahorita' → ahora", "requires_human_review": False, "alternative_candidates": ["ahora"]},
+    {"pattern": r"\btempranito\b", "replacement": "temprano", "asr_confidence": 0.92, "normalization_confidence": 0.96, "reason": "diminutivo adverbial andino 'tempranito' → temprano", "requires_human_review": False, "alternative_candidates": ["temprano"]},
+    {"pattern": r"\brapidito\b", "replacement": "rápido", "asr_confidence": 0.92, "normalization_confidence": 0.96, "reason": "diminutivo adverbial andino 'rapidito' → rápido", "requires_human_review": False, "alternative_candidates": ["rápido"]},
+    # El porcentaje se realiza con la seña existente PORCENTAJE.
+    {"pattern": r"\bpor\s+ciento\b", "replacement": "porcentaje", "asr_confidence": 0.95, "normalization_confidence": 0.98, "reason": "porcentaje léxico: 'por ciento' → 'porcentaje'", "requires_human_review": False, "alternative_candidates": ["porcentaje"]},
+    # 14:15 → hora 14 15; el planificador compone HORA + numerales.
+    {"pattern": r"(?<!\d)(\d{1,2}):(\d{2})(?!\d)", "replacement": "", "replacer": _clock_time_replacer, "asr_confidence": 0.95, "normalization_confidence": 0.98, "reason": "horario 24h: se antepone HORA y se separan sus componentes", "requires_human_review": False, "alternative_candidates": ["hora + hora + minutos"]},
 ])
 
 
@@ -743,30 +474,15 @@ class TextNormalizer:
             if clean_res.removed:
                 for seg in clean_res.removed:
                     s_sec, e_sec = _ts_seconds(seg.token_indexes)
-                    corrections.append(
-                        CorrectionRecord(
-                            id=f"corr_{len(corrections) + 1}",
-                            normalization_id=f"corr_{len(corrections) + 1}",
-                            asr_text=seg.text,
-                            normalized_text="",
-                            source_char_start=seg.start,
-                            source_char_end=seg.end,
-                            source_token_indexes=list(seg.token_indexes),
-                            global_source_token_indexes=list(seg.token_indexes),
-                            source_start_seconds=s_sec,
-                            source_end_seconds=e_sec,
-                            alignment_type="NORMALIZED",
-                            alignment_confidence=0.97,
-                            asr_confidence=0.90,
-                            normalization_confidence=0.97,
-                            correction_confidence=0.97,
-                            reason=f"disfluencia oral eliminada: {seg.reason}",
-                            correction_reason=f"disfluencia oral eliminada: {seg.reason}",
-                            requires_human_review=False,
-                            alternative_candidates=[],
-                            position=seg.start,
-                        )
-                    )
+                    corrections.append(CorrectionRecord(
+                        id=f"corr_{len(corrections) + 1}", normalization_id=f"corr_{len(corrections) + 1}",
+                        asr_text=seg.text, normalized_text="", source_char_start=seg.start, source_char_end=seg.end,
+                        source_token_indexes=list(seg.token_indexes), global_source_token_indexes=list(seg.token_indexes),
+                        source_start_seconds=s_sec, source_end_seconds=e_sec, alignment_type="NORMALIZED",
+                        alignment_confidence=0.97, asr_confidence=0.90, normalization_confidence=0.97, correction_confidence=0.97,
+                        reason=f"disfluencia oral eliminada: {seg.reason}", correction_reason=f"disfluencia oral eliminada: {seg.reason}",
+                        requires_human_review=False, alternative_candidates=[], position=seg.start,
+                    ))
                 result = clean_res.text
                 char_map = list(clean_res.char_map)
 
@@ -790,8 +506,7 @@ class TextNormalizer:
 
             while match:
                 original_fragment = match.group(0)
-                start_pos = match.start()
-                end_pos = match.end()
+                start_pos, end_pos = match.start(), match.end()
                 replacement = replacer(match) if replacer else entry["replacement"]
 
                 if original_fragment.lower() != replacement.lower():
@@ -804,51 +519,30 @@ class TextNormalizer:
                         orig_s, orig_e = start_pos, end_pos
 
                     # Encontrar tokens fuente que se solapan
-                    matching_tok_idxs: List[int] = []
-                    for t_idx, (ts_start, ts_end) in enumerate(token_spans):
-                        if max(orig_s, ts_start) < min(orig_e, ts_end):
-                            matching_tok_idxs.append(t_idx)
-
+                    matching_tok_idxs: List[int] = [t_idx for t_idx, (ts_start, ts_end) in enumerate(token_spans) if max(orig_s, ts_start) < min(orig_e, ts_end)]
                     if not matching_tok_idxs and token_spans:
                         # Buscar el más cercano
-                        for t_idx, (ts_start, ts_end) in enumerate(token_spans):
-                            if ts_start >= orig_s and ts_end <= orig_e + 2:
-                                matching_tok_idxs.append(t_idx)
+                        matching_tok_idxs = [t_idx for t_idx, (ts_start, ts_end) in enumerate(token_spans) if ts_start >= orig_s and ts_end <= orig_e + 2]
 
                     src_start_sec, src_end_sec = _ts_seconds(matching_tok_idxs)
-
                     align_type = "NORMALIZED_MULTIWORD" if len(matching_tok_idxs) > 1 else "NORMALIZED"
 
                     rec = CorrectionRecord(
-                        id=f"corr_{len(corrections) + 1}",
-                        normalization_id=f"corr_{len(corrections) + 1}",
-                        asr_text=original_fragment,
-                        normalized_text=replacement,
-                        source_char_start=orig_s,
-                        source_char_end=orig_s + len(original_fragment),
-                        source_token_indexes=matching_tok_idxs,
-                        global_source_token_indexes=matching_tok_idxs,
-                        source_start_seconds=src_start_sec,
-                        source_end_seconds=src_end_sec,
-                        alignment_type=align_type,
-                        alignment_confidence=conf,
-                        asr_confidence=entry["asr_confidence"],
-                        normalization_confidence=conf,
-                        correction_confidence=conf,
-                        reason=entry["reason"],
-                        correction_reason=entry["reason"],
-                        requires_human_review=entry["requires_human_review"],
-                        alternative_candidates=entry["alternative_candidates"],
+                        id=f"corr_{len(corrections) + 1}", normalization_id=f"corr_{len(corrections) + 1}",
+                        asr_text=original_fragment, normalized_text=replacement,
+                        source_char_start=orig_s, source_char_end=orig_s + len(original_fragment),
+                        source_token_indexes=matching_tok_idxs, global_source_token_indexes=matching_tok_idxs,
+                        source_start_seconds=src_start_sec, source_end_seconds=src_end_sec,
+                        alignment_type=align_type, alignment_confidence=conf,
+                        asr_confidence=entry["asr_confidence"], normalization_confidence=conf, correction_confidence=conf,
+                        reason=entry["reason"], correction_reason=entry["reason"],
+                        requires_human_review=entry["requires_human_review"], alternative_candidates=entry["alternative_candidates"],
                         position=orig_s,
                     )
                     corrections.append(rec)
 
                     result = result[:start_pos] + replacement + result[end_pos:]
-                    char_map = (
-                        char_map[:start_pos]
-                        + _interp_map(orig_s, orig_e, len(replacement))
-                        + char_map[end_pos:]
-                    )
+                    char_map = char_map[:start_pos] + _interp_map(orig_s, orig_e, len(replacement)) + char_map[end_pos:]
                     match = regex.search(result, start_pos + len(replacement))
                 else:
                     match = regex.search(result, end_pos)
@@ -860,37 +554,18 @@ class TextNormalizer:
         Detecta números preservando valores y relaciones cuantificadoras como 'más de'.
         """
         numbers: List[DetectedNumber] = []
-
         for match in _NUMBER_PATTERN.finditer(text):
             raw = match.group(1)
             clean = raw.replace(".", "").replace(",", "")
             try:
                 val = int(clean)
-                start_pos = match.start(1)
-                end_pos = match.end(1)
-
+                start_pos, end_pos = match.start(1), match.end(1)
                 # Verificar si precede "más de" o "menos de"
                 prefix = text[max(0, start_pos - 15):start_pos].lower()
-                quant_rel = "exact"
-                if "más de" in prefix or "mas de" in prefix:
-                    quant_rel = "more_than"
-                elif "menos de" in prefix:
-                    quant_rel = "less_than"
-
-                numbers.append(
-                    DetectedNumber(
-                        surface_form=raw,
-                        numeric_value=val,
-                        number_type="cardinal",
-                        quantifier_relation=quant_rel,
-                        start_pos=start_pos,
-                        end_pos=end_pos,
-                        raw_text=raw,
-                    )
-                )
+                quant_rel = "more_than" if ("más de" in prefix or "mas de" in prefix) else ("less_than" if "menos de" in prefix else "exact")
+                numbers.append(DetectedNumber(surface_form=raw, numeric_value=val, number_type="cardinal", quantifier_relation=quant_rel, start_pos=start_pos, end_pos=end_pos, raw_text=raw))
             except ValueError:
                 continue
-
         return numbers
 
     def check_dubious_words(
@@ -925,13 +600,8 @@ class TextNormalizer:
             w = dub["word"]
             pattern = re.compile(r"\b" + re.escape(w) + r"\b", re.IGNORECASE)
             for m in pattern.finditer(text):
-                char_start = m.start()
-                char_end = m.end()
-
-                matching_tok_idxs: List[int] = []
-                for t_idx, (ts_start, ts_end) in enumerate(token_spans):
-                    if max(char_start, ts_start) < min(char_end, ts_end):
-                        matching_tok_idxs.append(t_idx)
+                char_start, char_end = m.start(), m.end()
+                matching_tok_idxs: List[int] = [t_idx for t_idx, (ts_start, ts_end) in enumerate(token_spans) if max(char_start, ts_start) < min(char_end, ts_end)]
 
                 if not matching_tok_idxs and word_timestamps:
                     w_clean = re.sub(r"[^\wáéíóúñüÁÉÍÓÚÑÜ\-]", "", w.lower())
@@ -945,28 +615,21 @@ class TextNormalizer:
                 if word_timestamps and matching_tok_idxs:
                     valid_t = [i for i in matching_tok_idxs if i < len(word_timestamps)]
                     if valid_t:
-                        wt_first = word_timestamps[valid_t[0]]
-                        wt_last = word_timestamps[valid_t[-1]]
+                        wt_first, wt_last = word_timestamps[valid_t[0]], word_timestamps[valid_t[-1]]
                         src_start_sec = wt_first.start if hasattr(wt_first, "start") else wt_first.get("start")
                         src_end_sec = wt_last.end if hasattr(wt_last, "end") else wt_last.get("end")
 
-                findings.append(
-                    DubiousWordFinding(
-                        source_word=m.group(0),
-                        global_source_token_indexes=matching_tok_idxs,
-                        source_start_seconds=src_start_sec,
-                        source_end_seconds=src_end_sec,
-                        acoustic_candidates=dub.get("acoustic_candidates", []),
-                        contextual_hypotheses=dub.get("contextual_hypotheses", ["lideran", "crean", "proyectan"]),
-                        selected_candidate=None,
-                        asr_confidence=dub.get("asr_confidence", 0.989),
-                        contextual_sense_confidence=dub.get("contextual_sense_confidence", 0.35),
-                        requires_audio_review=dub.get("requires_audio_review", True),
-                        review_reason=dub.get("review_reason", "high_acoustic_confidence_but_low_contextual_coherence"),
-                        alternative_candidates=[],
-                        char_position=char_start,
-                    )
-                )
+                findings.append(DubiousWordFinding(
+                    source_word=m.group(0), global_source_token_indexes=matching_tok_idxs,
+                    source_start_seconds=src_start_sec, source_end_seconds=src_end_sec,
+                    acoustic_candidates=dub.get("acoustic_candidates", []),
+                    contextual_hypotheses=dub.get("contextual_hypotheses", ["lideran", "crean", "proyectan"]),
+                    selected_candidate=None, asr_confidence=dub.get("asr_confidence", 0.989),
+                    contextual_sense_confidence=dub.get("contextual_sense_confidence", 0.35),
+                    requires_audio_review=dub.get("requires_audio_review", True),
+                    review_reason=dub.get("review_reason", "high_acoustic_confidence_but_low_contextual_coherence"),
+                    alternative_candidates=[], char_position=char_start,
+                ))
         return findings
 
     def get_entity_info(self, name: str) -> Optional[EntityInfo]:

@@ -700,102 +700,48 @@ def build_histogram(values: Sequence[float], bins: Sequence[float]) -> List[Dict
     if arr.size == 0:
         return []
     counts, edges = np.histogram(arr, bins=bins)
-    out = []
-    for idx in range(len(counts)):
-        out.append({
-            "range": f"[{edges[idx]:.2f}, {edges[idx + 1]:.2f})",
-            "min": round(float(edges[idx]), 3),
-            "max": round(float(edges[idx + 1]), 3),
-            "count": int(counts[idx]),
-            "pct": round(100.0 * float(counts[idx]) / float(arr.size), 2),
-        })
-    return out
+    return [
+        {"range": f"[{edges[i]:.2f}, {edges[i + 1]:.2f})", "min": round(float(edges[i]), 3), "max": round(float(edges[i + 1]), 3), "count": int(counts[i]), "pct": round(100.0 * float(counts[i]) / float(arr.size), 2)}
+        for i in range(len(counts))
+    ]
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Construye stroke_index.json para el catálogo v2.7 LSEC.")
-    parser.add_argument(
-        "--v27-dir",
-        type=str,
-        default=r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC\senas_vrm_standardized_v2.7",
-        help="Ruta al directorio senas_vrm_standardized_v2.7",
-    )
-    parser.add_argument(
-        "--output",
-        type=str,
-        default="",
-        help="Ruta de salida para stroke_index.json (por defecto en v27-dir/stroke_index.json y copia en app/data/)",
-    )
-    parser.add_argument(
-        "--preserve-windows-from",
-        type=str,
-        default="",
-        help="Ruta opcional a un stroke_index existente cuyas ventanas [startFrame, endFrame] deben preservarse",
-    )
-    parser.add_argument(
-        "--sample",
-        type=int,
-        default=0,
-        help="Si > 0, evalúa únicamente una muestra aleatoria reproducible (seed=1) de N señas",
-    )
-    parser.add_argument(
-        "--workers",
-        type=int,
-        default=max(1, min(8, (os.cpu_count() or 4))),
-        help="Número de procesos paralelos",
-    )
+    parser.add_argument("--v27-dir", type=str, default=r"c:\Users\brana\Desktop\TIC Software\Diccionario LSEC\senas_vrm_standardized_v2.7", help="Ruta al directorio senas_vrm_standardized_v2.7")
+    parser.add_argument("--output", type=str, default="", help="Ruta de salida para stroke_index.json")
+    parser.add_argument("--preserve-windows-from", type=str, default="", help="Ruta opcional a un stroke_index existente cuyas ventanas deben preservarse")
+    parser.add_argument("--sample", type=int, default=0, help="Si > 0, evalúa únicamente una muestra aleatoria reproducible (seed=1) de N señas")
+    parser.add_argument("--workers", type=int, default=max(1, min(8, (os.cpu_count() or 4))), help="Número de procesos paralelos")
     args = parser.parse_args()
-
     v27_dir = Path(args.v27_dir)
     if not v27_dir.is_dir():
         print(f"ERROR: No existe el directorio {v27_dir}", file=sys.stderr)
         return 1
 
     preserved_windows: Dict[str, Tuple[int, int]] = {}
-    if args.preserve_windows_from:
-        pw_path = Path(args.preserve_windows_from)
-        if pw_path.is_file():
-            pw_doc = json.loads(pw_path.read_text(encoding="utf-8"))
-            for sn, st_e in (pw_doc.get("signs") or {}).items():
-                if "startFrame" in st_e and "endFrame" in st_e:
-                    preserved_windows[unicodedata.normalize("NFC", str(sn).strip())] = (
-                        int(st_e["startFrame"]),
-                        int(st_e["endFrame"]),
-                    )
+    if args.preserve_windows_from and Path(args.preserve_windows_from).is_file():
+        pw_doc = json.loads(Path(args.preserve_windows_from).read_text(encoding="utf-8"))
+        for sn, st_e in (pw_doc.get("signs") or {}).items():
+            if "startFrame" in st_e and "endFrame" in st_e:
+                preserved_windows[unicodedata.normalize("NFC", str(sn).strip())] = (int(st_e["startFrame"]), int(st_e["endFrame"]))
 
-    sign_dirs = sorted(
-        [v27_dir / d for d in os.listdir(v27_dir) if (v27_dir / d).is_dir() and not d.startswith(".")],
-        key=lambda p: unicodedata.normalize("NFC", p.name),
-    )
-
-    if args.sample > 0 and args.sample < len(sign_dirs):
-        rng = random.Random(1)
-        sign_dirs = rng.sample(sign_dirs, args.sample)
+    sign_dirs = sorted([v27_dir / d for d in os.listdir(v27_dir) if (v27_dir / d).is_dir() and not d.startswith(".")], key=lambda p: unicodedata.normalize("NFC", p.name))
+    if 0 < args.sample < len(sign_dirs):
+        sign_dirs = random.Random(1).sample(sign_dirs, args.sample)
 
     t0 = time.time()
     print(f"Procesando {len(sign_dirs)} señas desde {v27_dir} con {args.workers} workers...")
-
-    task_items = [
-        (str(p), preserved_windows.get(unicodedata.normalize("NFC", p.name.strip())))
-        for p in sign_dirs
-    ]
-
+    task_items = [(str(p), preserved_windows.get(unicodedata.normalize("NFC", p.name.strip()))) for p in sign_dirs]
     results: List[Dict[str, Any]] = []
     if args.workers > 1 and len(sign_dirs) > 30:
         with ProcessPoolExecutor(max_workers=args.workers) as ex:
-            for item in ex.map(_worker_analyze, task_items, chunksize=25):
-                if item is not None:
-                    results.append(item)
+            results = [item for item in ex.map(_worker_analyze, task_items, chunksize=25) if item is not None]
     else:
-        for p, fw in task_items:
-            item = analyze_sign_stroke(Path(p), fixed_window=fw)
-            if item is not None:
-                results.append(item)
+        results = [item for p, fw in task_items if (item := analyze_sign_stroke(Path(p), fixed_window=fw)) is not None]
 
     elapsed = time.time() - t0
     results.sort(key=lambda r: r["sign"])
-
-    # Estadísticas globales y entregable de QA
     lead_rem = [r["_qa_metrics"]["leadRemovedSec"] for r in results]
     tail_rem = [r["_qa_metrics"]["tailRemovedSec"] for r in results]
     lead_res = [r["_qa_metrics"]["leadResidualSec"] for r in results]
@@ -805,64 +751,25 @@ def main() -> int:
     confs = [r["confidence"] for r in results]
 
     lowest_50 = sorted(
-        [
-            {
-                "sign": r["sign"],
-                "confidence": r["confidence"],
-                "strokeStart": r["strokeStart"],
-                "strokeEnd": r["strokeEnd"],
-                "strokeDuration": r["strokeDuration"],
-                "originalDuration": r["originalDuration"],
-                "flags": r["flags"],
-                "activeHands": r["activeHands"],
-            }
-            for r in results
-        ],
+        [{"sign": r["sign"], "confidence": r["confidence"], "strokeStart": r["strokeStart"], "strokeEnd": r["strokeEnd"], "strokeDuration": r["strokeDuration"], "originalDuration": r["originalDuration"], "flags": r["flags"], "activeHands": r["activeHands"]} for r in results],
         key=lambda x: (x["confidence"], x["strokeDuration"]),
     )[:50]
 
+    def _stats_3(arr: List[float]) -> Dict[str, float]:
+        return {"mean": round(float(np.mean(arr)), 3) if arr else 0.0, "median": round(float(np.median(arr)), 3) if arr else 0.0, "p90": round(float(np.percentile(arr, 90)), 3) if arr else 0.0}
+
     summary_stats = {
-        "version": "2.7",
-        "totalSignsIndexed": len(results),
-        "processingTimeSec": round(elapsed, 2),
-        "originalDurationSec": {
-            "mean": round(float(np.mean(orig_durs)), 3) if orig_durs else 0.0,
-            "median": round(float(np.median(orig_durs)), 3) if orig_durs else 0.0,
-            "p90": round(float(np.percentile(orig_durs, 90)), 3) if orig_durs else 0.0,
-        },
-        "strokeDurationSec": {
-            "mean": round(float(np.mean(stroke_durs)), 3) if stroke_durs else 0.0,
-            "median": round(float(np.median(stroke_durs)), 3) if stroke_durs else 0.0,
-            "p10": round(float(np.percentile(stroke_durs, 10)), 3) if stroke_durs else 0.0,
-            "p90": round(float(np.percentile(stroke_durs, 90)), 3) if stroke_durs else 0.0,
-        },
-        "leadInTrimmedSec": {
-            "mean": round(float(np.mean(lead_rem)), 3) if lead_rem else 0.0,
-            "median": round(float(np.median(lead_rem)), 3) if lead_rem else 0.0,
-            "p90": round(float(np.percentile(lead_rem, 90)), 3) if lead_rem else 0.0,
-        },
-        "tailOutTrimmedSec": {
-            "mean": round(float(np.mean(tail_rem)), 3) if tail_rem else 0.0,
-            "median": round(float(np.median(tail_rem)), 3) if tail_rem else 0.0,
-            "p90": round(float(np.percentile(tail_rem, 90)), 3) if tail_rem else 0.0,
-        },
+        "version": "2.7", "totalSignsIndexed": len(results), "processingTimeSec": round(elapsed, 2),
+        "originalDurationSec": _stats_3(orig_durs),
+        "strokeDurationSec": {**_stats_3(stroke_durs), "p10": round(float(np.percentile(stroke_durs, 10)), 3) if stroke_durs else 0.0},
+        "leadInTrimmedSec": _stats_3(lead_rem), "tailOutTrimmedSec": _stats_3(tail_rem),
         "residualDeadTimeSec": {
-            "leadMedian": round(float(np.median(lead_res)), 4) if lead_res else 0.0,
-            "tailMedian": round(float(np.median(tail_res)), 4) if tail_res else 0.0,
-            "leadMean": round(float(np.mean(lead_res)), 4) if lead_res else 0.0,
-            "tailMean": round(float(np.mean(tail_res)), 4) if tail_res else 0.0,
-            "leadP90": round(float(np.percentile(lead_res, 90)), 4) if lead_res else 0.0,
-            "tailP90": round(float(np.percentile(tail_res, 90)), 4) if tail_res else 0.0,
+            "leadMedian": round(float(np.median(lead_res)), 4) if lead_res else 0.0, "tailMedian": round(float(np.median(tail_res)), 4) if tail_res else 0.0,
+            "leadMean": round(float(np.mean(lead_res)), 4) if lead_res else 0.0, "tailMean": round(float(np.mean(tail_res)), 4) if tail_res else 0.0,
+            "leadP90": round(float(np.percentile(lead_res, 90)), 4) if lead_res else 0.0, "tailP90": round(float(np.percentile(tail_res, 90)), 4) if tail_res else 0.0,
         },
-        "deadTimeShareRemovedPct": round(
-            100.0 * (sum(lead_rem) + sum(tail_rem)) / max(1e-6, sum(orig_durs)), 2
-        ),
-        "flagsCount": {
-            "repeatedStroke": sum(1 for r in results if r["flags"]["repeatedStroke"]),
-            "oneHanded": sum(1 for r in results if r["flags"]["oneHanded"]),
-            "tooShort": sum(1 for r in results if r["flags"]["tooShort"]),
-            "faceOnly": sum(1 for r in results if r["flags"]["faceOnly"]),
-        },
+        "deadTimeShareRemovedPct": round(100.0 * (sum(lead_rem) + sum(tail_rem)) / max(1e-6, sum(orig_durs)), 2),
+        "flagsCount": {k: sum(1 for r in results if r["flags"][k]) for k in ("repeatedStroke", "oneHanded", "tooShort", "faceOnly")},
         "histograms": {
             "strokeDurationSec": build_histogram(stroke_durs, [0.0, 0.4, 0.8, 1.2, 1.6, 2.0, 2.5, 3.5, 10.0]),
             "leadInTrimmedSec": build_histogram(lead_rem, [0.0, 0.25, 0.5, 1.0, 1.5, 2.0, 3.0, 10.0]),
@@ -871,52 +778,21 @@ def main() -> int:
         },
         "lowestConfidence50": lowest_50,
     }
-
-    print(
-        f"Completado en {elapsed:.2f}s | Señas: {len(results)} | "
-        f"Duración trazo mediana: {summary_stats['strokeDurationSec']['median']:.2f}s (orig {summary_stats['originalDurationSec']['median']:.2f}s) | "
-        f"Residual mediano lead={summary_stats['residualDeadTimeSec']['leadMedian']:.4f}s, tail={summary_stats['residualDeadTimeSec']['tailMedian']:.4f}s"
-    )
-
+    print(f"Completado en {elapsed:.2f}s | Señas: {len(results)} | Duración trazo mediana: {summary_stats['strokeDurationSec']['median']:.2f}s")
     if args.sample > 0 and not args.output:
         return 0
-
-    signs_dict: Dict[str, Dict[str, Any]] = {}
-    for r in results:
-        entry = dict(r)
-        entry.pop("_qa_metrics", None)
-        signs_dict[entry["sign"]] = entry
-
-    payload = {
-        "version": "2.7",
-        "generatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "totalSigns": len(signs_dict),
-        "canonicalRestPose": CANONICAL_REST_POSE,
-        "summary": summary_stats,
-        "signs": signs_dict,
-    }
-
+    signs_dict = {r["sign"]: {k: v for k, v in r.items() if k != "_qa_metrics"} for r in results}
+    payload = {"version": "2.7", "generatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "totalSigns": len(signs_dict), "canonicalRestPose": CANONICAL_REST_POSE, "summary": summary_stats, "signs": signs_dict}
     repo_root = Path(__file__).resolve().parents[1]
-    out_paths: List[Path] = []
-    if args.output:
-        out_paths.append(Path(args.output))
-    else:
-        out_paths.append(v27_dir / "stroke_index.json")
-        data_dir = repo_root / "app" / "data"
-        data_dir.mkdir(parents=True, exist_ok=True)
-        out_paths.append(data_dir / "stroke_index_v27.json")
-
+    out_paths = [Path(args.output)] if args.output else [v27_dir / "stroke_index.json", repo_root / "app" / "data" / "stroke_index_v27.json"]
     qa_report_path = repo_root / "reports" / "stroke_index_v27_qa.json"
     qa_report_path.parent.mkdir(parents=True, exist_ok=True)
     qa_report_path.write_text(json.dumps(summary_stats, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"Reporte QA guardado en: {qa_report_path}")
-
     serialized = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
     for p in out_paths:
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(serialized, encoding="utf-8")
         print(f"Índice guardado en: {p} ({len(serialized) / (1024 * 1024):.2f} MB)")
-
     return 0
 
 

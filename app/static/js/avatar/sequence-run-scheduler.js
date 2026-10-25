@@ -361,8 +361,9 @@ export function schedulePlayableRunsWithLagBudget(entries, runs, params) {
 
     const scaleVelMap = (rawVel, spd) => {
       const out = {};
+      const effScale = spd * 0.45;
       for (const [k, v] of Object.entries(rawVel || {})) {
-        out[k] = [v[0] * spd, v[1] * spd, v[2] * spd];
+        out[k] = [v[0] * effScale, v[1] * effScale, v[2] * effScale];
       }
       return out;
     };

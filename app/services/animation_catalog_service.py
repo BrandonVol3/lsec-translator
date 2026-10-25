@@ -64,11 +64,8 @@ def normalize_text(text: str) -> str:
     """Normaliza texto para comparaciones seguras de nombres de señas."""
     if not text:
         return ""
-    s = text.strip().lower()
-    s = unicodedata.normalize("NFKD", s)
-    s = "".join(c for c in s if not unicodedata.combining(c))
-    s = re.sub(r"[^a-z0-9]", "", s)
-    return s
+    s = "".join(c for c in unicodedata.normalize("NFKD", text.strip().lower()) if not unicodedata.combining(c))
+    return re.sub(r"[^a-z0-9]", "", s)
 
 
 def _get_norm_dir_map(base_dir: Path) -> Dict[str, List[Path]]:
@@ -80,10 +77,8 @@ def _get_norm_dir_map(base_dir: Path) -> Dict[str, List[Path]]:
     try:
         with os.scandir(str(base_dir)) as it:
             for entry in it:
-                if entry.is_dir() and not entry.name.startswith("."):
-                    nk = normalize_text(entry.name)
-                    if nk:
-                        mapping.setdefault(nk, []).append(Path(entry.path))
+                if entry.is_dir() and not entry.name.startswith(".") and normalize_text(entry.name):
+                    mapping.setdefault(normalize_text(entry.name), []).append(Path(entry.path))
     except Exception:
         pass
     _dir_norm_map_cache[key] = mapping
@@ -346,113 +341,70 @@ def _enrich_item_with_handshape_meta(item: Dict[str, Any]) -> Dict[str, Any]:
 def _load_catalog_cache() -> None:
     """Carga y cachea la lista ordenada según catalogo_lsec.json y metadata enriquecida (normalizada en NFC y sin duplicados)."""
     global _cached_signs, _cached_metadata, _cached_ordered_items, _cached_catalog_mtime
-
     base_dir = get_animations_dir()
     ordered_json = base_dir / "catalogo_ordenado.json"
-    if not ordered_json.is_file():
-        parent_ordered = base_dir.parent / "catalogo_ordenado_vrm.json"
-        if parent_ordered.is_file():
-            ordered_json = parent_ordered
-
-    current_mtime = 0.0
-    if ordered_json.is_file():
-        try:
-            current_mtime = ordered_json.stat().st_mtime
-        except OSError:
-            current_mtime = 0.0
-
+    if not ordered_json.is_file() and (base_dir.parent / "catalogo_ordenado_vrm.json").is_file():
+        ordered_json = base_dir.parent / "catalogo_ordenado_vrm.json"
+    try:
+        current_mtime = ordered_json.stat().st_mtime if ordered_json.is_file() else 0.0
+    except OSError:
+        current_mtime = 0.0
     _load_handshape_schema()
     effective_mtime = current_mtime + _cached_handshape_schema_mtime
-
-    if (
-        _cached_signs is not None
-        and _cached_metadata is not None
-        and _cached_catalog_mtime == effective_mtime
-    ):
+    if _cached_signs is not None and _cached_metadata is not None and _cached_catalog_mtime == effective_mtime:
         return
-
     signs_list: List[str] = []
     meta_dict: Dict[str, Dict[str, Any]] = {}
     ordered_items: List[Dict[str, Any]] = []
-
     if ordered_json.is_file():
         try:
-            with open(ordered_json, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            raw_signs = data.get("signs", [])
-            for item in raw_signs:
+            data = json.loads(ordered_json.read_text(encoding="utf-8"))
+            for item in data.get("signs", []):
                 raw_name = item.get("sign")
-                if not raw_name:
-                    continue
-                s_name = unicodedata.normalize("NFC", str(raw_name).strip())
+                s_name = unicodedata.normalize("NFC", str(raw_name).strip()) if raw_name else ""
                 if not s_name or s_name in meta_dict:
                     continue
-                norm_item = dict(item)
-                norm_item["sign"] = s_name
-                if "palabra" in norm_item and isinstance(norm_item["palabra"], str):
+                norm_item = dict(item, sign=s_name)
+                if isinstance(norm_item.get("palabra"), str):
                     norm_item["palabra"] = unicodedata.normalize("NFC", norm_item["palabra"].strip())
                 _enrich_item_with_handshape_meta(norm_item)
                 signs_list.append(s_name)
                 meta_dict[s_name] = norm_item
                 ordered_items.append(norm_item)
-            _cached_signs = signs_list
-            _cached_metadata = meta_dict
-            _cached_ordered_items = ordered_items
-            _cached_catalog_mtime = effective_mtime
+            _cached_signs, _cached_metadata, _cached_ordered_items, _cached_catalog_mtime = signs_list, meta_dict, ordered_items, effective_mtime
             logger.info("✓ Cargadas %d señas ordenadas (NFC únicas) desde %s", len(_cached_signs), ordered_json)
             return
         except Exception as exc:
             logger.warning("Error leyendo %s: %s", ordered_json, exc)
-
-    # Fallback 1: qa_summary.csv
     csv_file = base_dir / "qa_summary.csv"
     if csv_file.is_file():
         try:
             with open(csv_file, "r", encoding="utf-8", errors="replace") as f:
-                reader = csv.DictReader(f)
-                for idx, row in enumerate(reader, start=1):
-                    raw_sign = row.get("sign", "").strip()
-                    sign = unicodedata.normalize("NFC", raw_sign)
+                for idx, row in enumerate(csv.DictReader(f), start=1):
+                    sign = unicodedata.normalize("NFC", (row.get("sign") or "").strip())
                     if sign and sign not in meta_dict:
                         signs_list.append(sign)
                         palabra_nfc = unicodedata.normalize("NFC", (row.get("palabra") or sign).strip())
-                        item_meta = _enrich_item_with_handshape_meta({
-                            "sign": sign,
-                            "catalog_index": int(row.get("catalog_index", idx)) if row.get("catalog_index") else idx,
-                            "slug": row.get("slug", ""),
-                            "palabra": palabra_nfc,
-                            "qa": row,
-                        })
+                        c_idx = int(row["catalog_index"]) if row.get("catalog_index") else idx
+                        item_meta = _enrich_item_with_handshape_meta({"sign": sign, "catalog_index": c_idx, "slug": row.get("slug", ""), "palabra": palabra_nfc, "qa": row})
                         meta_dict[sign] = item_meta
                         ordered_items.append(item_meta)
-            _cached_signs = signs_list
-            _cached_metadata = meta_dict
-            _cached_ordered_items = ordered_items
+            _cached_signs, _cached_metadata, _cached_ordered_items = signs_list, meta_dict, ordered_items
             logger.info("✓ Indexadas %d señas únicas (NFC) desde qa_summary.csv", len(_cached_signs))
             return
         except Exception as exc:
             logger.warning("Error leyendo qa_summary.csv: %s", exc)
-
-    # Fallback 2: listdir directo
     try:
-        raw = [
-            unicodedata.normalize("NFC", name) for name in os.listdir(base_dir)
-            if not name.startswith(".") and not name.endswith(".csv") and not name.endswith(".json")
-            and (base_dir / name).is_dir()
-        ]
+        raw = [unicodedata.normalize("NFC", n) for n in os.listdir(base_dir) if not n.startswith(".") and not n.endswith((".csv", ".json")) and (base_dir / n).is_dir()]
         signs_list = sorted(set(raw), key=lambda s: s.lower())
         for idx, s in enumerate(signs_list, start=1):
             meta_dict[s] = _enrich_item_with_handshape_meta({"sign": s, "catalog_index": idx, "palabra": s})
             ordered_items.append(meta_dict[s])
-        _cached_signs = signs_list
-        _cached_metadata = meta_dict
-        _cached_ordered_items = ordered_items
+        _cached_signs, _cached_metadata, _cached_ordered_items = signs_list, meta_dict, ordered_items
         logger.info("✓ Indexadas %d señas únicas (NFC) mediante listdir", len(_cached_signs))
     except Exception as exc:
         logger.warning("Error listando directorio %s: %s", base_dir, exc)
-        _cached_signs = []
-        _cached_metadata = {}
-        _cached_ordered_items = []
+        _cached_signs, _cached_metadata, _cached_ordered_items = [], {}, []
 
 
 def get_available_signs() -> List[str]:
@@ -466,44 +418,31 @@ def get_sign_metadata(sign_name: str) -> Optional[Dict[str, Any]]:
     _load_catalog_cache()
     if not _cached_metadata:
         return None
-
     sign_nfc = unicodedata.normalize("NFC", sign_name)
-
     if sign_nfc in _cached_metadata:
         return _cached_metadata[sign_nfc]
     if sign_name in _cached_metadata:
         return _cached_metadata[sign_name]
-
     norm_target = normalize_text(sign_nfc)
     for name, meta in _cached_metadata.items():
-        if (
-            normalize_text(name) == norm_target
-            or normalize_text(meta.get("palabra", "")) == norm_target
-            or normalize_text(meta.get("slug", "")) == norm_target
-        ):
+        if norm_target in (normalize_text(name), normalize_text(meta.get("palabra", "")), normalize_text(meta.get("slug", ""))):
             return meta
-
     base_dir = get_animations_dir()
     for candidate_name in (sign_nfc, sign_name, unicodedata.normalize("NFD", sign_nfc)):
         info_file = base_dir / candidate_name / "info.json"
         if info_file.is_file():
             try:
-                with open(info_file, "r", encoding="utf-8") as f:
-                    info_obj = json.load(f)
-                return _enrich_item_with_handshape_meta(info_obj)
+                return _enrich_item_with_handshape_meta(json.loads(info_file.read_text(encoding="utf-8")))
             except Exception:
                 pass
-
     return None
 
 
 def _cm_sort_key(cm_id: Optional[str]) -> int:
     if not cm_id:
         return 99
-    if cm_id.endswith("rostro"):
-        return 10
-    if cm_id.endswith("*"):
-        return 11
+    if cm_id.endswith(("rostro", "*")):
+        return 10 if cm_id.endswith("rostro") else 11
     m = re.search(r"(\d+)$", cm_id)
     return int(m.group(1)) if m else 99
 
@@ -714,28 +653,17 @@ def build_handshapes_catalog_payload(include_signs: bool = False) -> Dict[str, A
 
 def build_animation_stats_payload(version: Optional[str] = None) -> Dict[str, Any]:
     """Construye las estadísticas globales de cobertura y QA para /api/v1/animations/stats."""
-    v27_dir = get_v27_dir()
-    v26_dir = get_v26_dir()
-    v25_dir = get_v25_dir()
+    v27_dir, v26_dir, v25_dir = get_v27_dir(), get_v26_dir(), get_v25_dir()
     eff_version = version or ("2.7" if v27_dir else ("2.6" if v26_dir else "2.5"))
-    if eff_version == "2.7" and v27_dir:
-        target_dir = v27_dir
-    elif eff_version == "2.6" and v26_dir:
-        target_dir = v26_dir
-    else:
-        target_dir = v25_dir
+    target_dir = v27_dir if (eff_version == "2.7" and v27_dir) else (v26_dir if (eff_version == "2.6" and v26_dir) else v25_dir)
     all_signs = get_available_signs()
     summary_csv = target_dir / "qa_summary.csv"
-
-    approved = 0
-    needs_review = 0
+    approved, needs_review = 0, 0
     fps_counts: Dict[str, int] = {}
-
     if summary_csv.is_file():
         try:
             with open(summary_csv, "r", encoding="utf-8", errors="replace") as fp:
-                reader = csv.DictReader(fp)
-                for row in reader:
+                for row in csv.DictReader(fp):
                     if row.get("needs_review") == "True":
                         needs_review += 1
                     else:
@@ -744,43 +672,28 @@ def build_animation_stats_payload(version: Optional[str] = None) -> Dict[str, An
                     fps_counts[fps_val] = fps_counts.get(fps_val, 0) + 1
         except Exception as exc:
             logger.warning("Error leyendo qa_summary.csv: %s", exc)
-
-    if eff_version == "2.7" and v27_dir:
-        ver_tag = "2.7_Estandarizado"
-    elif eff_version == "2.6" and v26_dir:
-        ver_tag = "2.6_Directo_1a1_corregido"
-    else:
-        ver_tag = "2.5_Directo_1a1"
-
+    ver_tag = "2.7_Estandarizado" if (eff_version == "2.7" and v27_dir) else ("2.6_Directo_1a1_corregido" if (eff_version == "2.6" and v26_dir) else "2.5_Directo_1a1")
     v26_approved, v26_needs_review = 0, 0
     if v26_dir and (v26_dir / "qa_summary.csv").is_file():
         try:
             with open(v26_dir / "qa_summary.csv", "r", encoding="utf-8", errors="replace") as fp:
                 for row in csv.DictReader(fp):
-                    if row.get("needs_review") == "True":
-                        v26_needs_review += 1
-                    else:
-                        v26_approved += 1
+                    v26_needs_review += int(row.get("needs_review") == "True")
+                    v26_approved += int(row.get("needs_review") != "True")
         except Exception:
             pass
-
     v27_approved, v27_needs_review, v27_standardized, v27_skipped = 0, 0, 0, 0
     if v27_dir and (v27_dir / "qa_summary.csv").is_file():
         try:
             with open(v27_dir / "qa_summary.csv", "r", encoding="utf-8", errors="replace") as fp:
                 for row in csv.DictReader(fp):
-                    if row.get("needs_review") == "True":
-                        v27_needs_review += 1
-                    else:
-                        v27_approved += 1
+                    v27_needs_review += int(row.get("needs_review") == "True")
+                    v27_approved += int(row.get("needs_review") != "True")
                     h_status = (row.get("hand_std_status") or "").strip()
-                    if h_status == "STANDARDIZED":
-                        v27_standardized += 1
-                    elif h_status:
-                        v27_skipped += 1
+                    v27_standardized += int(h_status == "STANDARDIZED")
+                    v27_skipped += int(bool(h_status and h_status != "STANDARDIZED"))
         except Exception:
             pass
-
     return {
         "total_signs": len(all_signs), "directory": str(target_dir),
         "approved_high_quality": approved if approved else len(all_signs),
@@ -811,9 +724,7 @@ def build_non_manual_standard_payload() -> Optional[Dict[str, Any]]:
                 return payload
         except Exception as exc:
             logger.warning("Error leyendo estandar_componentes_no_manuales.json: %s", exc)
-    if lsec_cnm is not None:
-        return lsec_cnm.build_manifest_and_update_dataset(_DICCIONARIO_LSEC_DIR, update_v26_files=False)
-    return None
+    return lsec_cnm.build_manifest_and_update_dataset(_DICCIONARIO_LSEC_DIR, update_v26_files=False) if lsec_cnm is not None else None
 
 
 def build_stroke_index_payload(
@@ -825,13 +736,9 @@ def build_stroke_index_payload(
     all_signs_map: Dict[str, Any] = idx_data.get("signs") or {}
     if summary_only:
         return {"version": idx_data.get("version", "2.7"), "totalSigns": idx_data.get("totalSigns", len(all_signs_map)), "summary": idx_data.get("summary", {})}
-
     selected: Dict[str, Any] = {}
     if signs:
-        for raw_token in signs.split(","):
-            tok = raw_token.strip()
-            if not tok:
-                continue
+        for tok in (t.strip() for t in signs.split(",") if t.strip()):
             entry = get_sign_stroke_entry(tok)
             if not entry and resolve_fn is not None:
                 res = resolve_fn(tok, version="2.7", include_animation=False)
@@ -839,19 +746,13 @@ def build_stroke_index_payload(
                     entry = get_sign_stroke_entry(res["resolved_gloss"])
             if entry:
                 selected[tok] = entry
-    elif q:
-        nq = normalize_text(q)
+    else:
+        nq = normalize_text(q) if q else None
         for s_name, s_entry in all_signs_map.items():
-            if nq in normalize_text(s_name):
+            if nq is None or nq in normalize_text(s_name):
                 selected[s_name] = s_entry
                 if len(selected) >= limit:
                     break
-    else:
-        for s_name, s_entry in all_signs_map.items():
-            selected[s_name] = s_entry
-            if len(selected) >= limit:
-                break
-
     fs_signs_map: Dict[str, Any] = idx_data.get("fingerspellingSigns") or {}
     return {
         "version": idx_data.get("version", "2.7"), "totalSigns": idx_data.get("totalSigns", len(all_signs_map)),
@@ -862,58 +763,34 @@ def build_stroke_index_payload(
 
 
 def ensure_sign_animation_stabilized(
-    raw_data: Dict[str, Any],
-    sign_name: str,
-    anim_file: Optional[Path] = None,
-    cat_meta: Optional[Dict[str, Any]] = None,
-    persist_to_disk: bool = True,
+    raw_data: Dict[str, Any], sign_name: str, anim_file: Optional[Path] = None,
+    cat_meta: Optional[Dict[str, Any]] = None, persist_to_disk: bool = True,
 ) -> Dict[str, Any]:
-    """
-    Garantiza que el diccionario `animation.json` haya sido estabilizado por `lsec_kinematic_stabilizer`
-    (eliminando giros de muñeca de 360°, torsiones antebrazo-mano, penetración corporal contra la malla VRM,
-    espasmos de mano inactiva y aplicando la configuración manual canónica durante todo el stroke elevado).
-    Si `persist_to_disk` es True, guarda el archivo estabilizado en disco para que futuras lecturas sean instantáneas.
-    """
+    """Garantiza que el diccionario `animation.json` haya sido estabilizado por `lsec_kinematic_stabilizer`."""
     if lsec_stabilizer is None or not isinstance(raw_data, dict):
         return raw_data
-
     clean_sign = str(sign_name or "").strip()
     if clean_sign.upper().startswith("DACT_"):
         return raw_data
-
     meta = raw_data.setdefault("metadata", {})
     stab_ver = getattr(lsec_stabilizer, "STABILIZER_VERSION", "2.7.2_Stabilized")
     existing_stab = meta.get("kinematicStabilizer")
     if isinstance(existing_stab, dict) and existing_stab.get("version") == stab_ver:
         return raw_data
-
     info_data: Optional[Dict[str, Any]] = None
-    if anim_file and anim_file.parent.is_dir():
-        info_path = anim_file.parent / "info.json"
-        if info_path.is_file():
-            try:
-                info_data = json.loads(info_path.read_text(encoding="utf-8"))
-            except Exception:
-                info_data = None
-
+    if anim_file and anim_file.parent.is_dir() and (anim_file.parent / "info.json").is_file():
+        try:
+            info_data = json.loads((anim_file.parent / "info.json").read_text(encoding="utf-8"))
+        except Exception:
+            info_data = None
     try:
-        lsec_stabilizer.stabilize_sign_animation_dict(
-            raw_data,
-            sign_name=clean_sign,
-            cat_entry=cat_meta,
-            info_data=info_data,
-            force=False,
-        )
+        lsec_stabilizer.stabilize_sign_animation_dict(raw_data, sign_name=clean_sign, cat_entry=cat_meta, info_data=info_data, force=False)
         if persist_to_disk and anim_file and anim_file.is_file():
             v27_dir = get_v27_dir()
             if v27_dir and str(anim_file.resolve()).startswith(str(v27_dir.resolve())):
                 tmp_file = anim_file.with_suffix(".json.tmp")
-                tmp_file.write_text(
-                    json.dumps(raw_data, ensure_ascii=False, separators=(",", ":")),
-                    encoding="utf-8",
-                )
+                tmp_file.write_text(json.dumps(raw_data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
                 tmp_file.replace(anim_file)
     except Exception as exc:
         logger.warning("No se pudo aplicar estabilizador cinemático en '%s': %s", clean_sign, exc)
-
     return raw_data

@@ -15,11 +15,7 @@ from __future__ import annotations
 import pytest
 
 from app.lsec_grammar.schema import (
-    GrammarRule,
-    RuleAction,
-    RuleCondition,
-    RuleScope,
-    RuleValidationStatus,
+    GrammarRule, RuleAction, RuleCondition, RuleScope, RuleValidationStatus,
 )
 from app.lsec_grammar.registry import RuleRegistry
 from app.lsec_grammar.rule_engine import RuleEngine, RuleApplication
@@ -35,10 +31,7 @@ class TestGrammarRuleSchema:
     """Pruebas del esquema tipado de reglas."""
 
     def test_rule_creation_minimal(self) -> None:
-        rule = GrammarRule(
-            rule_id="TEST_RULE_01",
-            name="Regla de prueba mínima",
-        )
+        rule = GrammarRule(rule_id="TEST_RULE_01", name="Regla de prueba mínima")
         assert rule.rule_id == "TEST_RULE_01"
         assert rule.priority == 50
         assert rule.scope == RuleScope.WORD_ORDER
@@ -46,43 +39,26 @@ class TestGrammarRuleSchema:
         assert rule.is_executable is True
 
     def test_rule_draft_not_executable(self) -> None:
-        rule = GrammarRule(
-            rule_id="DRAFT_RULE",
-            name="Borrador",
-            validation_status=RuleValidationStatus.DRAFT,
-        )
+        rule = GrammarRule(rule_id="DRAFT_RULE", name="Borrador", validation_status=RuleValidationStatus.DRAFT)
         assert rule.is_executable is False
 
     def test_rule_rejected_not_executable(self) -> None:
-        rule = GrammarRule(
-            rule_id="REJECTED_RULE",
-            name="Rechazada",
-            validation_status=RuleValidationStatus.REJECTED,
-        )
+        rule = GrammarRule(rule_id="REJECTED_RULE", name="Rechazada", validation_status=RuleValidationStatus.REJECTED)
         assert rule.is_executable is False
 
     def test_rule_provisional_reduces_confidence(self) -> None:
-        rule = GrammarRule(
-            rule_id="PROV_RULE",
-            name="Provisional",
-            validation_status=RuleValidationStatus.PROVISIONAL,
-        )
+        rule = GrammarRule(rule_id="PROV_RULE", name="Provisional", validation_status=RuleValidationStatus.PROVISIONAL)
         assert rule.reduces_confidence is True
         assert rule.requires_review is True
 
     def test_rule_validated_does_not_reduce_confidence(self) -> None:
-        rule = GrammarRule(
-            rule_id="VAL_RULE",
-            name="Validada",
-            validation_status=RuleValidationStatus.COMMUNITY_VALIDATED,
-        )
+        rule = GrammarRule(rule_id="VAL_RULE", name="Validada", validation_status=RuleValidationStatus.COMMUNITY_VALIDATED)
         assert rule.reduces_confidence is False
         assert rule.requires_review is False
 
     def test_rule_with_conditions_and_actions(self) -> None:
         rule = GrammarRule(
-            rule_id="FULL_RULE",
-            name="Regla completa",
+            rule_id="FULL_RULE", name="Regla completa",
             conditions=[
                 RuleCondition(field="polarity", operator="eq", value="negative"),
                 RuleCondition(field="sentence_type", operator="neq", value="interrogative_wh"),
@@ -92,10 +68,8 @@ class TestGrammarRuleSchema:
                 RuleAction(action_type="set_non_manual", parameters={"expression": "negación"}),
             ],
         )
-        assert len(rule.conditions) == 2
-        assert len(rule.actions) == 2
-        assert rule.conditions[0].field == "polarity"
-        assert rule.actions[0].action_type == "reorder"
+        assert len(rule.conditions) == 2 and len(rule.actions) == 2
+        assert rule.conditions[0].field == "polarity" and rule.actions[0].action_type == "reorder"
 
 
 # ============================================================
@@ -115,37 +89,28 @@ class TestRuleRegistry:
     def test_get_by_scope(self) -> None:
         registry = RuleRegistry()
         neg_rules = registry.get_by_scope(RuleScope.NEGATION)
-        assert len(neg_rules) >= 1
-        assert all(r.scope == RuleScope.NEGATION for r in neg_rules)
+        assert len(neg_rules) >= 1 and all(r.scope == RuleScope.NEGATION for r in neg_rules)
 
     def test_get_executable_filters_drafts(self) -> None:
         registry = RuleRegistry()
-        registry.register(GrammarRule(
-            rule_id="DRAFT_TEST",
-            name="Borrador test",
-            validation_status=RuleValidationStatus.DRAFT,
-        ))
+        registry.register(GrammarRule(rule_id="DRAFT_TEST", name="Borrador test", validation_status=RuleValidationStatus.DRAFT))
         executable = registry.get_executable()
         assert all(r.rule_id != "DRAFT_TEST" for r in executable)
 
     def test_register_replaces_existing(self) -> None:
         registry = RuleRegistry()
         rule = GrammarRule(
-            rule_id="LSEC_NEGATION_POSTVERBAL",
-            name="Negación v2",
-            description="Versión actualizada",
-            grammar_version="0.2.0",
+            rule_id="LSEC_NEGATION_POSTVERBAL", name="Negación v2",
+            description="Versión actualizada", grammar_version="0.2.0",
         )
         registry.register(rule)
-        retrieved = registry.get("LSEC_NEGATION_POSTVERBAL")
-        assert retrieved.description == "Versión actualizada"
+        assert registry.get("LSEC_NEGATION_POSTVERBAL").description == "Versión actualizada"
 
     def test_priority_ordering_in_scope(self) -> None:
         registry = RuleRegistry()
         rules = registry.get_by_scope(RuleScope.WORD_ORDER)
-        if len(rules) >= 2:
-            for i in range(len(rules) - 1):
-                assert rules[i].priority <= rules[i + 1].priority
+        for i in range(len(rules) - 1):
+            assert rules[i].priority <= rules[i + 1].priority
 
 
 # ============================================================
@@ -210,44 +175,35 @@ class TestRuleEngine:
         engine = RuleEngine()
         rules = [
             GrammarRule(
-                rule_id="R1",
-                name="Regla 1",
+                rule_id="R1", name="Regla 1",
                 conditions=[RuleCondition(field="polarity", operator="eq", value="negative")],
                 actions=[RuleAction(action_type="set_non_manual", parameters={"expression": "negación"})],
             ),
             GrammarRule(
-                rule_id="R2",
-                name="Regla 2",
+                rule_id="R2", name="Regla 2",
                 conditions=[RuleCondition(field="polarity", operator="eq", value="positive")],
                 actions=[RuleAction(action_type="reorder", parameters={"pattern": "SOV"})],
             ),
         ]
-        frame = {"polarity": "negative", "sentence_type": "declarative"}
-        apps = engine.apply_rules(rules, frame)
-        assert len(apps) == 1
-        assert apps[0].rule_id == "R1"
+        apps = engine.apply_rules(rules, {"polarity": "negative", "sentence_type": "declarative"})
+        assert len(apps) == 1 and apps[0].rule_id == "R1"
 
     def test_apply_rules_exclusions(self) -> None:
         engine = RuleEngine()
         rules = [
             GrammarRule(
-                rule_id="R_A",
-                name="Regla A",
+                rule_id="R_A", name="Regla A", exclusions=["R_B"],
                 conditions=[RuleCondition(field="polarity", operator="eq", value="negative")],
                 actions=[RuleAction(action_type="reorder", parameters={})],
-                exclusions=["R_B"],
             ),
             GrammarRule(
-                rule_id="R_B",
-                name="Regla B",
+                rule_id="R_B", name="Regla B",
                 conditions=[RuleCondition(field="polarity", operator="eq", value="negative")],
                 actions=[RuleAction(action_type="reorder", parameters={})],
             ),
         ]
-        frame = {"polarity": "negative"}
-        apps = engine.apply_rules(rules, frame)
-        assert len(apps) == 1
-        assert apps[0].rule_id == "R_A"
+        apps = engine.apply_rules(rules, {"polarity": "negative"})
+        assert len(apps) == 1 and apps[0].rule_id == "R_A"
 
 
 # ============================================================
@@ -258,13 +214,9 @@ class TestConflictResolver:
     """Pruebas de resolución de conflictos entre reglas."""
 
     def test_no_conflict(self) -> None:
-        rules = [
-            GrammarRule(rule_id="R1", name="R1", priority=10),
-            GrammarRule(rule_id="R2", name="R2", priority=20),
-        ]
+        rules = [GrammarRule(rule_id="R1", name="R1", priority=10), GrammarRule(rule_id="R2", name="R2", priority=20)]
         winners, conflicts = ConflictResolver.resolve(rules)
-        assert len(winners) == 2
-        assert len(conflicts) == 0
+        assert len(winners) == 2 and len(conflicts) == 0
 
     def test_resolve_by_priority(self) -> None:
         rules = [
@@ -273,14 +225,11 @@ class TestConflictResolver:
         ]
         winners, conflicts = ConflictResolver.resolve(rules)
         # R_HIGH wins by priority and excludes R_LOW preemptively
-        assert len(winners) == 1
-        assert winners[0].rule_id == "R_HIGH"
+        assert len(winners) == 1 and winners[0].rule_id == "R_HIGH"
 
     def test_single_rule_no_conflict(self) -> None:
-        rules = [GrammarRule(rule_id="SOLO", name="Única")]
-        winners, conflicts = ConflictResolver.resolve(rules)
-        assert len(winners) == 1
-        assert len(conflicts) == 0
+        winners, conflicts = ConflictResolver.resolve([GrammarRule(rule_id="SOLO", name="Única")])
+        assert len(winners) == 1 and len(conflicts) == 0
 
 
 # ============================================================
@@ -292,16 +241,11 @@ class TestConfidenceCalculator:
 
     def test_no_applications(self) -> None:
         vec = ConfidenceCalculator.from_rule_applications([])
-        assert vec.linguistic == 0.65  # Sin reglas = heurístico
-        assert vec.overall > 0.0
+        assert vec.linguistic == 0.65 and vec.overall > 0.0  # Sin reglas = heurístico
 
     def test_with_applications(self) -> None:
-        apps = [
-            RuleApplication(rule_id="R1", rule_name="R1", scope=RuleScope.WORD_ORDER),
-        ]
-        vec = ConfidenceCalculator.from_rule_applications(apps)
-        assert vec.linguistic >= 0.80
-        assert vec.overall > 0.0
+        vec = ConfidenceCalculator.from_rule_applications([RuleApplication(rule_id="R1", rule_name="R1", scope=RuleScope.WORD_ORDER)])
+        assert vec.linguistic >= 0.80 and vec.overall > 0.0
 
     def test_unresolved_reduces_production(self) -> None:
         vec_ok = ConfidenceCalculator.from_rule_applications([], has_unresolved=False)
@@ -314,13 +258,9 @@ class TestConfidenceCalculator:
         assert vec_full.lexical > vec_partial.lexical
 
     def test_to_dict(self) -> None:
-        vec = ConfidenceCalculator.from_rule_applications([])
-        d = vec.to_dict()
-        assert "linguistic" in d
-        assert "lexical" in d
-        assert "semantic" in d
-        assert "production" in d
-        assert "overall" in d
+        d = ConfidenceCalculator.from_rule_applications([]).to_dict()
+        for k in ("linguistic", "lexical", "semantic", "production", "overall"):
+            assert k in d
 
 
 # ============================================================
@@ -333,104 +273,60 @@ class TestSemanticFrame:
     def test_frame_from_proposition_basic(self) -> None:
         from app.core.schemas import SemanticProposition, SemanticFrame
         prop = SemanticProposition(
-            id="p1",
-            source_text="La universidad ofrece carreras.",
-            normalized_text="la universidad ofrece carreras",
-            polarity="positive",
-            modality="declarative",
+            id="p1", source_text="La universidad ofrece carreras.",
+            normalized_text="la universidad ofrece carreras", polarity="positive", modality="declarative",
         )
         frame = SemanticFrame.from_proposition(prop)
-        assert frame.frame_id == "frame_p1"
-        assert frame.proposition_id == "p1"
-        assert frame.sentence_type == "declarative"
-        assert frame.polarity == "positive"
+        assert (frame.frame_id, frame.proposition_id, frame.sentence_type, frame.polarity) == ("frame_p1", "p1", "declarative", "positive")
 
     def test_frame_from_negative_proposition(self) -> None:
         from app.core.schemas import SemanticProposition, SemanticFrame
         prop = SemanticProposition(
-            id="p2",
-            source_text="No ofrecemos eso.",
-            normalized_text="no ofrecemos eso",
-            polarity="negative",
-            modality="declarative",
+            id="p2", source_text="No ofrecemos eso.",
+            normalized_text="no ofrecemos eso", polarity="negative", modality="declarative",
         )
         frame = SemanticFrame.from_proposition(prop)
-        assert frame.polarity == "negative"
-        assert frame.negation_scope == "clausal"
+        assert frame.polarity == "negative" and frame.negation_scope == "clausal"
 
     def test_frame_interrogative_wh(self) -> None:
         from app.core.schemas import SemanticProposition, SemanticFrame
         prop = SemanticProposition(
-            id="p3",
-            source_text="¿Qué carrera ofrece la UPEC?",
-            normalized_text="qué carrera ofrece la upec",
-            modality="declarative",
+            id="p3", source_text="¿Qué carrera ofrece la UPEC?",
+            normalized_text="qué carrera ofrece la upec", modality="declarative",
         )
-        frame = SemanticFrame.from_proposition(prop)
-        assert frame.sentence_type == "interrogative_wh"
+        assert SemanticFrame.from_proposition(prop).sentence_type == "interrogative_wh"
 
     def test_frame_interrogative_yn(self) -> None:
         from app.core.schemas import SemanticProposition, SemanticFrame
         prop = SemanticProposition(
-            id="p4",
-            source_text="¿Ofrecen carreras de grado?",
-            normalized_text="ofrecen carreras de grado",
-            modality="declarative",
+            id="p4", source_text="¿Ofrecen carreras de grado?",
+            normalized_text="ofrecen carreras de grado", modality="declarative",
         )
-        frame = SemanticFrame.from_proposition(prop)
-        assert frame.sentence_type == "interrogative_yn"
+        assert SemanticFrame.from_proposition(prop).sentence_type == "interrogative_yn"
 
     def test_frame_to_eval_dict(self) -> None:
         from app.core.schemas import SemanticProposition, SemanticFrame
-        prop = SemanticProposition(
-            id="p5",
-            source_text="UPEC educa.",
-            normalized_text="upec educa",
-        )
-        frame = SemanticFrame.from_proposition(prop)
-        d = frame.to_eval_dict()
-        assert isinstance(d, dict)
-        assert "sentence_type" in d
-        assert "polarity" in d
+        prop = SemanticProposition(id="p5", source_text="UPEC educa.", normalized_text="upec educa")
+        d = SemanticFrame.from_proposition(prop).to_eval_dict()
+        assert isinstance(d, dict) and "sentence_type" in d and "polarity" in d
 
     def test_frame_with_participants(self) -> None:
         from app.core.schemas import (
-            SemanticProposition,
-            SemanticFrame,
-            SemanticPredicate,
-            SemanticParticipant,
-            PredicateType,
-            ParticipantType,
-            SemanticRole,
+            SemanticProposition, SemanticFrame, SemanticPredicate, SemanticParticipant,
+            PredicateType, ParticipantType, SemanticRole,
         )
         prop = SemanticProposition(
-            id="p6",
-            source_text="Los estudiantes estudian ingeniería.",
+            id="p6", source_text="Los estudiantes estudian ingeniería.",
             normalized_text="los estudiantes estudian ingeniería",
             predicate=SemanticPredicate(lemma="estudiar", predicate_type=PredicateType.ACTION),
             participants=[
-                SemanticParticipant(
-                    lemma="estudiante",
-                    normalized_text="estudiantes",
-                    participant_type=ParticipantType.PERSON,
-                    semantic_role=SemanticRole.AGENT,
-                ),
-                SemanticParticipant(
-                    lemma="ingeniería",
-                    normalized_text="ingeniería",
-                    participant_type=ParticipantType.PERSON,
-                    semantic_role=SemanticRole.THEME,
-                ),
+                SemanticParticipant(lemma="estudiante", normalized_text="estudiantes", participant_type=ParticipantType.PERSON, semantic_role=SemanticRole.AGENT),
+                SemanticParticipant(lemma="ingeniería", normalized_text="ingeniería", participant_type=ParticipantType.PERSON, semantic_role=SemanticRole.THEME),
             ],
         )
         frame = SemanticFrame.from_proposition(prop)
-        assert frame.predicate_lemma == "estudiar"
-        assert frame.predicate_type == "ACTION"
-        assert frame.has_patient_or_theme is True
-        assert frame.agent == "estudiante"
-        assert frame.patient == "ingeniería"
-        assert frame.explicit_subject is True
-        assert len(frame.participants) == 2
+        assert (frame.predicate_lemma, frame.predicate_type, frame.has_patient_or_theme) == ("estudiar", "ACTION", True)
+        assert (frame.agent, frame.patient, frame.explicit_subject, len(frame.participants)) == ("estudiante", "ingeniería", True, 2)
 
 
 # ============================================================

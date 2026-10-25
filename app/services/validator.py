@@ -402,54 +402,28 @@ class StructuralValidator:
                         )
                     )
 
-        # 3. GLOBAL_TOKEN_INDEX_OUT_OF_RANGE
-        # 4. TOKEN_TIMESTAMP_MISMATCH
-        # 5. SOURCE_TOKEN_TEXT_MISMATCH
+        def _err(code: str, msg: str, affected: Optional[List[str]] = None, blocking: bool = True, sev: ValidationSeverity = ValidationSeverity.ERROR) -> None:
+            errors.append(StructuralValidationError(severity=sev, code=code, message=msg, affected_ids=affected or [], blocking=blocking))
+
+        # 3-5. GLOBAL_TOKEN_INDEX_OUT_OF_RANGE, TOKEN_TIMESTAMP_MISMATCH, SOURCE_TOKEN_TEXT_MISMATCH
         if word_timestamps:
             total_tokens = len(word_timestamps)
             for prop in propositions:
                 for idx in prop.global_source_token_indexes:
                     if idx < 0 or idx >= total_tokens:
-                        errors.append(
-                            StructuralValidationError(
-                                severity=ValidationSeverity.ERROR,
-                                code="GLOBAL_TOKEN_INDEX_OUT_OF_RANGE",
-                                message=f"Proposición '{prop.id}' contiene índice global fuera de rango ({idx} >= {total_tokens}).",
-                                affected_ids=[prop.id],
-                                blocking=True,
-                            )
-                        )
+                        _err("GLOBAL_TOKEN_INDEX_OUT_OF_RANGE", f"Proposición '{prop.id}' contiene índice global fuera de rango ({idx} >= {total_tokens}).", [prop.id])
             for g in glosses:
                 for idx in g.global_source_token_indexes:
                     if idx < 0 or idx >= total_tokens:
-                        errors.append(
-                            StructuralValidationError(
-                                severity=ValidationSeverity.ERROR,
-                                code="GLOBAL_TOKEN_INDEX_OUT_OF_RANGE",
-                                message=f"Glosa '{g.gloss}' contiene índice global fuera de rango ({idx} >= {total_tokens}).",
-                                affected_ids=[str(g.id)],
-                                blocking=True,
-                            )
-                        )
+                        _err("GLOBAL_TOKEN_INDEX_OUT_OF_RANGE", f"Glosa '{g.gloss}' contiene índice global fuera de rango ({idx} >= {total_tokens}).", [str(g.id)])
                 if g.global_source_token_indexes and g.source_start_seconds is not None and g.source_end_seconds is not None:
-                    first_idx = g.global_source_token_indexes[0]
-                    last_idx = g.global_source_token_indexes[-1]
+                    first_idx, last_idx = g.global_source_token_indexes[0], g.global_source_token_indexes[-1]
                     if 0 <= first_idx < total_tokens and 0 <= last_idx < total_tokens:
-                        wt_f = word_timestamps[first_idx]
-                        wt_l = word_timestamps[last_idx]
+                        wt_f, wt_l = word_timestamps[first_idx], word_timestamps[last_idx]
                         exp_start = wt_f.start if hasattr(wt_f, "start") else wt_f.get("start")
                         exp_end = wt_l.end if hasattr(wt_l, "end") else wt_l.get("end")
-                        if exp_start is not None and exp_end is not None:
-                            if abs(g.source_start_seconds - exp_start) > 0.05 or abs(g.source_end_seconds - exp_end) > 0.05:
-                                errors.append(
-                                    StructuralValidationError(
-                                        severity=ValidationSeverity.ERROR,
-                                        code="TOKEN_TIMESTAMP_MISMATCH",
-                                        message=f"Glosa '{g.gloss}' tiene tiempos ({g.source_start_seconds}–{g.source_end_seconds}) que divergen de los tokens ASR ({exp_start}–{exp_end}).",
-                                        affected_ids=[str(g.id)],
-                                        blocking=True,
-                                    )
-                                )
+                        if exp_start is not None and exp_end is not None and (abs(g.source_start_seconds - exp_start) > 0.05 or abs(g.source_end_seconds - exp_end) > 0.05):
+                            _err("TOKEN_TIMESTAMP_MISMATCH", f"Glosa '{g.gloss}' tiene tiempos ({g.source_start_seconds}–{g.source_end_seconds}) que divergen de los tokens ASR ({exp_start}–{exp_end}).", [str(g.id)])
                 if g.alignment_type == AlignmentType.DIRECT and g.source_word and g.global_source_token_indexes:
                     first_idx = g.global_source_token_indexes[0]
                     if 0 <= first_idx < total_tokens:
@@ -458,143 +432,43 @@ class StructuralValidator:
                         w_text = re.sub(r"[^\wáéíóúñüÁÉÍÓÚÑÜ]", "", wt_w.lower())
                         s_text = re.sub(r"[^\wáéíóúñüÁÉÍÓÚÑÜ]", "", g.source_word.lower())
                         if w_text != s_text and not (len(s_text) >= 3 and s_text in w_text) and not (len(w_text) >= 3 and w_text in s_text):
-                            errors.append(
-                                StructuralValidationError(
-                                    severity=ValidationSeverity.ERROR,
-                                    code="SOURCE_TOKEN_TEXT_MISMATCH",
-                                    message=f"Glosa '{g.gloss}' asocia source_word '{g.source_word}' con token ASR distinto '{wt_w}'.",
-                                    affected_ids=[str(g.id)],
-                                    blocking=True,
-                                )
-                            )
+                            _err("SOURCE_TOKEN_TEXT_MISMATCH", f"Glosa '{g.gloss}' asocia source_word '{g.source_word}' con token ASR distinto '{wt_w}'.", [str(g.id)])
 
-        # 6. INVALID_MULTIWORD_ALIGNMENT
         for g in glosses:
             if g.alignment_type in (AlignmentType.MULTIWORD, AlignmentType.NORMALIZED_MULTIWORD) and len(g.global_source_token_indexes) > 1:
                 idxs = sorted(g.global_source_token_indexes)
-                if any(idxs[i+1] - idxs[i] != 1 for i in range(len(idxs)-1)):
-                    errors.append(
-                        StructuralValidationError(
-                            severity=ValidationSeverity.ERROR,
-                            code="INVALID_MULTIWORD_ALIGNMENT",
-                            message=f"Glosa multipalabra '{g.gloss}' tiene índices no contiguos: {g.global_source_token_indexes}.",
-                            affected_ids=[str(g.id)],
-                            blocking=True,
-                        )
-                    )
+                if any(idxs[i + 1] - idxs[i] != 1 for i in range(len(idxs) - 1)):
+                    _err("INVALID_MULTIWORD_ALIGNMENT", f"Glosa multipalabra '{g.gloss}' tiene índices no contiguos: {g.global_source_token_indexes}.", [str(g.id)])
+            if g.alignment_type == AlignmentType.ENTITY_ALIAS and g.spatial_ref == "upec" and "Politécnica" in (g.source_word or "") and g.global_source_token_indexes != [22, 23, 24]:
+                _err("ENTITY_ALIAS_RANGE_MISMATCH", f"Alias de entidad '{g.gloss}' para Politécnica del Carchi esperaba índices [22, 23, 24] pero tiene {g.global_source_token_indexes}.", [str(g.id)])
+            if g.alignment_type == AlignmentType.DIRECT and g.alignment_confidence >= 0.90 and (not g.global_source_token_indexes or g.source_start_seconds is None):
+                _err("CONFIDENCE_WITHOUT_EVIDENCE", f"Glosa '{g.gloss}' tiene confianza alta ({g.alignment_confidence}) sin evidencia de alineación.", [str(g.id)])
 
-        # 7. ENTITY_ALIAS_RANGE_MISMATCH
-        for g in glosses:
-            if g.alignment_type == AlignmentType.ENTITY_ALIAS and g.spatial_ref == "upec" and "Politécnica" in (g.source_word or ""):
-                if g.global_source_token_indexes != [22, 23, 24]:
-                    errors.append(
-                        StructuralValidationError(
-                            severity=ValidationSeverity.ERROR,
-                            code="ENTITY_ALIAS_RANGE_MISMATCH",
-                            message=f"Alias de entidad '{g.gloss}' para Politécnica del Carchi esperaba índices [22, 23, 24] pero tiene {g.global_source_token_indexes}.",
-                            affected_ids=[str(g.id)],
-                            blocking=True,
-                        )
-                    )
-
-        # 10. SOURCE_CONCEPT_WITHOUT_ALIGNMENT
-        # 11. UNSUPPORTED_REALIZED_CONCEPT
         if plans:
             for plan in plans:
                 for rci in plan.realized_concept_items:
                     if not getattr(rci, "is_supported", True):
-                        errors.append(
-                            StructuralValidationError(
-                                severity=ValidationSeverity.ERROR,
-                                code="UNSUPPORTED_REALIZED_CONCEPT",
-                                message=f"Concepto realizado '{rci.concept}' en plan '{plan.id}' carece de justificación o soporte.",
-                                affected_ids=[plan.id, rci.concept],
-                                blocking=True,
-                            )
-                        )
+                        _err("UNSUPPORTED_REALIZED_CONCEPT", f"Concepto realizado '{rci.concept}' en plan '{plan.id}' carece de justificación o soporte.", [plan.id, rci.concept])
 
-        # 12. REVIEW_LIST_NOT_POPULATED
         if validation_metadata:
             has_paraphrase = any(g.requires_native_review for g in glosses)
             has_audio = any(g.requires_audio_review for g in glosses) or any(u.get("requires_audio_review") for u in unresolved_items)
-            p_native = getattr(validation_metadata, "pending_native_review_gloss_ids", [])
-            p_audio = getattr(validation_metadata, "pending_audio_review_ids", [])
-            if has_paraphrase and not p_native:
-                errors.append(
-                    StructuralValidationError(
-                        severity=ValidationSeverity.ERROR,
-                        code="REVIEW_LIST_NOT_POPULATED",
-                        message="Existen paráfrasis pendientes pero pending_native_review_gloss_ids está vacía.",
-                        blocking=True,
-                    )
-                )
-            if has_audio and not p_audio:
-                errors.append(
-                    StructuralValidationError(
-                        severity=ValidationSeverity.ERROR,
-                        code="REVIEW_LIST_NOT_POPULATED",
-                        message="Existe revisión de audio pendiente pero pending_audio_review_ids está vacía.",
-                        blocking=True,
-                    )
-                )
+            if has_paraphrase and not getattr(validation_metadata, "pending_native_review_gloss_ids", []):
+                _err("REVIEW_LIST_NOT_POPULATED", "Existen paráfrasis pendientes pero pending_native_review_gloss_ids está vacía.")
+            if has_audio and not getattr(validation_metadata, "pending_audio_review_ids", []):
+                _err("REVIEW_LIST_NOT_POPULATED", "Existe revisión de audio pendiente pero pending_audio_review_ids está vacía.")
 
-        # 13. UNRESOLVED_ITEM_WITHOUT_TIME
         for unres in unresolved_items:
-            u_start = unres.get("source_start_seconds")
-            u_end = unres.get("source_end_seconds")
-            u_idxs = unres.get("global_source_token_indexes", [])
-            if u_start is None or u_end is None or not u_idxs:
-                errors.append(
-                    StructuralValidationError(
-                        severity=ValidationSeverity.ERROR,
-                        code="UNRESOLVED_ITEM_WITHOUT_TIME",
-                        message=f"Elemento no resuelto '{unres.get('source_word')}' no tiene marcas de tiempo o índices globales.",
-                        affected_ids=[str(unres.get("source_word"))],
-                        blocking=True,
-                    )
-                )
+            if unres.get("source_start_seconds") is None or unres.get("source_end_seconds") is None or not unres.get("global_source_token_indexes", []):
+                _err("UNRESOLVED_ITEM_WITHOUT_TIME", f"Elemento no resuelto '{unres.get('source_word')}' no tiene marcas de tiempo o índices globales.", [str(unres.get("source_word"))])
 
-        # 14. CONFIDENCE_WITHOUT_EVIDENCE
-        for g in glosses:
-            if g.alignment_type == AlignmentType.DIRECT and g.alignment_confidence >= 0.90:
-                if not g.global_source_token_indexes or g.source_start_seconds is None:
-                    errors.append(
-                        StructuralValidationError(
-                            severity=ValidationSeverity.ERROR,
-                            code="CONFIDENCE_WITHOUT_EVIDENCE",
-                            message=f"Glosa '{g.gloss}' tiene confianza alta ({g.alignment_confidence}) sin evidencia de alineación.",
-                            affected_ids=[str(g.id)],
-                            blocking=True,
-                        )
-                    )
-
-        # ------------------------------------------------------------------ #
-        # 12. Reglas Obligatorias LSEC 2.1.1 (Validaciones 1 a 13)
-        # ------------------------------------------------------------------ #
-        lsec_errors = self._validate_lsec_211_invariants(
-            original_text=original_text,
-            normalized_text=normalized_text,
-            propositions=propositions,
-            glosses=glosses,
-            blocks=blocks,
-            plans=plans,
-            timing_plan=timing_plan,
-            validation_metadata=validation_metadata,
-        )
-        errors.extend(lsec_errors)
-
+        errors.extend(self._validate_lsec_211_invariants(original_text, normalized_text, propositions, glosses, blocks, plans, timing_plan, validation_metadata))
         return errors
 
     def _validate_lsec_211_invariants(
-        self,
-        original_text: str,
-        normalized_text: str,
-        propositions: List[SemanticProposition],
-        glosses: List[GlossItem],
-        blocks: List[DiscourseBlock],
-        plans: Optional[List[TranslationPlan]] = None,
-        timing_plan: Optional[TimingPlan] = None,
-        validation_metadata: Optional[Any] = None,
+        self, original_text: str, normalized_text: str, propositions: List[SemanticProposition],
+        glosses: List[GlossItem], blocks: List[DiscourseBlock], plans: Optional[List[TranslationPlan]] = None,
+        timing_plan: Optional[TimingPlan] = None, validation_metadata: Optional[Any] = None,
     ) -> List[StructuralValidationError]:
         """Ejecuta el catálogo de las 13 validaciones automáticas obligatorias de LSEC 2.1.1."""
         errors: List[StructuralValidationError] = []
@@ -602,235 +476,73 @@ class StructuralValidator:
         forbidden_predicates = {
             "yo", "tú", "tu", "él", "ella", "ello", "nosotros", "nosotras", "ustedes", "ellos", "ellas",
             "qué", "que", "quién", "quien", "quiénes", "quienes", "dónde", "donde", "cuándo", "cuando", "cómo", "como",
-            "el", "la", "los", "las", "un", "una", "unos", "unas", "manzana", "manzanas", "carne", "carnes", "pan", "panes", "agua", "aguas"
+            "el", "la", "los", "las", "un", "una", "unos", "unas", "manzana", "manzanas", "carne", "carnes", "pan", "panes", "agua", "aguas",
         }
 
-        # 1. INVALID_PREDICATE_SELECTION
+        def _err(code: str, msg: str, affected: Optional[List[str]] = None, blocking: bool = True, sev: ValidationSeverity = ValidationSeverity.ERROR) -> None:
+            errors.append(StructuralValidationError(severity=sev, code=code, message=msg, affected_ids=affected or [], blocking=blocking))
+
         for prop in propositions:
             if prop.predicate:
                 pred_l = prop.predicate.lemma.lower().strip()
                 if pred_l in forbidden_predicates:
-                    errors.append(
-                        StructuralValidationError(
-                            severity=ValidationSeverity.ERROR,
-                            code="INVALID_PREDICATE_SELECTION",
-                            message=f"Predicado inválido '{pred_l}' en '{prop.id}': se seleccionó un pronombre, determinante o sustantivo en lugar de una acción.",
-                            affected_ids=[prop.id],
-                            blocking=True,
-                        )
-                    )
-
-        # 2. PUNCTUATION_IN_LEMMA
-        for prop in propositions:
-            if prop.predicate and any(c in punct_chars for c in prop.predicate.lemma):
-                errors.append(
-                    StructuralValidationError(
-                        severity=ValidationSeverity.ERROR,
-                        code="PUNCTUATION_IN_LEMMA",
-                        message=f"Signo de puntuación detectado en lema de predicado '{prop.predicate.lemma}'.",
-                        affected_ids=[prop.id],
-                        blocking=True,
-                    )
-                )
+                    _err("INVALID_PREDICATE_SELECTION", f"Predicado inválido '{pred_l}' en '{prop.id}': se seleccionó un pronombre, determinante o sustantivo en lugar de una acción.", [prop.id])
+                if any(c in punct_chars for c in prop.predicate.lemma):
+                    _err("PUNCTUATION_IN_LEMMA", f"Signo de puntuación detectado en lema de predicado '{prop.predicate.lemma}'.", [prop.id])
+                if pred_l in ("comer", "beber", "comprar", "educar", "transformar", "decidir", "ofrecer"):
+                    has_agent = any(p.semantic_role in (SemanticRole.AGENT, SemanticRole.EXPERIENCER) for p in prop.participants)
+                    has_patient = any(p.semantic_role in (SemanticRole.PATIENT, SemanticRole.THEME, SemanticRole.GOAL) for p in prop.participants)
+                    if not has_agent or not has_patient:
+                        _err("MISSING_SEMANTIC_PARTICIPANTS", f"Oración transitiva '{prop.id}' con predicado '{prop.predicate.lemma}' carece de participantes nucleares (AGENT o PATIENT/THEME).", [prop.id])
             for part in prop.participants:
                 if any(c in punct_chars for c in part.lemma):
-                    errors.append(
-                        StructuralValidationError(
-                            severity=ValidationSeverity.ERROR,
-                            code="PUNCTUATION_IN_LEMMA",
-                            message=f"Signo de puntuación detectado en lema de participante '{part.lemma}'.",
-                            affected_ids=[part.id],
-                            blocking=True,
-                        )
-                    )
+                    _err("PUNCTUATION_IN_LEMMA", f"Signo de puntuación detectado en lema de participante '{part.lemma}'.", [part.id])
+                if not part.is_implicit and not part.normalized_text and not part.source_char_start:
+                    _err("UNLINKED_PARTICIPANT_SOURCE", f"Participante explícito '{part.id}' carece de texto fuente vinculado.", [part.id])
+
         for g in glosses:
             if any(c in punct_chars for c in g.gloss):
-                errors.append(
-                    StructuralValidationError(
-                        severity=ValidationSeverity.ERROR,
-                        code="PUNCTUATION_IN_LEMMA",
-                        message=f"Signo de puntuación detectado en glosa '{g.gloss}'.",
-                        affected_ids=[str(g.id)],
-                        blocking=True,
-                    )
-                )
+                _err("PUNCTUATION_IN_LEMMA", f"Signo de puntuación detectado en glosa '{g.gloss}'.", [str(g.id)])
+            if g.alignment_type == AlignmentType.DIRECT and not g.source_word:
+                _err("INVALID_DIRECT_ALIGNMENT", f"Glosa '{g.gloss}' clasificada como DIRECT sin source_word.", [str(g.id)])
+            if g.alignment_type == AlignmentType.COREFERENCE and not (g.antecedent_proposition_id or g.coreference_target_id):
+                _err("UNRESOLVED_COREFERENCE_ALIGNMENT", f"Glosa de correferencia '{g.gloss}' sin antecedente ni coreference_target_id.", [str(g.id)])
+            if "manzán" in (g.normalized_word or "").lower() or (g.source_word == "manzana" and g.gloss == "MANZÁN"):
+                _err("DESTRUCTIVE_NORMALIZATION", f"Normalización destructiva detectada en '{g.gloss}' ({g.source_word} -> {g.normalized_word}).", [str(g.id)])
 
-        # 3. MISSING_SEMANTIC_PARTICIPANTS
-        for prop in propositions:
-            if prop.predicate and prop.predicate.lemma.lower() in ("comer", "beber", "comprar", "educar", "transformar", "decidir", "ofrecer"):
-                has_agent = any(p.semantic_role in (SemanticRole.AGENT, SemanticRole.EXPERIENCER) for p in prop.participants)
-                has_patient = any(p.semantic_role in (SemanticRole.PATIENT, SemanticRole.THEME, SemanticRole.GOAL) for p in prop.participants)
-                if not has_agent or not has_patient:
-                    errors.append(
-                        StructuralValidationError(
-                            severity=ValidationSeverity.ERROR,
-                            code="MISSING_SEMANTIC_PARTICIPANTS",
-                            message=f"Oración transitiva '{prop.id}' con predicado '{prop.predicate.lemma}' carece de participantes nucleares (AGENT o PATIENT/THEME).",
-                            affected_ids=[prop.id],
-                            blocking=True,
-                        )
-                    )
-
-        # 4. UNLINKED_PARTICIPANT_SOURCE
-        for prop in propositions:
-            for part in prop.participants:
-                if not part.is_implicit and not part.normalized_text and not part.source_char_start:
-                    errors.append(
-                        StructuralValidationError(
-                            severity=ValidationSeverity.ERROR,
-                            code="UNLINKED_PARTICIPANT_SOURCE",
-                            message=f"Participante explícito '{part.id}' carece de texto fuente vinculado.",
-                            affected_ids=[part.id],
-                            blocking=True,
-                        )
-                    )
-
-        # 5. UNSUPPORTED_REALIZED_CONCEPT
         if plans:
             for plan in plans:
                 for rci in plan.realized_concept_items:
-                    if rci.is_supported and not rci.source_concept_ids and not (
-                        rci.inference_rule_id or rci.coreference_target_id or rci.discourse_relation or rci.entity_id
-                    ):
-                        errors.append(
-                            StructuralValidationError(
-                                severity=ValidationSeverity.ERROR,
-                                code="UNSUPPORTED_REALIZED_CONCEPT",
-                                message=f"Concepto '{rci.concept}' declarado soportado sin source_concept_ids ni regla de inferencia.",
-                                affected_ids=[plan.id, rci.concept],
-                                blocking=True,
-                            )
-                        )
+                    if rci.is_supported and not rci.source_concept_ids and not (rci.inference_rule_id or rci.coreference_target_id or rci.discourse_relation or rci.entity_id):
+                        _err("UNSUPPORTED_REALIZED_CONCEPT", f"Concepto '{rci.concept}' declarado soportado sin source_concept_ids ni regla de inferencia.", [plan.id, rci.concept])
+                if plan.coverage_status == "COMPLETE" and (plan.unsupported_realized_concepts or plan.omitted_concepts or plan.source_recall < 1.0 or plan.realization_precision < 1.0):
+                    _err("INVALID_COVERAGE_STATUS", f"Plan '{plan.id}' declarado COMPLETE pero tiene conceptos omitidos o no soportados.", [plan.id])
 
-        # 6. INVALID_DIRECT_ALIGNMENT
-        for g in glosses:
-            if g.alignment_type == AlignmentType.DIRECT and not g.source_word:
-                errors.append(
-                    StructuralValidationError(
-                        severity=ValidationSeverity.ERROR,
-                        code="INVALID_DIRECT_ALIGNMENT",
-                        message=f"Glosa '{g.gloss}' clasificada como DIRECT sin source_word.",
-                        affected_ids=[str(g.id)],
-                        blocking=True,
-                    )
-                )
-
-        # 7. MODALITY_MISMATCH
         if "¿" in original_text or "?" in original_text:
-            _q_prop_ids = set()
-            for prop in propositions:
-                _src = getattr(prop, "source_text", "") or ""
-                if "?" in _src or "\u00bf" in _src:
-                    _q_prop_ids.add(prop.id)
+            _q_prop_ids = {p.id for p in propositions if "?" in (getattr(p, "source_text", "") or "") or "\u00bf" in (getattr(p, "source_text", "") or "")}
             for prop in propositions:
                 if prop.modality == "declarative" and prop.id in _q_prop_ids:
-                    errors.append(
-                        StructuralValidationError(
-                            severity=ValidationSeverity.ERROR,
-                            code="MODALITY_MISMATCH",
-                            message=f"Oración interrogativa analizada con modalidad declarativa en '{prop.id}'.",
-                            affected_ids=[prop.id],
-                            blocking=True,
-                        )
-                    )
+                    _err("MODALITY_MISMATCH", f"Oración interrogativa analizada con modalidad declarativa en '{prop.id}'.", [prop.id])
             for block in blocks:
-                _block_pids = set(getattr(block, "proposition_ids", []) or [])
-                if block.discourse_function == "statement" and (_block_pids & _q_prop_ids):
-                    errors.append(
-                        StructuralValidationError(
-                            severity=ValidationSeverity.ERROR,
-                            code="MODALITY_MISMATCH",
-                            message=f"Bloque discursivo {block.id} clasificado como 'statement' en oración interrogativa.",
-                            affected_ids=[str(block.id)],
-                            blocking=True,
-                        )
-                    )
+                if block.discourse_function == "statement" and (set(getattr(block, "proposition_ids", []) or []) & _q_prop_ids):
+                    _err("MODALITY_MISMATCH", f"Bloque discursivo {block.id} clasificado como 'statement' en oración interrogativa.", [str(block.id)])
 
-        # 8. MISSING_NEGATION_OPERATOR
         from app.services.text_normalizer import contains_negation
         for prop in propositions:
-            p_text = prop.source_text.lower()
-            if prop.polarity == "negative" or contains_negation(p_text):
-                has_neg_op = any(op.get("type") == "NEGATION" or op.get("operator_type") == "NEGATION" for op in prop.operators)
-                if not has_neg_op:
-                    errors.append(
-                        StructuralValidationError(
-                            severity=ValidationSeverity.ERROR,
-                            code="MISSING_NEGATION_OPERATOR",
-                            message=f"Proposición negativa '{prop.id}' no contiene operador semántico NEGATION.",
-                            affected_ids=[prop.id],
-                            blocking=True,
-                        )
-                    )
+            if (prop.polarity == "negative" or contains_negation(prop.source_text.lower())) and not any(op.get("type") == "NEGATION" or op.get("operator_type") == "NEGATION" for op in prop.operators):
+                _err("MISSING_NEGATION_OPERATOR", f"Proposición negativa '{prop.id}' no contiene operador semántico NEGATION.", [prop.id])
 
-        # 9. UNRESOLVED_COREFERENCE_ALIGNMENT
-        for g in glosses:
-            if g.alignment_type == AlignmentType.COREFERENCE and not (g.antecedent_proposition_id or g.coreference_target_id):
-                errors.append(
-                    StructuralValidationError(
-                        severity=ValidationSeverity.ERROR,
-                        code="UNRESOLVED_COREFERENCE_ALIGNMENT",
-                        message=f"Glosa de correferencia '{g.gloss}' sin antecedente ni coreference_target_id.",
-                        affected_ids=[str(g.id)],
-                        blocking=True,
-                    )
-                )
-
-        # 10. INVALID_COVERAGE_STATUS
-        if plans:
-            for plan in plans:
-                if plan.coverage_status == "COMPLETE":
-                    if plan.unsupported_realized_concepts or plan.omitted_concepts or plan.source_recall < 1.0 or plan.realization_precision < 1.0:
-                        errors.append(
-                            StructuralValidationError(
-                                severity=ValidationSeverity.ERROR,
-                                code="INVALID_COVERAGE_STATUS",
-                                message=f"Plan '{plan.id}' declarado COMPLETE pero tiene conceptos omitidos o no soportados.",
-                                affected_ids=[plan.id],
-                                blocking=True,
-                            )
-                        )
-
-        # 11. VALIDATION_STATE_INCONSISTENCY
         if validation_metadata:
             errs_count = getattr(validation_metadata, "errors_count", 0)
             ex_stat = getattr(validation_metadata, "execution_status", None)
             rev_stat = getattr(validation_metadata, "review_status", None)
             if errs_count > 0 and (ex_stat in ("READY", "READY_FOR_EXECUTION") or rev_stat == "VERIFIED"):
-                errors.append(
-                    StructuralValidationError(
-                        severity=ValidationSeverity.ERROR,
-                        code="VALIDATION_STATE_INCONSISTENCY",
-                        message=f"Inconsistencia de estado: errors_count={errs_count} coexiste con execution_status={ex_stat} o review_status={rev_stat}.",
-                        blocking=True,
-                    )
-                )
+                _err("VALIDATION_STATE_INCONSISTENCY", f"Inconsistencia de estado: errors_count={errs_count} coexiste con execution_status={ex_stat} o review_status={rev_stat}.")
 
-        # 12. DESTRUCTIVE_NORMALIZATION
-        for g in glosses:
-            if "manzán" in (g.normalized_word or "").lower() or (g.source_word == "manzana" and g.gloss == "MANZÁN"):
-                errors.append(
-                    StructuralValidationError(
-                        severity=ValidationSeverity.ERROR,
-                        code="DESTRUCTIVE_NORMALIZATION",
-                        message=f"Normalización destructiva detectada en '{g.gloss}' ({g.source_word} -> {g.normalized_word}).",
-                        affected_ids=[str(g.id)],
-                        blocking=True,
-                    )
-                )
-
-        # 13. TIMING_ARITHMETIC_INCONSISTENCY
         if timing_plan:
             expected_total = timing_plan.manual_sign_duration_ms + timing_plan.fingerspelling_duration_ms + timing_plan.pause_budget_ms
             if abs(timing_plan.total_duration_ms - expected_total) > 5:
-                errors.append(
-                    StructuralValidationError(
-                        severity=ValidationSeverity.ERROR,
-                        code="TIMING_ARITHMETIC_INCONSISTENCY",
-                        message=f"Inconsistencia aritmética en TimingPlan: total_duration_ms={timing_plan.total_duration_ms} != suma({expected_total}).",
-                        blocking=True,
-                    )
-                )
+                _err("TIMING_ARITHMETIC_INCONSISTENCY", f"Inconsistencia aritmética en TimingPlan: total_duration_ms={timing_plan.total_duration_ms} != suma({expected_total}).")
 
         # 14. POSSIBLE_CONJUGATED_GLOSS (F-24)
         conj_gloss_re = re.compile(

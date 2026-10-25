@@ -446,23 +446,39 @@ export class SequenceCompiler {
         bones[bName] = interpolateSO3HermiteC1(q0, q1, null, null, T * (1.0 - alphaAnt), uFingers);
       } else if (ARM_BONE_SET.has(bName)) {
         let qArm = interpolateSO3HermiteC1(q0, q1, fromVel[bName], toVel[bName], T, u);
-        // Epéntesis de Arco Frontal C¹: cuando el brazo recorre > 18° entre dos señas,
-        // proyectar suavemente el arco medio hacia adelante (+Z) con campana sin²(π·u)
-        // para que las manos no atraviesen el pecho durante el encadenamiento.
+        // Epéntesis de Arco Frontal C¹: cuando el brazo recorre > 14° entre dos señas (o baja del rostro
+        // al abdomen / cruza el tórax), proyectar suavemente el arco medio hacia adelante (+Z) con campana
+        // sin²(π·u) (derivada nula en u=0 y u=1) para garantizar despeje pectoral/abdominal en u=0.5.
         if (
           seg.subtype === 'coarticulation' &&
-          (bName === 'leftUpperArm' || bName === 'rightUpperArm') &&
-          u > 0.01 &&
-          u < 0.99
+          u > 0.005 &&
+          u < 0.995
         ) {
-          const travelDeg = quatAngleDeg(q0, q1);
-          if (travelDeg > 18.0) {
-            const bell = Math.sin(Math.PI * u);
-            const bellC1 = bell * bell;
-            const maxArcRad = Math.min(0.16, ((travelDeg - 18.0) / 90.0) * 0.16);
-            const sideSign = bName === 'leftUpperArm' ? -1.0 : 1.0;
-            const qArc = quatExpRad([0, sideSign * maxArcRad * bellC1, 0]);
-            qArm = quatNormalize(quatMultiply(qArc, qArm));
+          const bell = Math.sin(Math.PI * u);
+          const bellC1 = bell * bell;
+          if (bName === 'leftUpperArm' || bName === 'rightUpperArm') {
+            const travelDeg = quatAngleDeg(q0, q1);
+            if (travelDeg > 14.0) {
+              const dzSpan = Math.abs((q1[2] || 0) - (q0[2] || 0));
+              const dySpan = Math.abs((q1[1] || 0) - (q0[1] || 0));
+              const torsoCrossBoost = Math.min(0.06, 0.14 * (dzSpan + dySpan));
+              const maxArcRad = Math.min(0.21, ((travelDeg - 14.0) / 82.0) * 0.16 + torsoCrossBoost);
+              const sideSign = bName === 'leftUpperArm' ? -1.0 : 1.0;
+              const qArc = quatExpRad([0, sideSign * maxArcRad * bellC1, 0]);
+              qArm = quatNormalize(quatMultiply(qArc, qArm));
+            }
+          } else if (bName === 'leftLowerArm' || bName === 'rightLowerArm') {
+            const upName = bName === 'leftLowerArm' ? 'leftUpperArm' : 'rightUpperArm';
+            const upTravelDeg = quatAngleDeg(
+              fromBones[upName] || CANONICAL_REST_BONES[upName],
+              toBones[upName] || CANONICAL_REST_BONES[upName]
+            );
+            if (upTravelDeg > 26.0) {
+              const sideSign = bName === 'leftLowerArm' ? -1.0 : 1.0;
+              const loClearRad = Math.min(0.08, ((upTravelDeg - 26.0) / 95.0) * 0.08);
+              const qLoArc = quatExpRad([0, sideSign * loClearRad * bellC1, 0]);
+              qArm = quatNormalize(quatMultiply(qLoArc, qArm));
+            }
           }
         }
         bones[bName] = qArm;

@@ -272,248 +272,86 @@ class DiscourseSegmenter:
                 propositions.extend(sub_trailing)
             return propositions
 
-        # 1d. Chequeo de emoción/actitud institucional ("nos enorgullece ser la universidad pública...")
-        if "enorgullece" in clean_sent.lower() and ("ser" in clean_sent.lower() or "sostenible" in clean_sent.lower() or "universidad" in clean_sent.lower()):
+        if "enorgullece" in clean_sent.lower() and any(k in clean_sent.lower() for k in ("ser", "sostenible", "universidad")):
             idx_ser = clean_sent.lower().find("ser ")
             if idx_ser > 0:
                 first_e = clean_sent[:idx_ser].strip().rstrip(",;:")
                 second_s = clean_sent[idx_ser:].strip()
-                propositions.append(
-                    DiscourseUnit(
-                        id=base_id,
-                        text=first_e if first_e else "nos enorgullece",
-                        unit_type="emotion",
-                        rhetorical_function="pride",
-                        fragment_type="COMPLETE_PROPOSITION",
-                    )
-                )
-                propositions.append(
-                    DiscourseUnit(
-                        id=base_id,
-                        text=second_s,
-                        unit_type="superlative",
-                        rhetorical_function="sustainability_recognition",
-                        fragment_type="COMPLETE_PROPOSITION",
-                    )
-                )
-                return propositions
+                return [
+                    DiscourseUnit(id=base_id, text=first_e if first_e else "nos enorgullece", unit_type="emotion", rhetorical_function="pride", fragment_type="COMPLETE_PROPOSITION"),
+                    DiscourseUnit(id=base_id, text=second_s, unit_type="superlative", rhetorical_function="sustainability_recognition", fragment_type="COMPLETE_PROPOSITION"),
+                ]
 
-        # 1e. Segmentación de Preparación, Recursos y Tecnología (Fase 7)
-        # "Aquí te preparamos desde el primer día con una educación de excelencia, innovación y tecnología que evoluciona contigo, y cercanía."
         if "preparamos" in clean_sent.lower() and "desde el primer día" in clean_sent.lower():
             idx_dia = clean_sent.lower().find("desde el primer día") + len("desde el primer día")
             prep_part = clean_sent[:idx_dia].strip().rstrip(",;:")
             rest = clean_sent[idx_dia:].strip().lstrip(",;:").strip()
-
             cercania_part = None
-            if "y cercanía" in rest.lower() or "cercanía" in rest.lower():
+            if "cercanía" in rest.lower():
                 idx_cerc = rest.lower().rfind("cercan")
-                # Encontrar el conector previo si existe (ej. ", y cercanía")
                 prefix_cerc = rest[:idx_cerc].rstrip(" ,;y")
                 cercania_part = rest[len(prefix_cerc):].strip().lstrip(" ,;").strip()
                 rest = prefix_cerc.strip()
-
-            resources_part = rest
-            tech_rel_part = None
+            resources_part, tech_rel_part = rest, None
             if "que evoluciona" in rest.lower() or "que avanza" in rest.lower():
                 idx_que = rest.lower().find("que ")
                 resources_part = rest[:idx_que].strip().rstrip(",;:")
                 tech_rel_part = rest[idx_que:].strip()
-
-            propositions.append(
-                DiscourseUnit(
-                    id=base_id,
-                    text=prep_part,
-                    unit_type="preparation",
-                    rhetorical_function="preparation_start",
-                    fragment_type="PREPARATION_START",
-                )
-            )
+            propositions.append(DiscourseUnit(id=base_id, text=prep_part, unit_type="preparation", rhetorical_function="preparation_start", fragment_type="PREPARATION_START"))
             if resources_part:
-                propositions.append(
-                    DiscourseUnit(
-                        id=base_id,
-                        text=resources_part,
-                        unit_type="resources",
-                        rhetorical_function="educational_resources",
-                        fragment_type="EDUCATIONAL_RESOURCES",
-                    )
-                )
+                propositions.append(DiscourseUnit(id=base_id, text=resources_part, unit_type="resources", rhetorical_function="educational_resources", fragment_type="EDUCATIONAL_RESOURCES"))
             if tech_rel_part:
-                propositions.append(
-                    DiscourseUnit(
-                        id=base_id,
-                        text=f"tecnología {tech_rel_part}" if not tech_rel_part.lower().startswith("tecnología") else tech_rel_part,
-                        unit_type="relative_clause",
-                        rhetorical_function="technology_development",
-                        fragment_type="TECHNOLOGY_DEVELOPMENT",
-                        is_embedded=True,
-                    )
-                )
+                t_txt = f"tecnología {tech_rel_part}" if not tech_rel_part.lower().startswith("tecnología") else tech_rel_part
+                propositions.append(DiscourseUnit(id=base_id, text=t_txt, unit_type="relative_clause", rhetorical_function="technology_development", fragment_type="TECHNOLOGY_DEVELOPMENT", is_embedded=True))
             if cercania_part:
-                propositions.append(
-                    DiscourseUnit(
-                        id=base_id,
-                        text=cercania_part,
-                        unit_type="human_focus",
-                        rhetorical_function="human_focus_4",
-                        fragment_type="COMPLETE_PROPOSITION",
-                    )
-                )
+                propositions.append(DiscourseUnit(id=base_id, text=cercania_part, unit_type="human_focus", rhetorical_function="human_focus_4", fragment_type="COMPLETE_PROPOSITION"))
             return propositions
 
-        # 2. Chequeo de par "no solo X, también/eliges Y" con prefijo contextual
         not_only_match = _NOT_ONLY_PATTERN.search(clean_sent)
         if not_only_match:
             prefix = clean_sent[:not_only_match.start()].strip().rstrip(",;:")
             first_part = not_only_match.group(1).strip().rstrip(",;:")
             second_part = not_only_match.group(2).strip().rstrip(".!?")
-
-            context_info = {}
-            first_unit_text = f"no solo {first_part}"
+            context_info, first_unit_text = {}, f"no solo {first_part}"
             if prefix:
                 if prefix.lower().startswith("en ") or not any(v in prefix.lower() for v in ("es", "son", "tiene", "ofrece", "educa")):
-                    context_info = {
-                        "raw_context": prefix,
-                        "institution": "upec" if ("politécnica" in prefix.lower() or "carchi" in prefix.lower() or "upec" in prefix.lower()) else prefix,
-                    }
+                    context_info = {"raw_context": prefix, "institution": "upec" if any(k in prefix.lower() for k in ("politécnica", "carchi", "upec")) else prefix}
                     first_unit_text = f"{prefix} no solo {first_part}"
                 else:
-                    propositions.append(
-                        DiscourseUnit(
-                            id=base_id,
-                            text=prefix,
-                            unit_type="statement",
-                            fragment_type="COMPLETE_PROPOSITION",
-                        )
-                    )
-
-            propositions.append(
-                DiscourseUnit(
-                    id=base_id,
-                    text=first_unit_text,
-                    unit_type="contrast",
-                    discourse_relation="not_only",
-                    has_negation_scope=False,
-                    has_contrast=True,
-                    rhetorical_function="identity",
-                    context_info=context_info,
-                    operators=[{"type": "NOT_ONLY", "scope": first_part}],
-                )
-            )
-            propositions.append(
-                DiscourseUnit(
-                    id=base_id,
-                    text=second_part,
-                    unit_type="contrast",
-                    discourse_relation="also",
-                    has_contrast=True,
-                    rhetorical_function="identity",
-                    context_info=context_info,
-                )
-            )
+                    propositions.append(DiscourseUnit(id=base_id, text=prefix, unit_type="statement", fragment_type="COMPLETE_PROPOSITION"))
+            propositions.append(DiscourseUnit(id=base_id, text=first_unit_text, unit_type="contrast", discourse_relation="not_only", has_contrast=True, rhetorical_function="identity", context_info=context_info, operators=[{"type": "NOT_ONLY", "scope": first_part}]))
+            propositions.append(DiscourseUnit(id=base_id, text=second_part, unit_type="contrast", discourse_relation="also", has_contrast=True, rhetorical_function="identity", context_info=context_info))
             return propositions
 
-        # 3. Chequeo de Bloque de Formación Humana (Fase 6)
-        # "Formamos más que profesionales, formamos seres humanos que inspiran confianza y cercanía."
         if ("más que profesionales" in clean_sent.lower() or "más que profesional" in clean_sent.lower()) and "seres humanos" in clean_sent.lower():
-            # Descomponer en 4 unidades no duplicadas:
-            # 1. Restricción de formación profesional
-            # 2. Formación humana
-            # 3. Inspiración de confianza
-            # 4. Cercanía o acompañamiento
-            propositions.append(
+            return [
                 DiscourseUnit(
-                    id=base_id,
-                    text="Formamos más que profesionales",
-                    unit_type="contrast",
-                    discourse_relation="more_than",
-                    has_contrast=True,
-                    rhetorical_function="human_focus_1",
+                    id=base_id, text="Formamos más que profesionales", unit_type="contrast",
+                    discourse_relation="more_than", has_contrast=True, rhetorical_function="human_focus_1",
                     fragment_type="COMPLETE_PROPOSITION",
-                    operators=[{
-                        "operator_type": "BEYOND_NOT_ONLY",
-                        "first_scope": "professional_formation",
-                        "second_scope": "human_formation",
-                        "relation": "ADDITIVE_EXPANSION",
-                    }],
-                )
-            )
-            propositions.append(
-                DiscourseUnit(
-                    id=base_id,
-                    text="formamos seres humanos",
-                    unit_type="statement",
-                    discourse_relation="also",
-                    has_contrast=True,
-                    rhetorical_function="human_focus_2",
-                    fragment_type="COMPLETE_PROPOSITION",
-                )
-            )
-            propositions.append(
-                DiscourseUnit(
-                    id=base_id,
-                    text="que inspiran confianza",
-                    unit_type="relative_clause",
-                    discourse_relation="elaboration",
-                    rhetorical_function="human_focus_3",
-                    fragment_type="RELATIVE_PROPOSITION",
-                    is_embedded=True,
-                )
-            )
-            propositions.append(
-                DiscourseUnit(
-                    id=base_id,
-                    text="y cercanía",
-                    unit_type="paraphrase",
-                    discourse_relation="additive",
-                    rhetorical_function="human_focus_4",
-                    fragment_type="EMBEDDED_PROPOSITION",
-                    is_embedded=True,
-                )
-            )
-            return propositions
+                    operators=[{"operator_type": "BEYOND_NOT_ONLY", "first_scope": "professional_formation", "second_scope": "human_formation", "relation": "ADDITIVE_EXPANSION"}],
+                ),
+                DiscourseUnit(id=base_id, text="formamos seres humanos", unit_type="statement", discourse_relation="also", has_contrast=True, rhetorical_function="human_focus_2", fragment_type="COMPLETE_PROPOSITION"),
+                DiscourseUnit(id=base_id, text="que inspiran confianza", unit_type="relative_clause", discourse_relation="elaboration", rhetorical_function="human_focus_3", fragment_type="RELATIVE_PROPOSITION", is_embedded=True),
+                DiscourseUnit(id=base_id, text="y cercanía", unit_type="paraphrase", discourse_relation="additive", rhetorical_function="human_focus_4", fragment_type="EMBEDDED_PROPOSITION", is_embedded=True),
+            ]
 
-        # 3b. Chequeo general de "más que X, (verbo) Y"
         more_than_match = _MORE_THAN_PATTERN.search(clean_sent)
         if more_than_match:
             prefix = clean_sent[:more_than_match.start()].strip()
             first_part = more_than_match.group(1).strip().rstrip(",;:")
             second_part = more_than_match.group(2).strip().rstrip(".!?")
-
             full_first = f"{prefix} más que {first_part}".strip() if prefix else f"más que {first_part}"
-            propositions.append(
-                DiscourseUnit(
-                    id=base_id,
-                    text=full_first,
-                    unit_type="contrast",
-                    discourse_relation="more_than",
-                    has_contrast=True,
-                    rhetorical_function="human_focus",
-                )
-            )
-            propositions.append(
-                DiscourseUnit(
-                    id=base_id,
-                    text=second_part,
-                    unit_type="statement",
-                    discourse_relation="emphasis",
-                    has_contrast=True,
-                    rhetorical_function="human_focus",
-                )
-            )
-            return propositions
+            return [
+                DiscourseUnit(id=base_id, text=full_first, unit_type="contrast", discourse_relation="more_than", has_contrast=True, rhetorical_function="human_focus"),
+                DiscourseUnit(id=base_id, text=second_part, unit_type="statement", discourse_relation="emphasis", has_contrast=True, rhetorical_function="human_focus"),
+            ]
 
-        # 3b-semi. División por punto y coma ';' (cuando no aplica 'no solo' ni 'más que')
         if ";" in clean_sent:
             semi_parts = [p.strip() for p in clean_sent.split(";") if p.strip()]
             if len(semi_parts) >= 2:
-                res_units: List[DiscourseUnit] = []
-                for sp in semi_parts:
-                    res_units.extend(self._segment_sentence_into_propositions(sp, base_id))
-                return res_units
+                return [u for sp in semi_parts for u in self._segment_sentence_into_propositions(sp, base_id)]
 
-        # 3b-paren. Incisos parentéticos con cláusula subordinada (ej. "(si el director ya está presente)")
         paren_match = re.search(r"\(([^()]{8,})\)", clean_sent)
         if paren_match:
             before_p = clean_sent[: paren_match.start()].strip().rstrip(",;:")
@@ -528,138 +366,50 @@ class DiscourseSegmenter:
                     res_units.extend(self._segment_sentence_into_propositions(after_p, base_id))
                 return res_units
 
-        # Normalizar coma tras conectores/marcadores de inicio ("Primero, cuando..." -> "Primero cuando...", "sin embargo, ..." -> "sin embargo ...")
-        clean_sent = re.sub(
-            r"^(primero|despu[eé]s|luego|adem[aá]s|finalmente)\s*,\s*",
-            r"\1 ",
-            clean_sent,
-            flags=re.IGNORECASE,
-        ).strip()
+        clean_sent = re.sub(r"^(primero|despu[eé]s|luego|adem[aá]s|finalmente)\s*,\s*", r"\1 ", clean_sent, flags=re.IGNORECASE).strip()
 
-        # 3c. Chequeo de cláusula temporal/presente tras coma ("...ya lo hicieron, hoy crean...")
-        # NOTA CRÍTICA: NO dividir si "hoy" es parte de "haz posible hoy lo que imaginas" ni tras conector ("pero hoy...")
         if "hoy" in clean_sent.lower() and "," in clean_sent:
             idx = clean_sent.lower().find("hoy")
             if idx > 3:
                 before = clean_sent[:idx].strip().rstrip(",;:")
                 after = clean_sent[idx:].strip()
-                if (
-                    before
-                    and not any(before.lower().endswith(v) for v in ("haz", "haz posible", "hacer", "hace", "convierte"))
-                    and not any(
-                        before.lower().endswith(c)
-                        for c in ("pero", "embargo", "obstante", "aunque", "y", "o", "porque", "cuando", "mientras", "si")
-                    )
-                ):
-                    left_sub = self._segment_sentence_into_propositions(before, base_id)
-                    right_sub = self._segment_sentence_into_propositions(after, base_id)
-                    return left_sub + right_sub
+                if before and not any(before.lower().endswith(v) for v in ("haz", "haz posible", "hacer", "hace", "convierte", "pero", "embargo", "obstante", "aunque", "y", "o", "porque", "cuando", "mientras", "si")):
+                    return self._segment_sentence_into_propositions(before, base_id) + self._segment_sentence_into_propositions(after, base_id)
 
-        # 3d. Desacoplamiento de proposiciones coordinadas en el presente ("hoy crean oportunidades, liberan y construyen ideas")
-        if "crean oportunidades" in clean_sent.lower() and ("liberan" in clean_sent.lower() or "construyen" in clean_sent.lower() or "ideas" in clean_sent.lower()):
-            sub_units = [
-                DiscourseUnit(
-                    id=base_id,
-                    text="hoy crean oportunidades",
-                    unit_type="statement",
-                    rhetorical_function="current_impact",
-                    topic="graduados",
-                    focus="oportunidades",
-                )
-            ]
+        if "crean oportunidades" in clean_sent.lower() and any(w in clean_sent.lower() for w in ("liberan", "construyen", "ideas")):
+            sub_units = [DiscourseUnit(id=base_id, text="hoy crean oportunidades", unit_type="statement", rhetorical_function="current_impact", topic="graduados", focus="oportunidades")]
             if "liberan" in clean_sent.lower():
-                sub_units.append(
-                    DiscourseUnit(
-                        id=base_id,
-                        text="liberan",
-                        unit_type="statement",
-                        rhetorical_function="current_impact",
-                        topic="graduados",
-                        focus="libertad",
-                    )
-                )
+                sub_units.append(DiscourseUnit(id=base_id, text="liberan", unit_type="statement", rhetorical_function="current_impact", topic="graduados", focus="libertad"))
             if "construyen" in clean_sent.lower() or "ideas" in clean_sent.lower():
-                sub_units.append(
-                    DiscourseUnit(
-                        id=base_id,
-                        text="construyen ideas",
-                        unit_type="statement",
-                        rhetorical_function="current_impact",
-                        topic="graduados",
-                        focus="ideas",
-                    )
-                )
+                sub_units.append(DiscourseUnit(id=base_id, text="construyen ideas", unit_type="statement", rhetorical_function="current_impact", topic="graduados", focus="ideas"))
             return sub_units
 
-        # 4. Chequeo de dos puntos o incisos reflexivos ("...libertad: libertad para decidir quién quieres ser")
         if ":" in clean_sent:
             colon_parts = [p.strip() for p in clean_sent.split(":", 1) if p.strip()]
             if len(colon_parts) == 2:
-                left_sub = self._segment_sentence_into_propositions(colon_parts[0], base_id)
-                right_sub = self._segment_sentence_into_propositions(colon_parts[1], base_id)
-                return left_sub + right_sub
+                return self._segment_sentence_into_propositions(colon_parts[0], base_id) + self._segment_sentence_into_propositions(colon_parts[1], base_id)
 
-        # 5. Chequeo de conectores adversativos ("pero", "sin embargo", "no obstante", "aunque")
         for adv_pat in _ADVERSATIVE_CONNECTORS:
             match = adv_pat.search(clean_sent)
             if match and match.start() == 0:
-                cleaned_adv = re.sub(
-                    r"^(sin\s+embargo|no\s+obstante|pero|aunque)\s*,\s*",
-                    r"\1 ",
-                    clean_sent,
-                    flags=re.IGNORECASE,
-                ).strip()
+                cleaned_adv = re.sub(r"^(sin\s+embargo|no\s+obstante|pero|aunque)\s*,\s*", r"\1 ", clean_sent, flags=re.IGNORECASE).strip()
                 if cleaned_adv != clean_sent:
                     sub_u = self._segment_sentence_into_propositions(cleaned_adv, base_id)
                     for u in sub_u:
-                        u.unit_type = "contrast"
-                        u.discourse_relation = "but"
-                        u.has_contrast = True
+                        u.unit_type, u.discourse_relation, u.has_contrast = "contrast", "but", True
                     return sub_u
-                else:
-                    # Ya no tiene coma inmediata tras el conector inicial; marcar relación si es cláusula simple
-                    pass
             elif match and match.start() > 5:
                 before = clean_sent[: match.start()].strip().rstrip(",;:")
-                after = clean_sent[match.start() :].strip()
-                after = re.sub(
-                    r"^(sin\s+embargo|no\s+obstante|pero|aunque)\s*,\s*",
-                    r"\1 ",
-                    after,
-                    flags=re.IGNORECASE,
-                ).strip()
-
+                after = re.sub(r"^(sin\s+embargo|no\s+obstante|pero|aunque)\s*,\s*", r"\1 ", clean_sent[match.start() :].strip(), flags=re.IGNORECASE).strip()
                 before_units = self._segment_sentence_into_propositions(before, base_id)
-
                 if "," in after:
                     c_parts = [p.strip() for p in after.split(",", 1) if p.strip()]
                     if len(c_parts) == 2 and any(k in c_parts[1].lower() for k in ("quién", "quien", "decidir", "libertad para")):
-                        u_adv = DiscourseUnit(
-                            id=base_id,
-                            text=c_parts[0],
-                            unit_type="contrast",
-                            discourse_relation="but",
-                            has_contrast=True,
-                            has_negation_scope=True if "nadie" in c_parts[0].lower() else False,
-                        )
-                        u_refl = DiscourseUnit(
-                            id=base_id,
-                            text=c_parts[1],
-                            unit_type="question_indirect",
-                            discourse_relation="elaboration",
-                            is_embedded=True,
-                            rhetorical_function="identity",
-                        )
-                        return before_units + [u_adv, u_refl]
-
-                after_unit = DiscourseUnit(
-                    id=base_id,
-                    text=after,
-                    unit_type="contrast",
-                    discourse_relation="but",
-                    has_contrast=True,
-                )
-                return before_units + [after_unit]
+                        return before_units + [
+                            DiscourseUnit(id=base_id, text=c_parts[0], unit_type="contrast", discourse_relation="but", has_contrast=True, has_negation_scope="nadie" in c_parts[0].lower()),
+                            DiscourseUnit(id=base_id, text=c_parts[1], unit_type="question_indirect", discourse_relation="elaboration", is_embedded=True, rhetorical_function="identity"),
+                        ]
+                return before_units + [DiscourseUnit(id=base_id, text=after, unit_type="contrast", discourse_relation="but", has_contrast=True)]
 
         # 5b. Subordinadas causales ("porque") y simultáneas ("mientras")
         porque_match = re.search(r"\bporque\b", clean_sent, re.IGNORECASE)

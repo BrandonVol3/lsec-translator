@@ -8,7 +8,9 @@ sin lanzar errores 404.
 
 from __future__ import annotations
 
+import copy
 import csv
+import functools
 import json
 import logging
 import os
@@ -35,6 +37,14 @@ from app.services.animation_fingerspelling_service import (
 logger = logging.getLogger(__name__)
 
 _v26_lexical_index: Optional[Dict[str, Any]] = None
+
+
+@functools.lru_cache(maxsize=256)
+def _load_raw_animation_json_cached(path_str: str, mtime_ns: int) -> Dict[str, Any]:
+    """Lee un archivo animation.json desde disco con caché LRU en memoria validada por mtime_ns."""
+    with open(path_str, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    return data if isinstance(data, dict) else {}
 
 # Preferencias explícitas para homónimos con calificadores de dominio en el catálogo
 _PREFERRED_HOMONYMS: Dict[str, str] = {
@@ -132,53 +142,31 @@ def _expand_gender_token(token: str) -> List[str]:
     t = token.strip()
     if not t:
         return []
-    results = [t]
     m = re.match(r"^(.+?)\((a|as|o|os|es)\)$", t, flags=re.IGNORECASE)
-    if m:
-        stem = m.group(1).strip()
-        suf = m.group(2).lower()
-        results = [stem]
-        stem_low = stem.lower()
-        if suf == "a":
-            if stem_low.endswith("o"):
-                results.append(stem[:-1] + "a")
-            else:
-                results.append(stem + "a")
-        elif suf == "as":
-            if stem_low.endswith("os"):
-                results.append(stem[:-2] + "as")
-                results.append(stem[:-1])
-                results.append(stem[:-2] + "a")
-            elif stem_low.endswith("o"):
-                results.append(stem[:-1] + "a")
-                results.append(stem + "s")
-                results.append(stem[:-1] + "as")
-            else:
-                results.append(stem + "as")
-        elif suf in ("o", "os"):
-            results.append(stem + suf)
-    return results
+    if not m:
+        return [t]
+    stem, suf = m.group(1).strip(), m.group(2).lower()
+    stem_low = stem.lower()
+    if suf == "a":
+        return [stem, (stem[:-1] if stem_low.endswith("o") else stem) + "a"]
+    if suf == "as":
+        if stem_low.endswith("os"):
+            return [stem, stem[:-2] + "as", stem[:-1], stem[:-2] + "a"]
+        if stem_low.endswith("o"):
+            return [stem, stem[:-1] + "a", stem + "s", stem[:-1] + "as"]
+        return [stem, stem + "as"]
+    return [stem, stem + suf] if suf in ("o", "os") else [stem]
 
 
 def parse_sign_title_tokens(folder_name: str) -> Tuple[List[str], List[str]]:
-    """
-    Extrae tokens de cabecera (head) y sinónimos/partes de un nombre de carpeta v2.6.
-    Soporta separadores ',', '/', ';', doble espacio ('Escoger  Elegir'), signos '¿?¡!',
-    sufijos '(1)', '__2' y expansiones de género '(a)', '(as)'.
-    """
-    cleaned = re.sub(r"[¿?¡!]", "", folder_name).strip()
-    cleaned = re.sub(r"__\d+$", "", cleaned).strip()
-    cleaned = re.sub(r"\(\d+\)$", "", cleaned).strip()
-
+    """Extrae tokens de cabecera (head) y sinónimos/partes de un nombre de carpeta v2.6."""
+    cleaned = re.sub(r"\(\d+\)$", "", re.sub(r"__\d+$", "", re.sub(r"[¿?¡!]", "", folder_name).strip()).strip()).strip()
     if re.search(r",\s*a$", cleaned, flags=re.IGNORECASE):
-        base = re.sub(r",\s*a$", "", cleaned, flags=re.IGNORECASE).strip()
-        expanded = _expand_gender_token(f"{base}(a)")
+        expanded = _expand_gender_token(f"{re.sub(r',\s*a$', '', cleaned, flags=re.IGNORECASE).strip()}(a)")
         return expanded, expanded
-
     raw_parts = [p.strip() for p in re.split(r"[,/;]|\s{2,}", cleaned) if p.strip()]
     head_tokens: List[str] = []
     all_tokens: List[str] = []
-
     for idx, part in enumerate(raw_parts):
         part_clean = re.sub(r"\(\d+\)$", "", part).strip()
         part_no_desc = re.sub(r"\([^)]{3,}\)", "", part_clean).strip()
@@ -190,8 +178,24 @@ def parse_sign_title_tokens(folder_name: str) -> Tuple[List[str], List[str]]:
                 head_tokens.append(cand)
             if cand not in all_tokens:
                 all_tokens.append(cand)
-
     return head_tokens, all_tokens
+
+
+def _scan_anim_folders(base_dir: Optional[Path]) -> Tuple[Dict[str, Path], int]:
+    """Escanea un directorio de animaciones VRM y devuelve el mapa NFC -> Path junto al conteo bruto."""
+    folders: Dict[str, Path] = {}
+    raw_count = 0
+    if base_dir and base_dir.is_dir():
+        try:
+            for entry in os.scandir(base_dir):
+                if entry.is_dir() and not entry.name.startswith(".") and (Path(entry.path) / "animation.json").is_file():
+                    raw_count += 1
+                    nfc_name = unicodedata.normalize("NFC", entry.name)
+                    if nfc_name not in folders or unicodedata.is_normalized("NFC", entry.name):
+                        folders[nfc_name] = Path(entry.path)
+        except Exception as exc:
+            logger.warning("Error escaneando %s: %s", base_dir, exc)
+    return folders, raw_count
 
 
 def _build_v26_lexical_index() -> Dict[str, Any]:
@@ -199,11 +203,7 @@ def _build_v26_lexical_index() -> Dict[str, Any]:
     global _v26_lexical_index
     if _v26_lexical_index is not None:
         return _v26_lexical_index
-
-    v27_dir = get_v27_dir()
-    v26_dir = get_v26_dir()
-    v25_dir = get_v25_dir()
-
+    v27_dir, v26_dir, v25_dir = get_v27_dir(), get_v26_dir(), get_v25_dir()
     qa_map: Dict[str, Dict[str, Any]] = {}
     qa_norm_map: Dict[str, Dict[str, Any]] = {}
     for qa_src_dir in (v26_dir, v27_dir):
@@ -213,111 +213,39 @@ def _build_v26_lexical_index() -> Dict[str, Any]:
                     for row in csv.DictReader(f):
                         s_name = unicodedata.normalize("NFC", (row.get("sign") or "").strip())
                         if s_name:
-                            merged_row = dict(qa_map.get(s_name, {}))
-                            merged_row.update({k: v for k, v in row.items() if v is not None and v != ""})
+                            merged_row = dict(qa_map.get(s_name, {}), **{k: v for k, v in row.items() if v is not None and v != ""})
                             qa_map[s_name] = merged_row
                             qa_norm_map[normalize_text(s_name)] = merged_row
             except Exception as exc:
                 logger.warning("No se pudo leer qa_summary.csv de %s: %s", qa_src_dir, exc)
 
-    v27_folders: Dict[str, Path] = {}
-    v26_folders: Dict[str, Path] = {}
-    v25_folders: Dict[str, Path] = {}
-    raw_v27_count = 0
-    raw_v26_count = 0
-    raw_v25_count = 0
-
-    if v27_dir and v27_dir.is_dir():
-        try:
-            for entry in os.scandir(v27_dir):
-                if entry.is_dir() and not entry.name.startswith("."):
-                    anim_p = Path(entry.path) / "animation.json"
-                    if anim_p.is_file():
-                        raw_v27_count += 1
-                        nfc_name = unicodedata.normalize("NFC", entry.name)
-                        if nfc_name not in v27_folders or unicodedata.is_normalized("NFC", entry.name):
-                            v27_folders[nfc_name] = Path(entry.path)
-        except Exception as exc:
-            logger.warning("Error escaneando v27_dir: %s", exc)
-
-    if v26_dir and v26_dir.is_dir():
-        try:
-            for entry in os.scandir(v26_dir):
-                if entry.is_dir() and not entry.name.startswith("."):
-                    anim_p = Path(entry.path) / "animation.json"
-                    if anim_p.is_file():
-                        raw_v26_count += 1
-                        nfc_name = unicodedata.normalize("NFC", entry.name)
-                        if nfc_name not in v26_folders or unicodedata.is_normalized("NFC", entry.name):
-                            v26_folders[nfc_name] = Path(entry.path)
-        except Exception as exc:
-            logger.warning("Error escaneando v26_dir: %s", exc)
-
-    if v25_dir and v25_dir.is_dir():
-        try:
-            for entry in os.scandir(v25_dir):
-                if entry.is_dir() and not entry.name.startswith("."):
-                    anim_p = Path(entry.path) / "animation.json"
-                    if anim_p.is_file():
-                        raw_v25_count += 1
-                        nfc_name = unicodedata.normalize("NFC", entry.name)
-                        if nfc_name not in v25_folders or unicodedata.is_normalized("NFC", entry.name):
-                            v25_folders[nfc_name] = Path(entry.path)
-        except Exception as exc:
-            logger.warning("Error escaneando v25_dir: %s", exc)
-
-    all_canonical_names = sorted(set(v27_folders.keys()) | set(v26_folders.keys()) | set(v25_folders.keys()))
-
+    v27_folders, raw_v27_count = _scan_anim_folders(v27_dir)
+    v26_folders, raw_v26_count = _scan_anim_folders(v26_dir)
+    v25_folders, raw_v25_count = _scan_anim_folders(v25_dir)
+    all_canonical_names = sorted(set(v27_folders) | set(v26_folders) | set(v25_folders))
     exact_map: Dict[str, str] = {}
     head_map: Dict[str, List[str]] = {}
     part_map: Dict[str, List[str]] = {}
-
     for canonical in all_canonical_names:
-        norm_full = normalize_text(canonical)
-        if norm_full and norm_full not in exact_map:
-            exact_map[norm_full] = canonical
-
-        cleaned = re.sub(r"[¿?¡!]", "", canonical).strip()
-        cleaned = re.sub(r"__\d+$", "", cleaned).strip()
-        norm_cleaned = normalize_text(cleaned)
-        if norm_cleaned and norm_cleaned not in exact_map:
-            exact_map[norm_cleaned] = canonical
-
+        for variant_str in (canonical, re.sub(r"__\d+$", "", re.sub(r"[¿?¡!]", "", canonical).strip()).strip()):
+            nk = normalize_text(variant_str)
+            if nk and nk not in exact_map:
+                exact_map[nk] = canonical
         heads, parts = parse_sign_title_tokens(canonical)
         for h in heads:
-            nh = normalize_text(h)
-            if nh:
-                head_map.setdefault(nh, []).append(canonical)
+            if normalize_text(h):
+                head_map.setdefault(normalize_text(h), []).append(canonical)
         for p in parts:
-            np = normalize_text(p)
-            if np:
-                part_map.setdefault(np, []).append(canonical)
+            if normalize_text(p):
+                part_map.setdefault(normalize_text(p), []).append(canonical)
 
     _v26_lexical_index = {
-        "v27_folders": v27_folders,
-        "v26_folders": v26_folders,
-        "v25_folders": v25_folders,
-        "qa_map": qa_map,
-        "qa_norm_map": qa_norm_map,
-        "exact_map": exact_map,
-        "head_map": head_map,
-        "part_map": part_map,
-        "total_v27": raw_v27_count,
-        "unique_v27": len(v27_folders),
-        "total_v26": raw_v26_count,
-        "unique_v26": len(v26_folders),
-        "total_v25": raw_v25_count,
-        "unique_v25": len(v25_folders),
+        "v27_folders": v27_folders, "v26_folders": v26_folders, "v25_folders": v25_folders,
+        "qa_map": qa_map, "qa_norm_map": qa_norm_map, "exact_map": exact_map, "head_map": head_map, "part_map": part_map,
+        "total_v27": raw_v27_count, "unique_v27": len(v27_folders), "total_v26": raw_v26_count, "unique_v26": len(v26_folders),
+        "total_v25": raw_v25_count, "unique_v25": len(v25_folders),
     }
-    logger.info(
-        "✓ Índice léxico v2.7/v2.6 construido: %d carpetas v2.7, %d carpetas v2.6 (%d únicas NFC), %d exactas, %d cabeceras, %d partes",
-        raw_v27_count,
-        raw_v26_count,
-        len(v26_folders),
-        len(exact_map),
-        len(head_map),
-        len(part_map),
-    )
+    logger.info("✓ Índice léxico v2.7/v2.6 construido: %d carpetas v2.7, %d carpetas v2.6 (%d únicas NFC)", raw_v27_count, raw_v26_count, len(v26_folders))
     return _v26_lexical_index
 
 
@@ -685,9 +613,10 @@ def resolve_gloss_to_sign(
     anim_payload: Optional[Dict[str, Any]] = None
     if include_animation:
         try:
-            with open(anim_path, "r", encoding="utf-8") as f:
-                anim_payload = json.load(f)
-            if isinstance(anim_payload, dict):
+            stat_res = anim_path.stat()
+            cached_anim = _load_raw_animation_json_cached(str(anim_path), int(stat_res.st_mtime_ns))
+            anim_payload = copy.deepcopy(cached_anim)
+            if isinstance(anim_payload, dict) and anim_payload:
                 cat_meta = get_sign_metadata(resolved_sign)
                 cnm_ver = getattr(lsec_cnm, "CNM_STANDARD_VERSION", "1.1")
                 if lsec_cnm is not None and anim_payload.get("metadata", {}).get("nonManualStandard", {}).get("version") != cnm_ver:

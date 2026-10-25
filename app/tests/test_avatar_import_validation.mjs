@@ -2,23 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  validateSignClip,
-  HUMAN_BONE_NAMES,
-  CLIP_STATUSES,
-  REST_POSE,
-  trimSignClipStroke,
-  convertDirectAnimationToSignClip,
-  detectDatasetQuaternionLayout as schemaDetectLayout,
+  validateSignClip, HUMAN_BONE_NAMES, CLIP_STATUSES, REST_POSE, trimSignClipStroke,
+  convertDirectAnimationToSignClip, detectDatasetQuaternionLayout as schemaDetectLayout,
   normalizeBoneName as schemaNormalizeBone
 } from '../static/js/avatar/sign-animation-schema.js';
 import {
-  SequenceCompiler,
-  interpolateSO3HermiteC1,
-  quatAngleDeg,
-  quatNormalize,
-  quatMultiply,
-  quatConjugate,
-  quatLogRad
+  SequenceCompiler, interpolateSO3HermiteC1, quatAngleDeg, quatNormalize, quatMultiply, quatConjugate, quatLogRad
 } from '../static/js/avatar/sequence-compiler.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -44,70 +33,27 @@ console.log('PASS: validateSignClip y HUMAN_BONE_NAMES están correctamente impo
 const BONE_LOWER_MAP = new Map((HUMAN_BONE_NAMES || []).map(b => [b.toLowerCase(), b]));
 
 const BONE_ALIASES = {
-  'j_bip_c_hips': 'hips',
-  'j_bip_c_spine': 'spine',
-  'j_bip_c_chest': 'chest',
-  'j_bip_c_upperchest': 'upperChest',
-  'j_bip_c_neck': 'neck',
-  'j_bip_c_head': 'head',
-  'j_bip_l_eye': 'leftEye',
-  'j_bip_r_eye': 'rightEye',
-  'j_bip_l_shoulder': 'leftShoulder',
-  'j_bip_l_upperarm': 'leftUpperArm',
-  'j_bip_l_lowerarm': 'leftLowerArm',
-  'j_bip_l_hand': 'leftHand',
-  'j_bip_l_thumb1': 'leftThumbMetacarpal',
-  'j_bip_l_thumb2': 'leftThumbProximal',
-  'j_bip_l_thumb3': 'leftThumbDistal',
-  'j_bip_l_index1': 'leftIndexProximal',
-  'j_bip_l_index2': 'leftIndexIntermediate',
-  'j_bip_l_index3': 'leftIndexDistal',
-  'j_bip_l_middle1': 'leftMiddleProximal',
-  'j_bip_l_middle2': 'leftMiddleIntermediate',
-  'j_bip_l_middle3': 'leftMiddleDistal',
-  'j_bip_l_ring1': 'leftRingProximal',
-  'j_bip_l_ring2': 'leftRingIntermediate',
-  'j_bip_l_ring3': 'leftRingDistal',
-  'j_bip_l_little1': 'leftLittleProximal',
-  'j_bip_l_little2': 'leftLittleIntermediate',
-  'j_bip_l_little3': 'leftLittleDistal',
-  'j_bip_r_shoulder': 'rightShoulder',
-  'j_bip_r_upperarm': 'rightUpperArm',
-  'j_bip_r_lowerarm': 'rightLowerArm',
-  'j_bip_r_hand': 'rightHand',
-  'j_bip_r_thumb1': 'rightThumbMetacarpal',
-  'j_bip_r_thumb2': 'rightThumbProximal',
-  'j_bip_r_thumb3': 'rightThumbDistal',
-  'j_bip_r_index1': 'rightIndexProximal',
-  'j_bip_r_index2': 'rightIndexIntermediate',
-  'j_bip_r_index3': 'rightIndexDistal',
-  'j_bip_r_middle1': 'rightMiddleProximal',
-  'j_bip_r_middle2': 'rightMiddleIntermediate',
-  'j_bip_r_middle3': 'rightMiddleDistal',
-  'j_bip_r_ring1': 'rightRingProximal',
-  'j_bip_r_ring2': 'rightRingIntermediate',
-  'j_bip_r_ring3': 'rightRingDistal',
-  'j_bip_r_little1': 'rightLittleProximal',
-  'j_bip_r_little2': 'rightLittleIntermediate',
-  'j_bip_r_little3': 'rightLittleDistal',
-  'wrist': 'rightHand',
-  'r_wrist': 'rightHand',
-  'l_wrist': 'leftHand',
-  'righthandthumb1': 'rightThumbMetacarpal',
-  'righthandthumb2': 'rightThumbProximal',
-  'righthandthumb3': 'rightThumbDistal',
-  'righthandindex1': 'rightIndexProximal',
-  'righthandindex2': 'rightIndexIntermediate',
-  'righthandindex3': 'rightIndexDistal',
-  'righthandmiddle1': 'rightMiddleProximal',
-  'righthandmiddle2': 'rightMiddleIntermediate',
-  'righthandmiddle3': 'rightMiddleDistal',
-  'righthandring1': 'rightRingProximal',
-  'righthandring2': 'rightRingIntermediate',
-  'righthandring3': 'rightRingDistal',
-  'righthandpinky1': 'rightLittleProximal',
-  'righthandpinky2': 'rightLittleIntermediate',
-  'righthandpinky3': 'rightLittleDistal'
+  'j_bip_c_hips': 'hips', 'j_bip_c_spine': 'spine', 'j_bip_c_chest': 'chest',
+  'j_bip_c_upperchest': 'upperChest', 'j_bip_c_neck': 'neck', 'j_bip_c_head': 'head',
+  'j_bip_l_eye': 'leftEye', 'j_bip_r_eye': 'rightEye', 'j_bip_l_shoulder': 'leftShoulder',
+  'j_bip_l_upperarm': 'leftUpperArm', 'j_bip_l_lowerarm': 'leftLowerArm', 'j_bip_l_hand': 'leftHand',
+  'j_bip_l_thumb1': 'leftThumbMetacarpal', 'j_bip_l_thumb2': 'leftThumbProximal', 'j_bip_l_thumb3': 'leftThumbDistal',
+  'j_bip_l_index1': 'leftIndexProximal', 'j_bip_l_index2': 'leftIndexIntermediate', 'j_bip_l_index3': 'leftIndexDistal',
+  'j_bip_l_middle1': 'leftMiddleProximal', 'j_bip_l_middle2': 'leftMiddleIntermediate', 'j_bip_l_middle3': 'leftMiddleDistal',
+  'j_bip_l_ring1': 'leftRingProximal', 'j_bip_l_ring2': 'leftRingIntermediate', 'j_bip_l_ring3': 'leftRingDistal',
+  'j_bip_l_little1': 'leftLittleProximal', 'j_bip_l_little2': 'leftLittleIntermediate', 'j_bip_l_little3': 'leftLittleDistal',
+  'j_bip_r_shoulder': 'rightShoulder', 'j_bip_r_upperarm': 'rightUpperArm', 'j_bip_r_lowerarm': 'rightLowerArm',
+  'j_bip_r_hand': 'rightHand', 'j_bip_r_thumb1': 'rightThumbMetacarpal', 'j_bip_r_thumb2': 'rightThumbProximal',
+  'j_bip_r_thumb3': 'rightThumbDistal', 'j_bip_r_index1': 'rightIndexProximal', 'j_bip_r_index2': 'rightIndexIntermediate',
+  'j_bip_r_index3': 'rightIndexDistal', 'j_bip_r_middle1': 'rightMiddleProximal', 'j_bip_r_middle2': 'rightMiddleIntermediate',
+  'j_bip_r_middle3': 'rightMiddleDistal', 'j_bip_r_ring1': 'rightRingProximal', 'j_bip_r_ring2': 'rightRingIntermediate',
+  'j_bip_r_ring3': 'rightRingDistal', 'j_bip_r_little1': 'rightLittleProximal', 'j_bip_r_little2': 'rightLittleIntermediate',
+  'j_bip_r_little3': 'rightLittleDistal', 'wrist': 'rightHand', 'r_wrist': 'rightHand', 'l_wrist': 'leftHand',
+  'righthandthumb1': 'rightThumbMetacarpal', 'righthandthumb2': 'rightThumbProximal', 'righthandthumb3': 'rightThumbDistal',
+  'righthandindex1': 'rightIndexProximal', 'righthandindex2': 'rightIndexIntermediate', 'righthandindex3': 'rightIndexDistal',
+  'righthandmiddle1': 'rightMiddleProximal', 'righthandmiddle2': 'rightMiddleIntermediate', 'righthandmiddle3': 'rightMiddleDistal',
+  'righthandring1': 'rightRingProximal', 'righthandring2': 'rightRingIntermediate', 'righthandring3': 'rightRingDistal',
+  'righthandpinky1': 'rightLittleProximal', 'righthandpinky2': 'rightLittleIntermediate', 'righthandpinky3': 'rightLittleDistal'
 };
 
 function normalizeBoneName(name) {
@@ -125,13 +71,10 @@ function detectDatasetQuaternionLayout(data) {
   if (explicit === 'wxyz') return 'wxyz';
   if (explicit === 'xyzw') return 'xyzw';
 
-  let wxyzVotes = 0;
-  let xyzwVotes = 0;
-
+  let wxyzVotes = 0, xyzwVotes = 0;
   const voteQuat = (q) => {
     if (!Array.isArray(q) || q.length < 4) return;
-    const a = Number(q[0]) || 0;
-    const d = Number(q[3]) || 0;
+    const a = Number(q[0]) || 0, d = Number(q[3]) || 0;
     if (Math.abs(a) > 0.7 && Math.abs(d) < 0.35) wxyzVotes++;
     else if (Math.abs(d) > 0.7 && Math.abs(a) < 0.35) xyzwVotes++;
   };
@@ -139,72 +82,48 @@ function detectDatasetQuaternionLayout(data) {
   if (Array.isArray(data.frames)) {
     for (const f of data.frames.slice(0, 10)) {
       if (f && f.rotations && typeof f.rotations === 'object') {
-        for (const q of Object.values(f.rotations)) {
-          voteQuat(q);
-        }
+        for (const q of Object.values(f.rotations)) voteQuat(q);
       }
     }
   } else if (data.extractedTracks && typeof data.extractedTracks === 'object') {
     for (const track of Object.values(data.extractedTracks)) {
       if (track && Array.isArray(track.quaternions)) {
-        for (const q of track.quaternions.slice(0, 10)) {
-          voteQuat(q);
-        }
+        for (const q of track.quaternions.slice(0, 10)) voteQuat(q);
       }
     }
   }
-
   return (wxyzVotes > xyzwVotes) ? 'wxyz' : 'xyzw';
 }
 
 class TestControllerHarness {
   constructor() {
-    this.clips = {};
-    this.categories = [];
-    this.selectedClipId = null;
-    this.lastError = null;
+    this.clips = {}; this.categories = []; this.selectedClipId = null; this.lastError = null;
     this.player = null; // Permite probar robustez con player null
   }
-
   renderClipOptions() {}
 
   async prepareSelectedClip() {
     let clip = this.clips[this.selectedClipId];
     if (typeof clip === 'function') {
-      try {
-        clip = await clip();
-        this.clips[this.selectedClipId] = clip;
-      } catch (e) {
-        console.error('Error al resolver clip dinámico:', e);
-      }
+      try { clip = await clip(); this.clips[this.selectedClipId] = clip; }
+      catch (e) { console.error('Error al resolver clip dinámico:', e); }
     }
     if (!clip) clip = this.clips.NEUTRAL;
-    if (this.player) {
-      this.player.loadClip(clip);
-    }
-    const duration = this.player ? this.player.getDuration() : ((clip && clip.durationMs ? clip.durationMs / 1000 : 0));
-    return duration;
+    if (this.player) this.player.loadClip(clip);
+    return this.player ? this.player.getDuration() : ((clip && clip.durationMs ? clip.durationMs / 1000 : 0));
   }
 
   convertHamerAnimationToSignClip(data, defaultName = 'SEÑA_LSEC') {
     if (!data || typeof data !== 'object') return data;
-
     const meta = data.metadata || {};
     const signName = (meta.sign && typeof meta.sign === 'string' && meta.sign.trim())
       || (data.sign && typeof data.sign === 'string' && data.sign.trim())
       || (typeof defaultName === 'string' && defaultName.trim() ? defaultName.trim() : 'SEÑA_LSEC');
     const fps = Number(meta.fps || data.fps || data.FPS) || 60;
-    const totalFrames = Array.isArray(data.frames)
-      ? data.frames.length
-      : (Number(data.totalFrames) || 0);
-    const durationSec = Number(meta.duration || data.duration)
-      || (totalFrames > 0 ? (totalFrames - 1) / fps : 1.0);
-
-    const detectedLayout = detectDatasetQuaternionLayout(data);
-    const isWxyz = (detectedLayout === 'wxyz');
-
-    const boneMap = new Map();
-    const exprMap = new Map();
+    const totalFrames = Array.isArray(data.frames) ? data.frames.length : (Number(data.totalFrames) || 0);
+    const durationSec = Number(meta.duration || data.duration) || (totalFrames > 0 ? (totalFrames - 1) / fps : 1.0);
+    const isWxyz = (detectDatasetQuaternionLayout(data) === 'wxyz');
+    const boneMap = new Map(), exprMap = new Map();
     let maxTimeFound = 0;
 
     const sanitizeQuat = (raw) => {
@@ -212,10 +131,7 @@ class TestControllerHarness {
       const vals = raw.slice(0, 4).map(v => (typeof v === 'number' && Number.isFinite(v) ? v : 0));
       const [x, y, z, w] = isWxyz ? [vals[1], vals[2], vals[3], vals[0]] : [vals[0], vals[1], vals[2], vals[3]];
       const norm = Math.hypot(x, y, z, w);
-      if (!Number.isFinite(norm) || norm < 0.0001) {
-        return [0, 0, 0, 1];
-      }
-      return [x / norm, y / norm, z / norm, w / norm];
+      return (!Number.isFinite(norm) || norm < 0.0001) ? [0, 0, 0, 1] : [x / norm, y / norm, z / norm, w / norm];
     };
 
     if (Array.isArray(data.frames)) {
@@ -229,30 +145,21 @@ class TestControllerHarness {
           for (let [rawBone, q] of Object.entries(f.rotations)) {
             if (!Array.isArray(q) || q.length < 4) continue;
             const bone = normalizeBoneName(rawBone);
-            if (!boneMap.has(bone)) {
-              boneMap.set(bone, { boneName: bone, times: [], rotations: [] });
-            }
+            if (!boneMap.has(bone)) boneMap.set(bone, { boneName: bone, times: [], rotations: [] });
             const bEntry = boneMap.get(bone);
             bEntry.times.push(t);
             const [qx, qy, qz, qw] = sanitizeQuat(q);
             bEntry.rotations.push(qx, qy, qz, qw);
           }
         }
-
         const exprSource = f.expressions || f.blendshapes;
         if (exprSource && typeof exprSource === 'object') {
           for (const [expr, val] of Object.entries(exprSource)) {
             if (typeof val !== 'number' || !Number.isFinite(val)) continue;
-            let exprName = expr;
-            if (expr === 'blink_l') exprName = 'blinkLeft';
-            else if (expr === 'blink_r') exprName = 'blinkRight';
-
-            if (!exprMap.has(exprName)) {
-              exprMap.set(exprName, { expressionName: exprName, times: [], values: [] });
-            }
+            const exprName = expr === 'blink_l' ? 'blinkLeft' : (expr === 'blink_r' ? 'blinkRight' : expr);
+            if (!exprMap.has(exprName)) exprMap.set(exprName, { expressionName: exprName, times: [], values: [] });
             const eEntry = exprMap.get(exprName);
-            eEntry.times.push(t);
-            eEntry.values.push(Math.max(0, Math.min(1, val)));
+            eEntry.times.push(t); eEntry.values.push(Math.max(0, Math.min(1, val)));
           }
         }
       }
@@ -261,77 +168,47 @@ class TestControllerHarness {
         if (!track || typeof track !== 'object') continue;
         const bone = normalizeBoneName(rawBone);
         const times = Array.isArray(track.times) ? track.times : [];
-        if (times.length > 0) {
-          const lastT = times[times.length - 1];
-          if (typeof lastT === 'number' && lastT > maxTimeFound) maxTimeFound = lastT;
+        if (times.length > 0 && typeof times[times.length - 1] === 'number' && times[times.length - 1] > maxTimeFound) {
+          maxTimeFound = times[times.length - 1];
         }
-
         const rotations = [];
         if (Array.isArray(track.rotations)) {
           for (let k = 0; k < track.rotations.length; k += 4) {
-            const rawSlice = [track.rotations[k], track.rotations[k + 1], track.rotations[k + 2], track.rotations[k + 3]];
-            const [qx, qy, qz, qw] = sanitizeQuat(rawSlice);
+            const [qx, qy, qz, qw] = sanitizeQuat(track.rotations.slice(k, k + 4));
             rotations.push(qx, qy, qz, qw);
           }
         } else if (Array.isArray(track.quaternions)) {
           for (let k = 0; k < track.quaternions.length; k++) {
-            const item = track.quaternions[k];
-            const [qx, qy, qz, qw] = sanitizeQuat(item);
+            const [qx, qy, qz, qw] = sanitizeQuat(track.quaternions[k]);
             rotations.push(qx, qy, qz, qw);
           }
         }
-        if (times.length > 0 && rotations.length === times.length * 4) {
-          boneMap.set(bone, { boneName: bone, times, rotations });
-        }
+        if (times.length > 0 && rotations.length === times.length * 4) boneMap.set(bone, { boneName: bone, times, rotations });
       }
     }
 
     const finalDurationSec = Math.max(durationSec, maxTimeFound);
     const durationMs = Math.max(100, Math.round((finalDurationSec + 0.15) * 1000));
-
     const rawSlug = meta.slug || data.slug || signName.toLowerCase().replace(/[^a-z0-9_-]/gi, '_').replace(/^_+|_+$/g, '');
     const clipId = (rawSlug && rawSlug.length > 0) ? rawSlug : 'custom_clip';
 
-    const boneTracks = Array.from(boneMap.values());
-    const expressionTracks = Array.from(exprMap.values());
-
     return {
-      clipId: clipId,
-      gloss: signName,
-      durationMs: durationMs,
-      status: 'DEMO_ONLY',
-      validationStatus: 'EXPERIMENTAL',
-      metadata: {
-        isValidatedLSEC: false,
-        source: 'HaMeR Pipeline',
-        quaternionOrder: 'xyzw',
-        ...meta
-      },
-      boneTracks,
-      expressionTracks
+      clipId, gloss: signName, durationMs, status: 'DEMO_ONLY', validationStatus: 'EXPERIMENTAL',
+      metadata: { isValidatedLSEC: false, source: 'HaMeR Pipeline', quaternionOrder: 'xyzw', ...meta },
+      boneTracks: Array.from(boneMap.values()), expressionTracks: Array.from(exprMap.values())
     };
   }
 
   async importCustomClip(file) {
     if (!file) return null;
-
     try {
       let customClip;
       const fileName = (file && typeof file === 'object' && file.name) ? file.name : 'custom_clip.json';
-
       if (typeof file === 'string') {
-        try {
-          customClip = JSON.parse(file);
-        } catch (jsonErr) {
-          throw new Error('El archivo no contiene un formato JSON válido.');
-        }
+        try { customClip = JSON.parse(file); } catch { throw new Error('El archivo no contiene un formato JSON válido.'); }
       } else if (file && typeof file.text === 'function') {
         const text = await file.text();
-        try {
-          customClip = JSON.parse(text);
-        } catch (jsonErr) {
-          throw new Error('El archivo no contiene un formato JSON válido.');
-        }
+        try { customClip = JSON.parse(text); } catch { throw new Error('El archivo no contiene un formato JSON válido.'); }
       } else if (file && typeof file === 'object') {
         customClip = JSON.parse(JSON.stringify(file));
       } else {
@@ -341,49 +218,29 @@ class TestControllerHarness {
       if (customClip && !customClip.boneTracks && (Array.isArray(customClip.frames) || customClip.extractedTracks)) {
         customClip = this.convertHamerAnimationToSignClip(customClip, fileName.replace(/\.[^/.]+$/, ''));
       }
-
       if (customClip && typeof customClip === 'object') {
-        if (!customClip.clipId && customClip.gloss) {
-          customClip.clipId = customClip.gloss.toLowerCase().replace(/[^a-z0-9_-]/gi, '_');
-        } else if (!customClip.clipId) {
-          customClip.clipId = `CUSTOM_${Date.now()}`;
-        }
-        if (!customClip.gloss && customClip.clipId) {
-          customClip.gloss = customClip.clipId.toUpperCase();
-        } else if (!customClip.gloss) {
-          customClip.gloss = 'PERSONALIZADA';
-        }
+        if (!customClip.clipId && customClip.gloss) customClip.clipId = customClip.gloss.toLowerCase().replace(/[^a-z0-9_-]/gi, '_');
+        else if (!customClip.clipId) customClip.clipId = `CUSTOM_${Date.now()}`;
+        if (!customClip.gloss && customClip.clipId) customClip.gloss = customClip.clipId.toUpperCase();
+        else if (!customClip.gloss) customClip.gloss = 'PERSONALIZADA';
         if (typeof customClip.durationMs !== 'number' || customClip.durationMs <= 0) {
           let maxT = 0;
           if (Array.isArray(customClip.boneTracks)) {
             customClip.boneTracks.forEach(tr => {
-              if (Array.isArray(tr.times) && tr.times.length > 0) {
-                const tLast = tr.times[tr.times.length - 1];
-                if (typeof tLast === 'number' && tLast > maxT) maxT = tLast;
-              }
+              if (Array.isArray(tr.times) && tr.times.length > 0 && tr.times[tr.times.length - 1] > maxT) maxT = tr.times[tr.times.length - 1];
             });
           }
-          if (maxT > 0) {
-            customClip.durationMs = Math.round((maxT + 0.15) * 1000);
-          }
+          if (maxT > 0) customClip.durationMs = Math.round((maxT + 0.15) * 1000);
         }
       }
 
       const validation = validateSignClip(customClip);
-      if (!validation.valid) {
-        const errorList = validation.errors.join('\n- ');
-        throw new Error(`Estructura de seña incompatible:\n- ${errorList}`);
-      }
-
+      if (!validation.valid) throw new Error(`Estructura de seña incompatible:\n- ${validation.errors.join('\n- ')}`);
       const clipId = customClip.clipId || `CUSTOM_${Date.now()}`;
       this.clips[clipId] = customClip;
       this.selectedClipId = clipId;
-
       await this.prepareSelectedClip();
-      if (this.player) {
-        this.player.play(customClip);
-      }
-
+      if (this.player) this.player.play(customClip);
       return customClip;
     } catch (err) {
       this.lastError = err.message;
@@ -396,36 +253,10 @@ const harness = new TestControllerHarness();
 
 console.log('--- TEST 2: Validar conversión de animation.json estándar de HaMeR Pipeline (xyzw) ---');
 const sampleHamer = {
-  metadata: {
-    sign: 'HOLA_COLAB',
-    slug: 'hola_colab',
-    fps: 30,
-    duration: 1.0,
-    source: 'Colab HaMeR'
-  },
+  metadata: { sign: 'HOLA_COLAB', slug: 'hola_colab', fps: 30, duration: 1.0, source: 'Colab HaMeR' },
   frames: [
-    {
-      time: 0.0,
-      rotations: {
-        rightUpperArm: [0.0, 0.0, 0.0, 1.0],
-        rightLowerArm: [0.1, 0.2, 0.3, 0.9]
-      },
-      expressions: {
-        happy: 0.8,
-        blink_l: 0.5
-      }
-    },
-    {
-      time: 0.5,
-      rotations: {
-        rightUpperArm: [0.0, 0.3826834, 0.0, 0.9238795],
-        rightLowerArm: [0.2, 0.3, 0.4, 0.8]
-      },
-      expressions: {
-        happy: 1.0,
-        blink_l: 0.0
-      }
-    }
+    { time: 0.0, rotations: { rightUpperArm: [0.0, 0.0, 0.0, 1.0], rightLowerArm: [0.1, 0.2, 0.3, 0.9] }, expressions: { happy: 0.8, blink_l: 0.5 } },
+    { time: 0.5, rotations: { rightUpperArm: [0.0, 0.3826834, 0.0, 0.9238795], rightLowerArm: [0.2, 0.3, 0.4, 0.8] }, expressions: { happy: 1.0, blink_l: 0.0 } }
   ]
 };
 
@@ -439,14 +270,7 @@ console.log('PASS: Clip convertido válido.');
 console.log('--- TEST 3: Manejo de cuaterniones degenerados o desnormalizados ---');
 const degenerateHamer = {
   totalFrames: 1,
-  frames: [
-    {
-      time: 0.0,
-      rotations: {
-        rightHand: [0.0, 0.0, 0.0, 0.0]
-      }
-    }
-  ]
+  frames: [{ time: 0.0, rotations: { rightHand: [0.0, 0.0, 0.0, 0.0] } }]
 };
 const convertedDegen = harness.convertHamerAnimationToSignClip(degenerateHamer, 'DEGEN_TEST');
 const valDegen = validateSignClip(convertedDegen);

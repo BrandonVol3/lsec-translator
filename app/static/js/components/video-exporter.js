@@ -765,9 +765,6 @@ class CompositeVideoExporter {
 
   /**
    * Renderiza los subtítulos normalizados utilizando el motor unificado SubtitleEngine.
-   * Aplica la personalización exacta de cada segmento (tipografía, color, opacidad,
-   * contorno, sombra, alineación, posición X/Y, márgenes y área segura) de manera idéntica
-   * a la vista previa, sin pintar la guía de área segura sobre el video final.
    */
   drawSubtitles(ctx, width, height, currentTime, segments, opts = {}) {
     const segList = (window.appState && window.appState.state.project?.segments) || segments || [];
@@ -776,42 +773,26 @@ class CompositeVideoExporter {
       const et = s.end_seconds !== undefined ? s.end_seconds : (s.end_time || 0);
       return currentTime >= st && currentTime <= et;
     });
-
     if (!activeSeg) return;
-
     const globalStyle = (window.appState && window.appState.state?.overlays?.subtitleStyle) || null;
-    const effectiveStyle = (typeof SubtitleEngine !== 'undefined')
-      ? SubtitleEngine.resolveEffectiveStyle(activeSeg, globalStyle)
-      : {};
+    const effectiveStyle = (typeof SubtitleEngine !== 'undefined') ? SubtitleEngine.resolveEffectiveStyle(activeSeg, globalStyle) : {};
     const rawText = (typeof SubtitleEngine !== 'undefined' && typeof SubtitleEngine.formatAccessibleSubtitleText === 'function')
       ? SubtitleEngine.formatAccessibleSubtitleText(activeSeg, effectiveStyle)
       : (activeSeg.normalized_text || activeSeg.original_text || activeSeg.text || '').trim();
     if (!rawText) return;
-
     if (typeof SubtitleEngine !== 'undefined') {
       const layout = SubtitleEngine.calculateLayout(ctx, rawText, effectiveStyle, width, height, {
-        avoidPip: opts.includeInterpreter !== false,
-        pipPosition: opts.pipPosition || 'bottom-right'
+        avoidPip: opts.includeInterpreter !== false, pipPosition: opts.pipPosition || 'bottom-right'
       });
-
-      // Renderizar sobre el Canvas de exportación
-      SubtitleEngine.drawToCanvas(ctx, layout, rawText, effectiveStyle, {
-        currentTime,
-        words: activeSeg.words
-      });
+      SubtitleEngine.drawToCanvas(ctx, layout, rawText, effectiveStyle, { currentTime, words: activeSeg.words });
     } else {
-      // Fallback defensivo
       ctx.save();
-      const fontSize = Math.max(16, Math.round(height * 0.034));
-      ctx.font = `600 ${fontSize}px sans-serif`;
-      ctx.fillStyle = '#FFFFFF';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
+      ctx.font = `600 ${Math.max(16, Math.round(height * 0.034))}px sans-serif`;
+      ctx.fillStyle = '#FFFFFF'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(rawText, width / 2, height * 0.88);
       ctx.restore();
     }
   }
 }
 
-// Instancia global disponible en toda la aplicación
 window.compositeVideoExporter = new CompositeVideoExporter();

@@ -783,24 +783,15 @@ async function initAvatarConfig() {
         updateVerificationBadge();
         renderSignOptions(allSigns, allItems);
 
-        const defaultSign = allSigns.find(s => s === '¡Quieto!') ||
-                            allSigns.find(s => s.toLowerCase() === '¡quieto!') ||
-                            allSigns[0];
+        const defaultSign = allSigns.find(s => s === '¡Quieto!' || s.toLowerCase() === '¡quieto!') || allSigns[0];
         if (defaultSign) {
           if (selectEl) selectEl.value = defaultSign;
           setTimeout(() => playSign(defaultSign), 1000);
         }
       }
-    } catch (err) {
-      console.error('Error al obtener lista de animaciones y configuraciones manuales:', err);
-    }
-  } catch (err) {
-    console.error('Error inicializando /avatarconfig:', err);
-  }
+    } catch (err) { console.error('Error al obtener lista de animaciones y configuraciones manuales:', err); }
+  } catch (err) { console.error('Error inicializando /avatarconfig:', err); }
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initAvatarConfig);
-} else {
-  initAvatarConfig();
-}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initAvatarConfig);
+else initAvatarConfig();
