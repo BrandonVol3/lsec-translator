@@ -14,7 +14,10 @@ import {
   createNeutralClip,
   createSaludarDemoClip,
   createNegacionDemoClip,
-  createLunesSignClip
+  createLunesSignClip,
+  LSEC_FINGERSPELLING_GRAPHEMES,
+  createLSECFingerspellingSignClip,
+  createLSECFingerspellingWordClip
 } from './sign-clip-factory.js';
 import { defaultAnimationCache } from './animation-cache.js';
 import {
@@ -35,6 +38,7 @@ export class AvatarSyncController {
     this.clipRegistry = new Map();
     this.resolutionCache = new Map();
     this.clipCache = new Map();
+    this.inFlightRequests = new Map();
     this.initDefaultRegistry();
   }
 
@@ -114,6 +118,26 @@ export class AvatarSyncController {
       factory: createNegacionDemoClip
     });
 
+    // Registrar las 30 señas oficiales del alfabeto dactilológico LSEC (Pág. 10 PDF)
+    if (
+      typeof LSEC_FINGERSPELLING_GRAPHEMES !== 'undefined' &&
+      Array.isArray(LSEC_FINGERSPELLING_GRAPHEMES) &&
+      typeof createLSECFingerspellingSignClip === 'function'
+    ) {
+      for (const g of LSEC_FINGERSPELLING_GRAPHEMES) {
+        const clipId = `LSEC_DACT_${g === 'Ñ' ? 'NH' : g}_V1`;
+        const desc = {
+          clipId,
+          version: '1.0.0',
+          validationStatus: 'VALIDATED_BY_OFFICIAL_PDF_GUIDE',
+          factory: () => createLSECFingerspellingSignClip(g)
+        };
+        this.registerClip(`DACT_${g}`, desc);
+        this.registerClip(`LETRA_${g}`, desc);
+        this.registerClip(g, desc);
+      }
+    }
+
     // Cargar catálogo modular dinámico de clips LSEC (manifest.json)
     this.loadManifest('/static/assets/clips/manifest.json');
   }
@@ -189,76 +213,88 @@ export class AvatarSyncController {
       }
     }
 
+    // Evitar ráfagas de peticiones HTTP duplicadas en vuelo para la misma glosa
+    if (this.inFlightRequests.has(cacheKey)) {
+      return this.inFlightRequests.get(cacheKey);
+    }
+
     // 2. Consultar el endpoint libre de 404 (/api/animations-direct/resolve/{gloss})
     if (typeof fetch === 'function') {
-      try {
-        const resolveUrl = `/api/animations-direct/resolve/${encodeURIComponent(clean)}?version=${encodeURIComponent(verTag)}&include_animation=true`;
-        let res = await fetch(resolveUrl);
-        if (!res || !res.ok) {
-          res = await fetch(`/api/v1/animations/resolve/${encodeURIComponent(clean)}?version=${encodeURIComponent(verTag)}&include_animation=true`);
-        }
-
-        if (res && res.ok) {
-          const payload = await res.json();
-          const isEnvelope = payload && typeof payload === 'object' && ('found' in payload);
-          if (isEnvelope) {
-            this.resolutionCache.set(`${verPrefix}${normKey}`, {
-              found: Boolean(payload.found),
-              match_type: payload.match_type || 'none',
-              warning: payload.warning || null,
-              needs_review: Boolean(payload.needs_review),
-              resolved_gloss: payload.resolved_gloss || payload.sign || null,
-              version_served: payload.version_served || verTag,
-              is_fingerspelling: Boolean(payload.is_fingerspelling),
-              stroke: payload.stroke || null,
-              qa: payload.qa || null
-            });
-            if (!payload.found || !payload.animation) {
-              return null;
-            }
+      const reqPromise = (async () => {
+        try {
+          const resolveUrl = `/api/animations-direct/resolve/${encodeURIComponent(clean)}?version=${encodeURIComponent(verTag)}&include_animation=true`;
+          let res = await fetch(resolveUrl);
+          if (!res || !res.ok) {
+            res = await fetch(`/api/v1/animations/resolve/${encodeURIComponent(clean)}?version=${encodeURIComponent(verTag)}&include_animation=true`);
           }
 
-          const rawData = isEnvelope ? payload.animation : payload;
-          const resolvedGloss = isEnvelope ? (payload.resolved_gloss || payload.sign || clean) : clean;
-
-          if (rawData && typeof rawData === 'object') {
-            if (isEnvelope && payload.stroke) {
-              rawData.metadata = rawData.metadata || {};
-              if (!rawData.metadata.stroke) {
-                rawData.metadata.stroke = payload.stroke;
+          if (res && res.ok) {
+            const payload = await res.json();
+            const isEnvelope = payload && typeof payload === 'object' && ('found' in payload);
+            if (isEnvelope) {
+              this.resolutionCache.set(`${verPrefix}${normKey}`, {
+                found: Boolean(payload.found),
+                match_type: payload.match_type || 'none',
+                warning: payload.warning || null,
+                needs_review: Boolean(payload.needs_review),
+                resolved_gloss: payload.resolved_gloss || payload.sign || null,
+                version_served: payload.version_served || verTag,
+                is_fingerspelling: Boolean(payload.is_fingerspelling),
+                stroke: payload.stroke || null,
+                qa: payload.qa || null
+              });
+              if (!payload.found || !payload.animation) {
+                return null;
               }
             }
-            let clip = convertDirectAnimationToSignClip(rawData, clean);
-            if (clip && Array.isArray(clip.boneTracks) && clip.boneTracks.length > 0) {
-              if (isEnvelope) {
-                clip.metadata = {
-                  ...(clip.metadata || {}),
-                  resolvedGloss,
-                  matchType: payload.match_type || 'exact',
-                  resolutionStatus: payload.status || 'EXACT',
-                  needsReview: Boolean(payload.needs_review),
-                  warning: payload.warning || null,
-                  versionServed: payload.version_served || verTag,
-                  stroke: payload.stroke || (clip.metadata && clip.metadata.stroke) || null
-                };
+
+            const rawData = isEnvelope ? payload.animation : payload;
+            const resolvedGloss = isEnvelope ? (payload.resolved_gloss || payload.sign || clean) : clean;
+
+            if (rawData && typeof rawData === 'object') {
+              if (isEnvelope && payload.stroke) {
+                rawData.metadata = rawData.metadata || {};
+                if (!rawData.metadata.stroke) {
+                  rawData.metadata.stroke = payload.stroke;
+                }
               }
-              if (shouldTrim) {
-                clip = trimSignClipStroke(clip);
+              let clip = convertDirectAnimationToSignClip(rawData, clean);
+              if (clip && Array.isArray(clip.boneTracks) && clip.boneTracks.length > 0) {
+                if (isEnvelope) {
+                  clip.metadata = {
+                    ...(clip.metadata || {}),
+                    resolvedGloss,
+                    matchType: payload.match_type || 'exact',
+                    resolutionStatus: payload.status || 'EXACT',
+                    needsReview: Boolean(payload.needs_review),
+                    warning: payload.warning || null,
+                    versionServed: payload.version_served || verTag,
+                    stroke: payload.stroke || (clip.metadata && clip.metadata.stroke) || null
+                  };
+                }
+                if (shouldTrim) {
+                  clip = trimSignClipStroke(clip);
+                }
+                defaultAnimationCache.setClip(cacheKey, clip);
+                defaultAnimationCache.setClip(`${verPrefix}${normKey}`, clip);
+                this.clipCache.set(normKey, clip);
+                this.clipCache.set(`${verPrefix}${normKey}`, clip);
+                if (clip.clipId) {
+                  defaultAnimationCache.setClip(clip.clipId, clip);
+                }
+                return clip;
               }
-              defaultAnimationCache.setClip(cacheKey, clip);
-              defaultAnimationCache.setClip(`${verPrefix}${normKey}`, clip);
-              this.clipCache.set(normKey, clip);
-              this.clipCache.set(`${verPrefix}${normKey}`, clip);
-              if (clip.clipId) {
-                defaultAnimationCache.setClip(clip.clipId, clip);
-              }
-              return clip;
             }
           }
+        } catch (err) {
+          // Fallback silencioso ante modo offline o error de red
+        } finally {
+          this.inFlightRequests.delete(cacheKey);
         }
-      } catch (err) {
-        // Fallback silencioso ante modo offline o error de red
-      }
+        return null;
+      })();
+      this.inFlightRequests.set(cacheKey, reqPromise);
+      return reqPromise;
     }
     return null;
   }
@@ -350,8 +386,23 @@ export class AvatarSyncController {
       }
       const resMeta = this.getResolutionMetadata(glossName, ver);
       if (resMeta && resMeta.is_fingerspelling) {
+        if (typeof createLSECFingerspellingWordClip === 'function') {
+          const fsClip = createLSECFingerspellingWordClip(glossName, options);
+          this.clipCache.set(key, fsClip);
+          return fsClip;
+        }
         return null;
       }
+    }
+
+    // Si es una glosa deletreada con guiones (ej. U-P-E-C, T-U-L-C-Á-N) o prefijo DACT:
+    if (
+      typeof createLSECFingerspellingWordClip === 'function' &&
+      (/^[A-ZÁÉÍÓÚÜÑ]{1,2}(-[A-ZÁÉÍÓÚÜÑ]{1,2})+$/i.test(key) || /^(DACT|FS|LETRA)[:_-]/i.test(key))
+    ) {
+      const fsClip = createLSECFingerspellingWordClip(glossName, options);
+      this.clipCache.set(key, fsClip);
+      return fsClip;
     }
 
     // Fallback: Registro canónico local / manifest offline
@@ -439,7 +490,21 @@ export class AvatarSyncController {
       let validationStatus = (clip && clip.validationStatus) || 'REQUIRES_LSEC_VALIDATION';
       let regEntry = null;
 
-      // 2. Si no se resolvió vía API directa, buscar en el registro local / manifest offline
+      // 2. Si es dactilología o no se resolvió vía API directa, sintetizar o buscar en el registro local
+      const isFingerspelledItem = Boolean(
+        (resMeta && resMeta.is_fingerspelling) ||
+        item.is_fingerspelling ||
+        item.isFingerspelling ||
+        String(item.gloss_type || '').toUpperCase().includes('DACTIL') ||
+        /^[A-ZÁÉÍÓÚÜÑ]{1,2}(-[A-ZÁÉÍÓÚÜÑ]{1,2})+$/i.test(normKey)
+      );
+      if (!clip && isFingerspelledItem && typeof createLSECFingerspellingWordClip === 'function') {
+        clip = createLSECFingerspellingWordClip(glossName, { targetDurationSec: slotSec });
+        clipVersion = '1.0.0_Dactilologia_LSEC';
+        clipSource = 'Motor Procedimental Dactilología LSEC (Guía Oficial PDF Pág. 10)';
+        validationStatus = 'VALIDATED_BY_OFFICIAL_PDF_GUIDE';
+      }
+
       if (!clip && (!resMeta || !resMeta.is_fingerspelling)) {
         regEntry = this.lookup(normKey);
 

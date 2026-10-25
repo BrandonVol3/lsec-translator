@@ -1,7 +1,11 @@
 /**
  * LSEC Studio — Controlador de la Ventana 1 («1. Transcripción con Whisper»)
- * Gestiona el visualizador animado de onda acústica Whisper ASR,
- * la lista limpia de segmentos editables [mm:ss - mm:ss] y el paso hacia Ventana 2.
+ * Gestiona la vista dual de la transcripción:
+ *  - Modo 'unified' (por defecto): Todo el texto continuo dentro de un único recuadro
+ *    interactivo. Al hacer clic en cualquier frase, cambia a la vista detallada por frase
+ *    y enfoca directamente la oración seleccionada.
+ *  - Modo 'cards': Cada frase en su propio recuadro editable con marcas de tiempo
+ *    [mm:ss - mm:ss], porcentaje de fidelidad ASR Whisper y acciones.
  */
 
 class TranscriptWindowController {
@@ -13,9 +17,14 @@ class TranscriptWindowController {
     this.countBadge = document.getElementById('transcript-count-badge');
     this.statusLabel = document.getElementById('whisper-status-label');
     this.waveformCanvas = document.getElementById('whisper-waveform-canvas');
+    this.btnToggleView = document.getElementById('btn-toggle-transcript-view');
     this.btnAddSegment = document.getElementById('btn-add-transcript-segment');
     this.btnTranscribe = document.getElementById('btn-step1-transcribe');
     this.btnProcessLsec = document.getElementById('btn-step1-process-lsec');
+
+    // Por defecto todo el texto aparece dentro de un solo recuadro ('unified')
+    this.viewMode = 'unified';
+    this.focusedSegmentId = null;
 
     this.waveBars = this.generateWaveProfile(72);
     this.animFrameId = null;
@@ -41,6 +50,12 @@ class TranscriptWindowController {
   }
 
   bindEvents() {
+    if (this.btnToggleView) {
+      this.btnToggleView.addEventListener('click', () => {
+        this.setViewMode(this.viewMode === 'unified' ? 'cards' : 'unified');
+      });
+    }
+
     if (this.btnAddSegment) {
       this.btnAddSegment.addEventListener('click', () => this.handleAddSegment());
     }
@@ -66,11 +81,49 @@ class TranscriptWindowController {
     }
   }
 
+  setViewMode(mode, targetSegId = null) {
+    this.viewMode = mode === 'cards' ? 'cards' : 'unified';
+    this.focusedSegmentId = targetSegId || null;
+    this.updateViewModeButton();
+    this.renderSegments();
+
+    if (this.viewMode === 'cards' && targetSegId && this.segmentsContainer) {
+      requestAnimationFrame(() => {
+        const targetCard = this.segmentsContainer.querySelector(
+          `.transcript-seg-card[data-seg-id="${CSS.escape(String(targetSegId))}"]`
+        );
+        if (targetCard) {
+          targetCard.classList.add('active');
+          targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          const textarea = targetCard.querySelector('.transcript-seg-input');
+          if (textarea) {
+            textarea.focus({ preventScroll: true });
+          }
+        }
+      });
+    }
+  }
+
+  updateViewModeButton() {
+    if (!this.btnToggleView) return;
+    if (this.viewMode === 'unified') {
+      this.btnToggleView.textContent = 'Ver por Frases';
+      this.btnToggleView.title = 'Cambiar a vista de recuadros individuales por oración';
+    } else {
+      this.btnToggleView.textContent = 'Ver Texto Unificado';
+      this.btnToggleView.title = 'Volver a la vista de todo el texto en un solo recuadro';
+    }
+  }
+
   subscribeToStore() {
     if (typeof appState === 'undefined') return;
 
     appState.subscribe('projectLoaded', () => {
       this.waveBars = this.generateWaveProfile(72);
+      // Al cargar un proyecto nuevo o transcribir con Whisper, iniciar en el recuadro único por defecto
+      this.viewMode = 'unified';
+      this.focusedSegmentId = null;
+      this.updateViewModeButton();
       this.renderSegments();
       this.drawWaveform(appState.state.playback.currentTime || 0);
     });
@@ -176,28 +229,130 @@ class TranscriptWindowController {
   renderSegments() {
     if (!this.segmentsContainer) return;
     const segments = (typeof appState !== 'undefined' && appState.state?.project?.segments) || [];
+    const hasVideo = Boolean(
+      (typeof appState !== 'undefined' && appState.state?.workspace?.videoLoaded) ||
+      (window.pipelineProcessor && window.pipelineProcessor.cachedVideoFile)
+    );
     this.updateCountBadge();
+    this.updateViewModeButton();
+
+    // Mostrar "Ver por Frases / Ver Texto Unificado" únicamente cuando existen segmentos
+    if (this.btnToggleView) {
+      this.btnToggleView.style.display = segments.length > 0 ? 'inline-flex' : 'none';
+    }
+
+    // Mostrar "Extraer con Whisper" únicamente si hay un video cargado PERO aún no se ha completado la extracción (segments.length === 0)
+    if (this.btnTranscribe) {
+      this.btnTranscribe.style.display = (hasVideo && segments.length === 0) ? 'inline-flex' : 'none';
+    }
 
     if (segments.length === 0) {
-      this.segmentsContainer.innerHTML = `
-        <div class="empty-state-box">
-          No hay segmentos transcritos aún. Carga un video y presiona <strong>Extraer con Whisper</strong> o usa <strong>+ Oración</strong>.
-        </div>
-      `;
+      this.segmentsContainer.innerHTML = hasVideo
+        ? `
+          <div class="empty-state-box">
+            No se detectó voz hablada en este archivo. Usa <strong>+ Oración</strong> para agregar subtítulos manualmente o selecciona otro video.
+          </div>
+        `
+        : `
+          <div class="empty-state-box">
+            Selecciona tu video en el panel izquierdo para extraer y transcribir automáticamente el audio con <strong>Whisper ASR</strong>, o usa <strong>+ Oración</strong>.
+          </div>
+        `;
       return;
     }
 
+    if (this.viewMode === 'unified') {
+      this.renderUnifiedBox(segments);
+    } else {
+      this.renderSentenceCards(segments);
+    }
+
+    const currentTime = (typeof appState !== 'undefined' && appState.state?.playback?.currentTime) || 0;
+    this.highlightActiveSegmentByTime(currentTime);
+  }
+
+  renderUnifiedBox(segments) {
+    this.segmentsContainer.innerHTML = '';
+
+    const firstStart = segments[0]?.start_time || 0;
+    const lastEnd = segments[segments.length - 1]?.end_time || 0;
+    const totalRange = this.formatTimeRange(firstStart, lastEnd);
+
+    const confidences = segments.map(s => Number(s.asr_confidence ?? s.confidence ?? 0.94));
+    const avgConf = Math.round((confidences.reduce((a, b) => a + b, 0) / Math.max(1, confidences.length)) * 100);
+
+    const unifiedCard = document.createElement('div');
+    unifiedCard.className = 'transcript-unified-box';
+
+    const sentencesHtml = segments.map((seg, idx) => {
+      const textValue = (seg.normalized_text || seg.raw_text || seg.original_text || '').trim();
+      const timeLabel = this.formatTimeRange(seg.start_time, seg.end_time);
+      const confPct = Math.round((seg.asr_confidence ?? seg.confidence ?? 0.94) * 100);
+      return `<span class="transcript-unified-sentence" role="button" tabindex="0" data-seg-id="${this.escapeHtml(seg.id)}" data-start-time="${seg.start_time}" data-end-time="${seg.end_time}" title="Oración #${idx + 1} ${timeLabel} · ASR Whisper ${confPct}% — Haz clic para editar por frase">${this.escapeHtml(textValue)}</span>`;
+    }).join(' ');
+
+    unifiedCard.innerHTML = `
+      <div class="transcript-unified-header">
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <span class="transcript-seg-time-badge" style="cursor:default;">
+            <span>Transcripción Completa</span>
+            <span>${totalRange}</span>
+          </span>
+          <span style="font-size:0.76rem; font-weight:700; color:var(--color-text-secondary);">
+            Fidelidad media: ${avgConf}%
+          </span>
+        </div>
+        <span class="transcript-unified-hint">
+          Clic en cualquier frase para editarla
+        </span>
+      </div>
+      <div class="transcript-unified-body" id="transcript-unified-body">
+        ${sentencesHtml}
+      </div>
+    `;
+
+    unifiedCard.querySelectorAll('.transcript-unified-sentence').forEach((spanEl) => {
+      const activateSentenceCardView = () => {
+        const segId = spanEl.dataset.segId;
+        const startSec = parseFloat(spanEl.dataset.startTime || '0');
+        const targetSeg = segments.find(s => String(s.id) === String(segId));
+        if (typeof appState !== 'undefined') {
+          appState.setCurrentTime(startSec, true);
+          if (targetSeg) {
+            appState.selectItem('segment', targetSeg.id, targetSeg);
+          }
+        }
+        this.setViewMode('cards', segId);
+      };
+
+      spanEl.addEventListener('click', activateSentenceCardView);
+      spanEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          activateSentenceCardView();
+        }
+      });
+    });
+
+    this.segmentsContainer.appendChild(unifiedCard);
+  }
+
+  renderSentenceCards(segments) {
     this.segmentsContainer.innerHTML = '';
 
     segments.forEach((seg, idx) => {
       const card = document.createElement('div');
       card.className = 'transcript-seg-card';
+      if (this.focusedSegmentId && String(seg.id) === String(this.focusedSegmentId)) {
+        card.classList.add('active');
+      }
       card.dataset.segId = seg.id;
       card.dataset.startTime = seg.start_time;
       card.dataset.endTime = seg.end_time;
 
-      const textValue = seg.normalized_text || seg.raw_text || '';
+      const textValue = seg.normalized_text || seg.raw_text || seg.original_text || '';
       const timeLabel = this.formatTimeRange(seg.start_time, seg.end_time);
+      const confPct = Math.round((seg.asr_confidence ?? seg.confidence ?? 0.94) * 100);
 
       card.innerHTML = `
         <div class="transcript-seg-top">
@@ -207,14 +362,14 @@ class TranscriptWindowController {
           </button>
           <div style="display:flex; gap:6px; align-items:center;">
             <span style="font-size:0.74rem; font-weight:700; color:var(--color-text-secondary);">
-              ASR Whisper ${Math.round((seg.asr_confidence || 0.94) * 100)}%
+              Fidelidad ${confPct}%
             </span>
-            <button type="button" class="btn btn-sm" data-action="delete" title="Eliminar oración" style="padding:2px 8px;">
+            <button type="button" class="btn btn-sm transcript-seg-delete-btn" data-action="delete" title="Eliminar oración" style="padding:2px 8px;">
               Eliminar
             </button>
           </div>
         </div>
-        <textarea class="transcript-seg-input" rows="2" aria-label="Texto transcrito oración ${idx + 1}" placeholder="Escribe o corrige la oración en español...">${this.escapeHtml(textValue)}</textarea>
+        <textarea id="transcript-seg-input-${idx + 1}" name="transcript_segment_${idx + 1}" class="transcript-seg-input" rows="2" aria-label="Texto transcrito oración ${idx + 1}" placeholder="Escribe o corrige la oración en español...">${this.escapeHtml(textValue)}</textarea>
       `;
 
       const seekBtn = card.querySelector('[data-action="seek"]');
@@ -252,12 +407,34 @@ class TranscriptWindowController {
 
   highlightActiveSegmentByTime(currentTime) {
     if (!this.segmentsContainer) return;
+
+    const findActiveIndex = (elements) => {
+      const arr = Array.from(elements);
+      let idx = arr.findIndex((el) => {
+        const start = parseFloat(el.dataset.startTime || '0');
+        const end = parseFloat(el.dataset.endTime || '0');
+        return currentTime >= start && currentTime < end;
+      });
+      if (idx === -1) {
+        idx = arr.findIndex((el) => {
+          const start = parseFloat(el.dataset.startTime || '0');
+          const end = parseFloat(el.dataset.endTime || '0');
+          return currentTime >= start && currentTime <= end;
+        });
+      }
+      return idx;
+    };
+
     const cards = this.segmentsContainer.querySelectorAll('.transcript-seg-card');
-    cards.forEach((card) => {
-      const start = parseFloat(card.dataset.startTime || '0');
-      const end = parseFloat(card.dataset.endTime || '0');
-      const isCurrent = currentTime >= start && currentTime <= end;
-      card.classList.toggle('active', isCurrent);
+    const activeCardIdx = findActiveIndex(cards);
+    cards.forEach((card, i) => {
+      card.classList.toggle('active', i === activeCardIdx);
+    });
+
+    const unifiedSpans = this.segmentsContainer.querySelectorAll('.transcript-unified-sentence');
+    const activeSpanIdx = findActiveIndex(unifiedSpans);
+    unifiedSpans.forEach((spanEl, i) => {
+      spanEl.classList.toggle('active', i === activeSpanIdx);
     });
   }
 
@@ -268,6 +445,8 @@ class TranscriptWindowController {
     const newStart = Number(lastEnd.toFixed(1));
     const newEnd = Number((newStart + 3.0).toFixed(1));
 
+    this.viewMode = 'cards';
+    this.updateViewModeButton();
     if (typeof appState.addSegment === 'function') {
       appState.addSegment(newStart, newEnd, 'Nueva oración educativa en español.');
     }

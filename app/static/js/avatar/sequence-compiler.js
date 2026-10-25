@@ -41,7 +41,13 @@ import {
   applyBreathingMicroMotion,
   makeNeutralExpressions,
   interpolateExpressions,
-  applyCompiledSampleToModel
+  applyCompiledSampleToModel,
+  OneEuroQuaternionFilter,
+  LSEC_FINGERSPELLING_GRAPHEMES,
+  LSEC_FINGERSPELLING_CATALOG,
+  tokenizeLSECFingerspelling,
+  createLSECFingerspellingSignClip,
+  createLSECFingerspellingWordClip
 } from './sequence-coarticulation-math.js';
 
 import {
@@ -71,7 +77,13 @@ export {
   quatSlerp,
   minimumJerk,
   interpolateSO3HermiteC1,
-  applyCompiledSampleToModel
+  applyCompiledSampleToModel,
+  OneEuroQuaternionFilter,
+  LSEC_FINGERSPELLING_GRAPHEMES,
+  LSEC_FINGERSPELLING_CATALOG,
+  tokenizeLSECFingerspelling,
+  createLSECFingerspellingSignClip,
+  createLSECFingerspellingWordClip
 };
 
 // ---------------------------------------------------------------------------
@@ -135,16 +147,35 @@ export class SequenceCompiler {
       (rawEntries.length > 0 ? rawEntries[rawEntries.length - 1].slotEnd : 0)
     ) || 0;
 
-    // 1. Preparar descriptores de trazo para cada glosa
+    // 1. Preparar descriptores de trazo para cada glosa (incluyendo síntesis dactilológica continua y fallback OOV)
     const entries = rawEntries.map((item, idx) => {
-      const clip = item.isFingerspelling ? null : this._resolveClipFromMap(item, clipMap);
+      let clip = this._resolveClipFromMap(item, clipMap);
+      const isOovFallback = Boolean(
+        !clip &&
+        !item.isFingerspelling &&
+        opts.fingerspellOovFallback !== false &&
+        (
+          item.raw?.validation?.fallback_fingerspelling_gloss ||
+          item.raw?.dictionary_metadata?.status === 'NO_VERIFICADO' ||
+          opts.fingerspellAllMissing === true
+        )
+      );
+      const effectiveFingerspelling = Boolean(item.isFingerspelling || isOovFallback);
+      if (!clip && effectiveFingerspelling && opts.synthesizeFingerspelling !== false) {
+        const fsTarget = item.raw?.validation?.fallback_fingerspelling_gloss || item.raw?.source_word || item.gloss;
+        clip = createLSECFingerspellingWordClip(fsTarget, {
+          targetDurationSec: Math.max(0.65, Number(item.slotDuration) || 1.2)
+        });
+      }
       const prepared = clip ? buildPreparedClipDescriptor(clip) : null;
       return {
         ...item,
+        isFingerspelling: effectiveFingerspelling,
         orderIndex: idx,
         clip: clip || null,
         prepared,
-        status: prepared ? 'PLAYABLE' : (item.isFingerspelling ? 'FINGERSPELLING' : 'MISSING')
+        playable: Boolean(prepared),
+        status: effectiveFingerspelling ? 'FINGERSPELLING' : (prepared ? 'PLAYABLE' : 'MISSING')
       };
     });
 
@@ -414,7 +445,27 @@ export class SequenceCompiler {
       if (FINGER_BONE_SET.has(bName)) {
         bones[bName] = interpolateSO3HermiteC1(q0, q1, null, null, T * (1.0 - alphaAnt), uFingers);
       } else if (ARM_BONE_SET.has(bName)) {
-        bones[bName] = interpolateSO3HermiteC1(q0, q1, fromVel[bName], toVel[bName], T, u);
+        let qArm = interpolateSO3HermiteC1(q0, q1, fromVel[bName], toVel[bName], T, u);
+        // Epéntesis de Arco Frontal C¹: cuando el brazo recorre > 18° entre dos señas,
+        // proyectar suavemente el arco medio hacia adelante (+Z) con campana sin²(π·u)
+        // para que las manos no atraviesen el pecho durante el encadenamiento.
+        if (
+          seg.subtype === 'coarticulation' &&
+          (bName === 'leftUpperArm' || bName === 'rightUpperArm') &&
+          u > 0.01 &&
+          u < 0.99
+        ) {
+          const travelDeg = quatAngleDeg(q0, q1);
+          if (travelDeg > 18.0) {
+            const bell = Math.sin(Math.PI * u);
+            const bellC1 = bell * bell;
+            const maxArcRad = Math.min(0.16, ((travelDeg - 18.0) / 90.0) * 0.16);
+            const sideSign = bName === 'leftUpperArm' ? -1.0 : 1.0;
+            const qArc = quatExpRad([0, sideSign * maxArcRad * bellC1, 0]);
+            qArm = quatNormalize(quatMultiply(qArc, qArm));
+          }
+        }
+        bones[bName] = qArm;
       } else {
         bones[bName] = interpolateSO3HermiteC1(q0, q1, null, null, T, u);
       }

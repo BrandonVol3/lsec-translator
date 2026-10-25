@@ -1,13 +1,25 @@
 <!DOCTYPE html>
-<html lang="es" data-theme="dark">
+<html lang="es" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LSEC Studio — Configuración y Verificación del Avatar 3D</title>
-  <meta name="description" content="Entorno dedicado para la calibración biomecánica, configuración cinemática, pruebas de rasgos no manuales y verificación comparativa con videos originales Ultra HD del Diccionario LSEC.">
-  <link rel="stylesheet" href="/static/css/app.css?v=2.2.0">
-  <link rel="stylesheet" href="/static/css/avatarconfig.css?v=2.8.0">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22%23B7D36B%22><rect width=%2224%22 height=%2224%22 rx=%226%22 fill=%22%23191B18%22/><path d=%22M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z%22 fill=%22%23B7D36B%22/></svg>">
+  <title>LSEC Studio — Auditoría Visual 1:1 del Avatar 3D</title>
+  <meta name="description" content="Entorno de desarrollo simplificado para la auditoría visual 1:1 entre el Avatar VRM v2.7.3 y los videos originales Ultra HD del Diccionario Oficial LSEC.">
+
+  <!-- Tipografía Libre («Pedagogical Tactile Light»): Nunito + Plus Jakarta Sans + JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Nunito:wght@700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Sistema de Diseño Modular («Pedagogical Tactile Light» · Paleta Institucional Sutil UPEC) -->
+  <link rel="stylesheet" href="/static/css/base-tokens.css?v=3.2.0">
+  <link rel="stylesheet" href="/static/css/modals-panels.css?v=3.2.0">
+  <link rel="stylesheet" href="/static/css/avatar-studio.css?v=3.2.0">
+  <link rel="stylesheet" href="/static/css/app.css?v=3.2.0">
+  <link rel="stylesheet" href="/static/css/layout-workspace.css?v=3.2.0">
+  <link rel="stylesheet" href="/static/css/components-ui.css?v=3.2.0">
+  <link rel="stylesheet" href="/static/css/avatarconfig.css?v=3.2.0">
+
   <script type="importmap">
   {
     "imports": {
@@ -20,371 +32,413 @@
 </head>
 <body class="avatar-config-page">
 
-  <!-- BARRA DE NAVEGACIÓN SUPERIOR DEDICADA -->
-  <header class="avatar-config-navbar" role="banner">
-    <div class="avatar-config-nav-left">
-      <a href="/studio" class="brand-badge" title="Ir a la Estación de Trabajo LSEC Studio">
-        <div class="brand-glyph" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></div>
-        <span>LSEC Studio</span>
+  <!-- BARRA SUPERIOR UNIFICADA CON EL ESTILO DE LSEC STUDIO -->
+  <header class="top-bar avatar-audit-topbar" role="banner">
+    <div class="top-bar-left">
+      <a href="/studio" class="brand" style="text-decoration:none;" title="Volver a LSEC Studio">
+        <svg class="brand-logo-svg" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect width="40" height="40" rx="10" fill="#007A3D"/>
+          <path d="M4 37H20" stroke="#FACC15" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M20 37H36" stroke="#DC2626" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M11 25V15C11 13.8954 11.8954 13 13 13C14.1046 13 15 13.8954 15 15V20M15 20V11C15 9.8954 15.8954 9 17 9C18.1046 9 19 9.8954 19 11V20M19 20V13C19 11.8954 19.8954 11 21 11C22.1046 11 23 11.8954 23 13V22C23 25.866 19.866 29 16 29H15C12.7909 29 11 27.2091 11 25Z" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M27 14V24M31 17V21" stroke="#FDE047" stroke-width="2.4" stroke-linecap="round"/>
+        </svg>
+        <div class="brand-text-group">
+          <span>LSEC Studio</span>
+          <span class="brand-subtitle">Auditoría Visual 1:1 · Desarrollo</span>
+        </div>
       </a>
-      <div style="width: 1px; height: 16px; background: var(--border-subtle); margin: 0 4px;"></div>
-      <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 6px;"><span style="color: var(--action-primary);">⚙</span> Verificación y Calibración 3D</span>
-      <span class="avatar-model-pill avatar-pill-vrm" id="avatar-model-source-info">Cargando modelo...</span>
+      <span class="audit-pill audit-pill-mint" id="avatar-model-source-info">VRM 1.0</span>
+      <span class="audit-pill audit-pill-verified" id="verification-progress-pill">✓ 0 / 4.142 VERIFICADAS</span>
     </div>
 
-    <div class="avatar-config-nav-right">
-      <div class="version-pill-group" id="navbar-version-group" title="Seleccionar versión del pipeline cinemático">
-        <button type="button" class="version-nav-btn active v27" id="nav-btn-v27" title="Versión 2.7 Estandarizada (Manos alineadas a la Configuración Manual oficial I–IX + 52 ARKit)"><span>v2.7 Estandarizada</span></button>
-        <button type="button" class="version-nav-btn" id="nav-btn-v26" title="Versión 2.6 Corregida (Suavizado de muñecas, IK despeje ~1cm, expresiones 52 ARKit y cabeza)"><span>v2.6 Corregida</span></button>
-        <button type="button" class="version-nav-btn" id="nav-btn-v25" title="Versión 2.5 Directo (1:1 Original sin postproceso)"><span>v2.5 Directo</span></button>
-        <button type="button" class="version-nav-toggle-btn" id="nav-btn-toggle-version" title="Alternar versión inmediatamente (Tecla V)"><span>⚡ (V)</span></button>
+    <div class="top-bar-center">
+      <div class="version-pill-group" id="navbar-version-group" title="Alternar versión del motor cinemático para comparar antes/después">
+        <button type="button" class="version-nav-btn active v27" id="nav-btn-v27" title="v2.7.3 Estabilizada (0 cm penetración, muñecas sin giros 360°, Configuración Manual I–IX)"><span>v2.7.3 Estabilizada</span></button>
+        <button type="button" class="version-nav-btn" id="nav-btn-v26" title="v2.6 Corregida anterior"><span>v2.6 Anterior</span></button>
+        <button type="button" class="version-nav-btn" id="nav-btn-v25" title="v2.5 Directo crudo sin postproceso"><span>v2.5 Crudo</span></button>
+        <button type="button" class="version-nav-toggle-btn" id="nav-btn-toggle-version" title="Alternar versión con tecla V"><span>⚡ (V)</span></button>
       </div>
-      <span class="avatar-model-pill" id="verification-progress-pill" style="background:#0f291e; color:#6ee7b7; border:1px solid #059669; font-weight:700; font-size:0.75rem;">✓ 0 / 4.142 VERIFICADAS</span>
-      <span class="avatar-status-badge" id="avatar-playback-status-badge">Listo</span>
-      <span class="avatar-perf-badge" id="avatar-hud-perf-badge" title="Rendimiento en tiempo real (FPS)">60 FPS</span>
-      <div style="width: 1px; height: 16px; background: var(--border-subtle); margin: 0 4px;"></div>
-      <a href="/studio" class="btn btn-secondary btn-sm" id="btn-back-to-studio" title="Volver al Editor Principal de LSEC Studio">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg><span>Volver a LSEC Studio</span>
-      </a>
+    </div>
+
+    <div class="top-bar-right">
+      <span class="audit-pill" id="avatar-playback-status-badge">Listo</span>
+      <span class="audit-pill audit-pill-mono" id="avatar-hud-perf-badge" title=" cuadros por segundo">60 FPS</span>
+      <a href="/viewer" class="btn btn-sm" title="Abrir Visor Matemático MANO M(β, θ)">Visor MANO</a>
+      <a href="/studio" class="btn btn-primary btn-sm" id="btn-back-to-studio" title="Volver al Editor Principal de LSEC Studio">Volver a Studio</a>
     </div>
   </header>
 
-  <!-- CONTENEDOR PRINCIPAL DE LA ESTACIÓN AVATAR -->
+  <!-- ÁREA PRINCIPAL DE AUDITORÍA VISUAL -->
   <main class="avatar-config-main-grid" id="avatar-config-workspace" role="main">
     <div id="view-side-avatar" style="display:contents;">
       <button id="tab-btn-side-avatar" style="display:none;" aria-hidden="true"></button>
 
-      <!-- ZONA IZQUIERDA: VISTA COMPARATIVA (AVATAR 3D + VIDEO ULTRA HD ORIGINAL) -->
-      <section class="avatar-config-viewport-zone" aria-label="Visualizador Comparativo de Señas">
+      <!-- ZONA IZQUIERDA: COMPARACIÓN LADO A LADO (AVATAR 3D vs VIDEO ORIGINAL UHD) -->
+      <section class="avatar-config-viewport-zone" aria-label="Comparador Visual 1:1">
         <div class="avatar-comparison-layout" id="comparison-layout-wrap">
-          <!-- SUB-VIEWPORT 1: AVATAR 3D WEBGL -->
+
+          <!-- PANEL 1: AVATAR 3D VRM -->
           <div class="avatar-viewport-container" id="avatar-viewport-wrap">
             <canvas id="avatar-webgl-canvas" class="avatar-canvas"></canvas>
-            <div class="avatar-overlay-loading" id="avatar-loading-indicator" style="display:none;"><div class="avatar-spinner"></div><span id="avatar-loading-text">Cargando modelo VRM 1.0...</span></div>
-            <div class="avatar-overlay-error" id="avatar-error-banner" style="display:none;">
-              <div class="avatar-error-content"><span class="avatar-error-icon">⚠️</span><span class="avatar-error-msg" id="avatar-error-message">Error de inicialización.</span><button class="btn btn-secondary btn-sm" id="btn-avatar-error-retry">Reintentar</button></div>
+            <div class="avatar-overlay-loading" id="avatar-loading-indicator" style="display:none;">
+              <div class="avatar-spinner"></div>
+              <span id="avatar-loading-text">Cargando modelo VRM 1.0...</span>
             </div>
+            <div class="avatar-overlay-error" id="avatar-error-banner" style="display:none;">
+              <div class="avatar-error-content">
+                <span class="avatar-error-icon">⚠️</span>
+                <span class="avatar-error-msg" id="avatar-error-message">Error de inicialización.</span>
+                <button class="btn btn-sm" id="btn-avatar-error-retry">Reintentar</button>
+              </div>
+            </div>
+
             <div class="avatar-hud-top" id="avatar-hud-bar">
               <div class="avatar-hud-gloss">
-                <span class="avatar-hud-label">AVATAR 3D:</span>
+                <span class="avatar-hud-label">AVATAR:</span>
                 <span class="avatar-hud-value" id="avatar-active-gloss-hud">—</span>
-                <button type="button" id="hud-pipeline-badge" style="font-size:0.65rem; padding:1px 6px; border-radius:4px; font-weight:700; margin-left:6px; background:#064e3b; color:#6ee7b7; border:1px solid #10b981; cursor:pointer; display:inline-flex; align-items:center;" title="Clic para alternar versión de animación (v2.7 / v2.6 / v2.5)">v2.7</button>
-                <span id="hud-expressions-badge" style="font-size:0.65rem; padding:1px 6px; border-radius:4px; font-weight:600; margin-left:4px; background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3); display:inline-flex; align-items:center;" title="Expresiones faciales y orientación cefálica">🎭 52 ARKit</span>
+                <button type="button" id="hud-pipeline-badge" class="hud-tag-btn" title="Clic para alternar versión (v2.7 / v2.6 / v2.5)">v2.7</button>
+                <span id="hud-expressions-badge" class="hud-tag-sub">🎭 RNM v1.1</span>
               </div>
-              <div class="avatar-hud-time"><span id="avatar-hud-time-current">0.00s</span><span style="opacity:0.4;">/</span><span id="avatar-hud-time-total">0.00s</span></div>
+              <div class="avatar-hud-time">
+                <span id="avatar-hud-time-current">0.00s</span>
+                <span style="opacity:0.45;">/</span>
+                <span id="avatar-hud-time-total">0.00s</span>
+              </div>
             </div>
-            <div class="avatar-viewport-progress-track"><div class="avatar-viewport-progress-fill" id="avatar-clip-progress-fill"></div></div>
-            <button class="btn-avatar-hud-action" id="btn-avatar-reset-camera" title="Recentrar cámara frontal (Espacio de señas)">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+
+            <div class="avatar-viewport-progress-track">
+              <div class="avatar-viewport-progress-fill" id="avatar-clip-progress-fill"></div>
+            </div>
+
+            <button class="btn-avatar-hud-action" id="btn-avatar-reset-camera" title="Recentrar cámara frontal">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>
             </button>
 
-            <div class="avatar-cam-floating-dock" id="avatar-cam-dock" aria-label="Controles de Cámara 3D">
+            <!-- Dock de cámara colapsado por defecto para no tapar el avatar -->
+            <div class="avatar-cam-floating-dock dock-collapsed" id="avatar-cam-dock" style="display:none;" aria-hidden="true">
               <div class="avatar-cam-dock-header">
-                <span class="avatar-cam-dock-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>Controles 3D</span>
-                <button class="avatar-cam-dock-toggle" id="btn-cam-dock-toggle" title="Minimizar / Expandir panel de cámara">▾</button>
+                <span class="avatar-cam-dock-title">Cámara 3D</span>
+                <button class="avatar-cam-dock-toggle" id="btn-cam-dock-toggle">▾</button>
               </div>
               <div class="avatar-cam-dock-body" id="avatar-cam-dock-body">
-                <div class="avatar-cam-tool-section">
-                  <div class="avatar-cam-section-label">Girar (Órbita)</div>
-                  <div class="avatar-cam-dpad-row">
-                    <button class="avatar-cam-btn" id="btn-cam-rot-left" title="Girar a la izquierda">↺ Izq</button>
-                    <button class="avatar-cam-btn" id="btn-cam-rot-up" title="Inclinar arriba">▲ Arr</button>
-                    <button class="avatar-cam-btn" id="btn-cam-rot-down" title="Inclinar abajo">▼ Aba</button>
-                    <button class="avatar-cam-btn" id="btn-cam-rot-right" title="Girar a la derecha">Der ↻</button>
-                  </div>
+                <div class="avatar-cam-dpad-row">
+                  <button class="avatar-cam-btn" id="btn-cam-rot-left">↺</button>
+                  <button class="avatar-cam-btn" id="btn-cam-rot-up">▲</button>
+                  <button class="avatar-cam-btn" id="btn-cam-rot-down">▼</button>
+                  <button class="avatar-cam-btn" id="btn-cam-rot-right">↻</button>
                 </div>
-                <div class="avatar-cam-tool-section">
-                  <div class="avatar-cam-section-label">Mover (Desplazamiento)</div>
-                  <div class="avatar-cam-grid-dpad">
-                    <button class="avatar-cam-btn avatar-cam-btn-up" id="btn-cam-pan-up" title="Mover hacia arriba">▲</button>
-                    <div class="avatar-cam-dpad-mid">
-                      <button class="avatar-cam-btn" id="btn-cam-pan-left" title="Mover a la izquierda">◄</button>
-                      <button class="avatar-cam-btn avatar-cam-btn-center" id="btn-cam-pan-center" title="Recentrar vista">●</button>
-                      <button class="avatar-cam-btn" id="btn-cam-pan-right" title="Mover a la derecha">►</button>
-                    </div>
-                    <button class="avatar-cam-btn avatar-cam-btn-down" id="btn-cam-pan-down" title="Mover hacia abajo">▼</button>
-                  </div>
+                <div class="avatar-cam-dpad-row">
+                  <button class="avatar-cam-btn" id="btn-cam-pan-up">▲</button>
+                  <button class="avatar-cam-btn" id="btn-cam-pan-left">◄</button>
+                  <button class="avatar-cam-btn" id="btn-cam-pan-center">●</button>
+                  <button class="avatar-cam-btn" id="btn-cam-pan-right">►</button>
+                  <button class="avatar-cam-btn" id="btn-cam-pan-down">▼</button>
                 </div>
-                <div class="avatar-cam-tool-section">
-                  <div class="avatar-cam-section-label">Deslizar (Zoom)</div>
-                  <div class="avatar-cam-dpad-row">
-                    <button class="avatar-cam-btn" id="btn-cam-zoom-in" title="Acercar cámara (Dolly In)"><span>＋ Acercar</span></button>
-                    <button class="avatar-cam-btn" id="btn-cam-zoom-out" title="Alejar cámara (Dolly Out)"><span>－ Alejar</span></button>
-                  </div>
+                <div class="avatar-cam-dpad-row">
+                  <button class="avatar-cam-btn" id="btn-cam-zoom-in">＋</button>
+                  <button class="avatar-cam-btn" id="btn-cam-zoom-out">－</button>
                 </div>
               </div>
             </div>
-            <div class="avatar-viewport-cam-hint" id="avatar-viewport-cam-hint"><span>🖱️ Arrastrar: Girar</span><span>•</span><span>Clic Der: Mover</span><span>•</span><span>Rueda: Zoom</span></div>
+
+            <div class="avatar-viewport-cam-hint" id="avatar-viewport-cam-hint">
+              <span>🖱️ Arrastrar: Rotar</span><span>•</span><span>Clic Der: Mover</span><span>•</span><span>Rueda: Zoom</span>
+            </div>
           </div>
 
-          <!-- SUB-VIEWPORT 2: PANEL DE VIDEO ORIGINAL ULTRA HD -->
+          <!-- PANEL 2: VIDEO REFERENCIA ULTRA HD E ILUSTRACIÓN -->
           <div class="avatar-uhd-panel" id="avatar-uhd-panel-wrap">
             <div class="avatar-uhd-header">
-              <div class="avatar-uhd-header-left"><span class="avatar-uhd-badge-live">Original UHD</span><span style="font-size:0.8rem; font-weight:700; color:var(--text-primary);" id="uhd-header-sign-name">Cargando seña...</span></div>
-              <div style="display:flex; align-items:center; gap:6px;">
-                <button class="btn btn-secondary btn-sm" id="btn-uhd-open-cm-sheet" title="Ver Lámina Oficial de Configuración Manual de esta seña" style="padding:2px 8px; font-size:0.7rem; border-color:#10b981; color:#a7f3d0; display:none;">🖐️ <span id="uhd-cm-pill-text">CM —</span></button>
-                <button class="btn btn-secondary btn-sm" id="btn-toggle-uhd-illustration" title="Ver Ilustración oficial de la seña (Tecla I)" style="padding:2px 8px; font-size:0.7rem; border-color:#6366f1; color:#c7d2fe; display:none;">🖼️ Ilustración</button>
-                <span class="avatar-model-pill" id="uhd-catalog-pos-pill" style="background:#1e3a8a; color:#bfdbfe; border:1px solid #3b82f6; font-size:0.7rem; font-weight:700;">#—</span>
-                <span class="avatar-model-pill" id="uhd-quality-badge" style="background:#064e3b; color:#a7f3d0; border:1px solid #059669; font-size:0.7rem; font-weight:700;">60 FPS</span>
+              <div class="avatar-uhd-header-left">
+                <span class="avatar-uhd-badge-live">Video Referencia</span>
+                <span class="uhd-sign-title" id="uhd-header-sign-name">Cargando seña...</span>
+              </div>
+              <div class="uhd-header-actions">
+                <button class="btn btn-sm" id="btn-uhd-open-cm-sheet" title="Ver Lámina de Configuración Manual" style="display:none;">🖐️ <span id="uhd-cm-pill-text">CM —</span></button>
+                <button class="btn btn-sm" id="btn-toggle-uhd-illustration" title="Superponer ilustración oficial (Tecla I)" style="display:none;">🖼️ Ilustración</button>
+                <span class="audit-pill audit-pill-mono" id="uhd-catalog-pos-pill">#—</span>
+                <span class="audit-pill audit-pill-mint" id="uhd-quality-badge">UHD</span>
               </div>
             </div>
+
             <div class="avatar-uhd-player-wrap">
               <video id="avatar-uhd-video" class="avatar-uhd-video-element" playsinline loop preload="auto"></video>
               <div id="uhd-illustration-overlay" class="uhd-illustration-overlay">
-                <div style="display:flex; justify-content:space-between; align-items:center; width:100%; padding:8px 12px; border-bottom:1px solid rgba(255,255,255,0.1); background:rgba(18,22,19,0.85);">
-                  <div style="display:flex; align-items:center; gap:6px;"><span style="font-size:0.85rem;">🖼️</span><span style="font-size:0.8rem; font-weight:700; color:#e2e8f0;" id="uhd-illustration-overlay-title">Ilustración Oficial</span></div>
+                <div class="uhd-overlay-bar">
+                  <span id="uhd-illustration-overlay-title">🖼️ Ilustración Oficial</span>
                   <div style="display:flex; gap:6px;">
-                    <button class="btn btn-secondary btn-sm" id="btn-expand-uhd-illustration" style="padding:2px 8px; font-size:0.7rem;" title="Ver en pantalla completa">🔍 Ampliar</button>
-                    <button class="btn btn-secondary btn-sm" id="btn-close-uhd-illustration" style="padding:2px 8px; font-size:0.7rem;">✕ Cerrar (Esc)</button>
+                    <button class="btn btn-sm" id="btn-expand-uhd-illustration">🔍 Ampliar</button>
+                    <button class="btn btn-sm" id="btn-close-uhd-illustration">✕ Cerrar</button>
                   </div>
                 </div>
-                <div style="flex:1; width:100%; display:flex; align-items:center; justify-content:center; padding:16px; overflow:hidden;">
-                  <img id="uhd-illustration-overlay-img" src="" alt="Ilustración oficial LSEC" style="max-height:100%; max-width:100%; object-fit:contain; border-radius:6px; filter:drop-shadow(0 10px 25px rgba(0,0,0,0.7)); cursor:pointer;" title="Clic para ver en pantalla completa">
+                <div class="uhd-overlay-body">
+                  <img id="uhd-illustration-overlay-img" src="" alt="Ilustración oficial LSEC">
                 </div>
               </div>
               <div id="avatar-uhd-fallback" class="avatar-uhd-fallback" style="display:none;">
-                <span style="font-size:2.2rem; margin-bottom:6px;">📺</span>
-                <span style="font-weight:700; font-size:0.9rem; color:var(--text-primary); margin-bottom:4px;" id="uhd-fallback-title">Video MP4 Local no encontrado</span>
-                <p style="font-size:0.75rem; color:var(--text-secondary); max-width:280px; margin-bottom:12px;" id="uhd-fallback-desc">Esta seña está registrada en el catálogo oficial de CONADIS con enlace de referencia externo.</p>
-                <a id="btn-uhd-open-remote" href="#" target="_blank" class="btn btn-primary btn-sm" style="display:none;"><span>Abrir Video en YouTube Oficial ↗</span></a>
+                <span style="font-size:2rem; margin-bottom:6px;">📺</span>
+                <strong id="uhd-fallback-title">Video local no encontrado</strong>
+                <p id="uhd-fallback-desc">Consulta la ilustración oficial o el enlace externo del diccionario.</p>
+                <a id="btn-uhd-open-remote" href="#" target="_blank" class="btn btn-primary btn-sm" style="display:none;">Abrir referencia externa ↗</a>
               </div>
             </div>
+
             <div class="avatar-uhd-footer-bar">
               <div style="display:flex; gap:4px; align-items:center;">
-                <button class="btn btn-secondary btn-sm" id="btn-uhd-toggle-play" title="Reproducir / Pausar Video (K)"><span id="uhd-play-btn-text">▶ Play</span></button>
-                <button class="btn btn-secondary btn-sm" id="btn-uhd-step-prev" title="Retroceder 1 frame (,)"><span>⏮ Frame</span></button>
-                <button class="btn btn-secondary btn-sm" id="btn-uhd-step-next" title="Avanzar 1 frame (.)"><span>Frame ⏭</span></button>
+                <button class="btn btn-sm" id="btn-uhd-toggle-play" title="Reproducir / Pausar Video (K)"><span id="uhd-play-btn-text">▶ Play</span></button>
+                <button class="btn btn-sm" id="btn-uhd-step-prev" title="Retroceder 1 cuadro (,)">⏮ -1f</button>
+                <button class="btn btn-sm" id="btn-uhd-step-next" title="Avanzar 1 cuadro (.)">+1f ⏭</button>
               </div>
-              <div style="font-size:0.72rem; color:var(--text-muted); font-variant-numeric:tabular-nums; font-weight:600;"><span id="uhd-time-display">0.00s / 0.00s</span></div>
-              <div style="display:flex; align-items:center; gap:6px;">
-                <button class="btn btn-secondary btn-sm" id="btn-uhd-mute" title="Silenciar / Activar audio"><span id="uhd-mute-label">🔇</span></button>
-                <button class="btn btn-secondary btn-sm" id="btn-uhd-fullscreen" title="Pantalla completa del video"><span>⛶</span></button>
+              <span class="uhd-time-readout" id="uhd-time-display">0.00s / 0.00s</span>
+              <div style="display:flex; gap:4px;">
+                <button class="btn btn-sm" id="btn-uhd-mute" title="Silenciar"><span id="uhd-mute-label">🔇</span></button>
+                <button class="btn btn-sm" id="btn-uhd-fullscreen" title="Pantalla completa">⛶</button>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- BARRA UNIFICADA DE TRANSPORTE Y SINCRONIZACIÓN -->
+        <!-- BARRA DE TRANSPORTE, CÁMARA Y SINCRONIZACIÓN 1:1 -->
         <div class="avatar-cam-presets-bar">
           <div class="avatar-cam-presets-group">
-            <span style="font-size:0.72rem; color:var(--text-muted); font-weight:600; margin-right:4px;">Cámara:</span>
-            <button class="avatar-cam-preset-btn active" id="btn-cam-medium" title="Vista plano medio (pecho y manos)">Plano Medio</button>
-            <button class="avatar-cam-preset-btn" id="btn-cam-full" title="Vista de cuerpo entero">Cuerpo Entero</button>
-            <button class="avatar-cam-preset-btn" id="btn-cam-face" title="Vista primer plano de rostro y mirada">Rostro</button>
-            <button class="avatar-cam-preset-btn" id="btn-cam-hands" title="Vista focalizada en manos y sien para señas">Manos / Sien</button>
+            <span class="bar-label">Vista:</span>
+            <button class="avatar-cam-preset-btn active" id="btn-cam-medium">Plano Medio</button>
+            <button class="avatar-cam-preset-btn" id="btn-cam-full">Cuerpo Entero</button>
+            <button class="avatar-cam-preset-btn" id="btn-cam-face">Rostro</button>
+            <button class="avatar-cam-preset-btn" id="btn-cam-hands">Manos / Sien</button>
             <div class="avatar-cam-tools-compact">
               <button class="avatar-cam-icon-btn" id="btn-quick-rot-left" title="Girar izquierda ↺">↺</button>
               <button class="avatar-cam-icon-btn" id="btn-quick-rot-right" title="Girar derecha ↻">↻</button>
               <button class="avatar-cam-icon-btn" id="btn-quick-zoom-in" title="Acercar ＋">＋</button>
               <button class="avatar-cam-icon-btn" id="btn-quick-zoom-out" title="Alejar －">－</button>
-              <button class="avatar-cam-icon-btn" id="btn-quick-cam-dock-toggle" title="Mostrar/Ocultar dock de controles">🎮</button>
+              <button class="avatar-cam-icon-btn" id="btn-quick-cam-dock-toggle" title="Controles de cámara" style="display:none;">🎮</button>
             </div>
           </div>
 
-          <div style="display:flex; align-items:center; gap:8px;">
-            <button class="btn btn-secondary btn-sm" id="btn-toggle-comparison-mode" title="Alternar Vista Comparativa Lado a Lado con Video Ultra HD (Tecla V)" style="border-color:#3b82f6; color:#93c5fd;"><span>🎥 Modo Comparación</span></button>
-            <label class="sync-toggle-pill" title="Reproduce simultáneamente el avatar 3D y el video original en sincronía temporal">
-              <input type="checkbox" id="chk-sync-playback" checked style="accent-color:#10b981; cursor:pointer;"><span style="font-weight:700; color:#34d399;">🔗 Sincronizado</span>
+          <div class="transport-controls-group">
+            <button class="btn btn-sm" id="btn-toggle-comparison-mode" title="Mostrar/Ocultar Video Original">🎥 Lado a Lado</button>
+            <label class="sync-toggle-pill" title="Sincronizar reproducción entre Avatar y Video">
+              <input type="checkbox" id="chk-sync-playback" checked>
+              <span>🔗 Sincronizado</span>
             </label>
-            <div style="width:1px; height:16px; background:var(--border-subtle); margin:0 2px;"></div>
-            <div style="display:flex; gap:6px;">
-              <button class="btn btn-primary btn-sm" id="btn-avatar-play" title="Reproducir seña activa (Espacio)" style="background:linear-gradient(135deg, #10b981 0%, #059669 100%);"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span>Reproducir</span></button>
-              <button class="btn btn-secondary btn-sm" id="btn-avatar-pause" title="Pausar animación y video"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg><span>Pausar</span></button>
-              <button class="btn btn-secondary btn-sm" id="btn-avatar-reset" title="Reiniciar a postura neutral y frame 0 (Tecla R)"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg><span>Reiniciar</span></button>
-            </div>
-            <div style="width:1px; height:16px; background:var(--border-subtle); margin:0 2px;"></div>
-            <select id="select-avatar-speed" class="avatar-select" title="Velocidad de reproducción conjunta">
-              <option value="0.25">0.25x</option><option value="0.5">0.5x</option><option value="0.75">0.75x</option><option value="1.0" selected>1.0x</option><option value="1.25">1.25x</option><option value="1.5">1.5x</option><option value="2.0">2.0x</option>
+            <button class="btn btn-primary btn-sm" id="btn-avatar-play" title="Reproducir (Espacio)">▶ Reproducir</button>
+            <button class="btn btn-sm" id="btn-avatar-pause" title="Pausar">⏸ Pausar</button>
+            <button class="btn btn-sm" id="btn-avatar-reset" title="Reiniciar al cuadro 0 (R)">↺ Reiniciar</button>
+            <select id="select-avatar-speed" class="avatar-select speed-select" title="Velocidad de reproducción">
+              <option value="0.25">0.25x (Lento)</option>
+              <option value="0.5">0.50x</option>
+              <option value="0.75">0.75x</option>
+              <option value="1.0" selected>1.00x</option>
+              <option value="1.25">1.25x</option>
+              <option value="1.5">1.50x</option>
             </select>
           </div>
         </div>
       </section>
 
-      <!-- ZONA DERECHA: CATÁLOGO OFICIAL, VERIFICACIÓN Y MODELO VRM -->
-      <aside class="avatar-config-sidebar-zone" aria-label="Catálogo de Señas y Verificación">
-        <!-- CARD 1: BUSCADOR Y NAVEGACIÓN EN ORDEN OFICIAL DEL CATÁLOGO Y CONFIGURACIONES MANUALES -->
+      <!-- ZONA DERECHA SIMPLIFICADA: NAVEGACIÓN DE SEÑAS, CONFIGURACIÓN MANUAL E ILUSTRACIÓN -->
+      <aside class="avatar-config-sidebar-zone" aria-label="Panel de Auditoría Visual">
+
+        <!-- TARJETA 1: SELECCIÓN Y FILTRADO QUEROLÓGICO -->
         <div class="avatar-config-card">
           <div class="avatar-config-card-header">
-            <span class="avatar-config-card-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z"/></svg>Catálogo Oficial Diccionario LSEC</span>
-            <span class="avatar-config-card-subtitle" id="sign-count-badge" style="color:var(--action-primary); font-weight:700;">4.142 Señas</span>
+            <span class="avatar-config-card-title">🔍 Explorador de Señas LSEC</span>
+            <span class="audit-pill audit-pill-mint" id="sign-count-badge">4.142 Señas</span>
           </div>
 
+          <div class="search-input-wrap">
+            <input type="text" id="input-search-sign" class="avatar-select" placeholder="Buscar seña (ej. Hola, Universidad, Biblia)..." autocomplete="off">
+          </div>
+
+          <div>
+            <div style="display:flex; justify-content:space-between; font-size:0.72rem; color:var(--text-secondary); margin-bottom:4px; font-weight:600;">
+              <span>Seña activa (`←` / `→`):</span>
+              <span id="select-sign-index-hint">—</span>
+            </div>
+            <select id="select-avatar-clip" class="avatar-select" style="width:100%; font-weight:600;">
+              <option value="">Cargando catálogo...</option>
+            </select>
+          </div>
+
+          <div class="nav-sign-stepper">
+            <button class="btn btn-sm" id="btn-sign-prev" title="Anterior (←)">⬅ Anterior</button>
+            <button class="btn btn-sm" id="btn-sign-next" title="Siguiente (→)">Siguiente ➡</button>
+            <button class="btn btn-sm" id="btn-sign-random" title="Seña aleatoria">🎲 Azar</button>
+          </div>
+
+          <button class="btn btn-sm" id="btn-verify-sign" style="width:100%; justify-content:center;">
+            <span id="verify-sign-label">✓ Marcar como Verificada</span>
+          </button>
+
+          <!-- Filtros compactos de Configuración Manual, Geolecto y RNM -->
           <div class="cm-filter-section" id="cm-explorer-panel">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span style="font-size:0.68rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em;">🖐️ Configuración Manual (Láminas I–IX y *)</span>
-              <button type="button" class="btn btn-secondary btn-sm" id="btn-reset-cm-filters" style="display:none; padding:1px 6px; font-size:0.62rem; height:18px;">✕ Limpiar filtro</button>
+              <span class="section-mini-label">🖐️ Configuración Manual (I–IX)</span>
+              <button type="button" class="btn btn-sm" id="btn-reset-cm-filters" style="display:none; padding:2px 6px; font-size:0.68rem;">✕ Limpiar</button>
             </div>
             <div class="cm-pills-grid" id="cm-pills-container"></div>
+
             <div class="cm-variants-drawer" id="cm-variants-drawer">
               <div style="display:flex; justify-content:space-between; align-items:center; gap:4px;">
-                <span id="cm-drawer-title" style="font-size:0.68rem; font-weight:700; color:#e2e8f0;">Sub-variantes de la Mano</span>
-                <button type="button" class="btn btn-secondary btn-sm" id="btn-open-cm-sheet-drawer" style="padding:1px 7px; font-size:0.64rem; border-color:#3b82f6; color:#93c5fd;" title="Ver lámina oficial completa con su forma base y variantes">📋 Ver Lámina Completa</button>
+                <span id="cm-drawer-title" style="font-size:0.72rem; font-weight:700;">Sub-variantes</span>
+                <button type="button" class="btn btn-sm" id="btn-open-cm-sheet-drawer" style="padding:2px 8px; font-size:0.68rem;">📋 Lámina</button>
               </div>
               <div class="cm-variants-strip" id="cm-variants-strip"></div>
             </div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:7px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.06);">
+
+            <div class="audit-filter-grid">
               <div>
-                <label for="select-filter-alfa" style="display:block; font-size:0.63rem; color:var(--text-muted); margin-bottom:2px;">Letra inicial (alfa):</label>
-                <select id="select-filter-alfa" class="avatar-select" style="width:100%; font-size:0.72rem; padding:3px 6px;"><option value="">Todas las letras (A–Z)</option></select>
+                <label for="select-filter-alfa">Letra:</label>
+                <select id="select-filter-alfa" class="avatar-select"><option value="">Todas (A–Z)</option></select>
               </div>
               <div>
-                <label for="select-sort-order" style="display:block; font-size:0.63rem; color:var(--text-muted); margin-bottom:2px;">Ordenar lista por:</label>
-                <select id="select-sort-order" class="avatar-select" style="width:100%; font-size:0.72rem; padding:3px 6px;">
-                  <option value="catalog">Orden Catálogo (#1–4252)</option>
-                  <option value="hand_config">Config. Manual (I–IX → Var)</option>
+                <label for="select-sort-order">Orden:</label>
+                <select id="select-sort-order" class="avatar-select">
+                  <option value="catalog">Catálogo (#1–4252)</option>
+                  <option value="hand_config">Config. Manual</option>
                   <option value="alfa">Alfabético (A–Z)</option>
+                </select>
+              </div>
+              <div>
+                <label for="select-filter-geolect">Geolecto:</label>
+                <select id="select-filter-geolect" class="avatar-select">
+                  <option value="">Todos (Nacional)</option>
+                  <option value="Sierra">Sierra</option>
+                  <option value="Costa">Costa</option>
+                </select>
+              </div>
+              <div>
+                <label for="select-filter-rnm">Rasgo Facial (RNM):</label>
+                <select id="select-filter-rnm" class="avatar-select">
+                  <option value="">Todos</option>
+                  <option value="non_neutral">Con RNM Activo</option>
+                  <option value="open_kiss_pucker">Beso Abierto</option>
+                  <option value="lips_projected_closed">Labios Proyectados</option>
+                  <option value="bite_teeth">Dientes Visibles</option>
+                  <option value="blow_puff">Mejilla Inflada</option>
                 </select>
               </div>
             </div>
           </div>
-
-          <div style="position:relative; margin-bottom:8px;">
-            <input type="text" id="input-search-sign" class="avatar-select" style="width:100%; padding-left:28px;" placeholder="Buscar por palabra, slug o # (ej. Quieto, Allá, Champú)..." autocomplete="off">
-            <svg style="position:absolute; left:9px; top:50%; transform:translateY(-50%); opacity:0.5; pointer-events:none;" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-          </div>
-
-          <div>
-            <label for="select-avatar-clip" class="avatar-control-label" style="display:flex; justify-content:space-between; margin-bottom:4px;"><span>Seña activa en el filtro:</span><span id="select-sign-index-hint" style="color:var(--text-muted); font-size:0.7rem;">Cargando catálogo...</span></label>
-            <select id="select-avatar-clip" class="avatar-select" style="width:100%; font-size:0.82rem;"><option value="">Cargando catálogo ordenado...</option></select>
-          </div>
-
-          <div class="nav-sign-stepper">
-            <button class="btn btn-secondary btn-sm" id="btn-sign-prev" title="Seña Anterior en el catálogo (Tecla Flecha Izquierda ←)"><span>⬅ Anterior</span></button>
-            <button class="btn btn-secondary btn-sm" id="btn-sign-next" title="Seña Siguiente en el catálogo (Tecla Flecha Derecha →)"><span>Siguiente ➡</span></button>
-            <button class="btn btn-secondary btn-sm" id="btn-sign-random" title="Ir a una seña aleatoria del filtro activo"><span>🎲 Azar</span></button>
-          </div>
-
-          <div style="margin-top:10px;">
-            <button class="btn btn-secondary btn-sm" id="btn-verify-sign" style="width:100%; justify-content:center; padding:7px 0; font-size:0.78rem;" title="Marcar esta seña como verificada y conforme con el video original"><span id="verify-sign-label">✓ Marcar como Verificada</span></button>
-          </div>
         </div>
 
-        <!-- CARD 2: FICHA TÉCNICA, LINGÜÍSTICA Y QA BIOMECÁNICO -->
+        <!-- TARJETA 2: REFERENCIA VISUAL DE MANO E ILUSTRACIÓN OFICIAL -->
         <div class="avatar-config-card" id="card-sign-qa">
           <div class="avatar-config-card-header">
-            <span class="avatar-config-card-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/></svg>Ficha Lingüística y Técnica</span>
-            <span class="avatar-config-card-subtitle" id="qa-status-pill" style="color:#10b981; font-weight:700;">✓ Aprobada</span>
-          </div>
-
-          <div class="version-card-switcher" id="card-version-switcher">
-            <button type="button" class="version-card-btn active v27" id="card-btn-v27" title="Seleccionar versión estandarizada v2.7 (Manos alineadas a la Configuración Manual oficial)">
-              <div class="version-card-btn-header"><span class="version-card-btn-title">v2.7 Estandarizada</span><span class="version-card-btn-badge">Activa</span></div>
-              <div class="version-card-btn-desc">Manos alineadas a la Configuración Manual (I–IX) + IK + 52 ARKit.</div>
-            </button>
-            <button type="button" class="version-card-btn" id="card-btn-v26" title="Seleccionar versión corregida v2.6">
-              <div class="version-card-btn-header"><span class="version-card-btn-title">v2.6 Corregida</span><span class="version-card-btn-badge" style="display:none;">v2.6</span></div>
-              <div class="version-card-btn-desc">Muñecas sin giros bruscos, IK anti-penetración (~1cm) y 52 ARKit faciales.</div>
-            </button>
-            <button type="button" class="version-card-btn" id="card-btn-v25" title="Seleccionar versión 1:1 original v2.5">
-              <div class="version-card-btn-header"><span class="version-card-btn-title">v2.5 Directo</span><span class="version-card-btn-badge" style="display:none;">Original</span></div>
-              <div class="version-card-btn-desc">Captura directa 1:1 original sin postproceso cinemático de despeje.</div>
-            </button>
+            <span class="avatar-config-card-title">📋 Referencia Oficial de la Seña</span>
+            <span class="audit-pill audit-pill-mint" id="qa-status-pill">✓ v2.7.3</span>
           </div>
 
           <div class="version-status-banner v27" id="version-status-banner">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px;">
-              <span id="version-status-text" style="font-weight:600;">✓ Versión 2.7 Estandarizada: Configuración Manual oficial (I–IX) + 52 Blendshapes.</span>
-              <span id="reextracted-sign-tag" class="reextracted-sign-tag" style="display:none;" title="Seña re-extraída en GPU en Google Colab con 64+ cuadros">✨ RE-EXTRAÍDA GPU</span>
-            </div>
+            <span id="version-status-text">✓ Estabilizador v2.7.3: 0 cm penetración + Configuración Manual en todo el trazo.</span>
+            <span id="reextracted-sign-tag" class="reextracted-sign-tag" style="display:none;">✨ GPU</span>
           </div>
 
-          <section class="phase3-review-card" id="phase3-review-card" aria-label="Revisión manual fase 3">
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-              <span style="font-size:0.76rem; font-weight:800; color:#fbbf24;">Fase 3 · Revisión rápida</span>
-              <span id="phase3-review-progress" style="font-size:0.64rem; color:var(--text-muted);">0 guardadas</span>
-            </div>
-            <div style="margin-top:4px; color:var(--text-secondary); font-size:0.66rem;">La ficha se guarda localmente por seña. No modifica el catálogo v2.7.</div>
-            <label class="phase3-review-field full" style="margin-top:8px;">
-              <span class="phase3-review-label">Señas de la muestra oficial · <span id="phase3-sample-count">Cargando...</span></span>
-              <select class="phase3-review-control" id="phase3-sample-sign" aria-label="Señas seleccionadas para revisar en fase 3"><option value="">Cargando muestra de fase 3...</option></select>
-            </label>
-
-            <div class="phase3-review-grid">
-              <label class="phase3-review-field"><span class="phase3-review-label">1. Coincidencia con video</span><select class="phase3-review-control" id="phase3-visualAgainstSource"><option value="PENDING">Pendiente</option><option value="PASS">PASS</option><option value="FAIL">FAIL</option><option value="UNCLEAR">UNCLEAR</option></select></label>
-              <label class="phase3-review-field"><span class="phase3-review-label">2. Fidelidad del avatar</span><select class="phase3-review-control" id="phase3-avatarFidelity"><option value="PENDING">Pendiente</option><option value="PASS">PASS</option><option value="FAIL">FAIL</option><option value="UNCLEAR">UNCLEAR</option></select></label>
-              <label class="phase3-review-field"><span class="phase3-review-label">3. Giro brusco</span><select class="phase3-review-control" id="phase3-abruptRotation"><option value="PENDING">Pendiente</option><option value="PASS">PASS</option><option value="FAIL">FAIL</option><option value="UNCLEAR">UNCLEAR</option></select></label>
-              <label class="phase3-review-field"><span class="phase3-review-label">4. Penetración de manos</span><select class="phase3-review-control" id="phase3-handPenetration"><option value="PENDING">Pendiente</option><option value="PASS">PASS</option><option value="FAIL">FAIL</option><option value="UNCLEAR">UNCLEAR</option></select></label>
-              <label class="phase3-review-field"><span class="phase3-review-label">5. Configuración manual</span><select class="phase3-review-control" id="phase3-handConfiguration"><option value="PENDING">Pendiente</option><option value="PASS">PASS</option><option value="FAIL">FAIL</option><option value="UNCLEAR">UNCLEAR</option></select></label>
-              <label class="phase3-review-field"><span class="phase3-review-label">6. Expresión no manual</span><select class="phase3-review-control" id="phase3-nonManualExpression"><option value="PENDING">Pendiente</option><option value="PASS">PASS</option><option value="FAIL">FAIL</option><option value="UNCLEAR">UNCLEAR</option><option value="NOT_APPLICABLE">No aplica</option></select></label>
-              <label class="phase3-review-field"><span class="phase3-review-label">7. Calidad de fuente</span><select class="phase3-review-control" id="phase3-sourceQuality"><option value="PENDING">Pendiente</option><option value="CLEAR">CLEAR</option><option value="BLURRY">BLURRY</option><option value="OCCLUDED">OCCLUDED</option><option value="MISSING">MISSING</option></select></label>
-              <label class="phase3-review-field"><span class="phase3-review-label">8. Decisión</span><select class="phase3-review-control" id="phase3-decision"><option value="PENDING">Pendiente</option><option value="ACCEPT">ACCEPT</option><option value="AUTO_FIX_CANDIDATE">AUTO_FIX_CANDIDATE</option><option value="MANUAL_FIX">MANUAL_FIX</option><option value="QUARANTINE">QUARANTINE</option><option value="INSUFFICIENT_SOURCE">INSUFFICIENT_SOURCE</option></select></label>
-              <div class="phase3-review-field full">
-                <span class="phase3-review-label">9. Códigos de error</span>
-                <div class="phase3-review-errors">
-                  <label><input type="checkbox" value="HAND_ORIENTATION"> Orientación</label><label><input type="checkbox" value="FINGER_OCCLUSION"> Dedos borrosos</label><label><input type="checkbox" value="WRIST_JUMP"> Giro brusco</label>
-                  <label><input type="checkbox" value="HAND_PENETRATION"> Penetración</label><label><input type="checkbox" value="FACIAL_UNCERTAINTY"> Cara incierta</label><label><input type="checkbox" value="WRONG_DOMINANT_HAND"> Mano dominante</label>
-                  <label><input type="checkbox" value="CONTACT_MISSED"> Contacto</label><label><input type="checkbox" value="NO_AVATAR_MOTION"> Sin movimiento</label><label><input type="checkbox" value="SOURCE_UNCLEAR"> Fuente insuficiente</label>
-                </div>
-              </div>
-              <label class="phase3-review-field full"><span class="phase3-review-label">Notas breves</span><textarea class="phase3-review-control" id="phase3-notes" rows="2" placeholder="Describe solo lo observable..."></textarea></label>
-            </div>
-            <div class="phase3-review-actions">
-              <button type="button" class="btn btn-secondary" id="phase3-save-review">Guardar ficha</button>
-              <button type="button" class="btn btn-secondary" id="phase3-next-pending">Siguiente pendiente</button>
-              <button type="button" class="btn btn-secondary" id="phase3-export-reviews">Exportar JSON</button>
-            </div>
-            <div class="phase3-review-status" id="phase3-review-status" role="status">Selecciona una seña para comenzar.</div>
-          </section>
-
+          <!-- Recuadro de Configuración Manual Oficial -->
           <div class="cm-active-ref-box" id="active-sign-cm-box">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span style="color:var(--text-muted); font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">🖐️ Configuración Manual Oficial</span>
-              <span id="active-cm-badge" style="font-size:0.68rem; font-weight:800; padding:1px 7px; border-radius:4px; background:rgba(16,185,129,0.18); color:#6ee7b7; border:1px solid rgba(16,185,129,0.35);">—</span>
+              <span class="section-mini-label">🖐️ Forma de la Mano</span>
+              <span id="active-cm-badge" class="audit-pill audit-pill-mint">—</span>
             </div>
             <div class="cm-active-ref-grid">
-              <div class="cm-active-thumb-wrap" id="active-cm-thumb-box" title="Clic para ampliar sub-variante de configuración manual">
-                <img id="active-cm-variant-img" src="" alt="Sub-variante de mano LSEC" style="display:none;"><span id="active-cm-no-img" style="font-size:1.5rem; color:#475569; font-weight:800;">*</span>
+              <div class="cm-active-thumb-wrap" id="active-cm-thumb-box" title="Clic para ampliar">
+                <img id="active-cm-variant-img" src="" alt="Sub-variante de mano LSEC" style="display:none;">
+                <span id="active-cm-no-img" style="font-size:1.3rem; color:var(--text-muted); font-weight:800;">*</span>
               </div>
               <div style="display:flex; flex-direction:column; gap:4px; min-width:0;">
-                <div style="font-size:0.75rem; font-weight:700; color:var(--text-primary); line-height:1.2;" id="active-cm-title">Cargando configuración...</div>
-                <div style="font-size:0.68rem; color:var(--text-secondary); line-height:1.25;" id="active-cm-subtitle">Sub-variante: —</div>
+                <div style="font-size:0.80rem; font-weight:700; color:var(--text-primary);" id="active-cm-title">—</div>
+                <div style="font-size:0.72rem; color:var(--text-secondary);" id="active-cm-subtitle">Sub-variante: —</div>
                 <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:2px;">
-                  <button type="button" class="btn btn-secondary btn-sm" id="btn-active-cm-filter-variant" style="padding:2px 7px; font-size:0.64rem; border-color:#10b981; color:#6ee7b7;" title="Filtrar todas las señas que comparten exactamente esta sub-variante manual">🔗 Ver grupo (<span id="active-cm-group-count">0</span>)</button>
-                  <button type="button" class="btn btn-secondary btn-sm" id="btn-active-cm-open-sheet" style="padding:2px 7px; font-size:0.64rem; border-color:#3b82f6; color:#93c5fd;" title="Abrir la lámina romana completa I–IX con su forma base y variantes">📋 Lámina I–IX</button>
+                  <button type="button" class="btn btn-sm" id="btn-active-cm-filter-variant" style="padding:2px 8px; font-size:0.68rem;">🔗 Grupo (<span id="active-cm-group-count">0</span>)</button>
+                  <button type="button" class="btn btn-sm" id="btn-active-cm-open-sheet" style="padding:2px 8px; font-size:0.68rem;">📋 Lámina I–IX</button>
                 </div>
               </div>
             </div>
           </div>
 
-          <div style="background:var(--bg-subtle, rgba(255,255,255,0.03)); padding:8px; border-radius:6px; border:1px solid var(--border-subtle); margin-bottom:8px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; padding-bottom:4px; border-bottom:1px solid rgba(255,255,255,0.05);">
-              <span style="color:var(--text-muted); font-size:0.68rem;">Versión Cinemática:</span>
-              <div style="display:flex; align-items:center; gap:6px;"><span id="info-pipeline-version" style="font-weight:700; color:#a7f3d0; font-size:0.72rem;">v2.7 Estandarizada</span><button class="btn btn-secondary btn-sm" id="btn-toggle-pipeline-version" style="font-size:0.65rem; padding:1px 6px; height:20px;" title="Alternar entre versión v2.7 (estandarizada), v2.6 (corregida) y v2.5 (original)">Ver v2.6</button></div>
+          <!-- Ilustración Oficial del Diccionario -->
+          <div id="sign-illustration-container" class="audit-meta-box">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <span class="section-mini-label">🖼️ Ilustración Diccionario</span>
+              <span id="illustration-status-badge" style="font-size:0.70rem; font-weight:700; color:var(--color-primary-emerald);">—</span>
             </div>
-            <div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span style="color:var(--text-muted); font-size:0.68rem;">Posición en Catálogo:</span><span id="info-catalog-pos" style="font-weight:700; color:#60a5fa; font-size:0.75rem;">#— de 4.252</span></div>
-            <div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span style="color:var(--text-muted); font-size:0.68rem;">Palabra Oficial:</span><span id="info-catalog-palabra" style="font-weight:700; color:var(--text-primary); font-size:0.75rem;">—</span></div>
-            <div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span style="color:var(--text-muted); font-size:0.68rem;">Slug Oficial:</span><span id="info-catalog-slug" style="color:var(--text-secondary); font-family:monospace; font-size:0.72rem;">—</span></div>
-            <div style="display:flex; justify-content:space-between; align-items:center;"><span style="color:var(--text-muted); font-size:0.68rem;">Categorías:</span><span id="info-catalog-categories" style="color:var(--action-primary); font-size:0.7rem; font-weight:600; text-align:right;">—</span></div>
-          </div>
-
-          <div id="sign-illustration-container" style="background:var(--bg-subtle, rgba(255,255,255,0.03)); padding:8px; border-radius:6px; border:1px solid var(--border-subtle); margin-bottom:8px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;"><span style="color:var(--text-muted); font-size:0.68rem; font-weight:600; text-transform:uppercase; letter-spacing:0.04em;">🖼️ Ilustración Oficial</span><span id="illustration-status-badge" style="font-size:0.68rem; font-weight:700; color:#10b981;">Cargando...</span></div>
-            <div id="illustration-img-box" class="illustration-preview-box" title="Clic para ampliar ilustración en pantalla completa">
+            <div id="illustration-img-box" class="illustration-preview-box" title="Clic para ampliar">
               <img id="sign-illustration-img" class="illustration-preview-img" src="" alt="Ilustración oficial LSEC">
-              <div id="sign-illustration-fallback" style="display:none; flex-direction:column; align-items:center; justify-content:center; padding:14px 8px; color:var(--text-muted); font-size:0.75rem; text-align:center;">
-                <span style="font-size:1.6rem; margin-bottom:4px; opacity:0.6;">🖼️</span><span style="font-size:0.72rem; color:var(--text-secondary);">Ilustración local no disponible</span><a id="illustration-remote-link" href="#" target="_blank" style="display:none; color:#60a5fa; margin-top:5px; text-decoration:underline; font-size:0.7rem;">Ver en catálogo CONADIS ↗</a>
+              <div id="sign-illustration-fallback" style="display:none; padding:12px; color:var(--text-muted); font-size:0.74rem; text-align:center;">
+                <span>Ilustración no disponible</span>
+                <a id="illustration-remote-link" href="#" target="_blank" style="display:none;">Ver externo ↗</a>
               </div>
-              <div id="illustration-zoom-tag" class="illustration-zoom-tag" style="position:absolute; bottom:5px; right:6px; font-size:0.65rem; background:rgba(0,0,0,0.7); padding:2px 6px; border-radius:4px; color:#cbd5e1; pointer-events:none; opacity:0.8; transition:opacity 0.2s;">🔍 Ampliar</div>
+              <div id="illustration-zoom-tag" class="illustration-zoom-tag">🔍 Ampliar</div>
             </div>
           </div>
-        </div>
 
-        <!-- CARD 3: MODELO HUMANOIDE VRM 1.0 -->
-        <div class="avatar-config-card">
-          <div class="avatar-config-card-header"><span class="avatar-config-card-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/></svg>Modelo Humanoide VRM 1.0</span><span class="avatar-config-card-subtitle" style="color:var(--text-muted);">LSEC-Female</span></div>
-          <div style="display:flex; flex-direction:column; gap:6px;"><input type="file" id="avatar-vrm-file-input" accept=".vrm,.glb" style="display:none;"><button class="btn btn-secondary btn-sm" id="btn-avatar-load-vrm" style="width:100%; justify-content:center; font-size:0.75rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg><span>Cargar Avatar VRM Local (.vrm)</span></button><button class="btn btn-secondary btn-sm" id="btn-reload-default-vrm" style="width:100%; justify-content:center; font-size:0.75rem;" title="Restaurar modelo VRM oficial LSEC-Interpreter-Female.vrm"><span>Restaurar Modelo Oficial</span></button></div>
+          <!-- Metadatos resumidos de la seña -->
+          <div class="audit-meta-box">
+            <div class="audit-meta-row">
+              <span>Versión activa:</span>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <strong id="info-pipeline-version">v2.7.3 Estabilizada</strong>
+                <button class="btn btn-sm" id="btn-toggle-pipeline-version" style="padding:1px 6px; font-size:0.66rem;">Cambiar</button>
+              </div>
+            </div>
+            <div class="audit-meta-row"><span>Posición Catálogo:</span><strong id="info-catalog-pos">#—</strong></div>
+            <div class="audit-meta-row"><span>Palabra Oficial:</span><strong id="info-catalog-palabra">—</strong></div>
+            <div class="audit-meta-row"><span>Slug:</span><code id="info-catalog-slug">—</code></div>
+            <div class="audit-meta-row"><span>Categoría:</span><span id="info-catalog-categories">—</span></div>
+          </div>
+
+          <!-- Controles de modelo VRM -->
+          <div style="display:flex; gap:6px;">
+            <input type="file" id="avatar-vrm-file-input" accept=".vrm,.glb" style="display:none;">
+            <button class="btn btn-sm" id="btn-avatar-load-vrm" style="flex:1; justify-content:center;">Cargar .VRM</button>
+            <button class="btn btn-sm" id="btn-reload-default-vrm" style="flex:1; justify-content:center;">Restaurar VRM</button>
+          </div>
+
+          <!-- Elementos heredados ocultos para mantener compatibilidad total con avatarconfig-main.js -->
+          <div style="display:none;" aria-hidden="true">
+            <div id="card-version-switcher">
+              <button type="button" id="card-btn-v27"></button>
+              <button type="button" id="card-btn-v26"></button>
+              <button type="button" id="card-btn-v25"></button>
+            </div>
+            <section id="phase3-review-card">
+              <span id="phase3-review-progress"></span>
+              <span id="phase3-sample-count"></span>
+              <select id="phase3-sample-sign"></select>
+              <select id="phase3-visualAgainstSource"><option value="PENDING"></option></select>
+              <select id="phase3-avatarFidelity"><option value="PENDING"></option></select>
+              <select id="phase3-abruptRotation"><option value="PENDING"></option></select>
+              <select id="phase3-handPenetration"><option value="PENDING"></option></select>
+              <select id="phase3-handConfiguration"><option value="PENDING"></option></select>
+              <select id="phase3-nonManualExpression"><option value="PENDING"></option></select>
+              <select id="phase3-sourceQuality"><option value="PENDING"></option></select>
+              <select id="phase3-decision"><option value="PENDING"></option></select>
+              <textarea id="phase3-notes"></textarea>
+              <button type="button" id="phase3-save-review"></button>
+              <button type="button" id="phase3-next-pending"></button>
+              <button type="button" id="phase3-export-reviews"></button>
+              <div id="phase3-review-status"></div>
+            </section>
+          </div>
         </div>
       </aside>
     </div>
   </main>
-  <!-- MODAL LIGHTBOX PARA INSPECCIÓN DETALLADA DE LA ILUSTRACIÓN -->
+
+  <!-- MODAL LIGHTBOX PARA AMPLIAR ILUSTRACIONES Y LÁMINAS -->
   <div id="illustration-lightbox" class="illustration-lightbox">
-    <div style="position:relative; max-width:90vw; max-height:90vh; background:#121614; border:1px solid var(--border-medium); border-radius:8px; box-shadow:0 24px 60px rgba(0,0,0,0.85); display:flex; flex-direction:column; overflow:hidden;">
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 16px; border-bottom:1px solid var(--border-subtle); background:#181c19;"><div style="display:flex; align-items:center; gap:8px;"><span style="font-size:1.1rem;">🖼️</span><span id="lightbox-title" style="font-weight:700; font-size:0.88rem; color:var(--text-primary);">Ilustración Oficial LSEC</span></div><button class="btn btn-secondary btn-sm" id="btn-close-lightbox" style="padding:3px 10px; font-size:0.8rem;" title="Cerrar (Esc)">✕ Cerrar (Esc)</button></div>
-      <div style="flex:1; display:flex; align-items:center; justify-content:center; padding:20px; background:#0b0d0c; overflow:auto;"><img id="lightbox-img" src="" alt="Ilustración oficial LSEC ampliada" style="max-width:100%; max-height:75vh; object-fit:contain; border-radius:4px; filter:drop-shadow(0 10px 25px rgba(0,0,0,0.8));"></div>
+    <div class="lightbox-card">
+      <div class="lightbox-header">
+        <span id="lightbox-title">🖼️ Ilustración Oficial LSEC</span>
+        <button class="btn btn-sm" id="btn-close-lightbox">✕ Cerrar (Esc)</button>
+      </div>
+      <div class="lightbox-body">
+        <img id="lightbox-img" src="" alt="Ilustración oficial LSEC ampliada">
+      </div>
     </div>
   </div>
-  <!-- Inicialización modular: /static/js/avatarconfig-main.js (let preferredVersion = '2.7') -->
-  <script type="module" src="/static/js/avatarconfig-main.js?v=2.8.0"></script>
+
+  <script type="module" src="/static/js/avatarconfig-main.js?v=3.2.0"></script>
 </body>
 </html>

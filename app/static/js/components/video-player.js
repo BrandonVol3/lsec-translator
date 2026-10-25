@@ -29,20 +29,22 @@ class VideoPlayerController {
     this.progressFill = document.getElementById('progress-fill');
     this.progressPlayhead = document.getElementById('progress-playhead');
     this.markersContainer = document.getElementById('progress-markers-container');
-    this.timecodeDisplay = document.getElementById('timecode-display');
+    this.timecodeDisplay = document.getElementById('timecode-display') || document.querySelector('.timecode-display');
+    this.timecodeCurrentEl = document.getElementById('timecode-current');
+    this.timecodeDurationEl = document.getElementById('timecode-duration');
     this.playPauseBtn = document.getElementById('btn-play-pause');
     this.prevFrameBtn = document.getElementById('btn-prev-frame');
     this.nextFrameBtn = document.getElementById('btn-next-frame');
     this.stepBack5sBtn = document.getElementById('btn-step-back-5s');
     this.stepFwd5sBtn = document.getElementById('btn-step-fwd-5s');
-    this.speedSelect = document.getElementById('select-playback-speed');
+    this.speedSelect = document.getElementById('playback-speed-select') || document.getElementById('select-playback-speed');
     this.volumeSlider = document.getElementById('video-volume-slider');
-    this.muteBtn = document.getElementById('btn-toggle-mute');
+    this.muteBtn = document.getElementById('btn-mute-toggle') || document.getElementById('btn-toggle-mute');
     this.loopBtn = document.getElementById('btn-toggle-loop');
     this.setInBtn = document.getElementById('btn-set-in');
     this.setOutBtn = document.getElementById('btn-set-out');
     this.fullscreenBtn = document.getElementById('btn-fullscreen');
-    this.videoFileInput = document.getElementById('video-file-input');
+    this.videoFileInput = document.getElementById('file-upload-input') || document.getElementById('video-file-input');
     // Referencia al empty state HTML existente (no crear duplicado)
     this.emptyStateOverlay = document.getElementById('video-empty-state');
 
@@ -79,17 +81,19 @@ class VideoPlayerController {
       });
     }
 
-    // 3. Step Frame dinámico según FPS detectado o configurado
+    // 3. Paso de ±1 segundo (o Shift+Clic para 1 fotograma)
     if (this.prevFrameBtn) {
-      this.prevFrameBtn.addEventListener('click', () => {
+      this.prevFrameBtn.addEventListener('click', (e) => {
         this.pause();
-        appState.stepFrame(-this.getFrameDuration());
+        const delta = e.shiftKey ? -this.getFrameDuration() : -1.0;
+        appState.stepFrame(delta);
       });
     }
     if (this.nextFrameBtn) {
-      this.nextFrameBtn.addEventListener('click', () => {
+      this.nextFrameBtn.addEventListener('click', (e) => {
         this.pause();
-        appState.stepFrame(this.getFrameDuration());
+        const delta = e.shiftKey ? this.getFrameDuration() : 1.0;
+        appState.stepFrame(delta);
       });
     }
 
@@ -163,7 +167,10 @@ class VideoPlayerController {
     if (this.videoFileInput) {
       this.videoFileInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
-        if (file) this.loadLocalVideoFile(file);
+        if (file) {
+          this.loadLocalVideoFile(file);
+          e.target.value = '';
+        }
       });
     }
 
@@ -359,6 +366,12 @@ class VideoPlayerController {
       if (this.volumeSlider) this.volumeSlider.value = isMuted ? 0 : volume;
       if (this.muteBtn) {
         this.muteBtn.classList.toggle('muted', isMuted);
+        const iconOn = document.getElementById('icon-volume-on');
+        const iconOff = document.getElementById('icon-volume-off');
+        if (iconOn && iconOff) {
+          iconOn.style.display = isMuted ? 'none' : 'inline';
+          iconOff.style.display = isMuted ? 'inline' : 'none';
+        }
       }
       if (this.videoEl) {
         this.videoEl.volume = volume;
@@ -441,16 +454,21 @@ class VideoPlayerController {
   }
 
   updateTimeDisplay(time) {
-    if (!this.timecodeDisplay) return;
     const formatTime = (secs) => {
-      if (secs === undefined || secs === null || isNaN(secs) || secs < 0) return '00:00.000';
+      if (secs === undefined || secs === null || isNaN(secs) || secs < 0) return '00:00.0';
       const m = Math.floor(secs / 60);
       const s = Math.floor(secs % 60);
-      const ms = Math.floor((secs % 1) * 1000);
-      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(ms).padStart(3, '0')}`;
+      const tenths = Math.floor((secs % 1) * 10);
+      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${tenths}`;
     };
 
     const duration = appState.state.playback.duration || 0;
+    if (this.timecodeCurrentEl && this.timecodeDurationEl) {
+      this.timecodeCurrentEl.textContent = formatTime(time);
+      this.timecodeDurationEl.textContent = formatTime(duration);
+      return;
+    }
+    if (!this.timecodeDisplay) return;
     this.timecodeDisplay.innerHTML = `
       <span class="timecode-current">${formatTime(time)}</span>
       <span class="timecode-sep" style="opacity:0.3; margin:0 3px;">/</span>

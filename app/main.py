@@ -178,11 +178,28 @@ app.include_router(ws_router)
 # ============================================================
 
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    """Sirve un isotipo SVG como favicon para evitar 404 en el navegador."""
+    svg = (
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none">'
+        '<rect width="40" height="40" rx="10" fill="#10B981"/>'
+        '<path d="M11 26V16C11 14.8954 11.8954 14 13 14C14.1046 14 15 14.8954 15 16V21'
+        'M15 21V12C15 10.8954 15.8954 10 17 10C18.1046 10 19 10.8954 19 12V21'
+        'M19 21V14C19 12.8954 19.8954 12 21 12C22.1046 12 23 12.8954 23 14V23'
+        'C23 26.866 19.866 30 16 30H15C12.7909 30 11 28.2091 11 26Z" '
+        'stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'
+        '<path d="M27 15V25M31 18V22" stroke="#ECFDF5" stroke-width="2.4" stroke-linecap="round"/>'
+        '</svg>'
+    )
+    return Response(content=svg, media_type="image/svg+xml")
 
 # Montar carpeta de modelos VRM desde la carpeta Avatar del proyecto
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

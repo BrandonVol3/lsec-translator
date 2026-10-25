@@ -225,8 +225,8 @@ export function buildActiveSignHandshapeMeta(signName, info, allItems, handshape
       badgeEl.textContent = `Lámina ${roman} · ${variantLabel}`;
     }
     badgeEl.style.borderColor = colorHex;
-    badgeEl.style.color = '#fff';
-    badgeEl.style.background = `${colorHex}33`;
+    badgeEl.style.color = 'var(--text-primary)';
+    badgeEl.style.background = `${colorHex}22`;
   }
 
   if (thumbBox) thumbBox.style.borderColor = colorHex;
@@ -305,7 +305,7 @@ export function syncVersionUIElements(preferredVersion) {
   if (banner && bannerText) {
     if (isV27) {
       banner.className = 'version-status-banner v27';
-      bannerText.textContent = '✓ Versión 2.7 Estandarizada: Configuración Manual oficial (I–IX) + IK + 52 Blendshapes.';
+      bannerText.textContent = '✓ Versión 2.7.3 Estabilizada: Configuración Manual oficial (I–IX) + IK Anti-Penetración + 52 Blendshapes.';
     } else if (isV26) {
       banner.className = 'version-status-banner v26';
       bannerText.textContent = '✓ Versión 2.6 Corregida: Cinemática optimizada, IK anti-penetración (~1cm) y 52 Blendshapes.';
@@ -319,41 +319,41 @@ export function syncVersionUIElements(preferredVersion) {
   const hudExpr = document.getElementById('hud-expressions-badge');
   if (hudBadge) {
     if (isV27) {
-      hudBadge.textContent = 'v2.7';
-      hudBadge.style.background = '#064e3b';
-      hudBadge.style.color = '#6ee7b7';
-      hudBadge.style.borderColor = '#10b981';
+      hudBadge.textContent = 'v2.7.3';
+      hudBadge.style.background = '#e8f5ee';
+      hudBadge.style.color = '#007a3d';
+      hudBadge.style.borderColor = 'rgba(0, 122, 61, 0.35)';
     } else if (isV26) {
       hudBadge.textContent = 'v2.6';
-      hudBadge.style.background = '#1e3a8a';
-      hudBadge.style.color = '#93c5fd';
-      hudBadge.style.borderColor = '#3b82f6';
+      hudBadge.style.background = '#eff6ff';
+      hudBadge.style.color = '#1d4ed8';
+      hudBadge.style.borderColor = 'rgba(37, 99, 235, 0.35)';
     } else {
       hudBadge.textContent = 'v2.5';
-      hudBadge.style.background = '#1e293b';
-      hudBadge.style.color = '#cbd5e1';
-      hudBadge.style.borderColor = '#64748b';
+      hudBadge.style.background = '#f1f5f9';
+      hudBadge.style.color = '#475569';
+      hudBadge.style.borderColor = 'rgba(100, 116, 139, 0.35)';
     }
   }
   if (hudExpr) {
     if (isV27 || isV26) {
       hudExpr.textContent = '🎭 52 ARKit';
-      hudExpr.style.background = 'rgba(16,185,129,0.15)';
-      hudExpr.style.color = '#34d399';
-      hudExpr.style.borderColor = 'rgba(16,185,129,0.3)';
+      hudExpr.style.background = 'rgba(0, 122, 61, 0.1)';
+      hudExpr.style.color = '#007a3d';
+      hudExpr.style.borderColor = 'rgba(0, 122, 61, 0.25)';
     } else {
       hudExpr.textContent = '🎭 Sin ARKit';
-      hudExpr.style.background = 'rgba(148,163,184,0.15)';
-      hudExpr.style.color = '#94a3b8';
-      hudExpr.style.borderColor = 'rgba(148,163,184,0.3)';
+      hudExpr.style.background = 'rgba(100, 116, 139, 0.12)';
+      hudExpr.style.color = '#475569';
+      hudExpr.style.borderColor = 'rgba(100, 116, 139, 0.25)';
     }
   }
 
   const infoPipe = document.getElementById('info-pipeline-version');
   const toggleBtn = document.getElementById('btn-toggle-pipeline-version');
   if (infoPipe) {
-    infoPipe.textContent = isV27 ? 'v2.7 Estandarizada' : (isV26 ? 'v2.6 Corregida' : 'v2.5 Directo');
-    infoPipe.style.color = isV27 ? '#6ee7b7' : (isV26 ? '#93c5fd' : '#94a3b8');
+    infoPipe.textContent = isV27 ? 'v2.7.3 Estabilizada' : (isV26 ? 'v2.6 Corregida' : 'v2.5 Directo');
+    infoPipe.style.color = isV27 ? '#007a3d' : (isV26 ? '#1d4ed8' : '#475569');
   }
   if (toggleBtn) {
     const nextVer = getNextVersion(preferredVersion);

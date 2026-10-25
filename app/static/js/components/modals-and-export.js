@@ -82,38 +82,88 @@ class ModalsAndExportController {
     this.modalTitle.textContent = 'Diccionario Oficial LSEC — CONADIS (4.252 Señas)';
     this.modalBody.innerHTML = `
       <div style="display:flex; flex-direction:column; gap:12px;">
-        <div style="display:flex; gap:8px;">
-          <input type="text" id="dict-search-input" class="transcript-seg-input" style="min-height:38px;" placeholder="Buscar glosa o palabra en el diccionario CONADIS (ej. HOLA, EDUCACIÓN, ECUADOR)...">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <input type="text" id="dict-search-input" class="transcript-seg-input" style="min-height:38px; flex:1 1 220px;" placeholder="Buscar glosa o palabra en el diccionario CONADIS (ej. HOLA, MAYO, EDUCACIÓN)...">
+          <select id="dict-geolect-select" class="export-config-select" title="Filtrar o priorizar por geolecto regional" style="min-height:38px;">
+            <option value="">Geolecto: Todos (Nacional)</option>
+            <option value="Sierra">Sierra (Quito / Andino)</option>
+            <option value="Costa">Costa (Guayaquil / Litoral)</option>
+          </select>
+          <select id="dict-handconfig-select" class="export-config-select" title="Filtrar por Configuración Manual (I a IX)" style="min-height:38px;">
+            <option value="">Config. Manual: Todas</option>
+            <option value="configuracion_manual_1">Grupo I</option>
+            <option value="configuracion_manual_2">Grupo II</option>
+            <option value="configuracion_manual_3">Grupo III</option>
+            <option value="configuracion_manual_4">Grupo IV</option>
+            <option value="configuracion_manual_5">Grupo V</option>
+            <option value="configuracion_manual_6">Grupo VI</option>
+            <option value="configuracion_manual_7">Grupo VII</option>
+            <option value="configuracion_manual_8">Grupo VIII</option>
+            <option value="configuracion_manual_9">Grupo IX</option>
+            <option value="configuracion_manual_rostro">Rostro (CNM)</option>
+          </select>
           <button type="button" class="btn btn-cobalt" id="btn-dict-search-go">Buscar</button>
         </div>
         <div id="dict-search-results" style="max-height:320px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">
-          <div class="empty-state-box">Escribe un término para consultar las 4.252 fichas léxicas CONADIS.</div>
+          <div class="empty-state-box">Escribe un término o selecciona parámetros querológicos/geolectales para consultar las 4.252 fichas léxicas CONADIS.</div>
         </div>
       </div>
     `;
-    this.modalFooter.innerHTML = `<button class="btn" id="btn-dict-close">Cerrar</button>`;
-    this.modalFooter.querySelector('#btn-dict-close')?.addEventListener('click', () => this.close());
+    this.modalFooter.innerHTML = '';
 
     const inputEl = this.modalBody.querySelector('#dict-search-input');
+    const geoSelectEl = this.modalBody.querySelector('#dict-geolect-select');
+    const hcSelectEl = this.modalBody.querySelector('#dict-handconfig-select');
     const resultsEl = this.modalBody.querySelector('#dict-search-results');
     const runSearch = async () => {
       const q = (inputEl?.value || '').trim();
+      const geolect = (geoSelectEl?.value || '').trim();
+      const handConfig = (hcSelectEl?.value || '').trim();
       if (!resultsEl) return;
       try {
-        const res = await fetch(`/api/v1/dictionary/search?q=${encodeURIComponent(q || 'A')}&limit=20`);
+        const params = new URLSearchParams({ q: q || 'A', limit: '20' });
+        if (geolect) params.set('geolect', geolect);
+        if (handConfig) params.set('hand_config', handConfig);
+        const res = await fetch(`/api/v1/dictionary/search?${params.toString()}`);
         if (res.ok) {
           const data = await res.json();
           const items = data.results || data.entries || data.items || [];
           if (items.length > 0) {
-            resultsEl.innerHTML = items.map(it => `
-              <div style="padding:10px 12px; border:2px solid var(--color-border-subtle); border-radius:10px; display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                  <strong style="color:var(--color-primary-emerald-dark); font-family:var(--font-display);">${it.gloss || it.lemma || it.word}</strong>
-                  <div style="font-size:0.76rem; color:var(--color-text-secondary);">${it.category || 'Léxico Oficial CONADIS'}</div>
+            resultsEl.innerHTML = items.map(it => {
+              const entry = it.entry || it;
+              const glossLabel = entry.canonical_gloss || entry.title || it.matched_form || entry.gloss || entry.lemma || entry.word || 'SEÑA';
+              const geoBadge = (entry.geolect && entry.geolect !== 'Nacional') ? ` · Geolecto: ${entry.geolect}` : '';
+              const categoryLabel = ((Array.isArray(entry.categories) && entry.categories.length > 0)
+                ? entry.categories.join(' · ')
+                : (entry.category || it.category || 'Léxico Oficial CONADIS')) + geoBadge;
+              return `
+                <div style="padding:10px 12px; border:2px solid var(--color-border-subtle); border-radius:10px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                  <div>
+                    <strong style="color:var(--color-primary-emerald-dark); font-family:var(--font-display);">${glossLabel}</strong>
+                    <div style="font-size:0.76rem; color:var(--color-text-secondary);">${categoryLabel}</div>
+                  </div>
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <span class="gloss-chip-tactile gloss-chip-conadis" style="font-size:0.74rem; padding:3px 8px;">✓ CONADIS</span>
+                    <button type="button" class="btn btn-sm btn-dict-copy-gloss" data-gloss="${String(glossLabel).replace(/"/g, '&quot;')}" title="Copiar glosa o previsualizar en Avatar">Usar glosa</button>
+                  </div>
                 </div>
-                <span class="gloss-chip-tactile gloss-chip-conadis" style="font-size:0.75rem; padding:3px 8px;">Seña CONADIS</span>
-              </div>
-            `).join('');
+              `;
+            }).join('');
+
+            resultsEl.querySelectorAll('.btn-dict-copy-gloss').forEach(btn => {
+              btn.addEventListener('click', () => {
+                const gl = btn.getAttribute('data-gloss') || '';
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                  navigator.clipboard.writeText(gl).catch(() => {});
+                }
+                if (window.avatarSyncController && typeof window.avatarSyncController.playGlossByName === 'function') {
+                  window.avatarSyncController.playGlossByName(gl);
+                }
+                if (typeof window.showToast === 'function') {
+                  window.showToast(`Glosa "${gl}" copiada al portapapeles.`, 'success');
+                }
+              });
+            });
             return;
           }
         }
@@ -122,46 +172,83 @@ class ModalsAndExportController {
     };
 
     this.modalBody.querySelector('#btn-dict-search-go')?.addEventListener('click', runSearch);
+    geoSelectEl?.addEventListener('change', runSearch);
+    hcSelectEl?.addEventListener('change', runSearch);
     inputEl?.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') runSearch();
     });
     this.openBackdrop();
   }
 
-  // --- Persistencia Local de Proyectos (RF-08) ---
+  // --- Persistencia Local de Proyectos y Exportación Unificada (RF-08 / Ley de Hick WCAG 2.2) ---
   openProjectsDialog() {
     if (!this.modalBackdrop || !this.modalTitle || !this.modalBody) return;
     const project = appState?.state?.project || {};
-    this.modalTitle.textContent = 'Gestión y Persistencia Local de Proyectos';
+    const hasSavedLocal = Boolean(localStorage.getItem('lsec_studio_project'));
+    this.modalTitle.textContent = 'Gestión de Proyectos y Exportación LSEC';
     this.modalBody.innerHTML = `
-      <div style="display:flex; flex-direction:column; gap:12px;">
+      <div style="display:flex; flex-direction:column; gap:14px;">
         <div style="padding:12px; border:2px solid var(--color-border-subtle); border-radius:12px; background:var(--color-canvas-bg);">
-          <div style="font-weight:800;">Proyecto Actual: ${project.project_name || project.title || 'Proyecto LSEC'}</div>
-          <div style="font-size:0.8rem; color:var(--color-text-secondary);">
+          <div style="font-weight:800;">Proyecto Actual: ${project.project_name || project.title || project.media_info?.filename || 'Proyecto LSEC'}</div>
+          <div style="font-size:0.85rem; color:var(--color-text-secondary);">
             Oraciones: ${(project.segments || []).length} · Glosas LSEC: ${(project.glosses || []).length}
           </div>
         </div>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <button type="button" class="btn btn-primary" id="btn-proj-save-local">Guardar en Almacenamiento Local</button>
-          <button type="button" class="btn btn-cobalt" id="btn-proj-download-json">Exportar Proyecto (.json)</button>
-          <button type="button" class="btn" id="btn-proj-reset-demo">Restaurar Proyecto Demo</button>
+          <button type="button" class="btn btn-primary" id="btn-proj-open-exports">Opciones de Exportación (MP4 / SRT / VTT / CSV)</button>
+          <button type="button" class="btn btn-cobalt" id="btn-proj-save-local">Guardar en Almacenamiento Local</button>
+          <button type="button" class="btn" id="btn-proj-load-local" ${hasSavedLocal ? '' : 'disabled title="No hay proyecto guardado en este navegador"'}>Cargar Guardado Local</button>
+          <button type="button" class="btn" id="btn-proj-download-json">Exportar Proyecto (.json)</button>
+          <button type="button" class="btn" id="btn-proj-import-json">Importar Proyecto (.json)</button>
+          <input type="file" id="input-import-project-json" accept=".json,application/json" style="display:none;">
         </div>
       </div>
     `;
-    this.modalFooter.innerHTML = `<button class="btn" id="btn-proj-close">Cerrar</button>`;
-    this.modalFooter.querySelector('#btn-proj-close')?.addEventListener('click', () => this.close());
+    this.modalFooter.innerHTML = '';
 
+    this.modalBody.querySelector('#btn-proj-open-exports')?.addEventListener('click', () => {
+      this.openExportDialog();
+    });
     this.modalBody.querySelector('#btn-proj-save-local')?.addEventListener('click', () => {
       appState.saveToLocalStorage();
       if (typeof window.showToast === 'function') window.showToast('Proyecto guardado localmente.', 'success');
       this.close();
     });
+    this.modalBody.querySelector('#btn-proj-load-local')?.addEventListener('click', () => {
+      const saved = localStorage.getItem('lsec_studio_project');
+      if (!saved) {
+        if (typeof window.showToast === 'function') window.showToast('No se encontró un proyecto guardado localmente.', 'warning');
+        return;
+      }
+      const res = appState.loadProjectFromJSON(saved, 'Proyecto_Local.json');
+      if (res && res.success) {
+        if (typeof window.showToast === 'function') window.showToast('Proyecto local restaurado.', 'success');
+        this.close();
+      } else if (typeof window.showToast === 'function') {
+        window.showToast('No se pudo cargar el proyecto local.', 'error');
+      }
+    });
     this.modalBody.querySelector('#btn-proj-download-json')?.addEventListener('click', () => {
       this.downloadProjectBundle();
     });
-    this.modalBody.querySelector('#btn-proj-reset-demo')?.addEventListener('click', () => {
-      appState.resetToDefaultProject();
-      this.close();
+    const importBtn = this.modalBody.querySelector('#btn-proj-import-json');
+    const importInput = this.modalBody.querySelector('#input-import-project-json');
+    importBtn?.addEventListener('click', () => importInput?.click());
+    importInput?.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const res = appState.loadProjectFromJSON(text, file.name);
+        if (res && res.success) {
+          if (typeof window.showToast === 'function') window.showToast(`Proyecto "${file.name}" importado exitosamente.`, 'success');
+          this.close();
+        } else if (typeof window.showToast === 'function') {
+          window.showToast('Archivo JSON inválido.', 'error');
+        }
+      } catch (err) {
+        if (typeof window.showToast === 'function') window.showToast('Error al leer el archivo JSON.', 'error');
+      }
     });
     this.openBackdrop();
   }
@@ -220,8 +307,7 @@ class ModalsAndExportController {
       </div>
     `;
 
-    this.modalFooter.innerHTML = `<button class="btn" id="btn-modal-export-close">Cerrar</button>`;
-    this.modalFooter.querySelector('#btn-modal-export-close')?.addEventListener('click', () => this.close());
+    this.modalFooter.innerHTML = '';
 
     this.modalBody.querySelector('#btn-exp-composite-video')?.addEventListener('click', () => this.openCompositeVideoExportDialog());
     this.modalBody.querySelector('#btn-exp-srt')?.addEventListener('click', () => this.downloadSRT());
@@ -251,6 +337,14 @@ class ModalsAndExportController {
         </div>
 
         <div class="export-video-config-panel" id="composite-config-panel">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; padding:8px 10px; border-radius:8px; background:var(--color-surface-mint); border:1.5px solid var(--color-primary-emerald);">
+            <div style="font-size:0.76rem; font-weight:700; color:var(--color-primary-emerald-dark);">
+              ✓ Cumple Norma NTE INEN 3198 (Recuadro ≥ 1/9 de pantalla · 12.3%) y Reglamento LOC Abril 2026
+            </div>
+            <button type="button" class="btn btn-sm" id="btn-download-inen-compliance-report" title="Descargar certificado JSON de cumplimiento técnico y normativo (Art. 26 Reglamento LOC 2026)">
+              Reporte Art. 26 (.json)
+            </button>
+          </div>
           <div class="export-config-row">
             <label class="export-config-label" for="cfg-pip-position">Posición del Avatar 3D (PiP):</label>
             <select id="cfg-pip-position" class="export-config-select">
@@ -311,6 +405,19 @@ class ModalsAndExportController {
         window.compositeVideoExporter.cancelExport();
       }
       this.openExportDialog();
+    });
+
+    this.modalBody.querySelector('#btn-download-inen-compliance-report')?.addEventListener('click', () => {
+      if (window.compositeVideoExporter && typeof window.compositeVideoExporter.buildComplianceReport === 'function') {
+        const pipPosition = this.modalBody.querySelector('#cfg-pip-position')?.value || 'bottom-right';
+        const resolution = this.modalBody.querySelector('#cfg-resolution')?.value || 'original';
+        const includeGlosses = this.modalBody.querySelector('#cfg-include-glosses')?.checked ?? true;
+        const report = window.compositeVideoExporter.buildComplianceReport({ pipPosition, resolution, includeGlosses });
+        this.downloadFile('reporte_cumplimiento_nte_inen_3198_loc_2026.json', JSON.stringify(report, null, 2), 'application/json;charset=utf-8');
+        if (typeof window.showToast === 'function') {
+          window.showToast('Reporte de cumplimiento NTE INEN 3198 / LOC 2026 descargado.', 'success');
+        }
+      }
     });
 
     this.modalFooter.querySelector('#btn-start-video-export')?.addEventListener('click', () => this.runCompositeVideoExport());

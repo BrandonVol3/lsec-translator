@@ -1,12 +1,6 @@
 /* ============================================================
    LSEC STUDIO — HOJA DE ESTILOS PRINCIPAL (FACHADA MODULAR)
    ============================================================ */
-@import url('./base-tokens.css');
-@import url('./layout-workspace.css');
-@import url('./components-ui.css');
-@import url('./timeline-editor.css');
-@import url('./modals-panels.css');
-@import url('./avatar-studio.css');
 
 /* Navegación por Etapas (3 Etapas) */
 .nav-stages-group {

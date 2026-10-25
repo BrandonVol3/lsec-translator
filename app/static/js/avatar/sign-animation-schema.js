@@ -1,4 +1,4 @@
-﻿/**
+/**
  * LSEC Studio — Esquema y Validador de Clips de Animación de Señas
  * 
  * Define la estructura de datos estandarizada para clips de animación de
@@ -661,6 +661,26 @@ export function convertDirectAnimationToSignClip(data, defaultName = 'SEÑA_LSEC
   const clipId = (rawSlug && rawSlug.length > 0) ? rawSlug : 'custom_clip';
 
   const boneTracks = Array.from(boneMap.values());
+  // Garantizar continuidad antipodal (<q_k, q_{k-1}> >= 0) en todas las pistas óseas
+  // para prevenir giros espurios de 360° en interpoladores SLERP/lineales.
+  for (const track of boneTracks) {
+    const rots = track && track.rotations;
+    if (!Array.isArray(rots) || rots.length < 8) continue;
+    for (let k = 4; k < rots.length; k += 4) {
+      const dot = (
+        rots[k - 4] * rots[k] +
+        rots[k - 3] * rots[k + 1] +
+        rots[k - 2] * rots[k + 2] +
+        rots[k - 1] * rots[k + 3]
+      );
+      if (dot < 0) {
+        rots[k] = -rots[k];
+        rots[k + 1] = -rots[k + 1];
+        rots[k + 2] = -rots[k + 2];
+        rots[k + 3] = -rots[k + 3];
+      }
+    }
+  }
   let expressionTracks = [];
   if (hasExplicitFacialExpression) {
     expressionTracks = Array.from(exprMap.values()).filter(et => {

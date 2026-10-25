@@ -321,12 +321,14 @@ class SentenceGroupingEngine {
 
       let matches = false;
 
-      // Coincidencia por proposition_id
-      if (gProp && propositionIds.some(pid => pid === gProp || pid.includes(gProp) || gProp.includes(pid))) {
+      // Coincidencia exacta por proposition_id o segment_id
+      if (gProp && propositionIds.some(pid => pid === gProp)) {
+        matches = true;
+      } else if (g.segment_id && segments.some(s => s.id === g.segment_id)) {
         matches = true;
       }
-      // Coincidencia temporal estricta o solapada con tolerancia
-      else if (gStart !== null && gEnd !== null) {
+      // Coincidencia temporal estricta solo cuando la glosa no pertenece a otra proposición
+      else if (!gProp && !g.segment_id && gStart !== null && gEnd !== null) {
         if (gStart >= startSec - 0.15 && gEnd <= endSec + 0.25) {
           matches = true;
         }

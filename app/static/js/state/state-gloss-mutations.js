@@ -91,6 +91,88 @@ const LSECStateGlossMutations = {
     });
   },
 
+  addSegment(startTime = 0, endTime = 3.0, text = 'Nueva oración educativa en español.') {
+    if (!this.state.project) {
+      this.loadProject({
+        version: '2.1.1',
+        media_info: {
+          filename: 'Proyecto_Manual_LSEC.mp4',
+          duration_seconds: Math.max(10.0, Number(endTime) || 3.0),
+          fps: 30.0,
+          resolution: '1920x1080'
+        },
+        segments: [],
+        glosses: [],
+        subtitles: []
+      });
+    }
+    this.pushHistory();
+
+    const segments = this.state.project.segments || [];
+    const idx = segments.length + 1;
+    const st = Number(startTime) || 0;
+    const et = Math.max(st + 0.5, Number(endTime) || (st + 3.0));
+    const segId = `seg_${String(idx).padStart(2, '0')}_${Date.now().toString().slice(-3)}`;
+
+    const newSeg = {
+      id: segId,
+      index: idx,
+      start_seconds: st,
+      end_seconds: et,
+      start_time: st,
+      end_time: et,
+      duration: parseFloat((et - st).toFixed(3)),
+      original_text: text,
+      normalized_text: text,
+      raw_text: text,
+      status: 'DRAFT',
+      status_label: this.getStatusLabel ? this.getStatusLabel('DRAFT') : 'Borrador',
+      confidence: 0.99,
+      human_reviewed: true,
+      words: [],
+      glosses: [],
+      gloss_sequence: []
+    };
+
+    segments.push(newSeg);
+    this.state.project.segments = segments;
+    this.state.project.subtitles = segments;
+    if (et > (this.state.playback.duration || 0)) {
+      this.setDuration(et);
+    }
+
+    this.markUnsavedChange();
+    this.emit('segmentUpdated', newSeg);
+    this.emit('segmentsChanged', this.state.project.segments);
+    this.emit('subtitlesChanged', this.state.project.segments);
+    return newSeg;
+  },
+
+  deleteSegment(segId) {
+    if (!this.state.project || !Array.isArray(this.state.project.segments)) return false;
+    const idx = this.state.project.segments.findIndex(s => s.id === segId);
+    if (idx === -1) return false;
+
+    this.pushHistory();
+    const [removed] = this.state.project.segments.splice(idx, 1);
+    this.state.project.segments.forEach((s, i) => {
+      s.index = i + 1;
+    });
+    this.state.project.subtitles = this.state.project.segments;
+
+    if (Array.isArray(this.state.project.glosses) && removed) {
+      this.state.project.glosses = this.state.project.glosses.filter(
+        g => g.segment_id !== segId && g.proposition_id !== segId && g.origin_proposition_id !== segId
+      );
+    }
+
+    this.markUnsavedChange();
+    this.emit('segmentsChanged', this.state.project.segments);
+    this.emit('glossesChanged', this.state.project.glosses || []);
+    this.emit('subtitlesChanged', this.state.project.segments);
+    return true;
+  },
+
   splitSegment(segId, splitTime) {
     if (!this.state.project || !this.state.project.segments) return;
     this.pushHistory();

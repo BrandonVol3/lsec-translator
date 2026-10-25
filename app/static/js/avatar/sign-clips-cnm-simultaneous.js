@@ -342,7 +342,39 @@ export function createTestParpadeoClip() {
 }
 
 /**
- * 4.7 Boca: Apertura (aa) y redondeo labial (oh/ou).
+ * Generador paramétrico de rasgos no manuales de boca (Página 5 de Guia-Uso-ilustraciones.pdf):
+ * - 'open_close_mouth': Abrir o cerrar la boca (jawOpen, mouthClose, aa)
+ * - 'expel_air_open_mouth': Expulsar aire con la boca abierta (jawOpen, cheekPuff, mouthFunnel, oh)
+ * - 'expel_air_closed_mouth': Expulsar aire con la boca cerrada (cheekPuff, mouthClose, mouthPressLeft/Right, ou)
+ */
+export function createLSECMouthNonManualTracks(mouthMode = 'open_close_mouth', durationSec = 2.2) {
+  const t = [0.0, Number((durationSec * 0.25).toFixed(4)), Number((durationSec * 0.72).toFixed(4)), Number(durationSec.toFixed(4))];
+  if (mouthMode === 'expel_air_open_mouth') {
+    return [
+      { expressionName: 'jawOpen', times: t, values: [0.0, 0.65, 0.60, 0.0], interpolation: 'LINEAR' },
+      { expressionName: 'cheekPuff', times: t, values: [0.0, 0.80, 0.35, 0.0], interpolation: 'LINEAR' },
+      { expressionName: 'mouthFunnel', times: t, values: [0.0, 0.75, 0.70, 0.0], interpolation: 'LINEAR' },
+      { expressionName: 'oh', times: t, values: [0.0, 0.70, 0.65, 0.0], interpolation: 'LINEAR' }
+    ];
+  }
+  if (mouthMode === 'expel_air_closed_mouth') {
+    return [
+      { expressionName: 'mouthClose', times: t, values: [0.0, 0.85, 0.85, 0.0], interpolation: 'LINEAR' },
+      { expressionName: 'cheekPuff', times: t, values: [0.0, 0.90, 0.45, 0.0], interpolation: 'LINEAR' },
+      { expressionName: 'mouthPressLeft', times: t, values: [0.0, 0.75, 0.70, 0.0], interpolation: 'LINEAR' },
+      { expressionName: 'mouthPressRight', times: t, values: [0.0, 0.75, 0.70, 0.0], interpolation: 'LINEAR' },
+      { expressionName: 'ou', times: t, values: [0.0, 0.60, 0.55, 0.0], interpolation: 'LINEAR' }
+    ];
+  }
+  return [
+    { expressionName: 'jawOpen', times: t, values: [0.0, 0.82, 0.05, 0.0], interpolation: 'LINEAR' },
+    { expressionName: 'mouthClose', times: t, values: [0.0, 0.0, 0.75, 0.0], interpolation: 'LINEAR' },
+    { expressionName: 'aa', times: t, values: [0.0, 0.82, 0.0, 0.0], interpolation: 'LINEAR' }
+  ];
+}
+
+/**
+ * 4.7 Boca: Abrir/cerrar boca y expulsar aire con boca abierta/cerrada (Página 5 PDF).
  */
 export function createTestBocaClip() {
   const durationMs = 2200;
@@ -363,22 +395,18 @@ export function createTestBocaClip() {
     exitPose: 'NEUTRAL',
     boneTracks: [],
     expressionTracks: [
-      {
-        expressionName: 'aa',
-        times,
-        values: [0.0, 0.85, 0.85, 0.0, 0.0, 0.0],
-        interpolation: 'LINEAR'
-      },
-      {
-        expressionName: 'oh',
-        times,
-        values: [0.0, 0.0, 0.0, 0.80, 0.80, 0.0],
-        interpolation: 'LINEAR'
-      }
+      { expressionName: 'aa', times, values: [0.0, 0.85, 0.85, 0.0, 0.0, 0.0], interpolation: 'LINEAR' },
+      { expressionName: 'jawOpen', times, values: [0.0, 0.85, 0.80, 0.0, 0.0, 0.0], interpolation: 'LINEAR' },
+      { expressionName: 'oh', times, values: [0.0, 0.0, 0.70, 0.80, 0.0, 0.0], interpolation: 'LINEAR' },
+      { expressionName: 'mouthFunnel', times, values: [0.0, 0.0, 0.65, 0.75, 0.0, 0.0], interpolation: 'LINEAR' },
+      { expressionName: 'cheekPuff', times, values: [0.0, 0.0, 0.75, 0.85, 0.80, 0.0], interpolation: 'LINEAR' },
+      { expressionName: 'mouthClose', times, values: [0.0, 0.0, 0.0, 0.80, 0.85, 0.0], interpolation: 'LINEAR' },
+      { expressionName: 'mouthPressLeft', times, values: [0.0, 0.0, 0.0, 0.70, 0.75, 0.0], interpolation: 'LINEAR' },
+      { expressionName: 'mouthPressRight', times, values: [0.0, 0.0, 0.0, 0.70, 0.75, 0.0], interpolation: 'LINEAR' }
     ],
     spatialConstraints: [],
     metadata: {
-      description: 'Componente no manual: apertura mandibular (aa) y redondeo labial (oh/ou).',
+      description: 'Componente no manual (Pág. 5 PDF): abrir/cerrar boca y expulsar aire con boca abierta y cerrada mediante ARKit Blendshapes.',
       isValidatedLSEC: false,
       disclaimer: 'PRUEBA TÉCNICA DEMOSTRATIVA. No es una seña validada de LSEC.'
     }

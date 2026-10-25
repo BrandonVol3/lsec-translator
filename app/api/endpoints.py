@@ -376,6 +376,24 @@ async def full_pipeline(
             )
 
         transcription = await asyncio.to_thread(_asr_service.transcribe_file, tmp_path)
+        if not transcription.text.strip():
+            logger.info("Pipeline 2.0: Audio sin habla detectada en '%s'. Devolviendo estructura vacía editable.", file.filename)
+            gloss_output = GlossOutput(
+                original_text="",
+                normalized_text="",
+                glosses=[],
+                semantic_propositions=[],
+                discourse_blocks=[],
+                spatial_referents=[],
+                spatial_operations=[],
+                non_manual_spans=[],
+                translation_plans=[],
+            )
+            return PipelineResponse(
+                transcription=transcription,
+                gloss_output=gloss_output,
+            )
+
         gloss_output = await _nlp_service.translate_to_gloss(
             text=transcription.text,
             mode=mode,

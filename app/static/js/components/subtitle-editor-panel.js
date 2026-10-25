@@ -24,84 +24,32 @@ class SubtitleEditorPanel {
 
     this.container.innerHTML = `
       <div class="subtitle-editor-wrap">
-        <!-- Encabezado y Selector de Segmento -->
-        <div class="sub-editor-header">
-          <div class="sub-target-picker">
-            <label for="sub-cfg-segment-select" class="sub-label-title">Segmento:</label>
-            <select id="sub-cfg-segment-select" class="sub-select-target">
-              <option value="">(Selecciona un segmento)</option>
-            </select>
-          </div>
-
-          <div class="sub-quick-actions-bar">
-            <button class="btn btn-secondary btn-xs" id="btn-sub-reset" title="Restablecer estilo al predeterminado">
-              ↺ Restablecer
-            </button>
-            <button class="btn btn-secondary btn-xs" id="btn-sub-copy" title="Copiar estilo de este segmento">
-              📋 Copiar
-            </button>
-            <button class="btn btn-secondary btn-xs" id="btn-sub-paste" title="Pegar estilo copiado" disabled>
-              📥 Pegar
-            </button>
-            <button class="btn btn-secondary btn-xs" id="btn-sub-apply-all" title="Aplicar este estilo a todos los segmentos">
-              ✦ A todos
-            </button>
-            <button class="btn btn-secondary btn-xs" id="btn-sub-toggle-safe-area" title="Mostrar/ocultar guía de área segura">
-              ⊡ Guía segura
-            </button>
-          </div>
-        </div>
-
         <div class="sub-editor-body custom-scrollbar">
-          <!-- GRUPO 1: TIPOGRAFÍA Y ALINEACIÓN -->
+          <!-- CONTROLES ESENCIALES (Visibles por defecto sin ruido visual) -->
           <div class="sub-editor-section">
-            <div class="sub-section-title">Tipografía y Alineación</div>
-
-            <div class="sub-form-row">
-              <label for="sub-cfg-font-family">Familia tipográfica</label>
-              <select id="sub-cfg-font-family" class="sub-select">
-                <option value="Inter, system-ui, -apple-system, sans-serif">Inter / Sistema</option>
-                <option value="Roboto, sans-serif">Roboto</option>
-                <option value="Montserrat, sans-serif">Montserrat</option>
-                <option value="Arial, sans-serif">Arial</option>
-                <option value="Helvetica, Arial, sans-serif">Helvetica</option>
-                <option value="Georgia, serif">Georgia</option>
-                <option value="'Courier New', monospace">Courier New</option>
-                <option value="Impact, Charcoal, sans-serif">Impact</option>
-              </select>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:4px;">
+              <div class="sub-section-title" style="border:none; margin:0; padding:0;">Apariencia Principal</div>
+              <button class="btn btn-sm" id="btn-sub-apply-all" type="button" title="Aplicar este estilo a todas las oraciones del video">
+                Aplicar a todos
+              </button>
             </div>
 
             <div class="sub-form-row">
-              <label for="sub-cfg-font-size">Tamaño de fuente</label>
+              <label for="sub-cfg-font-size">Tamaño de texto</label>
               <div class="sub-slider-group">
                 <input type="range" id="sub-cfg-font-size" min="12" max="44" step="1" value="20">
                 <span class="sub-value-display" id="sub-cfg-font-size-val">20px</span>
               </div>
             </div>
 
-            <div class="sub-form-row sub-row-dual">
-              <div>
-                <span class="sub-field-label" id="lbl-sub-cfg-style">Estilo</span>
-                <div class="sub-toggle-group" role="group" aria-labelledby="lbl-sub-cfg-style">
-                  <button type="button" class="sub-btn-toggle" id="sub-cfg-bold" title="Negrita" aria-label="Negrita"><b>B</b></button>
-                  <button type="button" class="sub-btn-toggle" id="sub-cfg-italic" title="Cursiva" aria-label="Cursiva"><i>I</i></button>
-                </div>
-              </div>
-
-              <div>
-                <span class="sub-field-label" id="lbl-sub-cfg-align">Alineación</span>
-                <div class="sub-toggle-group" id="sub-cfg-align-group" role="group" aria-labelledby="lbl-sub-cfg-align">
-                  <button type="button" class="sub-btn-toggle" data-align="left" title="Izquierda" aria-label="Alinear a la izquierda">Izq</button>
-                  <button type="button" class="sub-btn-toggle active" data-align="center" title="Centro" aria-label="Alinear al centro">Cen</button>
-                  <button type="button" class="sub-btn-toggle" data-align="right" title="Derecha" aria-label="Alinear a la derecha">Der</button>
-                </div>
+            <div class="sub-form-row">
+              <span class="sub-field-label" id="lbl-sub-cfg-quick-pos">Ubicación en pantalla</span>
+              <div class="sub-preset-buttons" role="group" aria-labelledby="lbl-sub-cfg-quick-pos">
+                <button type="button" class="btn btn-sm" id="btn-pos-preset-bottom">Inferior</button>
+                <button type="button" class="btn btn-sm" id="btn-pos-preset-center">Centro</button>
+                <button type="button" class="btn btn-sm" id="btn-pos-preset-top">Superior</button>
               </div>
             </div>
-          </div>
-
-          <!-- GRUPO 2: COLORES Y FONDO -->
-          <div class="sub-editor-section">
-            <div class="sub-section-title">Colores y Fondo</div>
 
             <div class="sub-form-row sub-row-dual">
               <div>
@@ -124,103 +72,139 @@ class SubtitleEditorPanel {
             <div class="sub-form-row">
               <label for="sub-cfg-bg-opacity">Opacidad del fondo</label>
               <div class="sub-slider-group">
-                <input type="range" id="sub-cfg-bg-opacity" min="0" max="100" step="5" value="0">
-                <span class="sub-value-display" id="sub-cfg-bg-opacity-val">0%</span>
+                <input type="range" id="sub-cfg-bg-opacity" min="0" max="100" step="5" value="78">
+                <span class="sub-value-display" id="sub-cfg-bg-opacity-val">78%</span>
               </div>
             </div>
           </div>
 
-          <!-- GRUPO 3: CONTORNO Y SOMBRA -->
-          <div class="sub-editor-section">
-            <div class="sub-section-title">Contorno y Sombra</div>
+          <!-- CONTROLES AVANZADOS (Ocultos bajo demanda para reducir carga cognitiva) -->
+          <details class="sub-advanced-details">
+            <summary class="sub-advanced-summary">Ajustes avanzados por segmento</summary>
+            <div class="sub-advanced-content">
+              <div class="sub-editor-section">
+                <div class="sub-target-picker">
+                  <label for="sub-cfg-segment-select" class="sub-label-title">Oración:</label>
+                  <select id="sub-cfg-segment-select" class="sub-select-target">
+                    <option value="">(Selecciona una oración)</option>
+                  </select>
+                </div>
 
-            <div class="sub-form-row sub-row-dual">
-              <div>
-                <label for="sub-cfg-outline-width">Grosor de contorno</label>
-                <div class="sub-slider-group">
-                  <input type="range" id="sub-cfg-outline-width" min="0" max="8" step="1" value="0">
-                  <span class="sub-value-display" id="sub-cfg-outline-width-val">0px</span>
+                <div class="sub-quick-actions-bar" style="margin-top:6px;">
+                  <button class="btn btn-sm" id="btn-sub-reset" type="button" title="Restablecer estilo al predeterminado">Restablecer</button>
+                  <button class="btn btn-sm" id="btn-sub-copy" type="button" title="Copiar estilo de este segmento">Copiar</button>
+                  <button class="btn btn-sm" id="btn-sub-paste" type="button" title="Pegar estilo copiado" disabled>Pegar</button>
+                  <button class="btn btn-sm" id="btn-sub-toggle-safe-area" type="button" title="Mostrar/ocultar guía de área segura">Guía segura</button>
                 </div>
               </div>
 
-              <div>
-                <label for="sub-cfg-outline-color">Color de contorno</label>
-                <div class="sub-color-input-wrap">
-                  <input type="color" id="sub-cfg-outline-color" value="#000000">
+              <div class="sub-editor-section">
+                <div class="sub-section-title">Tipografía y Alineación</div>
+                <div class="sub-form-row">
+                  <label for="sub-cfg-font-family">Familia tipográfica</label>
+                  <select id="sub-cfg-font-family" class="sub-select">
+                    <option value="Inter, system-ui, -apple-system, sans-serif">Inter / Sistema</option>
+                    <option value="Roboto, sans-serif">Roboto</option>
+                    <option value="Montserrat, sans-serif">Montserrat</option>
+                    <option value="Arial, sans-serif">Arial</option>
+                    <option value="Helvetica, Arial, sans-serif">Helvetica</option>
+                    <option value="Georgia, serif">Georgia</option>
+                    <option value="'Courier New', monospace">Courier New</option>
+                    <option value="Impact, Charcoal, sans-serif">Impact</option>
+                  </select>
                 </div>
-              </div>
-            </div>
 
-            <div class="sub-form-row">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                <label for="sub-cfg-shadow-toggle" style="margin-bottom:0; cursor:pointer;">Sombra de texto</label>
-                <input type="checkbox" id="sub-cfg-shadow-toggle" checked style="width:16px; height:16px; accent-color:var(--action-primary); cursor:pointer;">
-              </div>
-              <div class="sub-slider-group" id="sub-shadow-controls">
-                <input type="range" id="sub-cfg-shadow-blur" min="0" max="20" step="1" value="4" aria-label="Desenfoque de sombra de texto">
-                <span class="sub-value-display" id="sub-cfg-shadow-blur-val">4px</span>
-                <input type="color" id="sub-cfg-shadow-color" value="#000000" style="margin-left:6px;" title="Color de sombra" aria-label="Color de sombra de texto">
-              </div>
-            </div>
-          </div>
+                <div class="sub-form-row sub-row-dual">
+                  <div>
+                    <span class="sub-field-label" id="lbl-sub-cfg-style">Estilo</span>
+                    <div class="sub-toggle-group" role="group" aria-labelledby="lbl-sub-cfg-style">
+                      <button type="button" class="sub-btn-toggle" id="sub-cfg-bold" title="Negrita" aria-label="Negrita"><b>B</b></button>
+                      <button type="button" class="sub-btn-toggle" id="sub-cfg-italic" title="Cursiva" aria-label="Cursiva"><i>I</i></button>
+                    </div>
+                  </div>
 
-          <!-- GRUPO 4: POSICIÓN, MÁRGENES Y ÁREA SEGURA -->
-          <div class="sub-editor-section">
-            <div class="sub-section-title">Posición y Área Segura</div>
-
-            <div class="sub-form-row">
-              <label for="sub-cfg-pos-x">Posición Horizontal (X)</label>
-              <div class="sub-slider-group">
-                <input type="range" id="sub-cfg-pos-x" min="0" max="100" step="1" value="50">
-                <span class="sub-value-display" id="sub-cfg-pos-x-val">50%</span>
-              </div>
-            </div>
-
-            <div class="sub-form-row">
-              <label for="sub-cfg-pos-y">Posición Vertical (Y)</label>
-              <div class="sub-slider-group">
-                <input type="range" id="sub-cfg-pos-y" min="0" max="100" step="1" value="88">
-                <span class="sub-value-display" id="sub-cfg-pos-y-val">88%</span>
-              </div>
-            </div>
-
-            <div class="sub-form-row">
-              <span class="sub-field-label" id="lbl-sub-cfg-quick-pos">Posición Rápida</span>
-              <div class="sub-preset-buttons" role="group" aria-labelledby="lbl-sub-cfg-quick-pos">
-                <button type="button" class="btn btn-secondary btn-xs" id="btn-pos-preset-bottom">Inferior (88%)</button>
-                <button type="button" class="btn btn-secondary btn-xs" id="btn-pos-preset-center">Centro (50%)</button>
-                <button type="button" class="btn btn-secondary btn-xs" id="btn-pos-preset-top">Superior (14%)</button>
-              </div>
-            </div>
-
-            <div class="sub-form-row sub-row-dual">
-              <div>
-                <label for="sub-cfg-margin">Margen interior</label>
-                <div class="sub-slider-group">
-                  <input type="range" id="sub-cfg-margin" min="4" max="36" step="2" value="12">
-                  <span class="sub-value-display" id="sub-cfg-margin-val">12px</span>
+                  <div>
+                    <span class="sub-field-label" id="lbl-sub-cfg-align">Alineación</span>
+                    <div class="sub-toggle-group" id="sub-cfg-align-group" role="group" aria-labelledby="lbl-sub-cfg-align">
+                      <button type="button" class="sub-btn-toggle" data-align="left" title="Izquierda" aria-label="Alinear a la izquierda">Izq</button>
+                      <button type="button" class="sub-btn-toggle active" data-align="center" title="Centro" aria-label="Alinear al centro">Cen</button>
+                      <button type="button" class="sub-btn-toggle" data-align="right" title="Derecha" aria-label="Alinear a la derecha">Der</button>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <label for="sub-cfg-safe-area">Área segura</label>
-                <div class="sub-slider-group">
-                  <input type="range" id="sub-cfg-safe-area" min="0" max="20" step="1" value="5">
-                  <span class="sub-value-display" id="sub-cfg-safe-area-val">5%</span>
+              <div class="sub-editor-section">
+                <div class="sub-section-title">Contorno, Sombra y Coordenadas</div>
+                <div class="sub-form-row sub-row-dual">
+                  <div>
+                    <label for="sub-cfg-outline-width">Contorno</label>
+                    <div class="sub-slider-group">
+                      <input type="range" id="sub-cfg-outline-width" min="0" max="8" step="1" value="0">
+                      <span class="sub-value-display" id="sub-cfg-outline-width-val">0px</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label for="sub-cfg-outline-color">Color contorno</label>
+                    <div class="sub-color-input-wrap">
+                      <input type="color" id="sub-cfg-outline-color" value="#000000">
+                    </div>
+                  </div>
+                </div>
+
+                <div class="sub-form-row">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <label for="sub-cfg-shadow-toggle" style="margin-bottom:0; cursor:pointer;">Sombra de texto</label>
+                    <input type="checkbox" id="sub-cfg-shadow-toggle" checked style="width:16px; height:16px; cursor:pointer;">
+                  </div>
+                  <div class="sub-slider-group" id="sub-shadow-controls">
+                    <input type="range" id="sub-cfg-shadow-blur" min="0" max="20" step="1" value="4" aria-label="Desenfoque de sombra de texto">
+                    <span class="sub-value-display" id="sub-cfg-shadow-blur-val">4px</span>
+                    <input type="color" id="sub-cfg-shadow-color" value="#000000" style="margin-left:6px;" title="Color de sombra" aria-label="Color de sombra de texto">
+                  </div>
+                </div>
+
+                <div class="sub-form-row sub-row-dual">
+                  <div>
+                    <label for="sub-cfg-pos-x">Posición X</label>
+                    <div class="sub-slider-group">
+                      <input type="range" id="sub-cfg-pos-x" min="0" max="100" step="1" value="50">
+                      <span class="sub-value-display" id="sub-cfg-pos-x-val">50%</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label for="sub-cfg-pos-y">Posición Y</label>
+                    <div class="sub-slider-group">
+                      <input type="range" id="sub-cfg-pos-y" min="0" max="100" step="1" value="88">
+                      <span class="sub-value-display" id="sub-cfg-pos-y-val">88%</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="sub-form-row sub-row-dual">
+                  <div>
+                    <label for="sub-cfg-margin">Margen</label>
+                    <div class="sub-slider-group">
+                      <input type="range" id="sub-cfg-margin" min="4" max="36" step="2" value="12">
+                      <span class="sub-value-display" id="sub-cfg-margin-val">12px</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label for="sub-cfg-safe-area">Área segura</label>
+                    <div class="sub-slider-group">
+                      <input type="range" id="sub-cfg-safe-area" min="0" max="20" step="1" value="5">
+                      <span class="sub-value-display" id="sub-cfg-safe-area-val">5%</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; gap:8px; margin-top:4px;">
+                  <button class="btn btn-sm" id="btn-sub-undo" type="button" title="Deshacer (Ctrl+Z)" disabled>Deshacer</button>
+                  <button class="btn btn-sm" id="btn-sub-redo" type="button" title="Rehacer (Ctrl+Y)" disabled>Rehacer</button>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-
-        <!-- Barra inferior con deshacer / rehacer -->
-        <div class="sub-editor-footer">
-          <button class="btn btn-secondary btn-xs" id="btn-sub-undo" title="Deshacer (Ctrl+Z)" disabled>
-            ↶ Deshacer
-          </button>
-          <button class="btn btn-secondary btn-xs" id="btn-sub-redo" title="Rehacer (Ctrl+Y)" disabled>
-            ↷ Rehacer
-          </button>
+          </details>
         </div>
       </div>
     `;
@@ -634,7 +618,12 @@ class SubtitleEditorPanel {
     if (!style) return;
 
     // Actualizar campos del formulario
-    if (this.fontFamily) this.fontFamily.value = style.fontFamily || 'Inter, system-ui, -apple-system, sans-serif';
+    if (this.fontFamily) {
+      this.fontFamily.value = style.fontFamily || 'Inter, system-ui, -apple-system, sans-serif';
+      if (this.fontFamily.selectedIndex === -1) {
+        this.fontFamily.selectedIndex = 0;
+      }
+    }
     if (this.fontSize) {
       this.fontSize.value = style.fontSize || 20;
       this.fontSizeVal.textContent = `${style.fontSize || 20}px`;

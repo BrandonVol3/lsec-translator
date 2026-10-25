@@ -59,11 +59,21 @@ import {
   createTestCejasClip,
   createTestParpadeoClip,
   createTestBocaClip,
+  createLSECMouthNonManualTracks,
   createTestSimultaneoManosCabezaClip,
   createTestSimultaneoManosMiradaClip,
   createTestSimultaneoManosExpresionClip,
   createTestSimultaneoComplejoTotalClip
 } from './sign-clips-cnm-simultaneous.js';
+
+import {
+  LSEC_FINGERSPELLING_GRAPHEMES,
+  LSEC_FINGERSPELLING_CATALOG,
+  tokenizeLSECFingerspelling,
+  createLSECFingerspellingSignClip,
+  createLSECFingerspellingWordClip,
+  getAllLSECFingerspellingClips
+} from './sign-clips-fingerspelling-lsec.js';
 
 export {
   REST_POSE,
@@ -90,10 +100,17 @@ export {
   createTestCejasClip,
   createTestParpadeoClip,
   createTestBocaClip,
+  createLSECMouthNonManualTracks,
   createTestSimultaneoManosCabezaClip,
   createTestSimultaneoManosMiradaClip,
   createTestSimultaneoManosExpresionClip,
-  createTestSimultaneoComplejoTotalClip
+  createTestSimultaneoComplejoTotalClip,
+  LSEC_FINGERSPELLING_GRAPHEMES,
+  LSEC_FINGERSPELLING_CATALOG,
+  tokenizeLSECFingerspelling,
+  createLSECFingerspellingSignClip,
+  createLSECFingerspellingWordClip,
+  getAllLSECFingerspellingClips
 };
 
 /* ========================================================================== */
@@ -515,7 +532,12 @@ export function getAllTechnicalClips() {
     TEST_SIMULTANEO_MANOS_CABEZA: createTestSimultaneoManosCabezaClip(),
     TEST_SIMULTANEO_MANOS_MIRADA: createTestSimultaneoManosMiradaClip(),
     TEST_SIMULTANEO_MANOS_EXPRESION: createTestSimultaneoManosExpresionClip(),
-    TEST_SIMULTANEO_COMPLEJO_TOTAL: createTestSimultaneoComplejoTotalClip()
+    TEST_SIMULTANEO_COMPLEJO_TOTAL: createTestSimultaneoComplejoTotalClip(),
+
+    // Alfabeto Manual Ecuatoriano (30 Señas Oficiales de Dactilología LSEC)
+    ...Object.fromEntries(
+      LSEC_FINGERSPELLING_GRAPHEMES.map(g => [`DACT_${g}`, createLSECFingerspellingSignClip(g)])
+    )
   };
 }
 
@@ -524,6 +546,17 @@ export function getAllTechnicalClips() {
  */
 export function getTechnicalClipsCategorized() {
   return [
+    {
+      groupName: 'Alfabeto Dactilológico LSEC (30 Señas — Guía Oficial)',
+      clips: LSEC_FINGERSPELLING_GRAPHEMES.map(g => {
+        const spec = LSEC_FINGERSPELLING_CATALOG[g];
+        const kind = spec && spec.isDynamic ? 'Dinámica 70%→100%' : 'Estática 100%';
+        return {
+          id: `DACT_${g}`,
+          label: `🔤 Letra ${g} (${kind})`
+        };
+      })
+    },
     {
       groupName: 'Léxico LSEC — Señas Reconstruidas',
       clips: [

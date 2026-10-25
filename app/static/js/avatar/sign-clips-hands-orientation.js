@@ -6,6 +6,23 @@
 
 import * as THREE from 'three';
 import { validateSignClip } from './sign-animation-schema.js';
+import {
+  LSEC_FINGERSPELLING_GRAPHEMES,
+  LSEC_FINGERSPELLING_CATALOG,
+  tokenizeLSECFingerspelling,
+  createLSECFingerspellingSignClip,
+  createLSECFingerspellingWordClip,
+  getAllLSECFingerspellingClips
+} from './sign-clips-fingerspelling-lsec.js';
+
+export {
+  LSEC_FINGERSPELLING_GRAPHEMES,
+  LSEC_FINGERSPELLING_CATALOG,
+  tokenizeLSECFingerspelling,
+  createLSECFingerspellingSignClip,
+  createLSECFingerspellingWordClip,
+  getAllLSECFingerspellingClips
+};
 
 /**
  * Convierte ángulos de Euler (en radianes) a un cuaternión unitario [x, y, z, w].

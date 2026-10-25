@@ -355,9 +355,18 @@ class SpanishVerbLexicon:
                     return f_stem
 
         # 3. Imperativos sin tilde con enclítico -te
-        if w_clean.endswith("ate") and lemma_clean.endswith(("atir", "ater", "ate")) and len(lemma_clean) > 5:
+        if (
+            pos in (None, "VERB", "AUX")
+            and w_clean not in cls._NON_ENCLITIC_WORDS
+            and w_clean not in cls.NOMINAL_HOMOGRAPHS
+            and w_clean.endswith("ate")
+            and lemma_clean.endswith(("atir", "ater", "ate"))
+            and len(lemma_clean) > 5
+        ):
             stem = w_clean[:-3].translate(str.maketrans("áéíóú", "aeiou"))
-            return stem + "ar"
+            cand = stem + "ar"
+            if lemma_clean.endswith(("atir", "ater")) or cls._is_verified_infinitive(cand):
+                return cand
 
         # 4. Sufijos inequívocos de 1ª conjugación (-ar)
         ar_inf = cls.derive_ar_infinitive(w_clean)

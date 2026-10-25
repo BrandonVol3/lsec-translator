@@ -11,6 +11,24 @@ import {
   computeSignClipStrokeWindow
 } from './sign-animation-schema.js';
 
+import {
+  OneEuroQuaternionFilter,
+  LSEC_FINGERSPELLING_GRAPHEMES,
+  LSEC_FINGERSPELLING_CATALOG,
+  tokenizeLSECFingerspelling,
+  createLSECFingerspellingSignClip,
+  createLSECFingerspellingWordClip
+} from './sign-clips-fingerspelling-lsec.js';
+
+export {
+  OneEuroQuaternionFilter,
+  LSEC_FINGERSPELLING_GRAPHEMES,
+  LSEC_FINGERSPELLING_CATALOG,
+  tokenizeLSECFingerspelling,
+  createLSECFingerspellingSignClip,
+  createLSECFingerspellingWordClip
+};
+
 export const LEFT_ARM_BONES = Object.freeze([
   'leftShoulder', 'leftUpperArm', 'leftLowerArm', 'leftHand'
 ]);
@@ -202,13 +220,13 @@ export function interpolateSO3HermiteC1(q0, q1, w0, w1, durationSec, u) {
     return quatNormalize(quatMultiply(qa, quatExpRad(rVec)));
   }
 
-  // Acotar tangentes escaladas T*w solo ante valores físicamente extremos
-  const maxTangentNorm = Math.max(4.0, 3.5 * deltaNorm + 2.5);
+  // Acotar tangentes escaladas T*w proporcionalmente a deltaNorm para evitar bucles/sobreimpulso
+  const maxTangentNorm = Math.min(1.40, Math.max(0.20, 0.90 * deltaNorm));
   const clampTangent = (w) => {
     if (!Array.isArray(w) || w.length < 3) return [0, 0, 0];
-    const tx = (Number(w[0]) || 0) * T;
-    const ty = (Number(w[1]) || 0) * T;
-    const tz = (Number(w[2]) || 0) * T;
+    const tx = (Number(w[0]) || 0) * T * 0.45;
+    const ty = (Number(w[1]) || 0) * T * 0.45;
+    const tz = (Number(w[2]) || 0) * T * 0.45;
     const mag = Math.hypot(tx, ty, tz);
     if (mag <= maxTangentNorm || mag < 1e-7) return [tx, ty, tz];
     const scale = maxTangentNorm / mag;
@@ -379,7 +397,26 @@ export function buildPreparedClipDescriptor(clip) {
   }
 
   const strokeDuration = Math.max(0.08, strokeEnd - strokeStart);
-  const activeHands = (strokeMeta && strokeMeta.activeHands) || { left: true, right: true, dominant: 'right' };
+  const rawActiveHands = (strokeMeta && strokeMeta.activeHands)
+    || (clip.metadata && clip.metadata.kinematicStabilizer && clip.metadata.kinematicStabilizer.activeHands)
+    || null;
+  let activeHands;
+  if (Array.isArray(rawActiveHands)) {
+    const hasLeft = rawActiveHands.includes('left');
+    const hasRight = rawActiveHands.includes('right');
+    const dom = (strokeMeta && strokeMeta.dominantHand)
+      || (clip.metadata && clip.metadata.kinematicStabilizer && clip.metadata.kinematicStabilizer.dominantHand)
+      || (hasRight ? 'right' : 'left');
+    activeHands = { left: hasLeft || (!hasLeft && !hasRight), right: hasRight || (!hasLeft && !hasRight), dominant: dom };
+  } else if (rawActiveHands && typeof rawActiveHands === 'object') {
+    activeHands = {
+      left: Boolean(rawActiveHands.left),
+      right: Boolean(rawActiveHands.right),
+      dominant: rawActiveHands.dominant || (rawActiveHands.right ? 'right' : 'left')
+    };
+  } else {
+    activeHands = { left: true, right: true, dominant: 'right' };
+  }
   const flags = (strokeMeta && strokeMeta.flags) || {
     repeatedStroke: false,
     oneHanded: activeHands.left !== activeHands.right,

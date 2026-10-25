@@ -70,31 +70,64 @@ class LinguisticComparisonView {
     return appState.state.project.segments || [];
   }
 
+  deduplicateConsecutiveGlosses(glossList) {
+    if (!Array.isArray(glossList) || glossList.length <= 1) return glossList || [];
+    const result = [];
+    for (const g of glossList) {
+      const currNorm = this.formatCleanGlossLabel(g?.gloss || g?.lemma || '');
+      const prev = result[result.length - 1];
+      const prevNorm = prev ? this.formatCleanGlossLabel(prev?.gloss || prev?.lemma || '') : null;
+      if (prev && currNorm && currNorm === prevNorm && !g?.manually_edited) {
+        continue;
+      }
+      result.push(g);
+    }
+    return result;
+  }
+
+  formatCleanGlossLabel(rawToken) {
+    return String(rawToken || '')
+      .toUpperCase()
+      .replace(/^FS:/i, '')
+      .replace(/\[[^\]]*\]/g, '')
+      .trim();
+  }
+
   getGlossObjectsForSegment(seg) {
     if (!seg || typeof appState === 'undefined' || !appState.state?.project) return [];
     const project = appState.state.project;
-    const units = typeof appState.getSentenceUnits === 'function' ? appState.getSentenceUnits() : [];
-    const matchingUnit = units.find(u =>
-      u.id === seg.id ||
-      (Array.isArray(u.segments) && u.segments.some(s => s.id === seg.id))
-    );
+    const allGlosses = project.glosses || [];
 
-    if (matchingUnit && Array.isArray(matchingUnit.glosses) && matchingUnit.glosses.length > 0) {
-      return matchingUnit.glosses;
+    // 1. Coincidencia directa por segment_id o proposition_id del segmento
+    const bySegOrProp = allGlosses.filter(g => {
+      if (g.segment_id && g.segment_id === seg.id) return true;
+      const gProp = g.prop_id || g.proposition_id || g.origin_proposition_id;
+      if (gProp && (gProp === seg.id || (seg.proposition_id && gProp === seg.proposition_id))) return true;
+      return false;
+    });
+    if (bySegOrProp.length > 0) return this.deduplicateConsecutiveGlosses(bySegOrProp);
+
+    // 2. Si el propio segmento tiene un arreglo de objetos glosses
+    if (Array.isArray(seg.glosses) && seg.glosses.length > 0 && typeof seg.glosses[0] === 'object') {
+      return this.deduplicateConsecutiveGlosses(seg.glosses);
     }
 
-    const allGlosses = project.glosses || [];
-    const bySegId = allGlosses.filter(g =>
-      g.segment_id === seg.id ||
-      (seg.proposition_id && g.prop_id === seg.proposition_id) ||
-      (g.start_seconds !== undefined && g.start_seconds >= (seg.start_time - 0.1) && g.end_seconds <= (seg.end_time + 0.1)) ||
-      (g.start_time !== undefined && g.start_time >= (seg.start_time - 0.1) && g.end_time <= (seg.end_time + 0.1))
-    );
+    // 3. Coincidencia por ventana temporal cuando las glosas no tienen propietario explícito
+    const segStart = Number(seg.start_time ?? seg.start_seconds ?? 0);
+    const segEnd = Number(seg.end_time ?? seg.end_seconds ?? 0);
+    const byTimeWindow = allGlosses.filter(g => {
+      const hasOtherOwner = (g.segment_id && g.segment_id !== seg.id) ||
+        ((g.prop_id || g.proposition_id) && (g.prop_id || g.proposition_id) !== seg.proposition_id && (g.prop_id || g.proposition_id) !== seg.id);
+      if (hasOtherOwner) return false;
+      const gs = Number(g.start_seconds ?? g.start_time ?? -1);
+      const ge = Number(g.end_seconds ?? g.end_time ?? -1);
+      return gs >= (segStart - 0.1) && ge <= (segEnd + 0.1);
+    });
+    if (byTimeWindow.length > 0) return this.deduplicateConsecutiveGlosses(byTimeWindow);
 
-    if (bySegId.length > 0) return bySegId;
-
+    // 4. Fallback a la secuencia de strings gloss_sequence del segmento
     const seq = Array.isArray(seg.gloss_sequence) ? seg.gloss_sequence : [];
-    return seq.map((token, idx) => ({
+    return this.deduplicateConsecutiveGlosses(seq.map((token, idx) => ({
       id: `${seg.id}_g_${idx}`,
       segment_id: seg.id,
       gloss: String(token).toUpperCase(),
@@ -102,7 +135,7 @@ class LinguisticComparisonView {
       status: seg.status === 'HUMAN_VERIFIED' ? 'HUMAN_VERIFIED' : 'VALIDATED',
       manually_edited: Boolean(seg.manually_edited),
       is_fingerspelling: String(token).includes('-') || String(token).startsWith('FS:')
-    }));
+    })));
   }
 
   classifyChipStatus(glossObj) {
@@ -123,19 +156,22 @@ class LinguisticComparisonView {
     if (isEdited) {
       return {
         cssClass: 'gloss-chip-edited',
-        badgeText: 'Editada',
+        symbol: '✎',
+        badgeText: 'Editada por humano',
         statusKey: 'HUMAN_VERIFIED'
       };
     }
     if (isFingerspell) {
       return {
         cssClass: 'gloss-chip-fingerspell',
+        symbol: '✦',
         badgeText: 'Dactilología',
         statusKey: 'FINGERSPELLING'
       };
     }
     return {
       cssClass: 'gloss-chip-conadis',
+      symbol: '✓',
       badgeText: 'Seña CONADIS',
       statusKey: 'CONADIS'
     };
@@ -284,7 +320,7 @@ class LinguisticComparisonView {
       const rem = (s % 60).toFixed(1).padStart(4, '0');
       return `${String(mins).padStart(2, '0')}:${rem}`;
     };
-    return `[${fmt(start)} - ${fmt(end)}]`;
+    return `${fmt(start)} – ${fmt(end)}`;
   }
 
   renderParallelRows(segments) {
@@ -311,20 +347,20 @@ class LinguisticComparisonView {
       const timeRange = this.formatTimeRange(seg.start_time ?? seg.start_seconds, seg.end_time ?? seg.end_seconds);
       const glossObjects = this.getGlossObjectsForSegment(seg);
 
-      // 1. Columna Izquierda: TRANSCRIPCIÓN OBTENIDA - WHISPER
+      // 1. Columna Izquierda: Español (Diseño limpio, botón de re-traducir solo bajo demanda)
       const leftCell = document.createElement('div');
       leftCell.className = 'comparative-cell-spanish';
       leftCell.innerHTML = `
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-          <button type="button" class="transcript-seg-time-badge" data-action="select-and-seek" title="Inspeccionar esta oración en el monitor gramatical y reproducir">
-            <span>Oración #${rowIndex + 1}</span>
-            <span>${timeRange}</span>
+        <div class="comparative-cell-meta-bar">
+          <button type="button" class="comparative-row-meta" data-action="select-and-seek" title="Reproducir video desde este fragmento">
+            <span class="comparative-row-num">#${rowIndex + 1}</span>
+            <span class="comparative-row-time">${timeRange}</span>
           </button>
-          <button type="button" class="btn btn-cobalt btn-sm" data-action="retranslate-row" title="Re-traducir esta fila con spaCy y reglas LSEC">
-            Re-traducir fila
+          <button type="button" class="btn btn-sm comparative-retranslate-btn" data-action="retranslate-row" title="Actualizar glosas según el texto editado">
+            Actualizar glosas
           </button>
         </div>
-        <textarea class="transcript-seg-input" rows="2" aria-label="Oración en español fila ${rowIndex + 1}">${this.escapeHtml(spanishText)}</textarea>
+        <textarea id="comparative-seg-input-${rowIndex + 1}" name="comparative_segment_${rowIndex + 1}" class="transcript-seg-input comparative-spanish-input" rows="2" aria-label="Oración en español fila ${rowIndex + 1}">${this.escapeHtml(spanishText)}</textarea>
       `;
 
       const selectSeekBtn = leftCell.querySelector('[data-action="select-and-seek"]');
@@ -340,11 +376,18 @@ class LinguisticComparisonView {
       }
 
       const textarea = leftCell.querySelector('.transcript-seg-input');
+      const retranslateBtn = leftCell.querySelector('[data-action="retranslate-row"]');
+
       if (textarea) {
         textarea.addEventListener('focus', () => {
           this.selectedSegmentIndex = rowIndex;
           this.renderGrammarMonitor(seg, rowIndex);
           this.highlightSelectedRow();
+        });
+        textarea.addEventListener('input', () => {
+          if (retranslateBtn) {
+            retranslateBtn.classList.add('is-dirty');
+          }
         });
         textarea.addEventListener('change', (e) => {
           const newText = e.target.value.trim();
@@ -356,22 +399,22 @@ class LinguisticComparisonView {
         });
       }
 
-      const retranslateBtn = leftCell.querySelector('[data-action="retranslate-row"]');
       if (retranslateBtn) {
         retranslateBtn.addEventListener('click', async () => {
           const currentText = textarea ? textarea.value.trim() : spanishText;
           retranslateBtn.disabled = true;
-          retranslateBtn.textContent = 'Traduciendo...';
+          retranslateBtn.textContent = 'Actualizando...';
           try {
             await this.retranslateSingleRow(seg, currentText, rowIndex);
+            retranslateBtn.classList.remove('is-dirty');
           } finally {
             retranslateBtn.disabled = false;
-            retranslateBtn.textContent = 'Re-traducir fila';
+            retranslateBtn.textContent = 'Actualizar glosas';
           }
         });
       }
 
-      // 2. Columna Derecha: CONTRAPARTE EN GLOSAS LSEC (Fichas táctiles frente a cada oración)
+      // 2. Columna Derecha: Glosas LSEC (Fichas limpias con acciones al pasar el cursor)
       const rightCell = document.createElement('div');
       rightCell.className = 'comparative-cell-glosses';
 
@@ -383,10 +426,10 @@ class LinguisticComparisonView {
         rack.appendChild(chipEl);
       });
 
-      // Botón inline "+ Glosa"
+      // Botón sutil "+ Glosa"
       const addBtn = document.createElement('button');
       addBtn.type = 'button';
-      addBtn.className = 'btn btn-sm';
+      addBtn.className = 'gloss-add-chip-btn';
       addBtn.textContent = '+ Glosa';
       addBtn.title = 'Agregar nueva glosa LSEC a esta oración';
       addBtn.addEventListener('click', () => {
@@ -403,17 +446,18 @@ class LinguisticComparisonView {
 
   createTactileGlossChip(seg, glossObj, gIdx, totalGlosses, rowIndex) {
     const info = this.classifyChipStatus(glossObj);
-    const token = String(glossObj.gloss || glossObj.lemma || '').toUpperCase();
+    const rawToken = String(glossObj.gloss || glossObj.lemma || '').toUpperCase();
+    const displayToken = this.formatCleanGlossLabel(rawToken) || rawToken;
 
     const chip = document.createElement('div');
     chip.className = `gloss-chip-tactile ${info.cssClass}`;
     chip.dataset.glossId = glossObj.id || `${seg.id}_${gIdx}`;
     chip.dataset.glossIndex = String(gIdx);
-    chip.title = `${token} (${info.badgeText}) — Clic en el nombre para editar`;
+    chip.title = `${rawToken} · ${info.badgeText} (Clic para editar)`;
 
     chip.innerHTML = `
-      <span class="gloss-chip-text" data-action="edit-gloss">${this.escapeHtml(token)}</span>
-      <span class="gloss-chip-badge-tag">${info.badgeText}</span>
+      <span class="gloss-chip-symbol" aria-hidden="true">${info.symbol}</span>
+      <span class="gloss-chip-text" data-action="edit-gloss">${this.escapeHtml(displayToken)}</span>
       <span class="gloss-chip-actions">
         ${gIdx > 0 ? '<button type="button" class="gloss-chip-btn" data-action="move-left" title="Mover a la izquierda" aria-label="Mover glosa a la izquierda">&lt;</button>' : ''}
         ${gIdx < totalGlosses - 1 ? '<button type="button" class="gloss-chip-btn" data-action="move-right" title="Mover a la derecha" aria-label="Mover glosa a la derecha">&gt;</button>' : ''}
@@ -552,6 +596,7 @@ class LinguisticComparisonView {
         id: g.id || `g_${seg.id}_${i}_${Date.now().toString().slice(-3)}`,
         segment_id: seg.id,
         prop_id: seg.proposition_id || g.prop_id || seg.id,
+        proposition_id: seg.proposition_id || g.proposition_id || seg.id,
         start_time: gStart,
         end_time: gEnd,
         start_seconds: gStart,
@@ -559,6 +604,8 @@ class LinguisticComparisonView {
         duration: Number(dur.toFixed(3))
       };
     });
+
+    seg.glosses = timedGlosses;
 
     // Actualizar project.glosses reemplazando las glosas de este segmento
     const otherGlosses = (project.glosses || []).filter(g =>
@@ -653,9 +700,10 @@ class LinguisticComparisonView {
 
     if (window.pipelineProcessor && typeof window.pipelineProcessor.translateSegmentViaBackend === 'function') {
       const result = await window.pipelineProcessor.translateSegmentViaBackend(updatedSpanishText, st, et, seg.id);
-      if (result && Array.isArray(result.glosses) && result.glosses.length > 0) {
-        seg.applied_rules = result.applied_rules || [];
-        this.syncSegmentGlossesToProject(seg, result.glosses);
+      const glossList = Array.isArray(result) ? result : (result && Array.isArray(result.glosses) ? result.glosses : []);
+      if (glossList.length > 0) {
+        if (result && result.applied_rules) seg.applied_rules = result.applied_rules;
+        this.syncSegmentGlossesToProject(seg, glossList);
         if (typeof window.showToast === 'function') {
           window.showToast(`Fila #${rowIndex + 1} re-traducida con motor lingüístico LSEC.`, 'info');
         }

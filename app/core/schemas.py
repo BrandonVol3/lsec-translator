@@ -846,6 +846,7 @@ class DictionarySignMetadata(BaseModel):
     match_type: Optional[str] = Field(default=None, description="'exact' | 'normalized' | 'lemma' | 'fuzzy'")
     hand_configuration: Optional[str] = None
     alphabetical_group: Optional[str] = None
+    geolect: Optional[str] = Field(default="Nacional", description="Geolecto LSEC: 'Nacional' | 'Sierra' | 'Costa'")
     thematic_categories: List[str] = Field(default_factory=list)
     video_url: Optional[str] = None
     illustration_url: Optional[str] = None

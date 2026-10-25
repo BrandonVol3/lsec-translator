@@ -7,32 +7,26 @@ así como el cálculo de facetas y estadísticas de cobertura QA.
 """
 
 from __future__ import annotations
-
-import csv
-import json
-import logging
-import os
-import re
-import sys
-import unicodedata
+import csv, json, logging, os, re, sys, unicodedata
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
-
 from app.config import external_path, settings
 
 _DICCIONARIO_LSEC_DIR = external_path(settings.lsec_dictionary_root, "Diccionario LSEC")
 if _DICCIONARIO_LSEC_DIR.is_dir() and str(_DICCIONARIO_LSEC_DIR) not in sys.path:
     sys.path.insert(0, str(_DICCIONARIO_LSEC_DIR))
-
 try:
     import lsec_non_manual_standard as lsec_cnm
 except Exception:
     lsec_cnm = None  # type: ignore
 
+try:
+    import lsec_kinematic_stabilizer as lsec_stabilizer
+except Exception:
+    lsec_stabilizer = None  # type: ignore
+
 logger = logging.getLogger(__name__)
 
-# Directorios candidatos para localizar las animaciones generadas (100% disco local)
-# Versión 2.7 estandarizada preferida, con fallback a versión 2.6 corregida y versión 2.5
 CANDIDATE_PATHS = [
     external_path(settings.lsec_animations_v27_dir, "Diccionario LSEC/senas_vrm_standardized_v2.7"),
     external_path("", "senas_vrm_standardized_v2.7"),
@@ -41,28 +35,16 @@ CANDIDATE_PATHS = [
     external_path(settings.lsec_animations_dir, "Diccionario LSEC/senas_vrm_direct"),
     external_path("", "senas_vrm_direct"),
 ]
-V27_CANDIDATE_PATHS = [
-    external_path(settings.lsec_animations_v27_dir, "Diccionario LSEC/senas_vrm_standardized_v2.7"),
-    external_path("", "senas_vrm_standardized_v2.7"),
-]
-V26_CANDIDATE_PATHS = [
-    external_path(settings.lsec_animations_v26_dir, "Diccionario LSEC/senas_vrm_direct_v2.6"),
-    external_path("", "senas_vrm_direct_v2.6"),
-]
+V27_CANDIDATE_PATHS = [external_path(settings.lsec_animations_v27_dir, "Diccionario LSEC/senas_vrm_standardized_v2.7"), external_path("", "senas_vrm_standardized_v2.7")]
+V26_CANDIDATE_PATHS = [external_path(settings.lsec_animations_v26_dir, "Diccionario LSEC/senas_vrm_direct_v2.6"), external_path("", "senas_vrm_direct_v2.6")]
 V25_CANDIDATE_PATHS = [
     external_path(settings.lsec_animations_dir, "Diccionario LSEC/senas_vrm_direct"),
     external_path("", "senas_vrm_direct"),
     external_path("", "Diccionario LSEC/senas_vrm_direct"),
     external_path("", "_archive/Diccionario LSEC/senas_vrm_direct"),
 ]
-UHD_CANDIDATE_PATHS = [
-    external_path(settings.lsec_uhd_dir, "Diccionario LSEC/senas_ultra_hd"),
-    external_path("", "senas_ultra_hd"),
-]
-SENAS_CANDIDATE_PATHS = [
-    external_path(settings.lsec_senas_dir, "Diccionario LSEC/senas"),
-    external_path("", "senas"),
-]
+UHD_CANDIDATE_PATHS = [external_path(settings.lsec_uhd_dir, "Diccionario LSEC/senas_ultra_hd"), external_path("", "senas_ultra_hd")]
+SENAS_CANDIDATE_PATHS = [external_path(settings.lsec_senas_dir, "Diccionario LSEC/senas"), external_path("", "senas")]
 
 _resolved_dir: Optional[Path] = None
 _cached_signs: Optional[List[str]] = None
@@ -71,16 +53,11 @@ _cached_ordered_items: Optional[List[Dict[str, Any]]] = None
 _dir_norm_map_cache: Dict[str, Dict[str, List[Path]]] = {}
 _v27_stroke_index_cache: Optional[Dict[str, Any]] = None
 _v27_stroke_norm_map: Optional[Dict[str, Dict[str, Any]]] = None
-
+_v27_fs_stroke_map: Optional[Dict[str, Dict[str, Any]]] = None
 _cached_catalog_mtime: float = 0.0
 _cached_handshape_schema_mtime: float = 0.0
 _cached_handshape_schema: Optional[Dict[str, Any]] = None
-
-_MAIN_CM_IDS = {
-    *[f"configuracion_manual_{i}" for i in range(1, 10)],
-    "configuracion_manual_rostro",
-    "configuracion_manual_*",
-}
+_MAIN_CM_IDS = {*[f"configuracion_manual_{i}" for i in range(1, 10)], "configuracion_manual_rostro", "configuracion_manual_*"}
 
 
 def normalize_text(text: str) -> str:
@@ -120,10 +97,9 @@ def get_v27_dir() -> Optional[Path]:
 
 def get_v27_stroke_index() -> Dict[str, Any]:
     """Carga y cachea en memoria el índice de trazos activos precalculado (stroke_index.json) para v2.7."""
-    global _v27_stroke_index_cache, _v27_stroke_norm_map
+    global _v27_stroke_index_cache, _v27_stroke_norm_map, _v27_fs_stroke_map
     if _v27_stroke_index_cache is not None:
         return _v27_stroke_index_cache
-
     v27_dir = get_v27_dir()
     candidates = ([v27_dir / "stroke_index.json"] if v27_dir else []) + [
         Path(__file__).resolve().parent.parent / "data" / "stroke_index_v27.json"
@@ -140,30 +116,40 @@ def get_v27_stroke_index() -> Dict[str, Any]:
                             nk = normalize_text(k)
                             if nk and nk not in norm_map:
                                 norm_map[nk] = v
+                    fs_map: Dict[str, Dict[str, Any]] = {}
+                    for fk, fv in (payload.get("fingerspellingSigns") or {}).items():
+                        if isinstance(fv, dict):
+                            g = str(fv.get("grapheme") or "").strip().upper()
+                            for alias in (fk, f"DACT_{g}", g, normalize_text(fk), f"dact{g.lower()}"):
+                                if alias:
+                                    fs_map[unicodedata.normalize("NFC", alias)] = fv
                     _v27_stroke_norm_map = norm_map
+                    _v27_fs_stroke_map = fs_map
                     logger.info("✓ Índice de trazos v2.7 cargado (%d señas) desde %s", len(payload["signs"]), idx_path)
                     return _v27_stroke_index_cache
             except Exception as exc:
                 logger.warning("Error leyendo stroke_index.json en %s: %s", idx_path, exc)
-
-    _v27_stroke_index_cache = {"version": "2.7", "totalSigns": 0, "summary": {}, "signs": {}}
-    _v27_stroke_norm_map = {}
+    _v27_stroke_index_cache = {"version": "2.7", "totalSigns": 0, "summary": {}, "signs": {}, "fingerspellingSigns": {}}
+    _v27_stroke_norm_map, _v27_fs_stroke_map = {}, {}
     return _v27_stroke_index_cache
 
 
 def get_sign_stroke_entry(sign_name: Optional[str]) -> Optional[Dict[str, Any]]:
-    """Obtiene la entrada de trazo activo y poses de ancla para una seña del catálogo v2.7."""
+    """Obtiene la entrada de trazo activo y poses de ancla para una seña léxica o de dactilología v2.7."""
     if not sign_name:
         return None
     signs_map = get_v27_stroke_index().get("signs") or {}
-    if not signs_map:
-        return None
     clean = unicodedata.normalize("NFC", sign_name.strip())
     if clean in signs_map:
         return signs_map[clean]
     if sign_name in signs_map:
         return signs_map[sign_name]
-    return _v27_stroke_norm_map.get(normalize_text(clean)) if _v27_stroke_norm_map else None
+    nk = normalize_text(clean)
+    if _v27_stroke_norm_map and nk in _v27_stroke_norm_map:
+        return _v27_stroke_norm_map[nk]
+    if _v27_fs_stroke_map:
+        return _v27_fs_stroke_map.get(clean) or _v27_fs_stroke_map.get(clean.upper()) or _v27_fs_stroke_map.get(nk)
+    return None
 
 
 def get_v26_dir() -> Optional[Path]:
@@ -291,6 +277,39 @@ def _enrich_item_with_handshape_meta(item: Dict[str, Any]) -> Dict[str, Any]:
     item["hand_variant_label"] = v_label
     item["face_only"] = is_face_only
     item["arms_in_rest_pose"] = arms_rest
+
+    # Inferir geolecto (Sierra / Costa / Nacional) y bimanualidad querológica (stroke_index_v27)
+    sign_str = str(item.get("sign") or item.get("palabra") or "")
+    slug_str = str(item.get("slug") or "")
+    palabra_str = str(item.get("palabra") or sign_str)
+    low_title = f"{sign_str} {palabra_str} {slug_str}".lower()
+    if "(sierra)" in low_title or "en la sierra" in low_title or slug_str.lower().endswith("-sierra"):
+        item["geolect"] = "Sierra"
+    elif "(costa)" in low_title or "en la costa" in low_title or slug_str.lower().endswith("-costa"):
+        item["geolect"] = "Costa"
+    else:
+        item["geolect"] = item.get("geolect") or "Nacional"
+
+    stroke_meta = get_sign_stroke_entry(sign_str) or get_sign_stroke_entry(palabra_str)
+    raw_ah = stroke_meta.get("activeHands") if stroke_meta else None
+    if is_face_only:
+        active_hands = "none"
+    elif isinstance(raw_ah, (list, tuple, set)):
+        ah_set = {str(h).lower() for h in raw_ah}
+        if "left" in ah_set and "right" in ah_set:
+            active_hands = "both"
+        elif "right" in ah_set:
+            active_hands = "right"
+        elif "left" in ah_set:
+            active_hands = "left"
+        else:
+            active_hands = "none"
+    elif isinstance(raw_ah, str) and raw_ah.strip():
+        active_hands = raw_ah.strip().lower()
+    else:
+        active_hands = "both"
+    item["active_hands"] = active_hands
+    item["bimanual"] = "bimanual" if active_hands == "both" else ("face_only" if active_hands == "none" else "unimanual")
 
     if lsec_cnm is not None:
         cnm_cls = lsec_cnm.classify_sign_non_manual(
@@ -498,8 +517,9 @@ def _variant_sort_key(v_key: Optional[str]) -> int:
 
 def build_animations_list_payload(
     q: Optional[str] = None, hand_config: Optional[str] = None, hand_variant: Optional[str] = None,
-    alfa: Optional[str] = None, category: Optional[str] = None, sort_by: Optional[str] = "catalog",
-    version: Optional[str] = None, limit: int = 5000, offset: int = 0,
+    alfa: Optional[str] = None, category: Optional[str] = None, geolect: Optional[str] = None,
+    bimanual: Optional[str] = None, facial_archetype: Optional[str] = None,
+    sort_by: Optional[str] = "catalog", version: Optional[str] = None, limit: int = 5000, offset: int = 0,
 ) -> Dict[str, Any]:
     """Construye la respuesta paginada y facetada para /api/v1/animations/list."""
     _load_catalog_cache()
@@ -508,9 +528,14 @@ def build_animations_list_payload(
     eff_version = version or ("2.7" if v27_dir else ("2.6" if v26_dir else "2.5"))
     pipeline_ver = "2.7_Estandarizado" if (eff_version == "2.7" and v27_dir) else ("2.6_Directo_1a1_corregido" if (eff_version == "2.6" and v26_dir) else "2.5_Directo_1a1")
 
+    _roman_to_num = {"I": "1", "II": "2", "III": "3", "IV": "4", "V": "5", "VI": "6", "VII": "7", "VIII": "8", "IX": "9"}
     hc_filter = hand_config.strip() if hand_config and hand_config.strip() else None
     if hc_filter and hc_filter.isdigit():
         hc_filter = f"configuracion_manual_{hc_filter}"
+    elif hc_filter and hc_filter.upper() in _roman_to_num:
+        hc_filter = f"configuracion_manual_{_roman_to_num[hc_filter.upper()]}"
+    elif hc_filter and hc_filter.upper().startswith("CONFIGURACION_MANUAL_") and hc_filter.split("_")[-1].upper() in _roman_to_num:
+        hc_filter = f"configuracion_manual_{_roman_to_num[hc_filter.split('_')[-1].upper()]}"
     elif hc_filter and hc_filter.lower() in ("rostro", "face"):
         hc_filter = "configuracion_manual_rostro"
     elif hc_filter == "*":
@@ -521,6 +546,9 @@ def build_animations_list_payload(
     if alfa_filter and len(alfa_filter) == 1 and alfa_filter.isalpha():
         alfa_filter = f"alfa-{alfa_filter}"
     cat_filter = category.strip().lower() if category and category.strip() else None
+    geo_filter = geolect.strip().capitalize() if geolect and geolect.strip() else None
+    bim_filter = bimanual.strip().lower() if bimanual and bimanual.strip() else None
+    arch_filter = facial_archetype.strip().lower() if facial_archetype and facial_archetype.strip() else None
     q_term = normalize_text(q) if (q and q.strip()) else None
 
     filtered_pairs: List[Tuple[str, Dict[str, Any]]] = []
@@ -536,6 +564,20 @@ def build_animations_list_payload(
                 continue
         if cat_filter and cat_filter not in [str(c).lower() for c in (it.get("categorias") or [])]:
             continue
+        if geo_filter and (it.get("geolect") or "Nacional") != geo_filter:
+            continue
+        if bim_filter:
+            act_h = str(it.get("active_hands") or "both").lower()
+            bim_tag = str(it.get("bimanual") or ("bimanual" if act_h == "both" else "unimanual")).lower()
+            if bim_filter not in (act_h, bim_tag):
+                continue
+        if arch_filter:
+            it_arch = str(it.get("facial_archetype") or "neutral").lower()
+            if arch_filter == "non_neutral":
+                if it_arch == "neutral":
+                    continue
+            elif it_arch != arch_filter:
+                continue
         if q_term and q_term not in normalize_text(s) and q_term not in normalize_text(it.get("palabra", "")):
             continue
         filtered_pairs.append((s, it))
@@ -547,20 +589,35 @@ def build_animations_list_payload(
 
     filtered_signs, filtered_items = [p[0] for p in filtered_pairs], [p[1] for p in filtered_pairs]
     cm_facets, variant_facets, alfa_facets = {}, {}, {}
+    geo_facets, bim_facets, arch_facets = {}, {}, {}
     for _, it in filtered_pairs:
         cm_k = it.get("hand_configuration") or "configuracion_manual_*"
         hv_k = it.get("hand_variant") or f"{cm_k}_base"
         al_k = it.get("alphabetical_group") or "sin-alfa"
+        geo_k = it.get("geolect") or "Nacional"
+        bim_k = it.get("active_hands") or "both"
+        ar_k = it.get("facial_archetype") or "neutral"
         cm_facets[cm_k] = cm_facets.get(cm_k, 0) + 1
         variant_facets[hv_k] = variant_facets.get(hv_k, 0) + 1
         alfa_facets[al_k] = alfa_facets.get(al_k, 0) + 1
+        geo_facets[geo_k] = geo_facets.get(geo_k, 0) + 1
+        bim_facets[bim_k] = bim_facets.get(bim_k, 0) + 1
+        arch_facets[ar_k] = arch_facets.get(ar_k, 0) + 1
 
     total = len(filtered_signs)
     return {
         "total": total, "offset": offset, "limit": limit, "query": q,
         "version": eff_version, "pipeline_version": pipeline_ver,
-        "filters": {"hand_config": hc_filter, "hand_variant": hv_filter, "alfa": alfa_filter, "category": cat_filter, "sort_by": sort_by or "catalog"},
-        "facets": {"by_hand_configuration": cm_facets, "by_hand_variant": variant_facets, "by_alphabet": alfa_facets},
+        "filters": {
+            "hand_config": hc_filter, "hand_variant": hv_filter, "alfa": alfa_filter,
+            "category": cat_filter, "geolect": geo_filter, "bimanual": bim_filter,
+            "facial_archetype": arch_filter, "sort_by": sort_by or "catalog",
+        },
+        "facets": {
+            "by_hand_configuration": cm_facets, "by_hand_variant": variant_facets,
+            "by_alphabet": alfa_facets, "by_geolect": geo_facets,
+            "by_bimanual": bim_facets, "by_facial_archetype": arch_facets,
+        },
         "order": "Catálogo Oficial Diccionario LSEC (CONADIS)",
         "signs": filtered_signs[offset : offset + limit],
         "items": filtered_items[offset : offset + limit],
@@ -746,9 +803,12 @@ def build_animation_stats_payload(version: Optional[str] = None) -> Dict[str, An
 def build_non_manual_standard_payload() -> Optional[Dict[str, Any]]:
     """Carga el manifiesto de estándar CNM o lo construye dinámicamente si lsec_cnm está presente."""
     manifest_path = _DICCIONARIO_LSEC_DIR / "configuracion_manual" / "estandar_componentes_no_manuales.json"
+    expected_ver = getattr(lsec_cnm, "CNM_STANDARD_VERSION", "1.1") if lsec_cnm is not None else None
     if manifest_path.is_file():
         try:
-            return json.loads(manifest_path.read_text(encoding="utf-8"))
+            payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if expected_ver is None or payload.get("version") == expected_ver:
+                return payload
         except Exception as exc:
             logger.warning("Error leyendo estandar_componentes_no_manuales.json: %s", exc)
     if lsec_cnm is not None:
@@ -792,7 +852,68 @@ def build_stroke_index_payload(
             if len(selected) >= limit:
                 break
 
+    fs_signs_map: Dict[str, Any] = idx_data.get("fingerspellingSigns") or {}
     return {
         "version": idx_data.get("version", "2.7"), "totalSigns": idx_data.get("totalSigns", len(all_signs_map)),
-        "returnedSigns": len(selected), "summary": idx_data.get("summary", {}), "signs": selected,
+        "totalFingerspellingSigns": idx_data.get("totalFingerspellingSigns", len(fs_signs_map)),
+        "returnedSigns": len(selected), "summary": idx_data.get("summary", {}),
+        "signs": selected, "fingerspellingSigns": fs_signs_map,
     }
+
+
+def ensure_sign_animation_stabilized(
+    raw_data: Dict[str, Any],
+    sign_name: str,
+    anim_file: Optional[Path] = None,
+    cat_meta: Optional[Dict[str, Any]] = None,
+    persist_to_disk: bool = True,
+) -> Dict[str, Any]:
+    """
+    Garantiza que el diccionario `animation.json` haya sido estabilizado por `lsec_kinematic_stabilizer`
+    (eliminando giros de muñeca de 360°, torsiones antebrazo-mano, penetración corporal contra la malla VRM,
+    espasmos de mano inactiva y aplicando la configuración manual canónica durante todo el stroke elevado).
+    Si `persist_to_disk` es True, guarda el archivo estabilizado en disco para que futuras lecturas sean instantáneas.
+    """
+    if lsec_stabilizer is None or not isinstance(raw_data, dict):
+        return raw_data
+
+    clean_sign = str(sign_name or "").strip()
+    if clean_sign.upper().startswith("DACT_"):
+        return raw_data
+
+    meta = raw_data.setdefault("metadata", {})
+    stab_ver = getattr(lsec_stabilizer, "STABILIZER_VERSION", "2.7.2_Stabilized")
+    existing_stab = meta.get("kinematicStabilizer")
+    if isinstance(existing_stab, dict) and existing_stab.get("version") == stab_ver:
+        return raw_data
+
+    info_data: Optional[Dict[str, Any]] = None
+    if anim_file and anim_file.parent.is_dir():
+        info_path = anim_file.parent / "info.json"
+        if info_path.is_file():
+            try:
+                info_data = json.loads(info_path.read_text(encoding="utf-8"))
+            except Exception:
+                info_data = None
+
+    try:
+        lsec_stabilizer.stabilize_sign_animation_dict(
+            raw_data,
+            sign_name=clean_sign,
+            cat_entry=cat_meta,
+            info_data=info_data,
+            force=False,
+        )
+        if persist_to_disk and anim_file and anim_file.is_file():
+            v27_dir = get_v27_dir()
+            if v27_dir and str(anim_file.resolve()).startswith(str(v27_dir.resolve())):
+                tmp_file = anim_file.with_suffix(".json.tmp")
+                tmp_file.write_text(
+                    json.dumps(raw_data, ensure_ascii=False, separators=(",", ":")),
+                    encoding="utf-8",
+                )
+                tmp_file.replace(anim_file)
+    except Exception as exc:
+        logger.warning("No se pudo aplicar estabilizador cinemático en '%s': %s", clean_sign, exc)
+
+    return raw_data

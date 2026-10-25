@@ -10,13 +10,13 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Nunito:wght@700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
 
-  <!-- Sistema de Diseño Modular («Pedagogical Tactile Light») -->
-  <link rel="stylesheet" href="/static/css/base-tokens.css?v=3.0.1">
-  <link rel="stylesheet" href="/static/css/modals-panels.css?v=3.0.1">
-  <link rel="stylesheet" href="/static/css/avatar-studio.css?v=3.0.1">
-  <link rel="stylesheet" href="/static/css/app.css?v=3.0.1">
-  <link rel="stylesheet" href="/static/css/layout-workspace.css?v=3.0.1">
-  <link rel="stylesheet" href="/static/css/components-ui.css?v=3.0.1">
+  <!-- Sistema de Diseño Modular («Pedagogical Tactile Light» · Paleta Institucional Sutil UPEC · WCAG 2.2 AA/AAA) -->
+  <link rel="stylesheet" href="/static/css/base-tokens.css?v=3.1.8">
+  <link rel="stylesheet" href="/static/css/modals-panels.css?v=3.1.8">
+  <link rel="stylesheet" href="/static/css/avatar-studio.css?v=3.1.8">
+  <link rel="stylesheet" href="/static/css/app.css?v=3.1.8">
+  <link rel="stylesheet" href="/static/css/layout-workspace.css?v=3.1.8">
+  <link rel="stylesheet" href="/static/css/components-ui.css?v=3.1.8">
 
   <!-- Import Map local para Three.js y @pixiv/three-vrm (100% Offline) -->
   <script type="importmap">
@@ -37,16 +37,18 @@
          ============================================================ -->
     <header class="top-bar" role="banner">
       <div class="top-bar-left">
-        <div class="brand" title="LSEC Studio — Lengua de Señas Ecuatoriana">
-          <!-- Isotipo Vectorial Propio de LSEC Studio: Dos Manos Estilizadas + Onda Acústica -->
+        <div class="brand" title="LSEC Studio — Universidad Politécnica Estatal del Carchi (UPEC)">
+          <!-- Isotipo Vectorial Propio de LSEC Studio con Paleta Sutil UPEC: Verde Institucional, Oro Sol Pasto y Franja Carchi -->
           <svg class="brand-logo-svg" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <rect width="40" height="40" rx="10" fill="#10B981"/>
-            <path d="M11 26V16C11 14.8954 11.8954 14 13 14C14.1046 14 15 14.8954 15 16V21M15 21V12C15 10.8954 15.8954 10 17 10C18.1046 10 19 10.8954 19 12V21M19 21V14C19 12.8954 19.8954 12 21 12C22.1046 12 23 12.8954 23 14V23C23 26.866 19.866 30 16 30H15C12.7909 30 11 28.2091 11 26Z" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M27 15V25M31 18V22" stroke="#ECFDF5" stroke-width="2.4" stroke-linecap="round"/>
+            <rect width="40" height="40" rx="10" fill="#007A3D"/>
+            <path d="M4 37H20" stroke="#FACC15" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M20 37H36" stroke="#DC2626" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M11 25V15C11 13.8954 11.8954 13 13 13C14.1046 13 15 13.8954 15 15V20M15 20V11C15 9.8954 15.8954 9 17 9C18.1046 9 19 9.8954 19 11V20M19 20V13C19 11.8954 19.8954 11 21 11C22.1046 11 23 11.8954 23 13V22C23 25.866 19.866 29 16 29H15C12.7909 29 11 27.2091 11 25Z" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M27 14V24M31 17V21" stroke="#FDE047" stroke-width="2.4" stroke-linecap="round"/>
           </svg>
           <div class="brand-text-group">
             <span>LSEC Studio</span>
-            <span class="brand-subtitle">Intérprete Educativo LSEC</span>
+            <span class="brand-subtitle">Intérprete Educativo LSEC · UPEC</span>
           </div>
         </div>
         <div class="project-meta">
@@ -55,53 +57,43 @@
         </div>
       </div>
 
-      <!-- STEPPER GUIADO DE 3 VENTANAS INDEPENDIENTES -->
+      <!-- STEPPER GUIADO DE 4 VENTANAS INDEPENDIENTES -->
       <div class="top-bar-center">
-        <nav class="workflow-stepper" id="workflow-stepper" aria-label="Flujo guiado de traducción LSEC en 3 ventanas">
+        <nav class="workflow-stepper" id="workflow-stepper" aria-label="Flujo guiado de traducción LSEC en 4 ventanas">
           <button class="step-btn active" data-step="preparar" id="step-btn-preparar" type="button" aria-current="step">
             <span class="step-number">1</span>
-            <span class="step-label">1. Transcripción con Whisper</span>
+            <span class="step-label">Transcripción</span>
           </button>
           <span class="step-connector" aria-hidden="true"></span>
           <button class="step-btn" data-step="traducir" id="step-btn-traducir" type="button">
             <span class="step-number">2</span>
-            <span class="step-label">2. Motor Lingüístico y Glosas LSEC</span>
+            <span class="step-label">Glosas LSEC</span>
+          </button>
+          <span class="step-connector" aria-hidden="true"></span>
+          <button class="step-btn" data-step="avatar" id="step-btn-avatar" type="button">
+            <span class="step-number">3</span>
+            <span class="step-label">Avatar 3D</span>
           </button>
           <span class="step-connector" aria-hidden="true"></span>
           <button class="step-btn" data-step="revisar" id="step-btn-revisar" type="button">
-            <span class="step-number">3</span>
-            <span class="step-label">3. Vista Previa del Avatar y Exportación</span>
+            <span class="step-number">4</span>
+            <span class="step-label">Subtítulos y Exportar</span>
           </button>
         </nav>
       </div>
 
-      <!-- ACCIONES GLOBALES DE PROYECTO (Enlaces técnicos /avatarconfig y /viewer ocultos) -->
+      <!-- ACCIONES GLOBALES DE PROYECTO (Sin duplicados ni Demo — Ley de Hick WCAG 2.2) -->
       <div class="top-bar-right">
         <input type="file" id="file-upload-input" accept="video/mp4,video/webm,video/ogg,video/quicktime,video/x-matroska,audio/wav,audio/mp3,.mp4,.webm,.mov,.mkv,.wav,.mp3" style="display: none;">
 
-        <button class="btn btn-sm" id="btn-upload-video" type="button" title="Cargar archivo de video o audio local">
-          Cargar Video
+        <button class="btn btn-sm" id="btn-projects-modal" type="button" title="Guardar, abrir o exportar proyectos locales">
+          Proyectos / Exportar
         </button>
 
-        <button class="btn btn-sm" id="btn-load-demo" type="button" title="Cargar proyecto educativo de demostración (UPEC)">
-          Cargar Demo
-        </button>
-
-        <button class="btn btn-cobalt btn-sm" id="btn-run-pipeline" type="button" title="Ejecutar transcripción Whisper y traducción LSEC">
-          Transcribir Audio
-        </button>
-
-        <button class="btn btn-sm" id="btn-dictionary-modal" type="button" title="Consultar las 4.252 señas del Diccionario CONADIS">
-          Diccionario CONADIS
-        </button>
-
-        <button class="btn btn-sm" id="btn-projects-modal" type="button" title="Guardar o abrir proyectos locales">
-          Proyectos
-        </button>
-
-        <button class="btn btn-primary btn-sm" id="btn-export-modal" type="button" title="Opciones de exportación">
-          Exportar
-        </button>
+        <!-- Botones ocultos para compatibilidad interna de controladores -->
+        <button class="btn btn-sm" id="btn-upload-video" type="button" style="display:none;" aria-hidden="true">Cargar Video</button>
+        <button class="btn btn-sm" id="btn-run-pipeline" type="button" style="display:none;" aria-hidden="true">Transcribir Audio</button>
+        <button class="btn btn-sm" id="btn-export-modal" type="button" style="display:none;" aria-hidden="true">Exportar</button>
       </div>
     </header>
 
@@ -127,7 +119,7 @@
                   <span class="wizard-card-subtitle" id="video-stage-mode-label">MP4 / WebM Local</span>
                 </div>
                 <div style="display:flex; gap:8px; align-items:center;">
-                  <button class="btn btn-sm" id="btn-stage-change-video" type="button">Cambiar Video</button>
+                  <button class="btn btn-sm" id="btn-stage-change-video" type="button" style="display:none;" title="Seleccionar otro archivo de video local">Cambiar Video</button>
                 </div>
               </div>
 
@@ -180,7 +172,7 @@
                   <button class="btn-icon" id="btn-prev-frame" type="button" title="Retroceder 1 segundo" aria-label="Retroceder">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
                   </button>
-                  <button class="btn btn-primary btn-sm" id="btn-play-pause" type="button" title="Reproducir o Pausar (Espacio)" aria-label="Reproducir o Pausar">
+                  <button class="btn-icon" id="btn-play-pause" type="button" title="Reproducir o Pausar (Espacio)" aria-label="Reproducir o Pausar">
                     <svg id="icon-play" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                     <svg id="icon-pause" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="display: none;"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
                   </button>
@@ -215,40 +207,30 @@
             <div class="wizard-card-header">
               <div>
                 <div class="wizard-card-title">
-                  <span>1. Transcripción Automática con Whisper</span>
+                  <span>Transcripción con Whisper</span>
                   <span class="whisper-badge" id="transcript-count-badge">0 segmentos</span>
                 </div>
-                <div class="wizard-card-subtitle">Revisa o corrige las oraciones extraídas del audio antes de traducir a LSEC</div>
+                <div class="wizard-card-subtitle">Haz clic sobre cualquier oración para editarla o escuchar su audio</div>
               </div>
-              <div style="display:flex; gap:8px;">
+              <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                <button class="btn btn-sm" id="btn-toggle-transcript-view" type="button" style="display:none;" title="Alternar entre texto completo unificado y recuadros individuales por oración">
+                  Ver por Frases
+                </button>
                 <button class="btn btn-sm" id="btn-add-transcript-segment" type="button">+ Oración</button>
-                <button class="btn btn-cobalt btn-sm" id="btn-step1-transcribe" type="button">Extraer con Whisper</button>
+                <button class="btn btn-cobalt btn-sm" id="btn-step1-transcribe" type="button" style="display:none;">Extraer con Whisper</button>
               </div>
-            </div>
-
-            <!-- Visualizador Gráfico Animado de Extracción de Audio / Onda Acústica Whisper ASR -->
-            <div class="whisper-visualizer-box" id="whisper-visualizer-box">
-              <div class="whisper-visualizer-header">
-                <span class="whisper-badge" id="whisper-engine-badge">MOTOR FASTER-WHISPER ASR</span>
-                <span style="font-size:0.78rem; font-weight:700; color:var(--color-accent-cobalt-dark);" id="whisper-status-label">
-                  Onda acústica sincronizada con el reproductor
-                </span>
-              </div>
-              <canvas class="whisper-waveform-canvas" id="whisper-waveform-canvas" width="640" height="54" aria-label="Visualizador de onda acústica de Whisper ASR"></canvas>
             </div>
 
             <!-- Lista limpia de segmentos transcritos editables [mm:ss - mm:ss] -->
             <div class="transcript-segments-scroll" id="transcript-segments-container" role="region" aria-label="Segmentos transcritos editables">
               <div class="empty-state-box">
-                Carga un video y presiona <strong>Extraer con Whisper</strong> o agrega una oración para comenzar.
+                Selecciona tu video en el panel izquierdo para extraer y transcribir automáticamente el audio con <strong>Whisper ASR</strong>, o usa <strong>+ Oración</strong>.
               </div>
             </div>
 
             <!-- Barra Inferior con Botón Táctil hacia Ventana 2 -->
             <div class="wizard-footer-bar">
-              <span style="font-size:0.82rem; font-weight:700; color:var(--color-text-secondary);" id="step1-footer-summary">
-                Verifica el texto en español antes de ejecutar la transformación gramatical LSEC.
-              </span>
+              <span style="font-size:0.82rem; font-weight:700; color:var(--color-text-secondary);" id="step1-footer-summary"></span>
               <button class="btn btn-primary btn-tactile-cta" id="btn-step1-process-lsec" type="button">
                 PROCESAR TRADUCCIÓN LSEC -&gt;
               </button>
@@ -260,74 +242,25 @@
 
       <!-- ============================================================
            VENTANA 2: «2. Motor Lingüístico y Mesa Comparativa Lado a Lado»
-           Arriba: Monitor Visual de Transformación Gramatical (SVO -> SOV)
-           Centro: Mesa Comparativa Paralela de 2 Columnas Sincronizadas
+           Mesa Comparativa Paralela de 2 Columnas Sincronizadas a Pantalla Completa
            Abajo: CONFIRMAR GLOSAS Y VER AVATAR 3D ->
            ============================================================ -->
       <section class="wizard-window" id="wizard-window-2" data-wizard-step="traducir" aria-label="Ventana 2: Motor Lingüístico y Glosas LSEC">
         <div class="wizard-step2-layout">
 
-          <!-- Parte Superior: Monitor Visual de Transformación Gramatical -->
-          <div class="grammar-monitor-card" id="grammar-transform-monitor">
-            <div class="grammar-monitor-header">
-              <div>
-                <div class="wizard-card-title">
-                  <span>Monitor Visual de Transformación Gramatical (Español SVO -&gt; LSEC SOV)</span>
-                  <span class="grammar-rule-badge" id="grammar-active-sentence-index">Oración #1</span>
-                </div>
-                <div class="wizard-card-subtitle">
-                  Observa cómo el motor lingüístico elide palabras funcionales, convierte verbos a infinitivo y reordena la sintaxis a LSEC
-                </div>
-              </div>
-              <div class="grammar-formula-pills">
-                <span class="grammar-formula-pill">ESPAÑOL: SUJETO + VERBO + OBJETO</span>
-                <span style="font-weight:800; color:var(--color-accent-cobalt);">-&gt;</span>
-                <span class="grammar-formula-pill" style="background:var(--color-surface-mint); border-color:var(--color-primary-emerald); color:#065f46;">
-                  LSEC: TIEMPO + TÓPICO + SOV + NEGACIÓN
-                </span>
-              </div>
-            </div>
-
-            <div class="grammar-transform-grid" id="grammar-transform-body">
-              <div>
-                <div class="grammar-box-title">Oración en Español (Palabras elididas tachadas / Verbos en infinitivo)</div>
-                <div class="grammar-tokens-flow" id="grammar-spanish-tokens"></div>
-              </div>
-              <div style="font-family:var(--font-display); font-size:1.3rem; font-weight:800; color:var(--color-accent-cobalt);">
-                =&gt;
-              </div>
-              <div>
-                <div class="grammar-box-title">Estructura Resultante en Glosas LSEC</div>
-                <div class="grammar-tokens-flow" id="grammar-lsec-tokens"></div>
-              </div>
-            </div>
-
-            <div class="grammar-rules-bar">
-              <div class="grammar-tokens-flow" id="grammar-applied-rules-list">
-                <span class="grammar-rule-badge">Estructura SOV</span>
-              </div>
-              <div style="display:flex; gap:10px; align-items:center; font-size:0.76rem; font-weight:700; color:var(--color-text-secondary);">
-                <span style="display:inline-flex; align-items:center; gap:5px;"><span style="width:10px;height:10px;border-radius:3px;background:#10b981;display:inline-block;"></span> Seña CONADIS</span>
-                <span style="display:inline-flex; align-items:center; gap:5px;"><span style="width:10px;height:10px;border-radius:3px;background:#0284c7;display:inline-block;"></span> Dactilología</span>
-                <span style="display:inline-flex; align-items:center; gap:5px;"><span style="width:10px;height:10px;border-radius:3px;background:#f59e0b;display:inline-block;"></span> Editada Manualmente</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Centro: Mesa Comparativa Paralela de 2 Columnas Sincronizadas -->
+          <!-- Mesa Comparativa Paralela de 2 Columnas Sincronizadas (Diseño Limpio sin Ruido Visual) -->
           <div class="comparative-table-card" id="comparative-parallel-table">
             <div class="comparative-table-header">
               <div class="comparative-col-head">
-                <span>TRANSCRIPCIÓN OBTENIDA - WHISPER</span>
-                <span style="font-size:0.74rem; color:var(--color-text-secondary); font-weight:700;">Editable in-situ + Re-traducir fila</span>
+                <span>Español (Transcripción)</span>
+                <span class="comparative-col-subhint">Haz clic en el texto para editar</span>
               </div>
               <div class="comparative-col-head">
-                <span>CONTRAPARTE EN GLOSAS LSEC</span>
-                <div style="display:flex; gap:8px; align-items:center;">
-                  <span style="font-size:0.74rem; color:var(--color-primary-emerald-dark); font-weight:700;" id="comparative-coverage-badge">4.252 Fichas CONADIS</span>
-                  <button class="btn btn-sm" id="btn-retranslate-all-rows" type="button" title="Re-procesar todas las filas con spaCy y reglas LSEC">
-                    Re-traducir Todo
-                  </button>
+                <span>Glosas LSEC</span>
+                <div class="comparative-legend-pills" aria-label="Leyenda de tipos de glosa">
+                  <span class="legend-mini-pill legend-conadis"><span aria-hidden="true">✓</span> CONADIS</span>
+                  <span class="legend-mini-pill legend-fingerspell"><span aria-hidden="true">✦</span> Dactilología</span>
+                  <span class="legend-mini-pill legend-edited"><span aria-hidden="true">✎</span> Editada</span>
                 </div>
               </div>
             </div>
@@ -339,12 +272,10 @@
             <!-- Barra Inferior de la Ventana 2 -->
             <div class="wizard-footer-bar">
               <button class="btn" id="btn-step2-back" type="button">
-                &lt;- Volver a 1. Transcripción
+                &lt;- Volver a Transcripción
               </button>
               <div style="display:flex; align-items:center; gap:12px;">
-                <span style="font-size:0.82rem; font-weight:700; color:var(--color-text-secondary);" id="step2-footer-summary">
-                  Haz clic en cualquier ficha para editarla, agregar glosas o reordenarlas.
-                </span>
+                <span style="font-size:0.82rem; font-weight:700; color:var(--color-text-secondary);" id="step2-footer-summary"></span>
                 <button class="btn btn-primary btn-tactile-cta" id="btn-step2-confirm-glosses" type="button">
                   CONFIRMAR GLOSAS Y VER AVATAR 3D -&gt;
                 </button>
@@ -356,90 +287,115 @@
       </section>
 
       <!-- ============================================================
-           VENTANA 3: «3. Vista Previa del Avatar y Exportación»
-           Izquierda: Escenario Multimedia (Video + Subtítulos + Avatar 3D VRM)
-           Centro: Monitor en Vivo de las Señas que ejecuta el Avatar
-           Derecha: Personalizador Avanzado de Estilos de Subtítulos + Exportación MP4 / SRT
+           VENTANA 3: «3. Intérprete Avatar 3D y Monitor en Vivo de Señas»
+           Izquierda: Video y Subtítulos Limpios (100% despejado sin superposición)
+           Derecha: Escenario Dedicado del Avatar 3D VRM + Seña en Ejecución + Glosas de la Oración
            ============================================================ -->
-      <section class="wizard-window" id="wizard-window-3" data-wizard-step="revisar" aria-label="Ventana 3: Vista Previa del Avatar y Exportación">
+      <section class="wizard-window" id="wizard-window-3" data-wizard-step="avatar" aria-label="Ventana 3: Intérprete Avatar 3D y Monitor en Vivo">
         <div class="wizard-step3-grid">
 
-          <!-- Izquierda: Slot para el Escenario Multimedia Sincronizado -->
+          <!-- Izquierda: Slot para el Escenario de Video Limpio -->
           <div class="step-video-slot" id="step3-video-slot"></div>
 
-          <!-- Centro: Monitor en Vivo de las Señas del Avatar en la Oración Actual -->
+          <!-- Derecha: Escenario Dedicado del Avatar 3D + Monitor en Vivo de Señas LSEC -->
           <div class="wizard-card" id="step3-live-sign-monitor">
             <div class="wizard-card-header">
               <div>
                 <div class="wizard-card-title">
-                  <span>Monitor en Vivo de Señas LSEC</span>
+                  <span>Intérprete Avatar 3D y Monitor de Señas</span>
+                  <span class="grammar-rule-badge" id="live-monitor-sentence-badge">Oración #1</span>
                 </div>
-                <div class="wizard-card-subtitle">Sincronización en tiempo real con el Avatar 3D VRM</div>
+                <div class="wizard-card-subtitle">El Avatar 3D se muestra en su propio escenario sin cubrir los subtítulos del video</div>
               </div>
               <span class="whisper-badge" id="live-monitor-time-badge">00:00.0</span>
             </div>
 
             <div class="live-monitor-body" id="live-monitor-body">
-              <div class="live-current-sign-card" id="live-current-sign-card">
-                <span style="font-size:0.74rem; font-weight:800; text-transform:uppercase; color:var(--color-text-secondary);">
-                  Seña en Ejecución
-                </span>
-                <div class="live-current-sign-word" id="live-current-sign-word">EN ESPERA</div>
-                <span class="grammar-rule-badge" id="live-current-sign-type" style="background:var(--color-primary-emerald);">
-                  Seña CONADIS
-                </span>
-              </div>
-
-              <div>
-                <div class="grammar-box-title">Oración Actual en Reproducción</div>
-                <div id="live-current-sentence-box" style="padding:10px 12px; border-radius:10px; background:var(--color-canvas-bg); border:2px solid var(--color-border-subtle); font-weight:700; color:var(--color-text-primary);">
-                  Reproduce el video o selecciona una oración para observar la secuencia de señas.
+              <!-- Escenario 3D Dedicado para el Avatar VRM en la Ventana 3 -->
+              <div class="step3-avatar-dedicated-box">
+                <div class="step3-avatar-stage-host" id="step3-avatar-dedicated-host"></div>
+                <div class="live-current-sign-card" id="live-current-sign-card">
+                  <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                    <span style="font-size:0.72rem; font-weight:800; text-transform:uppercase; color:var(--color-text-secondary);">
+                      Seña Activa:
+                    </span>
+                    <div class="live-current-sign-word" id="live-current-sign-word">EN ESPERA</div>
+                  </div>
+                  <span class="grammar-rule-badge" id="live-current-sign-type" style="background:var(--color-primary-emerald);">
+                    ✓ Seña CONADIS
+                  </span>
                 </div>
               </div>
 
-              <div>
-                <div class="grammar-box-title">Secuencia de Glosas de la Oración Actual</div>
+              <!-- Oración Actual con Navegación Rápida (Sin listas largas ni doble scrollbar) -->
+              <div class="step3-sentence-focus-box">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
+                  <div class="grammar-box-title" style="margin-bottom:0;">Oración Actual y Secuencia de Glosas</div>
+                  <div style="display:inline-flex; align-items:center; gap:6px;">
+                    <button class="btn btn-sm" id="btn-step3-prev-sentence" type="button" title="Oración anterior">&lt;- Anterior</button>
+                    <button class="btn btn-cobalt btn-sm" id="btn-step3-replay-sentence" type="button" title="Repetir oración actual">Repetir</button>
+                    <button class="btn btn-sm" id="btn-step3-next-sentence" type="button" title="Siguiente oración">Siguiente -&gt;</button>
+                  </div>
+                </div>
+                <div id="live-current-sentence-box" style="padding:9px 12px; border-radius:10px; background:var(--color-canvas-bg); border:2px solid var(--color-border-subtle); font-weight:700; color:var(--color-text-primary); margin-bottom:8px;">
+                  Reproduce el video o usa Anterior / Siguiente para inspeccionar cada oración.
+                </div>
                 <div class="gloss-chips-rack" id="live-sentence-gloss-rack"></div>
-              </div>
-
-              <div>
-                <div class="grammar-box-title">Índice Rápido de Oraciones</div>
-                <div id="live-all-sentences-list" style="display:flex; flex-direction:column; gap:6px;"></div>
+                <div id="live-all-sentences-list" style="display:none;" aria-hidden="true"></div>
               </div>
             </div>
 
             <div class="wizard-footer-bar">
-              <button class="btn btn-sm" id="btn-step3-back-to-glosses" type="button">
+              <button class="btn" id="btn-step3-back-to-glosses" type="button">
                 &lt;- Editar Glosas (Paso 2)
               </button>
-              <button class="btn btn-cobalt btn-sm" id="btn-step3-replay-sentence" type="button">
-                Repetir Oración Actual
+              <button class="btn btn-primary btn-tactile-cta" id="btn-step3-to-step4" type="button">
+                PERSONALIZAR SUBTÍTULOS Y EXPORTAR -&gt;
               </button>
             </div>
           </div>
 
-          <!-- Derecha: Personalizador Avanzado de Estilos de Subtítulos + Botones de Exportación -->
+        </div>
+      </section>
+
+      <!-- ============================================================
+           VENTANA 4: «4. Subtítulos y Exportación Final»
+           Izquierda: Amplio Escenario Compuesto (Video + Subtítulos a la izquierda + Avatar PiP en esquina sin solaparse)
+           Derecha: Personalizador de Estilos de Subtítulos + Exportación MP4 / SRT
+           ============================================================ -->
+      <section class="wizard-window" id="wizard-window-4" data-wizard-step="revisar" aria-label="Ventana 4: Subtítulos y Exportación Final">
+        <div class="wizard-step4-grid">
+
+          <!-- Izquierda: Slot Amplio para la Vista Previa Compuesta Final -->
+          <div class="step-video-slot" id="step4-video-slot"></div>
+
+          <!-- Derecha: Personalizador de Estilos de Subtítulos + Botones de Exportación -->
           <div class="wizard-card" id="step3-styles-export-panel">
             <div class="wizard-card-header">
               <div>
                 <div class="wizard-card-title">
                   <span>Estilos de Subtítulos y Exportación</span>
                 </div>
-                <div class="wizard-card-subtitle">Personaliza la apariencia visual y descarga el resultado</div>
+                <div class="wizard-card-subtitle">Los subtítulos se ajustan automáticamente a la izquierda del Avatar 3D para evitar solapamientos</div>
               </div>
             </div>
 
-            <!-- Contenedor del Personalizador Avanzado de Estilos de Subtítulos (RF-03) -->
+            <!-- Contenedor del Personalizador de Estilos de Subtítulos (RF-03) -->
             <div id="view-side-subtitles" style="flex:1 1 auto; overflow-y:auto; min-height:0;"></div>
 
-            <!-- Botones Prominentes de Exportación MP4 y SRT (RF-03 y RF-08) -->
+            <!-- Botón CTA Primario + Acción Secundaria SRT y Retorno a Paso 3 -->
             <div class="export-actions-stack">
               <button class="btn btn-primary btn-tactile-cta" id="btn-step3-export-mp4" type="button" style="width:100%;">
                 EXPORTAR VIDEO MP4
               </button>
-              <button class="btn btn-cobalt btn-tactile-cta" id="btn-step3-export-srt" type="button" style="width:100%;">
-                EXPORTAR SUBTÍTULOS SRT
-              </button>
+              <div style="display:grid; grid-template-columns: auto 1fr; gap:8px;">
+                <button class="btn" id="btn-step4-back-to-avatar" type="button">
+                  &lt;- Avatar 3D
+                </button>
+                <button class="btn btn-cobalt" id="btn-step3-export-srt" type="button">
+                  Descargar Subtítulos SRT (.srt)
+                </button>
+              </div>
             </div>
           </div>
 
@@ -474,25 +430,25 @@
   </div>
 
   <!-- Scripts Modulares de LSEC Studio (Sin timeline.js en la interfaz) -->
-  <script src="/static/js/demo-data.js"></script>
-  <script src="/static/js/state/state-project-hydration.js"></script>
-  <script src="/static/js/state/state-gloss-mutations.js"></script>
-  <script src="/static/js/state/state-persistence-styles.js"></script>
-  <script src="/static/js/state.js"></script>
-  <script src="/static/js/components/subtitle-engine.js"></script>
-  <script src="/static/js/components/pipeline-processor.js"></script>
-  <script src="/static/js/components/video-player.js"></script>
-  <script src="/static/js/components/subtitle-overlay.js"></script>
-  <script src="/static/js/components/subtitle-editor-panel.js"></script>
-  <script src="/static/js/components/gloss-overlay.js"></script>
-  <script src="/static/js/components/structural-validator.js"></script>
-  <script src="/static/js/components/sentence-engine.js"></script>
-  <script src="/static/js/components/transcript-window.js?v=3.0.0"></script>
-  <script src="/static/js/components/linguistic-comparison-view.js?v=3.0.0"></script>
-  <script src="/static/js/components/sidebar-panels.js?v=3.0.0"></script>
-  <script src="/static/js/components/video-exporter.js?v=3.0.0"></script>
-  <script src="/static/js/components/modals-and-export.js?v=3.0.0"></script>
-  <script src="/static/js/app.js?v=3.0.1"></script>
-  <script type="module" src="/static/js/avatar/studio-avatar-bridge.js?v=3.0.0"></script>
+  <script src="/static/js/demo-data.js?v=3.1.8"></script>
+  <script src="/static/js/state/state-project-hydration.js?v=3.1.8"></script>
+  <script src="/static/js/state/state-gloss-mutations.js?v=3.1.8"></script>
+  <script src="/static/js/state/state-persistence-styles.js?v=3.1.8"></script>
+  <script src="/static/js/state.js?v=3.1.8"></script>
+  <script src="/static/js/components/subtitle-engine.js?v=3.1.8"></script>
+  <script src="/static/js/components/pipeline-processor.js?v=3.1.8"></script>
+  <script src="/static/js/components/video-player.js?v=3.1.8"></script>
+  <script src="/static/js/components/subtitle-overlay.js?v=3.1.8"></script>
+  <script src="/static/js/components/subtitle-editor-panel.js?v=3.1.8"></script>
+  <script src="/static/js/components/gloss-overlay.js?v=3.1.8"></script>
+  <script src="/static/js/components/structural-validator.js?v=3.1.8"></script>
+  <script src="/static/js/components/sentence-engine.js?v=3.1.8"></script>
+  <script src="/static/js/components/transcript-window.js?v=3.1.8"></script>
+  <script src="/static/js/components/linguistic-comparison-view.js?v=3.1.8"></script>
+  <script src="/static/js/components/sidebar-panels.js?v=3.1.8"></script>
+  <script src="/static/js/components/video-exporter.js?v=3.1.8"></script>
+  <script src="/static/js/components/modals-and-export.js?v=3.1.8"></script>
+  <script src="/static/js/app.js?v=3.1.8"></script>
+  <script type="module" src="/static/js/avatar/studio-avatar-bridge.js?v=3.1.8"></script>
 </body>
 </html>

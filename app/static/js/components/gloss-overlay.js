@@ -164,7 +164,7 @@ class GlossOverlayController {
       const isParaphrase = activeGloss.is_paraphrase || (activeGloss.type_badge === 'paráfrasis');
       
       let typeLabel = activeGloss.gloss_type || 'SEÑA LÉXICA';
-      if (isFingerspelling) typeLabel = 'DACTILOLOGÍA (PENDIENTE)';
+      if (isFingerspelling) typeLabel = 'DACTILOLOGÍA LSEC';
       if (isParaphrase) typeLabel = 'PARÁFRASIS LSEC';
 
       const warningHtml = this.buildWarningSublabelHtml(glossName, isFingerspelling);

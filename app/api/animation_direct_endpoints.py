@@ -59,6 +59,16 @@ from app.services.animation_catalog_service import (
     lsec_cnm,
     normalize_text,
 )
+from app.services.animation_fingerspelling_service import (
+    DYNAMIC_GRAPHEMES,
+    GRAPHEME_METADATA,
+    LSEC_FINGERSPELLING_GRAPHEMES,
+    STATIC_GRAPHEMES,
+    build_fingerspelling_catalog_payload,
+    is_fingerspelling_query,
+    synthesize_fingerspelling_animation,
+    tokenize_lsec_fingerspelling,
+)
 from app.services.animation_lexical_resolver import (
     _LSEC_LEXICAL_ALIASES,
     _PREFERRED_HOMONYMS,
@@ -85,13 +95,16 @@ from app.services.animation_media_service import (
 animation_router = APIRouter(prefix="/api/v1/animations", tags=["Animaciones Directas 1:1 (VRM)"])
 
 
-@animation_router.get("/list", summary="Lista todas las señas con animación directa 1:1 con filtros de Configuración Manual, Sub-variante y Letra")
+@animation_router.get("/list", summary="Lista todas las señas con animación directa 1:1 con filtros de Configuración Manual, Sub-variante, Geolecto y Parámetros Querológicos")
 async def list_animations(
     q: Optional[str] = Query(None, description="Término de búsqueda opcional"),
     hand_config: Optional[str] = Query(None, description="Filtrar por Configuración Manual (ej. configuracion_manual_3, configuracion_manual_rostro o configuracion_manual_*)"),
     hand_variant: Optional[str] = Query(None, description="Filtrar por sub-variante (ej. configuracion_manual_3_v2 o configuracion_manual_rostro_base)"),
     alfa: Optional[str] = Query(None, description="Filtrar por letra inicial del catálogo (ej. alfa-a)"),
     category: Optional[str] = Query(None, description="Filtrar por categoría arbitraria en info.json"),
+    geolect: Optional[str] = Query(None, description="Filtrar por geolecto regional: 'Nacional', 'Sierra' o 'Costa'"),
+    bimanual: Optional[str] = Query(None, description="Filtrar por lateralidad/bimanualidad: 'both', 'right', 'left', 'none'"),
+    facial_archetype: Optional[str] = Query(None, description="Filtrar por arquetipo de Rasgo No Manual (ej. 'open_kiss_pucker', 'lips_projected_closed', 'non_neutral')"),
     sort_by: Optional[str] = Query("catalog", description="Ordenamiento: 'catalog' (defecto), 'hand_config', 'alfa'"),
     version: Optional[str] = Query(None, description="Versión preferida: '2.7', '2.6' o '2.5'"),
     limit: int = Query(5000, ge=1, le=10000, description="Límite de resultados devueltos"),
@@ -99,7 +112,7 @@ async def list_animations(
 ) -> Dict[str, Any]:
     """
     Retorna la lista de señas directas 1:1 ordenadas según catalogo_lsec.json (o por configuración manual),
-    incluyendo metadata de Configuración Manual (I–IX, Rostro y *), sub-variante y letra para verificación.
+    incluyendo metadata de Configuración Manual (I–IX, Rostro y *), sub-variante, geolecto y rasgos no manuales.
     """
     return build_animations_list_payload(
         q=q,
@@ -107,6 +120,9 @@ async def list_animations(
         hand_variant=hand_variant,
         alfa=alfa,
         category=category,
+        geolect=geolect,
+        bimanual=bimanual,
+        facial_archetype=facial_archetype,
         sort_by=sort_by,
         version=version,
         limit=limit,
@@ -164,13 +180,24 @@ async def get_stroke_index_endpoint(
     )
 
 
+@animation_router.get("/fingerspelling/catalog", summary="Obtiene el catálogo oficial de las 30 señas de dactilología LSEC (Guía Oficial PDF)")
+async def get_fingerspelling_catalog() -> Dict[str, Any]:
+    return build_fingerspelling_catalog_payload()
+
+
+@animation_router.get("/fingerspelling/{text}", summary="Sintetiza la animación VRM 1.0 de dactilología LSEC para una letra, dígrafo o palabra")
+async def get_fingerspelling_animation(text: str, fps: int = Query(30, ge=15, le=60)) -> Dict[str, Any]:
+    return synthesize_fingerspelling_animation(text, fps=fps)
+
+
 @animation_router.get("/resolve/{gloss}", summary="Resuelve una glosa LSEC en el catálogo v2.7/v2.6 sin lanzar 404")
 async def resolve_single_gloss(
     gloss: str,
     version: Optional[str] = Query("2.7", description="Versión preferida: '2.7', '2.6' o '2.5'"),
     include_animation: bool = Query(True, description="Incluir el JSON completo de animation.json"),
+    geolect: Optional[str] = Query(None, description="Preferencia geolectal opcional: 'Sierra', 'Costa' o 'Nacional'"),
 ) -> Dict[str, Any]:
-    res = resolve_gloss_to_sign(gloss, version=version or "2.7", include_animation=include_animation)
+    res = resolve_gloss_to_sign(gloss, version=version or "2.7", include_animation=include_animation, geolect=geolect)
     res.pop("anim_path", None)
     return res
 
@@ -265,6 +292,8 @@ animation_direct_alias_router = APIRouter(
 )
 animation_direct_alias_router.add_api_route("/non-manual-standard", get_non_manual_standard, methods=["GET"])
 animation_direct_alias_router.add_api_route("/stroke-index", get_stroke_index_endpoint, methods=["GET"])
+animation_direct_alias_router.add_api_route("/fingerspelling/catalog", get_fingerspelling_catalog, methods=["GET"])
+animation_direct_alias_router.add_api_route("/fingerspelling/{text}", get_fingerspelling_animation, methods=["GET"])
 animation_direct_alias_router.add_api_route("/resolve/{gloss}", resolve_single_gloss, methods=["GET"])
 animation_direct_alias_router.add_api_route("/resolve", resolve_batch_glosses, methods=["POST"])
 animation_direct_alias_router.add_api_route("/stats", animation_stats, methods=["GET"])

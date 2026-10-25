@@ -241,6 +241,20 @@
       ],
       "requires_native_review": false,
       "confidence": 0.95
+    },
+    {
+      "id": "mwe_santo_domingo",
+      "source_phrase": "Santo Domingo",
+      "semantic_concept": "toponym_santo_domingo",
+      "prevent_component_parsing": true,
+      "preferred_gloss": "SANTO-DOMINGO",
+      "candidate_realizations": [
+        [
+          "SANTO-DOMINGO"
+        ]
+      ],
+      "requires_native_review": false,
+      "confidence": 0.98
     }
   ],
   "contextual_corrections": [
@@ -746,7 +760,24 @@
     "muestras": "mostrar",
     "muestra": "mostrar",
     "mostramos": "mostrar",
-    "muestran": "mostrar"
+    "muestran": "mostrar",
+    "huelo": "oler",
+    "hueles": "oler",
+    "huele": "oler",
+    "olemos": "oler",
+    "huelen": "oler",
+    "chocolate": "chocolate",
+    "chocolates": "chocolate",
+    "pescado": "pescado",
+    "pescados": "pescado",
+    "helado": "helado",
+    "helados": "helado",
+    "enferma": "enferma",
+    "enfermo": "enfermo",
+    "ecuatoriana": "ecuador",
+    "ecuatoriano": "ecuador",
+    "ecuatorianas": "ecuador",
+    "ecuatorianos": "ecuador"
   },
   "periphrasis_map": {
     "ir_a": {
@@ -1003,7 +1034,23 @@
     "trabajo",
     "estudio",
     "canto",
-    "diseño"
+    "diseño",
+    "chocolate",
+    "chocolates",
+    "tomate",
+    "tomates",
+    "aguacate",
+    "aguacates",
+    "pescado",
+    "pescados",
+    "helado",
+    "helados",
+    "enfermo",
+    "enferma",
+    "enfermos",
+    "enfermas",
+    "cansado",
+    "cansada"
   ],
   "toponyms": [
     "carchi",

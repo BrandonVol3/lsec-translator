@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 CATALOG_FILENAME = "catalogo_lsec.json"
 INDEX_FILENAME = "lsec_dictionary_index.json"
-INDEX_SCHEMA_VERSION = 1
+INDEX_SCHEMA_VERSION = 2
 MAX_PHRASE_WORDS = 6
 
 STATUS_VERIFIED = "VERIFICADO_CONADIS"
@@ -221,6 +221,30 @@ def to_gloss_form(text: str) -> str:
     return "-".join(cleaned.upper().split())
 
 
+def infer_geolect(title: str, slug: str = "", qualifiers: Optional[Sequence[str]] = None) -> str:
+    """Infiere el geolecto ('Sierra' | 'Costa' | 'Nacional') a partir del título, slug o calificadores."""
+    t_low = (title or "").lower()
+    s_low = (slug or "").lower()
+    quals = [q.lower() for q in (qualifiers or ())]
+    if (
+        "sierra" in quals
+        or "(sierra)" in t_low
+        or "en la sierra" in t_low
+        or s_low.endswith("-sierra")
+        or s_low.endswith("-en-la-sierra")
+    ):
+        return "Sierra"
+    if (
+        "costa" in quals
+        or "(costa)" in t_low
+        or "en la costa" in t_low
+        or s_low.endswith("-costa")
+        or s_low.endswith("-en-la-costa")
+    ):
+        return "Costa"
+    return "Nacional"
+
+
 # ======================================================================
 # Estructuras de datos
 # ======================================================================
@@ -241,6 +265,7 @@ class DictionaryEntry:
     hand_variant_label: Optional[str] = None
     alphabetical_group: Optional[str] = None
     categories: List[str] = field(default_factory=list)
+    geolect: str = "Nacional"
 
     def gloss_alternatives(self, exclude: Optional[str] = None) -> List[str]:
         """Otras variantes del título (sinónimos) en forma de glosa, sin la variante emparejada."""
@@ -276,6 +301,7 @@ class DictionaryMatch:
             match_type=self.match_type,
             hand_configuration=e.hand_configuration,
             alphabetical_group=e.alphabetical_group,
+            geolect=e.geolect,
             thematic_categories=list(e.categories),
             video_url=e.video_url,
             illustration_url=e.illustration_url,
@@ -411,7 +437,9 @@ class LSECDictionaryService:
                 continue
             seen_slugs.add(slug)
             forms: List[str] = []
+            all_quals: List[str] = []
             for v in variants:
+                all_quals.extend(v.qualifiers)
                 for f in v.forms:
                     if f not in forms:
                         forms.append(f)
@@ -422,6 +450,7 @@ class LSECDictionaryService:
             video_url = item.get("video_url") or (
                 f"https://www.youtube.com/watch?v={item['video_id']}" if item.get("video_id") else None
             )
+            geolect = str(item.get("geolect") or infer_geolect(title, slug, all_quals))
             entries.append(
                 DictionaryEntry(
                     slug=slug,
@@ -437,6 +466,7 @@ class LSECDictionaryService:
                     hand_variant_label=item.get("hand_variant_label"),
                     alphabetical_group=alpha,
                     categories=themes,
+                    geolect=geolect,
                 )
             )
         return entries
@@ -506,25 +536,38 @@ class LSECDictionaryService:
         if key.endswith("s"):
             yield key[:-1]
 
-    def _find(self, key: str) -> Optional[Tuple[int, str]]:
+    def _find(self, key: str, preferred_geolect: Optional[str] = None) -> Optional[Tuple[int, str]]:
         hits = self._index.get(key)
         if not hits:
             return None
+        if preferred_geolect:
+            pref_norm = preferred_geolect.strip().capitalize()
+            if pref_norm in ("Sierra", "Costa"):
+                for _, idx, form in hits:
+                    if self._entries[idx].geolect == pref_norm:
+                        return idx, form
         _, idx, form = hits[0]
         return idx, form
 
-    def lookup(self, term: str, *, match_type: str = "exact", allow_inflection: bool = True) -> Optional[DictionaryMatch]:
-        """Resuelve un término (palabra o frase) a una seña oficial."""
+    def lookup(
+        self,
+        term: str,
+        *,
+        match_type: str = "exact",
+        allow_inflection: bool = True,
+        preferred_geolect: Optional[str] = None,
+    ) -> Optional[DictionaryMatch]:
+        """Resuelve un término (palabra o frase) a una seña oficial, priorizando opcionalmente un geolecto."""
         if not self.available or not term:
             return None
         key = normalize_key(term)
         if not key:
             return None
-        found = self._find(key)
+        found = self._find(key, preferred_geolect=preferred_geolect)
         label = match_type
         if found is None and allow_inflection:
             for cand in self._inflection_candidates(key):
-                found = self._find(cand)
+                found = self._find(cand, preferred_geolect=preferred_geolect)
                 if found is not None:
                     label = "inflected"
                     break
@@ -565,6 +608,7 @@ class LSECDictionaryService:
         gloss: str,
         normalized_word: Optional[str] = None,
         source_word: Optional[str] = None,
+        preferred_geolect: Optional[str] = None,
     ) -> Optional[DictionaryMatch]:
         """Resuelve una glosa generada probando glosa, palabra normalizada, fuente y lema verbal."""
         if not self.available:
@@ -587,7 +631,7 @@ class LSECDictionaryService:
             if marker in seen:
                 continue
             seen.add(marker)
-            match = self.lookup(term, match_type=label)
+            match = self.lookup(term, match_type=label, preferred_geolect=preferred_geolect)
             if match is not None:
                 return match
         return None
@@ -728,6 +772,10 @@ class LSECDictionaryService:
     def stats(self) -> Dict[str, Any]:
         entries = self._entries
         total = len(entries)
+        geo_counts: Dict[str, int] = {}
+        for e in entries:
+            g = e.geolect or "Nacional"
+            geo_counts[g] = geo_counts.get(g, 0) + 1
         return {
             "available": self.available,
             "catalog_path": str(self.catalog_path) if self.catalog_path else None,
@@ -738,6 +786,7 @@ class LSECDictionaryService:
             "with_illustration": sum(1 for e in entries if e.illustration_url),
             "multi_variant_entries": sum(1 for e in entries if len(e.variants) > 1),
             "phrases": sum(1 for e in entries if "frases-comunes" in e.categories),
+            "by_geolect": geo_counts,
         }
 
     # ------------------------------------------------------------ enriquecimiento

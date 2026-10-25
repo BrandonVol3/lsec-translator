@@ -26,6 +26,7 @@ from app.services.animation_catalog_service import (
     SENAS_CANDIDATE_PATHS,
     UHD_CANDIDATE_PATHS,
     _get_norm_dir_map,
+    ensure_sign_animation_stabilized,
     get_animations_dir,
     get_available_signs,
     get_senas_dir,
@@ -37,6 +38,10 @@ from app.services.animation_catalog_service import (
     get_v27_dir,
     lsec_cnm,
     normalize_text,
+)
+from app.services.animation_fingerspelling_service import (
+    get_baked_fingerspelling_folder,
+    resolve_explicit_fingerspelling_grapheme,
 )
 from app.services.animation_lexical_resolver import resolve_gloss_to_sign
 
@@ -237,6 +242,15 @@ def resolve_sign_animation_response(sign_name: str, version: Optional[str] = Non
             warning_msg = res.get("warning")
 
     if not anim_file or not anim_file.is_file():
+        fs_folder = get_baked_fingerspelling_folder(clean_name)
+        if fs_folder and (fs_folder / "animation.json").is_file():
+            anim_file = fs_folder / "animation.json"
+            resolved_name = fs_folder.name
+            version_served = "2.7"
+            match_type = "fingerspelling_baked_v27"
+            status_label = "EXACT"
+
+    if not anim_file or not anim_file.is_file():
         raise HTTPException(
             status_code=404,
             detail=f"Animación no encontrada para la seña '{sign_name}'. Verifique /api/v1/animations/list.",
@@ -258,7 +272,8 @@ def resolve_sign_animation_response(sign_name: str, version: Optional[str] = Non
         raw_data = json.loads(anim_file.read_text(encoding="utf-8"))
         if isinstance(raw_data, dict):
             cat_meta = get_sign_metadata(resolved_name)
-            if lsec_cnm is not None and not raw_data.get("metadata", {}).get("nonManualStandard"):
+            cnm_ver = getattr(lsec_cnm, "CNM_STANDARD_VERSION", "1.1")
+            if lsec_cnm is not None and raw_data.get("metadata", {}).get("nonManualStandard", {}).get("version") != cnm_ver:
                 lsec_cnm.standardize_animation_dict(raw_data, sign_name=resolved_name, catalog_entry=cat_meta)
             meta = raw_data.setdefault("metadata", {})
             meta["version_served"] = version_served
@@ -272,8 +287,10 @@ def resolve_sign_animation_response(sign_name: str, version: Optional[str] = Non
                 meta["pipelineVersion"] = "2.7_Estandarizado"
                 stroke_entry = get_sign_stroke_entry(resolved_name)
                 if stroke_entry:
-                    meta["stroke"] = stroke_entry
-                    headers["X-Sign-Stroke-Window"] = f"{stroke_entry.get('strokeStart', 0.0)}-{stroke_entry.get('strokeEnd', 0.0)}"
+                    existing_stroke = meta.get("stroke") if isinstance(meta.get("stroke"), dict) else {}
+                    merged_stroke = dict(stroke_entry)
+                    merged_stroke.update(existing_stroke)
+                    meta["stroke"] = merged_stroke
                 if cat_meta and isinstance(cat_meta.get("hand_standardization"), dict):
                     h_std = dict(cat_meta["hand_standardization"])
                     if isinstance(meta.get("handStandardization"), dict):
@@ -281,6 +298,16 @@ def resolve_sign_animation_response(sign_name: str, version: Optional[str] = Non
                     if "distance_reduction_pct" in h_std and "reduction_pct" not in h_std:
                         h_std["reduction_pct"] = h_std["distance_reduction_pct"]
                     meta["handStandardization"] = h_std
+                ensure_sign_animation_stabilized(
+                    raw_data,
+                    sign_name=resolved_name,
+                    anim_file=anim_file,
+                    cat_meta=cat_meta,
+                    persist_to_disk=True,
+                )
+                if isinstance(meta.get("stroke"), dict):
+                    s_cur = meta["stroke"]
+                    headers["X-Sign-Stroke-Window"] = f"{s_cur.get('strokeStart', 0.0)}-{s_cur.get('strokeEnd', 0.0)}"
             cnm_std = meta.get("nonManualStandard", {})
             headers["X-Sign-Facial-Archetype"] = str(cnm_std.get("archetype", "neutral"))
             headers["X-Sign-Explicit-Expression"] = "true" if cnm_std.get("hasExplicitFacialExpression") else "false"
@@ -288,6 +315,8 @@ def resolve_sign_animation_response(sign_name: str, version: Optional[str] = Non
             if isinstance(hand_std, dict) and hand_std:
                 headers["X-Sign-Hand-Standardization"] = str(hand_std.get("status", ""))
                 headers["X-Sign-Hand-Template"] = str(hand_std.get("template_id") or (cat_meta.get("hand_variant") if cat_meta else "") or "")
+            if isinstance(meta.get("kinematicStabilizer"), dict):
+                headers["X-Sign-Stabilizer-Version"] = str(meta["kinematicStabilizer"].get("version", ""))
             return JSONResponse(content=raw_data, headers=headers)
     except Exception as exc:
         logger.warning("Aviso normalizando metadata al vuelo para %s: %s", resolved_name, exc)
@@ -371,6 +400,10 @@ def resolve_sign_info_response(sign_name: str):
             info_file = base_dir / variant / "info.json"
             if info_file.is_file():
                 return FileResponse(path=str(info_file), media_type="application/json")
+
+    fs_folder = get_baked_fingerspelling_folder(clean_name)
+    if fs_folder and (fs_folder / "info.json").is_file():
+        return FileResponse(path=str(fs_folder / "info.json"), media_type="application/json")
 
     raise HTTPException(status_code=404, detail=f"Ficha lingüística no encontrada para '{sign_name}'.")
 

@@ -9,31 +9,40 @@
 [data-theme="light"] {
   color-scheme: light;
 
-  /* --- PALETA OFICIAL «PEDAGOGICAL TACTILE LIGHT» (DESIGN.md) --- */
-  --color-primary-emerald: #10b981;
-  --color-primary-emerald-dark: #059669;
-  --color-surface-mint: #ecfdf5;
+  /* --- PALETA INSTITUCIONAL SUTIL UPEC (Universidad Politécnica Estatal del Carchi · WCAG 2.2 AA/AAA) --- */
+  --color-upec-green: #007a3d;
+  --color-upec-green-dark: #00552a;
+  --color-upec-gold: #d99b00;
+  --color-upec-gold-dark: #8f6200;
+  --color-upec-gold-soft: #fef9e7;
+  --color-upec-gold-border: #e5c467;
+  --color-upec-red: #c81e1e;
+  --color-upec-red-dark: #8b1515;
 
-  --color-accent-cobalt: #0284c7;
-  --color-accent-cobalt-dark: #0369a1;
-  --color-surface-sky: #f0f9ff;
+  --color-primary-emerald: #007a3d;
+  --color-primary-emerald-dark: #00552a;
+  --color-surface-mint: #edf7f1;
 
-  --color-warning-amber: #f59e0b;
-  --color-warning-amber-dark: #d97706;
-  --color-surface-amber: #fffbeb;
+  --color-accent-cobalt: #0e5e6f;
+  --color-accent-cobalt-dark: #08414e;
+  --color-surface-sky: #f2f8f9;
 
-  --color-danger-rose: #ef4444;
-  --color-danger-rose-dark: #dc2626;
+  --color-warning-amber: #b47800;
+  --color-warning-amber-dark: #784e00;
+  --color-surface-amber: #fef9e7;
+
+  --color-danger-rose: #c81e1e;
+  --color-danger-rose-dark: #8b1515;
   --color-surface-rose: #fef2f2;
 
-  --color-canvas-bg: #f8fafc;
+  --color-canvas-bg: #f7f8f5;
   --color-card-white: #ffffff;
-  --color-surface-muted: #f1f5f9;
-  --color-text-primary: #1e293b;
-  --color-text-secondary: #64748b;
-  --color-text-muted: #475569;
-  --color-border-subtle: #cbd5e1;
-  --color-border-strong: #94a3b8;
+  --color-surface-muted: #eff2ed;
+  --color-text-primary: #18221d;
+  --color-text-secondary: #43534b;
+  --color-text-muted: #4b5550;
+  --color-border-subtle: #8c9c93;
+  --color-border-strong: #55665d;
 
   /* --- TIPOGRAFÍA Y GEOMETRÍA TÁCTIL --- */
   --font-display: 'Nunito', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -173,22 +182,32 @@ html, body {
   background-color: var(--color-canvas-bg);
   color: var(--color-text-primary);
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.5;
+  text-align: left;
+  scroll-padding-top: var(--header-height);
   -webkit-font-smoothing: antialiased;
 }
 
 h1, h2, h3, h4, .display-title {
   font-family: var(--font-display);
+  line-height: 1.25;
   letter-spacing: -0.015em;
 }
 
+p, .reading-block {
+  max-width: 75ch;
+  line-height: 1.5;
+  margin-bottom: 1.5em;
+  text-align: left;
+}
+
 html[data-font-scale="large"] {
-  font-size: 15.5px;
+  font-size: 17px;
 }
 
 html[data-font-scale="xlarge"] {
-  font-size: 17px;
+  font-size: 19px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -210,8 +229,8 @@ body.reduced-motion *::after {
 }
 
 :focus-visible {
-  outline: 3px solid var(--color-accent-cobalt);
-  outline-offset: 2px;
+  outline: 3px solid var(--color-upec-gold, #d99b00) !important;
+  outline-offset: 2px !important;
 }
 
 button, input, select, textarea {
@@ -230,15 +249,33 @@ select option {
   color: var(--color-text-primary);
   border: 2px solid var(--color-border-subtle);
   border-radius: var(--radius-chip);
-  padding: 4px 10px;
-  font-size: 0.82rem;
+  padding: 6px 12px;
+  font-size: 0.85rem;
   font-weight: 700;
   cursor: pointer;
-  min-height: 34px;
+  min-height: 40px;
+  min-width: 64px;
   transition: border-color var(--transition-fast);
 }
 
-.speed-select:focus {
-  border-color: var(--color-accent-cobalt);
-  outline: none;
+.speed-select:focus-visible {
+  border-color: var(--color-primary-emerald);
+  outline: 3px solid var(--color-upec-gold, #d99b00) !important;
+  outline-offset: 2px !important;
+}
+
+/* Soporte para Modo de Colores Forzados del Sistema (Forced Colors Mode) */
+@media (forced-colors: active) {
+  .btn,
+  .wizard-card,
+  .comparative-table-card,
+  .transcript-seg-card,
+  .gloss-chip-tactile,
+  .step-btn {
+    border: 2px solid ButtonText !important;
+  }
+  .step-btn.active,
+  .btn.btn-primary {
+    outline: 2px solid Highlight !important;
+  }
 }

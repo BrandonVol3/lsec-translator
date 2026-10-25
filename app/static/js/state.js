@@ -63,7 +63,7 @@ class LSECStateStore {
           fontSize: 20,
           textColor: '#ffffff',
           bgColor: '#000000',
-          bgOpacity: 0.0,
+          bgOpacity: 0.78,
           outlineWidth: 0,
           outlineColor: 'transparent',
           shadow: true,
@@ -76,7 +76,7 @@ class LSECStateStore {
           textAlign: 'center',
           positionX: 50,
           positionY: 88,
-          margin: 6,
+          margin: 8,
           safeArea: 5
         },
         glossStyle: {
@@ -639,6 +639,12 @@ class LSECStateStore {
 
     this.updateActiveElements(this.state.playback.currentTime);
     this.emit('timeupdate', { time: this.state.playback.currentTime, source });
+    this.emit('timeChanged', this.state.playback.currentTime);
+  }
+
+  confirmTranslationStage() {
+    this.markTranslationConfirmed();
+    this.markTranslationReviewStep();
   }
 
   setIsPlaying(isPlaying) {

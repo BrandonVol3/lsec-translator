@@ -24,7 +24,7 @@ export class AvatarEngine {
 
     this.canvas = canvas;
     this.options = {
-      clearColor: 0x151714, // Grafito neutro suave de LSEC Studio
+      clearColor: 0xcfe5da, // Fondo salvia luminoso de alto contraste con la vestimenta oscura y manos del avatar
       clearAlpha: 1.0,
       fov: 28,
       cameraPos: new THREE.Vector3(0, 1.28, 2.15),

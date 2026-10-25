@@ -14,7 +14,7 @@ import {
   updateUHDVideoPlayer, buildActiveSignHandshapeMeta, syncVersionUIElements,
   getPhase3ReviewFromForm, setPhase3Form, exportPhase3ReviewsData,
   openLightboxModal, closeLightboxModal, loadSignIllustrationPreview, renderSignSelectOptions,
-} from './avatarconfig-helpers.js';
+} from './avatarconfig-helpers.js?v=3.2.0';
 
 let allSigns = [], allItems = [], displayedSigns = [], displayedItems = [];
 let currentSignName = null, currentSignIndex = -1, isComparisonMode = true;
@@ -439,10 +439,10 @@ async function playSign(signName) {
             ? ` (${qa.review_reasons[0]})`
             : '';
           statusPill.textContent = `⚠️ Revisión${reasons}`;
-          statusPill.style.color = '#f59e0b';
+          statusPill.style.color = '#b45309';
         } else {
           statusPill.textContent = '✓ Aprobada';
-          statusPill.style.color = '#10b981';
+          statusPill.style.color = '#007a3d';
         }
       }
     }
@@ -466,7 +466,7 @@ async function playSign(signName) {
       const stdTag = handStd?.status === 'STANDARDIZED'
         ? `🖐️ ${handStd.template_id || handStd.template_variant || handStd.hand_configuration || 'CM'} (${handStd.frames_modified || 0} frames)`
         : (handStd?.status || 'CM Estandarizada');
-      bannerText.textContent = `✓ Versión 2.7 Estandarizada: ${stdTag} + 52 Blendshapes.`;
+      bannerText.textContent = `✓ Versión 2.7.3 Estabilizada: ${stdTag} + IK Anti-Penetración + 52 Blendshapes.`;
     }
 
     const selectEl = document.getElementById('select-avatar-clip');
@@ -523,12 +523,12 @@ async function initAvatarConfig() {
       isComparisonMode = !isComparisonMode;
       if (isComparisonMode) {
         compLayout?.classList.remove('single-view');
-        toggleCompBtn.style.color = '#93c5fd';
-        toggleCompBtn.textContent = '🎥 Modo Comparación: ON';
+        toggleCompBtn.style.color = 'var(--accent-primary)';
+        toggleCompBtn.textContent = '🎥 Comparación: ON';
       } else {
         compLayout?.classList.add('single-view');
         toggleCompBtn.style.color = 'var(--text-muted)';
-        toggleCompBtn.textContent = '🎥 Modo Comparación: OFF';
+        toggleCompBtn.textContent = '🎥 Comparación: OFF';
       }
     });
 
@@ -652,10 +652,24 @@ async function initAvatarConfig() {
     });
 
     document.getElementById('btn-uhd-step-prev')?.addEventListener('click', () => {
-      if (videoEl) videoEl.currentTime = Math.max(0, videoEl.currentTime - (1 / 60));
+      if (videoEl) {
+        videoEl.pause();
+        videoEl.currentTime = Math.max(0, videoEl.currentTime - (1 / 60));
+        if (document.getElementById('chk-sync-playback')?.checked && window.avatarController) {
+          window.avatarController.pause();
+          window.avatarController.seek(videoEl.currentTime);
+        }
+      }
     });
     document.getElementById('btn-uhd-step-next')?.addEventListener('click', () => {
-      if (videoEl) videoEl.currentTime = Math.min(videoEl.duration || 10, videoEl.currentTime + (1 / 60));
+      if (videoEl) {
+        videoEl.pause();
+        videoEl.currentTime = Math.min(videoEl.duration || 10, videoEl.currentTime + (1 / 60));
+        if (document.getElementById('chk-sync-playback')?.checked && window.avatarController) {
+          window.avatarController.pause();
+          window.avatarController.seek(videoEl.currentTime);
+        }
+      }
     });
     document.getElementById('btn-uhd-mute')?.addEventListener('click', () => {
       if (!videoEl) return;

@@ -125,6 +125,12 @@ class SubtitleOverlayController {
       this.render(appState.state?.playback?.currentTime || 0);
     });
 
+    appState.subscribe('stageChanged', () => {
+      setTimeout(() => {
+        this.render(appState.state?.playback?.currentTime || 0);
+      }, 40);
+    });
+
     appState.subscribe('safeAreaGuideToggled', (show) => {
       this.showSafeAreaGuide = !!show;
       this.updateSafeAreaGuideVisibility();

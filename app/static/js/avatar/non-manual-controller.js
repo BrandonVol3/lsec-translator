@@ -88,6 +88,30 @@ export class NonManualController {
         this.setExpression('blink', weight);
         break;
 
+      case 'MOUTH_OPEN_CLOSE': // Página 5 PDF: Abrir o cerrar la boca
+      case 'MOUTH_GESTURE':
+        this.setExpression('aa', weight * 0.85);
+        this.setExpression('jawOpen', weight * 0.85);
+        this.setExpression('mouthClose', (1.0 - weight) * 0.45);
+        break;
+
+      case 'MOUTH_EXPEL_AIR_OPEN': // Página 5 PDF: Expulsar aire con la boca abierta
+        this.setExpression('aa', weight * 0.65);
+        this.setExpression('oh', weight * 0.70);
+        this.setExpression('jawOpen', weight * 0.65);
+        this.setExpression('mouthFunnel', weight * 0.75);
+        this.setExpression('cheekPuff', weight * 0.80);
+        break;
+
+      case 'MOUTH_EXPEL_AIR_CLOSED': // Página 5 PDF: Expulsar aire con la boca cerrada
+        this.setExpression('ou', weight * 0.65);
+        this.setExpression('mouthClose', weight * 0.85);
+        this.setExpression('cheekPuff', weight * 0.90);
+        this.setExpression('mouthPressLeft', weight * 0.75);
+        this.setExpression('mouthPressRight', weight * 0.75);
+        this.setExpression('mouthPucker', weight * 0.60);
+        break;
+
       default:
         break;
     }
@@ -122,9 +146,13 @@ export class NonManualController {
 
   reset() {
     this.rotateHead(0, 0, 0);
-    this.setExpression('angry', 0);
-    this.setExpression('happy', 0);
-    this.setExpression('surprised', 0);
-    this.setExpression('blink', 0);
+    const exprs = [
+      'angry', 'happy', 'surprised', 'blink', 'aa', 'oh', 'ou',
+      'jawOpen', 'mouthClose', 'mouthFunnel', 'cheekPuff',
+      'mouthPressLeft', 'mouthPressRight', 'mouthPucker'
+    ];
+    for (const ex of exprs) {
+      this.setExpression(ex, 0);
+    }
   }
 }

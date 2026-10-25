@@ -3,7 +3,7 @@
  * Conecta el estado central (appState) con AvatarPanelController y SequenceCompiler.
  */
 
-import { AvatarPanelController } from './avatar-controller.js?v=2.4.0';
+import { AvatarPanelController } from './avatar-controller.js?v=3.1.8';
 import { SequenceCompiler, applyCompiledSampleToModel } from './sequence-compiler.js';
 
 export class StudioAvatarBridge {
@@ -14,7 +14,7 @@ export class StudioAvatarBridge {
     this.sidebarContainer = null;
     this.currentGlossKey = null;
     this.isReady = false;
-    this.solidBgColor = '#20242b';
+    this.solidBgColor = '#cfe5da';
     this.fluidMode = true;
     this.compiler = new SequenceCompiler({
       maxSpeed: 1.6,
@@ -57,6 +57,7 @@ export class StudioAvatarBridge {
     try {
       this.controller = new AvatarPanelController('view-side-avatar');
       window.avatarController = this.controller;
+      window.avatarPanel = this.controller;
       this.controller.onPreUpdateCallback = (delta) => this.onEngineFrame(delta);
       if (this.controller && this.controller.engine) {
         this.dockToPip();
@@ -100,6 +101,31 @@ export class StudioAvatarBridge {
       this._preExportCameraState.preset = 'pip_bust';
       this._preExportCameraState.position = null;
       this._preExportCameraState.target = null;
+    }
+  }
+
+  dockToStep3Stage() {
+    if (!this.controller || !this.controller.engine) return;
+    const dedicatedHost = document.getElementById('step3-avatar-dedicated-host');
+    const pipContainer = document.getElementById('gloss-overlay-container');
+    const canvas = this.controller.engine.canvas;
+
+    if (dedicatedHost && canvas && canvas.parentElement !== dedicatedHost) {
+      dedicatedHost.appendChild(canvas);
+      canvas.style.width = '100%';
+      canvas.style.height = '100%';
+      canvas.style.display = 'block';
+      canvas.style.borderRadius = '10px';
+    }
+    if (pipContainer) {
+      pipContainer.dataset.hiddenBySidebar = 'true';
+      pipContainer.style.display = 'none';
+    }
+    this.currentLocation = 'step3_dedicated';
+    this.controller.setClearColor(this.solidBgColor);
+    if (!this.isExportingDeterministic) {
+      this.controller.setCameraPreset('pip_bust');
+      this.controller.engine.onResize();
     }
   }
 
@@ -327,16 +353,12 @@ export class StudioAvatarBridge {
           this.clipMap.set(gName, newlyCached);
           this.rebuildSequencePlan(project);
         } else if (!this.isExportingDeterministic) {
-          const isSingleLetterHyphenated = gName.includes('-') && gName.split('-').filter(Boolean).every(p => p.trim().length === 1);
-          const isFs = Boolean(nominalEntry.gloss.is_fingerspelling || isSingleLetterHyphenated || nominalEntry.gloss.gloss_type === 'DACTILOLOGÍA');
-          if (!isFs) {
-            this.controller.syncController.loadClipAsync(gName, { version: activeVersion }).then((loaded) => {
-              if (loaded && this.clipMapVersion === activeVersion) {
-                this.clipMap.set(gName, loaded);
-                this.scheduleRebuildPlan();
-              }
-            }).catch(() => {});
-          }
+          this.controller.syncController.loadClipAsync(gName, { version: activeVersion }).then((loaded) => {
+            if (loaded && this.clipMapVersion === activeVersion) {
+              this.clipMap.set(gName, loaded);
+              this.scheduleRebuildPlan();
+            }
+          }).catch(() => {});
         }
       }
     }
@@ -597,8 +619,11 @@ export class StudioAvatarBridge {
 
     if (activeGloss) {
       const glossName = (activeGloss.gloss || activeGloss.lemma || '').toUpperCase().trim();
-      const isSingleLetterHyphenated = glossName.includes('-') && glossName.split('-').filter(Boolean).every(p => p.trim().length === 1);
-      const isFingerspelling = Boolean(activeGloss.is_fingerspelling || isSingleLetterHyphenated || (activeGloss.gloss_type === 'DACTILOLOGÍA'));
+      const isSingleLetterHyphenated = glossName.includes('-') && glossName.split('-').filter(Boolean).every(p => {
+        const tok = p.trim();
+        return tok.length === 1 || tok === 'CH' || tok === 'LL' || tok === 'RR';
+      });
+      const isFingerspelling = Boolean(activeGloss.is_fingerspelling || isSingleLetterHyphenated || String(activeGloss.gloss_type || '').toUpperCase().includes('DACTIL') || activeGloss.gloss_type === 'FINGERSPELLING');
       const basePlaybackRate = window.appState?.state?.playback?.playbackRate || 1.0;
       let dynamicSpeed = undefined;
       const cachedClip = this.controller.syncController?.getCachedClip
@@ -641,8 +666,11 @@ export class StudioAvatarBridge {
       const entry = this.resolveActiveGlossEntry(project, videoTimeSec);
       if (entry && entry.gloss && this.controller.syncController) {
         const glossName = String(entry.gloss.gloss || entry.gloss.lemma || '').toUpperCase().trim();
-        const isSingleLetterHyphenated = glossName.includes('-') && glossName.split('-').filter(Boolean).every(p => p.trim().length === 1);
-        const isFingerspelling = Boolean(entry.gloss.is_fingerspelling || isSingleLetterHyphenated || (entry.gloss.gloss_type === 'DACTILOLOGÍA'));
+        const isSingleLetterHyphenated = glossName.includes('-') && glossName.split('-').filter(Boolean).every(p => {
+          const tok = p.trim();
+          return tok.length === 1 || tok === 'CH' || tok === 'LL' || tok === 'RR';
+        });
+        const isFingerspelling = Boolean(entry.gloss.is_fingerspelling || isSingleLetterHyphenated || String(entry.gloss.gloss_type || '').toUpperCase().includes('DACTIL') || entry.gloss.gloss_type === 'FINGERSPELLING');
         if (glossName && !isFingerspelling && !this.clipMap.has(glossName)) {
           const loaded = await this.controller.syncController.loadClipAsync(glossName);
           if (loaded) {
@@ -710,8 +738,13 @@ export class StudioAvatarBridge {
     const uniqueNames = new Set();
     const addIfLexical = (g) => {
       const name = String(g?.gloss || g?.lemma || '').trim().toUpperCase();
-      const isFs = name.includes('-') && name.split('-').filter(Boolean).every(p => p.trim().length === 1);
-      if (name && !isFs && g.gloss_type !== 'DACTILOLOGÍA') uniqueNames.add(name);
+      const isFs = name.includes('-') && name.split('-').filter(Boolean).every(p => {
+        const tok = p.trim();
+        return tok.length === 1 || tok === 'CH' || tok === 'LL' || tok === 'RR';
+      });
+      if (name && !isFs && !String(g?.gloss_type || '').toUpperCase().includes('DACTIL') && g?.gloss_type !== 'FINGERSPELLING') {
+        uniqueNames.add(name);
+      }
     };
     glosses.forEach(addIfLexical);
     (project.segments || []).forEach(seg => (seg?.glosses || []).forEach(addIfLexical));

@@ -33,7 +33,7 @@ class ContextualInspectorController {
   }
 }
 
-class AvatarPanelController {
+class AvatarPanelHostStub {
   constructor(containerId = 'view-side-avatar') {
     this.container = document.getElementById(containerId);
   }
@@ -42,8 +42,10 @@ class AvatarPanelController {
 if (typeof window !== 'undefined') {
   window.SidebarPanelsController = ContextualInspectorController;
   window.ContextualInspectorController = ContextualInspectorController;
-  window.AvatarPanelController = AvatarPanelController;
+  if (!window.AvatarPanelController) {
+    window.AvatarPanelController = AvatarPanelHostStub;
+  }
 }
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { ContextualInspectorController, AvatarPanelController };
+  module.exports = { ContextualInspectorController, AvatarPanelController: AvatarPanelHostStub };
 }

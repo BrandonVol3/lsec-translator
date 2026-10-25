@@ -234,6 +234,22 @@ class WhisperASRService:
                 )
             return result
 
+        except IndexError as exc:
+            logger.warning(
+                "Archivo multimedia sin pista de audio decodificable (%s): %s. Devolviendo transcripción vacía.",
+                file_path.name,
+                exc,
+            )
+            hw_status = self.get_hardware_status()
+            return TranscriptionResult(
+                text="",
+                language=language,
+                confidence=0.0,
+                duration_seconds=0.0,
+                word_timestamps=[],
+                device_used=self._device,
+                device_warning=hw_status["notice"] if not hw_status["is_gpu"] else None,
+            )
         except Exception as exc:
             logger.error("Error en transcripción de archivo: %s", exc)
             raise RuntimeError(f"Error durante la transcripción: {exc}") from exc

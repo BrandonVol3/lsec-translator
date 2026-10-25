@@ -43,8 +43,15 @@ from app.lsec_grammar.confidence import ConfidenceCalculator, ConfidenceVector
 from app.lsec_grammar.conflict_resolver import ConflictResolver
 from app.lsec_grammar.registry import get_rule_registry
 from app.lsec_grammar.rule_engine import RuleApplication, RuleEngine
+from app.services.animation_fingerspelling_service import (
+    count_lsec_fingerspelling_graphemes,
+    format_lsec_fingerspelling_gloss,
+    tokenize_lsec_fingerspelling,
+)
 from app.services.dictionary_service import (
     LSECDictionaryService,
+    STATUS_FINGERSPELLING,
+    STATUS_UNVERIFIED,
     get_dictionary_service,
     to_gloss_form,
 )
@@ -124,8 +131,10 @@ class DiscoursePlanner:
         dictionary_service: Optional[LSECDictionaryService] = None,
         use_dictionary: Optional[bool] = None,
         named_entities: Optional[Dict[str, Any]] = None,
+        fingerspell_oov: bool = False,
     ) -> None:
         self._nlp = nlp
+        self._fingerspell_oov = bool(fingerspell_oov)
         self._institutional_dict = institutional_dict or {}
         self._lemma_overrides = lemma_overrides or {}
         self._pronoun_deixis = pronoun_deixis_map or {}
@@ -241,15 +250,38 @@ class DiscoursePlanner:
     def apply_dictionary(self, glosses: List[GlossItem]) -> Dict[str, int]:
         """
         Cascada léxica sobre las glosas: seña oficial CONADIS -> dactilología/partículas exentas ->
-        léxico local curado -> glosa no verificada marcada para revisión nativa.
+        léxico local curado -> glosa no verificada marcada para revisión nativa (con metadatos de
+        respaldo dactilológico o promoción directa cuando `self._fingerspell_oov` está activo).
         """
-        if self._dictionary is None or not glosses:
+        if not glosses:
             return {}
-        try:
-            return self._dictionary.enrich_glosses(glosses, known_glosses=self._known_local_glosses)
-        except Exception as exc:  # pragma: no cover
-            logger.warning("Enriquecimiento con diccionario LSEC omitido: %s", exc)
-            return {}
+        counts: Dict[str, int] = {}
+        if self._dictionary is not None:
+            try:
+                counts = self._dictionary.enrich_glosses(glosses, known_glosses=self._known_local_glosses)
+            except Exception as exc:  # pragma: no cover
+                logger.warning("Enriquecimiento con diccionario LSEC omitido: %s", exc)
+        for g in glosses:
+            if g.gloss_type == GlossType.FINGERSPELLING:
+                val = dict(g.validation or {})
+                tokens = tokenize_lsec_fingerspelling(g.gloss)
+                val["is_fingerspelling"] = True
+                val["fingerspelling_graphemes"] = [t["grapheme"] for t in tokens]
+                g.validation = val
+            elif g.dictionary_metadata is not None and g.dictionary_metadata.status == STATUS_UNVERIFIED:
+                raw_probe = g.source_word or g.normalized_word or g.gloss
+                fs_gloss = format_lsec_fingerspelling_gloss(raw_probe)
+                tokens = tokenize_lsec_fingerspelling(fs_gloss)
+                val = dict(g.validation or {})
+                val["fallback_fingerspelling_gloss"] = fs_gloss
+                val["fallback_graphemes"] = [t["grapheme"] for t in tokens]
+                g.validation = val
+                if self._fingerspell_oov and tokens:
+                    g.gloss = fs_gloss
+                    g.gloss_type = GlossType.FINGERSPELLING
+                    g.duration_ms = self.compute_duration(fs_gloss, GlossType.FINGERSPELLING)
+                    g.dictionary_metadata.status = STATUS_FINGERSPELLING
+        return counts
 
     def evaluate_grammar_rules(
         self,
@@ -320,8 +352,8 @@ class DiscoursePlanner:
         if is_plural_marker:
             return dur.get("plural_marker", 300)
         if gloss_type == GlossType.FINGERSPELLING:
-            clean_chars = len(gloss_text.replace("-", ""))
-            return max(dur.get("fingerspelling_per_char", 300) * clean_chars, 300)
+            clean_chars = count_lsec_fingerspelling_graphemes(gloss_text)
+            return max(dur.get("fingerspelling_per_char", 300) * max(clean_chars, 1), 300)
 
         base = dur.get("sign_base", 500)
         if len(gloss_text) <= 3:

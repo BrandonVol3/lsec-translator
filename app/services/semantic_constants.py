@@ -183,6 +183,10 @@ KNOWN_VERB_FORMS: Dict[str, str] = {
     "acércate": "acercar", "acercate": "acercar", "acercarse": "acercar",
     "matricúlate": "matricular", "matriculate": "matricular", "matricularse": "matricular",
     "prepárate": "preparar", "preparate": "preparar", "prepararse": "preparar",
+    # oler / sentir / doler / gustar / cuidar
+    "huelo": "oler", "hueles": "oler", "huele": "oler", "olemos": "oler", "huelen": "oler", "oler": "oler",
+    "duelo": "doler", "dueles": "doler", "duele": "doler", "duelen": "doler", "dolió": "doler",
+    "cuido": "cuidar", "cuidas": "cuidar", "cuida": "cuidar", "cuidamos": "cuidar", "cuidan": "cuidar", "cuidó": "cuidar",
 }
 
 NOMINAL_HOMOGRAPHS: Set[str] = {
@@ -191,7 +195,9 @@ NOMINAL_HOMOGRAPHS: Set[str] = {
     "lugar", "lugares", "hogar", "hogares", "mujer", "mujeres", "celular", "celulares",
     "mar", "par", "líder", "líderes", "placer", "carácter", "escolar", "familiar", "popular",
     "ruido", "estado", "lado", "cuidado", "resultado", "sentido", "sonido", "partido",
-    "vestido", "contenido", "pedido", "mercado",
+    "vestido", "contenido", "pedido", "mercado", "chocolate", "chocolates", "tomate", "tomates",
+    "aguacate", "aguacates", "combate", "debate", "empate", "rescate", "pescado", "pescados",
+    "helado", "helados", "enfermo", "enferma", "enfermos", "enfermas", "cansado", "cansada",
 }
 
 POS_GATED_LEMMAS: Set[str] = {

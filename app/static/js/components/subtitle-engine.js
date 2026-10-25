@@ -11,7 +11,7 @@ const DEFAULT_SUBTITLE_STYLE = {
   fontSize: 20, // Tamaño de fuente base en px (normalizado para 720p base)
   textColor: '#ffffff', // Color blanco por defecto
   bgColor: '#000000',
-  bgOpacity: 0.0, // Fondo transparente por defecto (0% opacidad)
+  bgOpacity: 0.78, // Fondo semitransparente oscuro WCAG 2.2 (Criterio 1.2.2 >= 4.5:1)
   outlineWidth: 0, // Sin contorno por defecto (0px grosor)
   outlineColor: 'transparent',
   shadow: true, // Sombra de texto suave para legibilidad sobre video
@@ -24,11 +24,50 @@ const DEFAULT_SUBTITLE_STYLE = {
   textAlign: 'center', // 'left' | 'center' | 'right'
   positionX: 50, // Porcentaje horizontal 0% a 100% (50 = centro)
   positionY: 88, // Porcentaje vertical 0% a 100% (88 = tercio inferior estándar)
-  margin: 6, // Margen interior / padding en px
-  safeArea: 5 // Porcentaje de margen para el área segura (ej. 5% = bordes protegidos)
+  margin: 8, // Margen interior / padding en px
+  safeArea: 5, // Porcentaje de margen para el área segura (ej. 5% = bordes protegidos)
+  includeSpeakerTag: true, // Reglamento LOC Abril 2026 Art. 8(b): identificación del hablante
+  includeSoundTags: true // Reglamento LOC Abril 2026 Art. 8(c): descripción de sonidos relevantes
 };
 
 class SubtitleEngine {
+  /**
+   * Formatea el texto del subtítulo conforme al Art. 8 del Reglamento para el Acceso
+   * a la Información y Comunicación de las Personas con Discapacidad (Abril 2026):
+   *  a) Transcripción íntegra de diálogos
+   *  b) Identificación clara del hablante (ej. [Docente]: ...)
+   *  c) Descripción de sonidos relevantes del entorno (ej. [música], [aplausos])
+   *
+   * @param {Object} segment - Segmento de transcripción
+   * @param {Object} style - Estilo efectivo resuelto
+   * @returns {string} Texto accesible formateado
+   */
+  static formatAccessibleSubtitleText(segment, style = {}) {
+    if (!segment) return '';
+    let baseText = String(segment.normalized_text || segment.original_text || segment.raw_text || segment.text || '').trim();
+    if (!baseText) return '';
+
+    const effStyle = { ...DEFAULT_SUBTITLE_STYLE, ...style };
+    const speaker = String(segment.speaker || segment.speaker_label || segment.speaker_name || '').trim();
+    const soundCue = String(segment.sound_description || segment.audio_cue || segment.sound_tag || '').trim();
+
+    if (effStyle.includeSoundTags !== false && soundCue) {
+      const normalizedCue = soundCue.startsWith('[') ? soundCue : `[${soundCue}]`;
+      if (!baseText.toLowerCase().includes(normalizedCue.toLowerCase())) {
+        baseText = `${normalizedCue} ${baseText}`.trim();
+      }
+    }
+
+    if (effStyle.includeSpeakerTag !== false && speaker && speaker.toLowerCase() !== 'narrator' && speaker.toLowerCase() !== 'default') {
+      const prefix = speaker.startsWith('[') ? `${speaker}:` : `[${speaker}]:`;
+      if (!baseText.toLowerCase().startsWith(prefix.toLowerCase())) {
+        baseText = `${prefix} ${baseText}`.trim();
+      }
+    }
+
+    return baseText;
+  }
+
   /**
    * Resuelve el estilo efectivo de un segmento combinando:
    * Estilo predeterminado del sistema + Preferencias globales del usuario + Personalización del segmento
@@ -97,7 +136,7 @@ class SubtitleEngine {
    * @param {number} containerHeight - Alto del lienzo o contenedor en px
    * @returns {Object} Información completa de layout
    */
-  static calculateLayout(ctxOrMeasure, text, style, containerWidth, containerHeight) {
+  static calculateLayout(ctxOrMeasure, text, style, containerWidth, containerHeight, options = {}) {
     const safeRect = this.getSafeAreaRect(containerWidth, containerHeight, style.safeArea);
 
     // Escala dimensional relativa referenciada a altura estándar 720p
@@ -107,6 +146,31 @@ class SubtitleEngine {
     const computedOutline = Math.max(0, Math.round((style.outlineWidth || 0) * scaleFactor));
     const computedShadowBlur = Math.max(0, Math.round((style.shadowBlur || 4) * scaleFactor));
     const lineHeight = Math.round(computedFontSize * 1.36);
+
+    const posX = Math.max(0, Math.min(100, style.positionX !== undefined ? style.positionX : 50));
+    const posY = Math.max(0, Math.min(100, style.positionY !== undefined ? style.positionY : 88));
+
+    // Reserva automática de espacio horizontal cuando el Avatar 3D PiP está visible (NTE INEN 3198 >= 1/9 de pantalla)
+    const isPipVisibleInStage = Boolean(
+      options.avoidPip !== undefined
+        ? options.avoidPip
+        : (typeof window !== 'undefined' &&
+           window.appState?.state?.overlays?.glossesEnabled !== false &&
+           window.appState?.state?.workspace?.stage === 'revisar')
+    );
+    const pipPosition = options.pipPosition || 'bottom-right';
+
+    let effectiveSafeLeft = safeRect.left;
+    let effectiveSafeRight = safeRect.right;
+    if (isPipVisibleInStage && posY >= 50) {
+      const pipReservePx = Math.max(190, Math.round(containerWidth * 0.275));
+      if (pipPosition === 'bottom-left') {
+        effectiveSafeLeft = Math.min(safeRect.right - 140, pipReservePx);
+      } else {
+        effectiveSafeRight = Math.max(safeRect.left + 140, containerWidth - pipReservePx);
+      }
+    }
+    const effectiveSafeWidth = Math.max(120, effectiveSafeRight - effectiveSafeLeft);
 
     // Helper de medición
     let measureTextWidth;
@@ -121,25 +185,26 @@ class SubtitleEngine {
       measureTextWidth = (str) => str.length * (computedFontSize * 0.58);
     }
 
-    // Partición de texto respetando ancho del área segura menos márgenes
+    // Partición de texto respetando WCAG 2.2 Criterio 1.2.2 y el espacio libre junto al Avatar PiP:
     const rawText = (text || '').trim();
-    const maxTextWidth = Math.max(60, safeRect.width - (computedMargin * 2) - 8);
+    const maxTextWidth = Math.max(60, effectiveSafeWidth - (computedMargin * 2) - 8);
+    const MAX_CHARS_PER_LINE = 42;
+    const MAX_LINES = 2;
     const words = rawText.split(/\s+/).filter(Boolean);
-    const lines = [];
+    let lines = [];
     let currentLine = '';
 
     for (const w of words) {
       const testLine = currentLine ? `${currentLine} ${w}` : w;
       const testWidth = measureTextWidth(testLine);
 
-      if (testWidth <= maxTextWidth) {
+      if (testWidth <= maxTextWidth && testLine.length <= MAX_CHARS_PER_LINE) {
         currentLine = testLine;
       } else {
         if (currentLine) {
           lines.push(currentLine);
           currentLine = w;
         } else {
-          // Palabra única excede ancho máximo
           lines.push(w);
           currentLine = '';
         }
@@ -151,6 +216,12 @@ class SubtitleEngine {
 
     if (lines.length === 0) {
       lines.push('');
+    } else if (lines.length > MAX_LINES) {
+      // Equilibrar en máximo 2 líneas según WCAG 1.2.2
+      const midpoint = Math.ceil(words.length / 2);
+      const line1 = words.slice(0, midpoint).join(' ').slice(0, 45);
+      const line2 = words.slice(midpoint).join(' ').slice(0, 45);
+      lines = [line1, line2].filter(Boolean);
     }
 
     // Medición del ancho de cada línea
@@ -161,24 +232,24 @@ class SubtitleEngine {
       return w;
     });
 
-    const boxWidth = Math.min(safeRect.width, Math.round(maxLineWidth + (computedMargin * 2)));
+    const boxWidth = Math.min(effectiveSafeWidth, Math.round(maxLineWidth + (computedMargin * 2)));
     const boxHeight = Math.min(safeRect.height, Math.round((lines.length * lineHeight) + (computedMargin * 2)));
 
-    // Cálculo de centro deseado según positionX y positionY (0 a 100%)
-    const posX = Math.max(0, Math.min(100, style.positionX !== undefined ? style.positionX : 50));
-    const posY = Math.max(0, Math.min(100, style.positionY !== undefined ? style.positionY : 88));
-
-    const targetCenterX = Math.round((posX / 100) * containerWidth);
+    // Si el PiP está activo abajo y la posición X es centrada por defecto (40..60%),
+    // centrar el subtítulo dentro de la zona libre junto al Avatar PiP para que nunca se tapen
+    const targetCenterX = (isPipVisibleInStage && posY >= 50 && posX >= 40 && posX <= 60)
+      ? Math.round(effectiveSafeLeft + (effectiveSafeWidth / 2))
+      : Math.round((posX / 100) * containerWidth);
     const targetCenterY = Math.round((posY / 100) * containerHeight);
 
     let boxLeft = Math.round(targetCenterX - (boxWidth / 2));
     let boxTop = Math.round(targetCenterY - (boxHeight / 2));
 
-    // CONFINAMIENTO ESTRICTO EN ÁREA SEGURA (Evita desborde del Canvas)
-    if (boxLeft < safeRect.left) {
-      boxLeft = safeRect.left;
-    } else if (boxLeft + boxWidth > safeRect.right) {
-      boxLeft = safeRect.right - boxWidth;
+    // CONFINAMIENTO ESTRICTO EN ÁREA SEGURA Y ZONA LIBRE DE PIP
+    if (boxLeft < effectiveSafeLeft) {
+      boxLeft = effectiveSafeLeft;
+    } else if (boxLeft + boxWidth > effectiveSafeRight) {
+      boxLeft = Math.max(effectiveSafeLeft, effectiveSafeRight - boxWidth);
     }
 
     if (boxTop < safeRect.top) {

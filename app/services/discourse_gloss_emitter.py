@@ -18,6 +18,10 @@ from app.core.schemas import (
     NonManualMarker,
     SemanticProposition,
 )
+from app.services.animation_fingerspelling_service import (
+    format_lsec_fingerspelling_gloss,
+    is_fingerspelling_query,
+)
 from app.services.discourse_lexicon import (
     _CANONICAL_SOURCE_LEMMAS,
     _KNOWN_SIGN_PROPN,
@@ -379,20 +383,55 @@ def emit_glosses_from_reordered_tokens(
 
         spatial_ref_id = None
         cand_gloss = lemma.upper() if lemma else text_upper
-        is_oov_propn = (
-            pos == "PROPN"
-            and clean_text[:1].isupper()
-            and len(clean_word) >= 2
-            and clean_word not in _KNOWN_SIGN_PROPN
-            and clean_word not in _CANONICAL_SOURCE_LEMMAS
-            and clean_word not in SpanishVerbLexicon.KNOWN_VERB_FORMS
-            and cand_gloss not in planner._known_local_glosses
-            and text_upper not in planner._known_local_glosses
+        is_in_dict = (
+            planner._dictionary is not None
             and (
-                planner._dictionary is None
-                or (planner._dictionary.lookup(clean_word) is None and planner._dictionary.lookup(lemma) is None)
+                planner._dictionary.lookup(clean_word) is not None
+                or planner._dictionary.lookup(lemma) is not None
+                or planner._dictionary.lookup(clean_text) is not None
             )
         )
+        is_known_lexical = (
+            clean_word in _KNOWN_SIGN_PROPN
+            or clean_word in _CANONICAL_SOURCE_LEMMAS
+            or clean_word in SpanishVerbLexicon.KNOWN_VERB_FORMS
+            or cand_gloss in planner._known_local_glosses
+            or text_upper in planner._known_local_glosses
+            or is_in_dict
+        )
+        is_explicit_fs = ("-" in clean_text or ":" in clean_text) and is_fingerspelling_query(clean_text)
+        src_not_all_caps = not (prop.source_text or "").strip().isupper()
+        is_oov_acronym = (
+            src_not_all_caps
+            and clean_text.isupper()
+            and clean_word.isalpha()
+            and 2 <= len(clean_word) <= 10
+            and not is_known_lexical
+        )
+        is_mid_sentence_capitalized = (
+            src_not_all_caps
+            and t.i > 0
+            and clean_text[:1].isupper()
+            and not clean_text.isupper()
+            and clean_word.isalpha()
+            and doc[t.i - 1].text not in ("¿", "¡", ".", "!", "?", ":", ";")
+            and pos in ("PROPN", "NOUN", "ADJ")
+        )
+        is_oov_propn = (
+            (pos == "PROPN" or is_mid_sentence_capitalized)
+            and clean_text[:1].isupper()
+            and len(clean_word) >= 2
+            and not is_known_lexical
+        )
+        is_oov_lexical = (
+            bool(getattr(planner, "_fingerspell_oov", False))
+            and pos in ("NOUN", "PROPN", "ADJ")
+            and len(clean_word) >= 3
+            and clean_word.isalpha()
+            and not is_known_lexical
+        )
+        should_fingerspell = is_explicit_fs or is_oov_propn or is_oov_acronym or is_oov_lexical
+
         if text_upper in planner._institutional_dict:
             gloss_txt = planner._institutional_dict[text_upper]["gloss"]
             gloss_typ = GlossType(planner._institutional_dict[text_upper]["type"])
@@ -402,8 +441,8 @@ def emit_glosses_from_reordered_tokens(
             else:
                 spatial_ref_id = f"campus_{clean_word.lower()}"
         elif prop.rhetorical_function in ("campus_enumeration", "enumeration"):
-            if is_oov_propn and clean_word not in ("campus", "dos", "sede", "sedes"):
-                gloss_txt = "-".join(list(clean_word.upper()))
+            if should_fingerspell and clean_word not in ("campus", "dos", "sede", "sedes"):
+                gloss_txt = format_lsec_fingerspelling_gloss(clean_text if is_explicit_fs else clean_word)
                 gloss_typ = GlossType.FINGERSPELLING
                 spatial_ref_id = f"campus_{clean_word.lower()}"
             else:
@@ -412,8 +451,8 @@ def emit_glosses_from_reordered_tokens(
                 if pos == "PROPN" and clean_word in _KNOWN_SIGN_PROPN:
                     spatial_ref_id = f"campus_{clean_word.lower()}"
         else:
-            if is_oov_propn:
-                gloss_txt = "-".join(list(clean_word.upper()))
+            if should_fingerspell:
+                gloss_txt = format_lsec_fingerspelling_gloss(clean_text if is_explicit_fs else clean_word)
                 gloss_typ = GlossType.FINGERSPELLING
             else:
                 gloss_txt = cand_gloss
@@ -620,6 +659,17 @@ def translate_general_heuristic(
         elif clean_lower in planner._pronoun_deixis:
             g_txt = planner._pronoun_deixis[clean_lower]
             g_typ = GlossType.SIGN
+        elif ("-" in clean and is_fingerspelling_query(clean)) or (
+            clean.isupper()
+            and clean.isalpha()
+            and 2 <= len(clean) <= 10
+            and not (prop.source_text or "").strip().isupper()
+            and clean_lower not in _KNOWN_SIGN_PROPN
+            and clean_upper not in planner._known_local_glosses
+            and (planner._dictionary is None or planner._dictionary.lookup(clean_lower) is None)
+        ):
+            g_txt = format_lsec_fingerspelling_gloss(clean)
+            g_typ = GlossType.FINGERSPELLING
         else:
             g_txt = clean_upper
             g_typ = GlossType.SIGN

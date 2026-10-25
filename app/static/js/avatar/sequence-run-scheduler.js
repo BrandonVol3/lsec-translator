@@ -56,7 +56,11 @@ export function extractRawEntries(project) {
 
     const cleanUpper = gloss.toUpperCase();
     const isSingleLetterHyphenated = cleanUpper.includes('-')
-      && cleanUpper.split('-').filter(Boolean).every(p => p.trim().length === 1);
+      && cleanUpper.split('-').filter(Boolean).every(p => {
+        const tok = p.trim();
+        return tok.length === 1 || tok === 'CH' || tok === 'LL' || tok === 'RR';
+      });
+    const gTypeUpper = String(item.gloss_type || '').toUpperCase();
 
     parsed.push({
       index: i,
@@ -67,7 +71,15 @@ export function extractRawEntries(project) {
       slotEnd: et,
       slotDuration: Math.max(0.05, et - st),
       propositionId: item.proposition_id || item.origin_proposition_id || item.prop_id || item.segment_id || null,
-      isFingerspelling: Boolean(item.is_fingerspelling || item.gloss_type === 'DACTILOLOGÍA' || isSingleLetterHyphenated),
+      isFingerspelling: Boolean(
+        item.is_fingerspelling ||
+        item.isFingerspelling ||
+        gTypeUpper.includes('DACTIL') ||
+        gTypeUpper === 'FINGERSPELLING' ||
+        item.validation?.is_fingerspelling ||
+        item.dictionary_metadata?.status === 'DACTILOLOGIA' ||
+        isSingleLetterHyphenated
+      ),
       raw: item,
       rawItem: item
     });

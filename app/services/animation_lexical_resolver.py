@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from app.config import settings
 from app.services.animation_catalog_service import (
+    ensure_sign_animation_stabilized,
     get_sign_metadata,
     get_sign_stroke_entry,
     get_v25_dir,
@@ -26,6 +27,9 @@ from app.services.animation_catalog_service import (
     get_v27_dir,
     lsec_cnm,
     normalize_text,
+)
+from app.services.animation_fingerspelling_service import (
+    is_fingerspelling_query, synthesize_fingerspelling_animation, tokenize_lsec_fingerspelling,
 )
 
 logger = logging.getLogger(__name__)
@@ -317,8 +321,20 @@ def _build_v26_lexical_index() -> Dict[str, Any]:
     return _v26_lexical_index
 
 
-def _select_best_candidate(norm_key: str, candidates: List[str], exact_map: Dict[str, str]) -> str:
+def _select_best_candidate(
+    norm_key: str,
+    candidates: List[str],
+    exact_map: Dict[str, str],
+    preferred_geolect: Optional[str] = None,
+) -> str:
     """Selecciona la mejor carpeta cuando existen múltiples variantes para un término."""
+    if preferred_geolect:
+        g_low = preferred_geolect.strip().lower()
+        if g_low in ("sierra", "costa"):
+            for c in candidates:
+                c_low = c.lower()
+                if f"({g_low})" in c_low or f"en la {g_low}" in c_low:
+                    return c
     if norm_key in _PREFERRED_HOMONYMS:
         pref = _PREFERRED_HOMONYMS[norm_key]
         for c in candidates:
@@ -429,20 +445,15 @@ def _generate_morphological_candidates(gloss: str) -> List[str]:
 
 def _is_fingerspelling_gloss(gloss: str) -> bool:
     """Detecta si una glosa corresponde a dactilología letra por letra (ej. G-U-A-Y-A-Q-U-I-L, U-P-E-C)."""
-    s = (gloss or "").strip()
-    if s.upper().startswith("FS:") or s.upper().startswith("DACT:"):
-        return True
-    if "-" in s:
-        parts = [p.strip() for p in s.split("-") if p.strip()]
-        if len(parts) >= 2 and all(len(p) == 1 and p.isalpha() for p in parts):
-            return True
-    return False
+    return is_fingerspelling_query(gloss)
 
 
 def resolve_gloss_to_sign(
     gloss: str,
     version: Optional[str] = "2.7",
     include_animation: bool = False,
+    geolect: Optional[str] = None,
+    preferred_geolect: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Resuelve una glosa LSEC contra las carpetas reales del catálogo v2.7 (con respaldo v2.6 -> v2.5).
@@ -450,6 +461,7 @@ def resolve_gloss_to_sign(
       found, gloss, resolved_gloss, sign, match_type, status, needs_review, warning,
       version_served, is_fingerspelling, qa, animation (opcional).
     """
+    geolect = geolect or preferred_geolect
     clean_gloss = (gloss or "").strip()
     if not clean_gloss:
         return {
@@ -480,19 +492,13 @@ def resolve_gloss_to_sign(
     qa_norm_map: Dict[str, Dict[str, Any]] = idx["qa_norm_map"]
 
     if _is_fingerspelling_gloss(lookup_gloss):
+        fs_tokens = tokenize_lsec_fingerspelling(lookup_gloss)
         return {
-            "found": False,
-            "gloss": clean_gloss,
-            "resolved_gloss": None,
-            "sign": None,
-            "match_type": "fingerspelling",
-            "status": "FINGERSPELLING",
-            "needs_review": False,
-            "warning": "Dactilología pendiente",
-            "version_served": None,
-            "is_fingerspelling": True,
-            "qa": None,
-            "animation": None,
+            "found": False, "gloss": clean_gloss, "resolved_gloss": None, "sign": None,
+            "match_type": "fingerspelling", "status": "FINGERSPELLING", "needs_review": False,
+            "warning": None, "version_served": "2.7", "is_fingerspelling": True,
+            "graphemes": [t["grapheme"] for t in fs_tokens], "tokens": fs_tokens, "qa": None,
+            "animation": synthesize_fingerspelling_animation(clean_gloss) if include_animation else None,
         }
 
     norm_g = normalize_text(lookup_gloss)
@@ -507,18 +513,28 @@ def resolve_gloss_to_sign(
             match_type = "exact" if normalize_text(pref) == norm_g else "compound"
             status_label = "EXACT" if match_type == "exact" else "VARIANT"
 
+    if not resolved_sign and geolect and norm_g in head_map:
+        g_low = geolect.strip().lower()
+        if g_low in ("sierra", "costa"):
+            for cand in head_map[norm_g]:
+                if f"({g_low})" in cand.lower() or f"en la {g_low}" in cand.lower():
+                    resolved_sign = cand
+                    match_type = "compound"
+                    status_label = "VARIANT"
+                    break
+
     if not resolved_sign and norm_g in exact_map:
         resolved_sign = exact_map[norm_g]
         match_type = "exact"
         status_label = "EXACT"
 
     if not resolved_sign and norm_g in head_map:
-        resolved_sign = _select_best_candidate(norm_g, head_map[norm_g], exact_map)
+        resolved_sign = _select_best_candidate(norm_g, head_map[norm_g], exact_map, preferred_geolect=geolect)
         match_type = "compound"
         status_label = "VARIANT"
 
     if not resolved_sign and norm_g in part_map:
-        resolved_sign = _select_best_candidate(norm_g, part_map[norm_g], exact_map)
+        resolved_sign = _select_best_candidate(norm_g, part_map[norm_g], exact_map, preferred_geolect=geolect)
         match_type = "compound"
         status_label = "VARIANT"
 
@@ -673,7 +689,8 @@ def resolve_gloss_to_sign(
                 anim_payload = json.load(f)
             if isinstance(anim_payload, dict):
                 cat_meta = get_sign_metadata(resolved_sign)
-                if lsec_cnm is not None and not anim_payload.get("metadata", {}).get("nonManualStandard"):
+                cnm_ver = getattr(lsec_cnm, "CNM_STANDARD_VERSION", "1.1")
+                if lsec_cnm is not None and anim_payload.get("metadata", {}).get("nonManualStandard", {}).get("version") != cnm_ver:
                     lsec_cnm.standardize_animation_dict(
                         anim_payload, sign_name=resolved_sign, catalog_entry=cat_meta
                     )
@@ -686,7 +703,10 @@ def resolve_gloss_to_sign(
                 if version_served == "2.7":
                     meta["pipelineVersion"] = "2.7_Estandarizado"
                     if stroke_entry:
-                        meta["stroke"] = stroke_entry
+                        existing_stroke = meta.get("stroke") if isinstance(meta.get("stroke"), dict) else {}
+                        merged_stroke = dict(stroke_entry)
+                        merged_stroke.update(existing_stroke)
+                        meta["stroke"] = merged_stroke
                     if cat_meta and isinstance(cat_meta.get("hand_standardization"), dict):
                         h_std = dict(cat_meta["hand_standardization"])
                         if isinstance(meta.get("handStandardization"), dict):
@@ -694,11 +714,26 @@ def resolve_gloss_to_sign(
                         if "distance_reduction_pct" in h_std and "reduction_pct" not in h_std:
                             h_std["reduction_pct"] = h_std["distance_reduction_pct"]
                         meta["handStandardization"] = h_std
+                    ensure_sign_animation_stabilized(
+                        anim_payload,
+                        sign_name=resolved_sign,
+                        anim_file=anim_path,
+                        cat_meta=cat_meta,
+                        persist_to_disk=True,
+                    )
+                    if isinstance(meta.get("stroke"), dict):
+                        stroke_entry = meta["stroke"]
         except Exception as exc:
             logger.warning("Error leyendo animation.json en %s: %s", anim_path, exc)
 
+    res_low = resolved_sign.lower()
+    resolved_geolect = (
+        "Sierra" if ("(sierra)" in res_low or "en la sierra" in res_low)
+        else ("Costa" if ("(costa)" in res_low or "en la costa" in res_low) else "Nacional")
+    )
     return {
         "found": True, "gloss": clean_gloss, "resolved_gloss": resolved_sign, "sign": resolved_sign,
+        "geolect": resolved_geolect,
         "match_type": match_type, "status": status_label, "needs_review": needs_review,
         "warning": warning_msg, "version_served": version_served, "is_fingerspelling": False,
         "anim_path": str(anim_path), "stroke": stroke_entry,
@@ -717,6 +752,7 @@ def resolve_batch_glosses_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     raw_glosses = payload.get("glosses") or []
     version = payload.get("version") or "2.7"
     include_animation = bool(payload.get("include_animation", False))
+    geolect = payload.get("geolect")
 
     results: Dict[str, Dict[str, Any]] = {}
     items: List[Dict[str, Any]] = []
@@ -726,7 +762,7 @@ def resolve_batch_glosses_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
         g_str = str(g or "").strip()
         if not g_str:
             continue
-        res = resolve_gloss_to_sign(g_str, version=version, include_animation=include_animation)
+        res = resolve_gloss_to_sign(g_str, version=version, include_animation=include_animation, geolect=geolect)
         res.pop("anim_path", None)
         results[g_str] = res
         items.append(res)

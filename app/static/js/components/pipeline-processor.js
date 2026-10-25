@@ -153,36 +153,37 @@ class PipelineProcessor {
     this.isProcessing = true;
     this.showProgressModal(
       project.media_info?.filename || 'Proyecto_LSEC.mp4',
-      'Paso 3: Traducción Lingüística a Glosas LSEC',
+      'Paso 2: Transformación Gramatical a Glosas LSEC',
       [
-        '1. Analizando texto en español y correcciones aplicadas...',
-        '2. Generando glosas LSEC con lematización y sintaxis Tópico-Comentario...',
-        '3. Asignando componentes espaciales, loci y rasgos no manuales...',
-        '4. Ensamblando línea de tiempo y capas multitrack...'
-      ]
+        '1. Analizando texto en español y elidiendo palabras funcionales...',
+        '2. Lematizando verbos a infinitivo y reordenando sintaxis SVO -> SOV...',
+        '3. Asignando fichas CONADIS, dactilología y rasgos no manuales...',
+        '4. Ensamblando mesa comparativa paralela LSEC...'
+      ],
+      'grammar'
     );
 
     try {
       this.setProgress(20);
-      this.updateStep(1, 'active', 'Analizando texto en español y correcciones aplicadas...');
-      await this.sleep(400);
-      this.updateStep(1, 'completed', 'Texto y palabras corregidas analizadas.');
+      this.updateStep(1, 'active', 'Analizando texto en español y elidiendo palabras funcionales...');
+      await this.sleep(550);
+      this.updateStep(1, 'completed', 'Texto y palabras funcionales analizadas.');
 
       this.setProgress(55);
-      this.updateStep(2, 'active', 'Generando glosas LSEC gramaticales...');
+      this.updateStep(2, 'active', 'Lematizando verbos a infinitivo y aplicando sintaxis SOV...');
       
       const translationResult = await this.performGlossesTranslation(project);
-      await this.sleep(400);
+      await this.sleep(600);
       this.updateStep(2, 'completed', `${translationResult.glosses.length} glosas LSEC generadas.`);
 
       this.setProgress(85);
-      this.updateStep(3, 'active', 'Asignando loci espaciales y rasgos no manuales...');
-      await this.sleep(350);
-      this.updateStep(3, 'completed', 'Estructura espacial y rasgos gramaticales asignados.');
+      this.updateStep(3, 'active', 'Asignando fichas CONADIS y rasgos gramaticales...');
+      await this.sleep(550);
+      this.updateStep(3, 'completed', 'Estructura espacial y fichas CONADIS asignadas.');
 
       this.setProgress(100);
-      this.updateStep(4, 'completed', 'Traducción a glosas completada exitosamente.');
-      await this.sleep(300);
+      this.updateStep(4, 'completed', 'Transformación gramatical a glosas LSEC completada exitosamente.');
+      await this.sleep(450);
 
       // Aplicar glosas generadas al proyecto
       project.glosses = translationResult.glosses;
@@ -210,10 +211,16 @@ class PipelineProcessor {
       appState.emit('projectUpdated', project);
       appState.emit('segmentsChanged', project.segments);
 
-      setTimeout(() => {
-        this.hideProgressModal();
-        this.isProcessing = false;
-      }, 400);
+      // Actualizar la animación del monitor con las glosas reales generadas y permitir que el usuario decida cuándo continuar
+      this.startModalGrammarAnimation(0);
+      const grammarStatusLabel = document.getElementById('pipeline-grammar-status-label');
+      if (grammarStatusLabel) {
+        grammarStatusLabel.textContent = 'Transformación completada. Explora cómo cada oración en español se convierte en glosas LSEC y pulsa "Continuar" cuando estés listo.';
+      }
+
+      await this.waitForUserContinue();
+      this.hideProgressModal();
+      this.isProcessing = false;
 
     } catch (err) {
       console.error('Error durante la traducción a glosas:', err);
@@ -736,7 +743,8 @@ class PipelineProcessor {
     return this.translateProjectGlosses();
   }
 
-  showProgressModal(filename, title = 'Procesando Video Audiovisual LSEC', steps = null) {
+  showProgressModal(filename, title = 'Procesando Video Audiovisual LSEC', steps = null, mode = 'whisper') {
+    this._currentModalMode = mode;
     let modal = document.getElementById('pipeline-progress-modal');
     const stepsToRender = (steps && steps.length > 0) ? steps : [
       '1. Extracción de pista de audio y metadatos...',
@@ -748,8 +756,108 @@ class PipelineProcessor {
     if (!modal) {
       modal = document.createElement('div');
       modal.id = 'pipeline-progress-modal';
-      modal.className = 'modal-backdrop open';
-      modal.innerHTML = `<div class="modal-dialog" style="max-width:520px;"><div class="modal-header"><h3 id="pipeline-modal-title">${title}</h3></div><div class="modal-body" style="padding:16px;"><div id="pipeline-modal-filename">Archivo: <strong>${filename}</strong></div><div style="width:100%;height:6px;background:var(--bg-surface-3);margin:12px 0;"><div id="pipeline-progress-fill" style="width:0%;height:100%;background:var(--primary);"></div></div><div id="pipeline-steps-list">${stepsHtml}</div></div></div>`;
+      modal.className = 'modal-backdrop pipeline-fullscreen-backdrop open';
+      modal.innerHTML = `
+        <div class="modal-dialog pipeline-fullscreen-dialog" role="dialog" aria-modal="true" aria-labelledby="pipeline-modal-title">
+          <div class="modal-header pipeline-fullscreen-header">
+            <div>
+              <h3 id="pipeline-modal-title" class="pipeline-fullscreen-title">${title}</h3>
+              <div id="pipeline-modal-filename" class="pipeline-fullscreen-subtitle">Archivo: <strong>${filename}</strong></div>
+            </div>
+            <span class="whisper-badge" id="whisper-engine-badge">MOTOR FASTER-WHISPER ASR</span>
+          </div>
+          <div class="modal-body pipeline-fullscreen-body" role="status" aria-live="polite">
+            <!-- Visualizador de Onda Acústica (Exclusivo de Paso 1: Whisper ASR) -->
+            <div class="whisper-visualizer-box pipeline-fullscreen-wavebox" id="whisper-visualizer-box">
+              <div class="whisper-visualizer-header">
+                <span style="font-size:0.9rem; font-weight:800; color:var(--color-accent-cobalt-dark);" id="whisper-status-label">
+                  Analizando espectro acústico y extrayendo fonemas con Faster-Whisper...
+                </span>
+                <span class="whisper-badge" id="pipeline-progress-pct-badge">0%</span>
+              </div>
+              <canvas class="whisper-waveform-canvas pipeline-fullscreen-canvas" id="whisper-waveform-canvas" width="1280" height="220" aria-label="Visualizador de onda acústica de Whisper ASR en pantalla completa"></canvas>
+            </div>
+
+            <!-- Monitor Animado de Transformación Gramatical Español SVO -> LSEC SOV (Exclusivo de Paso 2) -->
+            <div class="grammar-monitor-card pipeline-fullscreen-grammarbox" id="pipeline-grammar-visualizer-box" style="display:none;">
+              <div class="grammar-monitor-header">
+                <div>
+                  <div class="wizard-card-title">
+                    <span>Monitor Visual de Transformación Gramatical (Español SVO -&gt; LSEC SOV)</span>
+                    <span class="grammar-rule-badge" id="pipeline-grammar-sentence-badge">Oración #1</span>
+                  </div>
+                  <div class="wizard-card-subtitle" id="pipeline-grammar-status-label">
+                    Observa cómo el motor lingüístico elide palabras funcionales, convierte verbos a infinitivo y reordena la sintaxis a LSEC
+                  </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                  <div style="display:inline-flex; align-items:center; gap:6px;">
+                    <button type="button" class="btn btn-sm" id="btn-grammar-prev-sent" title="Ver oración anterior">
+                      &lt;- Anterior
+                    </button>
+                    <button type="button" class="btn btn-sm" id="btn-grammar-toggle-play" title="Pausar o reanudar rotación automática">
+                      Pausar
+                    </button>
+                    <button type="button" class="btn btn-sm" id="btn-grammar-next-sent" title="Ver siguiente oración">
+                      Siguiente -&gt;
+                    </button>
+                  </div>
+                  <div class="grammar-formula-pills">
+                    <span class="grammar-formula-pill">ESPAÑOL: SUJETO + VERBO + OBJETO</span>
+                    <span style="font-weight:800; color:var(--color-accent-cobalt);">-&gt;</span>
+                    <span class="grammar-formula-pill" style="background:var(--color-surface-mint); border-color:var(--color-primary-emerald); color:#065f46;">
+                      LSEC: TIEMPO + TÓPICO + SOV + NEGACIÓN
+                    </span>
+                    <span class="whisper-badge" id="pipeline-grammar-pct-badge">0%</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="grammar-transform-grid pipeline-fullscreen-grammar-grid">
+                <div>
+                  <div class="grammar-box-title">ORACIÓN EN ESPAÑOL (PALABRAS ELIDIDAS TACHADAS / VERBOS EN INFINITIVO)</div>
+                  <div class="grammar-tokens-flow" id="pipeline-grammar-spanish-tokens"></div>
+                </div>
+                <div style="font-family:var(--font-display); font-size:1.6rem; font-weight:800; color:var(--color-accent-cobalt);">
+                  =&gt;
+                </div>
+                <div>
+                  <div class="grammar-box-title">ESTRUCTURA RESULTANTE EN GLOSAS LSEC</div>
+                  <div class="grammar-tokens-flow" id="pipeline-grammar-lsec-tokens"></div>
+                </div>
+              </div>
+
+              <div class="grammar-rules-bar">
+                <div class="grammar-tokens-flow" id="pipeline-grammar-rules-badges">
+                  <span class="grammar-rule-badge">Reordenamiento Sintáctico SVO -&gt; SOV</span>
+                  <span class="grammar-rule-badge">Elisión de Artículos/Copulativos</span>
+                  <span class="grammar-rule-badge">Verbos en Infinitivo</span>
+                </div>
+                <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; font-size:0.78rem; font-weight:700; color:var(--color-text-secondary);">
+                  <span style="display:inline-flex; align-items:center; gap:5px;"><span aria-hidden="true">✓</span> <strong>[CONADIS]</strong> Seña Oficial</span>
+                  <span style="display:inline-flex; align-items:center; gap:5px;"><span aria-hidden="true">✦</span> <strong>[DACTILOLOGÍA]</strong> Deletreo Manual</span>
+                  <span style="display:inline-flex; align-items:center; gap:5px;"><span aria-hidden="true">✎</span> <strong>[EDITADO]</strong> Verificada por Humano</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="pipeline-progress-track">
+              <div id="pipeline-progress-fill" class="pipeline-progress-bar-fill" style="width:0%;"></div>
+            </div>
+            <div id="pipeline-steps-list" class="pipeline-fullscreen-steps">${stepsHtml}</div>
+
+            <!-- Barra de confirmación controlada por el usuario al terminar Paso 2 -->
+            <div id="pipeline-modal-actions" style="display:none; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; background:var(--color-card-white); border:2px solid var(--color-primary-emerald); border-radius:16px; padding:14px 20px; box-shadow:var(--shadow-sm);">
+              <div style="font-size:0.92rem; font-weight:700; color:var(--color-text-primary);">
+                Revisa la transformación gramatical de las oraciones con los botones <strong>&lt;- Anterior / Siguiente -&gt;</strong> y continúa cuando estés listo.
+              </div>
+              <button type="button" class="btn btn-primary btn-tactile-cta" id="btn-pipeline-modal-continue">
+                CONTINUAR A LA MESA COMPARATIVA LSEC -&gt;
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
       document.body.appendChild(modal);
     } else {
       modal.classList.add('open');
@@ -758,26 +866,315 @@ class PipelineProcessor {
       const fnEl = document.getElementById('pipeline-modal-filename');
       if (fnEl) fnEl.innerHTML = `Archivo: <strong>${filename}</strong>`;
       const listEl = document.getElementById('pipeline-steps-list');
-      if (listEl) listEl.innerHTML = stepsHtml;
+      if (listEl) {
+        listEl.innerHTML = stepsHtml;
+        listEl.style.display = 'flex';
+      }
       this.setProgress(0);
+    }
+
+    const listElGlobal = document.getElementById('pipeline-steps-list');
+    if (listElGlobal) listElGlobal.style.display = 'flex';
+    const actionsBar = document.getElementById('pipeline-modal-actions');
+    if (actionsBar) actionsBar.style.display = 'none';
+
+    const waveBox = document.getElementById('whisper-visualizer-box');
+    const grammarBox = document.getElementById('pipeline-grammar-visualizer-box');
+    const engineBadge = document.getElementById('whisper-engine-badge');
+
+    if (mode === 'grammar') {
+      if (waveBox) waveBox.style.display = 'none';
+      if (grammarBox) grammarBox.style.display = 'flex';
+      if (engineBadge) {
+        engineBadge.textContent = 'MOTOR LINGÜÍSTICO LSEC (SVO -> SOV)';
+        engineBadge.style.background = 'var(--color-primary-emerald)';
+      }
+      this.stopModalWaveformAnimation();
+      this.startModalGrammarAnimation(0);
+    } else {
+      if (waveBox) waveBox.style.display = 'flex';
+      if (grammarBox) grammarBox.style.display = 'none';
+      if (engineBadge) {
+        engineBadge.textContent = 'MOTOR FASTER-WHISPER ASR';
+        engineBadge.style.background = 'var(--color-accent-cobalt)';
+      }
+      this.stopModalGrammarAnimation();
+      this.startModalWaveformAnimation();
+    }
+  }
+
+  waitForUserContinue() {
+    return new Promise((resolve) => {
+      const actionsBar = document.getElementById('pipeline-modal-actions');
+      const btnContinue = document.getElementById('btn-pipeline-modal-continue');
+      const stepsList = document.getElementById('pipeline-steps-list');
+      const dialogEl = document.querySelector('#pipeline-progress-modal .pipeline-fullscreen-dialog');
+      if (!actionsBar || !btnContinue) {
+        resolve();
+        return;
+      }
+      if (stepsList) {
+        stepsList.style.display = 'none';
+      }
+      actionsBar.style.display = 'flex';
+      if (dialogEl) {
+        dialogEl.scrollTop = 0;
+      }
+      const handler = () => {
+        btnContinue.removeEventListener('click', handler);
+        resolve();
+      };
+      btnContinue.addEventListener('click', handler);
+      setTimeout(() => {
+        try { btnContinue.focus({ preventScroll: true }); } catch (e) {}
+      }, 60);
+    });
+  }
+
+  startModalGrammarAnimation(initialIndex = 0) {
+    this.stopModalGrammarAnimation();
+    const elidedSet = new Set([
+      'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas',
+      'es', 'son', 'está', 'están', 'fue', 'era', 'ser', 'estar', 'sido',
+      'de', 'del', 'a', 'al', 'en', 'con', 'por', 'para', 'que', 'se', 'lo', 'le', 'les', 'y', 'o'
+    ]);
+
+    this._grammarCurrentIdx = initialIndex;
+    this._grammarPaused = false;
+
+    const getSegments = () => (typeof appState !== 'undefined' && appState.state?.project?.segments) || [];
+
+    const renderSentenceStep = (advance = false) => {
+      const segments = getSegments();
+      const total = Math.max(1, segments.length);
+      if (advance) {
+        this._grammarCurrentIdx = (this._grammarCurrentIdx + 1) % total;
+      } else {
+        this._grammarCurrentIdx = ((this._grammarCurrentIdx % total) + total) % total;
+      }
+
+      const spanishContainer = document.getElementById('pipeline-grammar-spanish-tokens');
+      const lsecContainer = document.getElementById('pipeline-grammar-lsec-tokens');
+      const sentBadge = document.getElementById('pipeline-grammar-sentence-badge');
+      const rulesContainer = document.getElementById('pipeline-grammar-rules-badges');
+      if (!spanishContainer || !lsecContainer) return;
+
+      const seg = segments[this._grammarCurrentIdx] || {
+        normalized_text: 'Dicen que el conocimiento es poder',
+        gloss_sequence: ['CONOCIMIENTO', 'DECIR', 'PODER']
+      };
+      if (sentBadge) {
+        sentBadge.textContent = `Oración #${this._grammarCurrentIdx + 1} de ${total}`;
+      }
+
+      const rawText = seg.normalized_text || seg.raw_text || seg.original_text || 'Dicen que el conocimiento es poder';
+      const words = rawText.split(/\s+/).filter(Boolean);
+      spanishContainer.innerHTML = '';
+      let elidedCount = 0;
+
+      words.forEach((w, wIdx) => {
+        const clean = w.toLowerCase().replace(/[.,;!?¿¡"()]/g, '');
+        const span = document.createElement('span');
+        span.style.animationDelay = `${wIdx * 70}ms`;
+        if (elidedSet.has(clean)) {
+          elidedCount++;
+          span.className = 'grammar-token-elided pipeline-gloss-chip-anim';
+          span.textContent = w;
+        } else if (/(ar|er|ir)$/i.test(clean) && clean.length > 3) {
+          span.className = 'grammar-token-infinitive pipeline-gloss-chip-anim';
+          span.textContent = w;
+        } else {
+          span.className = 'grammar-token-word pipeline-gloss-chip-anim';
+          span.textContent = w;
+        }
+        spanishContainer.appendChild(span);
+      });
+
+      const cleanGlossLabel = (txt) => String(txt || '').toUpperCase().replace(/^FS:/i, '').replace(/\[[^\]]*\]/g, '').trim();
+
+      // Derivar glosas de la oración actual (usando glosas reales si ya están disponibles)
+      let rawItems = [];
+      if (Array.isArray(seg.glosses) && seg.glosses.length > 0) {
+        rawItems = seg.glosses.map(g => ({
+          label: cleanGlossLabel(g.gloss || g.lemma || g),
+          isFs: Boolean(g.is_fingerspelling || g.gloss_type === 'DACTILOLOGÍA' || g.gloss_type === 'FINGERSPELLING')
+        }));
+      } else if (Array.isArray(seg.gloss_sequence) && seg.gloss_sequence.length > 0) {
+        rawItems = seg.gloss_sequence.map(g => {
+          const txt = cleanGlossLabel(g);
+          return { label: txt, isFs: txt.includes('-') };
+        });
+      } else {
+        const contentWords = words
+          .map(w => w.replace(/[.,;!?¿¡"()]/g, '').toLowerCase())
+          .filter(w => w && !elidedSet.has(w))
+          .map(w => w.toUpperCase());
+        const ordered = contentWords.length >= 3
+          ? [contentWords[1], contentWords[0], ...contentWords.slice(2)]
+          : (contentWords.length > 0 ? contentWords : ['CONOCIMIENTO', 'DECIR', 'PODER']);
+        rawItems = ordered.map(txt => ({ label: txt, isFs: false }));
+      }
+
+      const glossItems = [];
+      for (const it of rawItems) {
+        if (!it.label) continue;
+        if (glossItems.length > 0 && glossItems[glossItems.length - 1].label === it.label) continue;
+        glossItems.push(it);
+      }
+
+      lsecContainer.innerHTML = '';
+      glossItems.forEach((item, gIdx) => {
+        const chip = document.createElement('span');
+        chip.style.animationDelay = `${gIdx * 130}ms`;
+        chip.className = `gloss-chip-tactile ${item.isFs ? 'gloss-chip-fingerspell' : 'gloss-chip-conadis'} pipeline-gloss-chip-anim`;
+        const sym = item.isFs ? '✦' : '✓';
+        chip.innerHTML = `<span class="gloss-chip-symbol" aria-hidden="true">${sym}</span> <span>${item.label}</span>`;
+        lsecContainer.appendChild(chip);
+      });
+
+      if (rulesContainer) {
+        rulesContainer.innerHTML = `
+          <span class="grammar-rule-badge">Reordenamiento Sintáctico SVO -&gt; SOV</span>
+          <span class="grammar-rule-badge">Elisión de Artículos/Copulativos (${elidedCount})</span>
+          <span class="grammar-rule-badge">Verbos en Infinitivo</span>
+        `;
+      }
+    };
+
+    const btnPrev = document.getElementById('btn-grammar-prev-sent');
+    const btnNext = document.getElementById('btn-grammar-next-sent');
+    const btnToggle = document.getElementById('btn-grammar-toggle-play');
+
+    if (btnPrev) {
+      btnPrev.onclick = () => {
+        this._grammarPaused = true;
+        if (btnToggle) btnToggle.textContent = 'Reanudar';
+        this._grammarCurrentIdx -= 1;
+        renderSentenceStep(false);
+      };
+    }
+    if (btnNext) {
+      btnNext.onclick = () => {
+        this._grammarPaused = true;
+        if (btnToggle) btnToggle.textContent = 'Reanudar';
+        this._grammarCurrentIdx += 1;
+        renderSentenceStep(false);
+      };
+    }
+    if (btnToggle) {
+      btnToggle.textContent = 'Pausar';
+      btnToggle.onclick = () => {
+        this._grammarPaused = !this._grammarPaused;
+        btnToggle.textContent = this._grammarPaused ? 'Reanudar' : 'Pausar';
+      };
+    }
+
+    renderSentenceStep(false);
+    this._grammarAnimInterval = setInterval(() => {
+      if (!this._grammarPaused) {
+        renderSentenceStep(true);
+      }
+    }, 3200);
+  }
+
+  stopModalGrammarAnimation() {
+    if (this._grammarAnimInterval) {
+      clearInterval(this._grammarAnimInterval);
+      this._grammarAnimInterval = null;
+    }
+  }
+
+  startModalWaveformAnimation() {
+    this.stopModalWaveformAnimation();
+    if (!this._modalWaveBars) {
+      this._modalWaveBars = [];
+      for (let i = 0; i < 96; i++) {
+        const base = 0.2 + 0.65 * Math.abs(Math.sin(i * 0.37) * Math.cos(i * 0.17));
+        this._modalWaveBars.push(Math.min(0.96, Math.max(0.14, base)));
+      }
+    }
+    this._modalAnimActive = true;
+    const renderFrame = (now) => {
+      if (!this._modalAnimActive) return;
+      const canvas = document.getElementById('whisper-waveform-canvas');
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          const width = canvas.width;
+          const height = canvas.height;
+          ctx.clearRect(0, 0, width, height);
+
+          const pct = (this._currentProgressPct || 0) / 100;
+          const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          const t = prefersReducedMotion ? 0 : (now / 320);
+          const barCount = this._modalWaveBars.length;
+          const gap = 5;
+          const barWidth = Math.max(4, (width - gap * (barCount + 1)) / barCount);
+
+          for (let i = 0; i < barCount; i++) {
+            const ratio = i / barCount;
+            const pulse = prefersReducedMotion ? 0 : (0.25 * Math.sin(t * 4.2 + i * 0.45) + 0.12 * Math.cos(t * 2.3 - i * 0.3));
+            const amp = Math.min(0.96, Math.max(0.12, this._modalWaveBars[i] + pulse));
+            const barH = Math.max(12, amp * (height - 28));
+            const x = gap + i * (barWidth + gap);
+            const y = (height - barH) / 2;
+
+            ctx.fillStyle = ratio <= pct ? '#007a3d' : (ratio <= pct + 0.15 ? '#d99b00' : '#b7d4c4');
+            ctx.beginPath();
+            if (ctx.roundRect) {
+              ctx.roundRect(x, y, barWidth, barH, 5);
+            } else {
+              ctx.rect(x, y, barWidth, barH);
+            }
+            ctx.fill();
+          }
+        }
+      }
+      this._modalAnimFrameId = requestAnimationFrame(renderFrame);
+    };
+    this._modalAnimFrameId = requestAnimationFrame(renderFrame);
+  }
+
+  stopModalWaveformAnimation() {
+    this._modalAnimActive = false;
+    if (this._modalAnimFrameId) {
+      cancelAnimationFrame(this._modalAnimFrameId);
+      this._modalAnimFrameId = null;
     }
   }
 
   updateStep(stepNum, status, text) {
     const el = document.getElementById(`step-${stepNum}`);
     if (!el) return;
+    el.dataset.status = status;
     const icon = el.querySelector('.step-icon');
     const txt = el.querySelector('.step-text');
     if (icon) icon.textContent = status === 'completed' ? '✓' : (status === 'active' ? '>' : '•');
     if (txt && text) txt.textContent = text;
+    const statusLabel = document.getElementById('whisper-status-label');
+    if (statusLabel && text && status === 'active') {
+      statusLabel.textContent = text;
+    }
+    const grammarStatusLabel = document.getElementById('pipeline-grammar-status-label');
+    if (grammarStatusLabel && text && status === 'active') {
+      grammarStatusLabel.textContent = text;
+    }
   }
 
   setProgress(percent) {
+    const clamped = Math.min(100, Math.max(0, percent));
+    this._currentProgressPct = clamped;
     const fill = document.getElementById('pipeline-progress-fill');
-    if (fill) fill.style.width = `${Math.min(100, Math.max(0, percent))}%`;
+    if (fill) fill.style.width = `${clamped}%`;
+    const pctBadge = document.getElementById('pipeline-progress-pct-badge');
+    if (pctBadge) pctBadge.textContent = `${Math.round(clamped)}%`;
+    const grammarPctBadge = document.getElementById('pipeline-grammar-pct-badge');
+    if (grammarPctBadge) grammarPctBadge.textContent = `${Math.round(clamped)}%`;
   }
 
   hideProgressModal() {
+    this.stopModalWaveformAnimation();
+    this.stopModalGrammarAnimation();
     const modal = document.getElementById('pipeline-progress-modal');
     if (modal) modal.classList.remove('open');
   }

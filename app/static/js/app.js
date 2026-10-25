@@ -78,8 +78,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 4. Función Global de Navegación entre las 3 Ventanas Independientes (Wizard)
-  const STEP_ORDER = ['preparar', 'traducir', 'revisar'];
+  // 4. Función Global de Navegación entre las 4 Ventanas Independientes (Wizard)
+  const STEP_ORDER = ['preparar', 'traducir', 'avatar', 'revisar'];
 
   function dockVideoZoneForStep(stepName) {
     const videoZone = document.getElementById('left-video-zone');
@@ -87,20 +87,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const slot1 = document.getElementById('step1-video-slot');
     const slot3 = document.getElementById('step3-video-slot');
+    const slot4 = document.getElementById('step4-video-slot');
     const stageLabel = document.getElementById('video-stage-mode-label');
+    const changeVideoBtn = document.getElementById('btn-stage-change-video');
+    const hasVideo = Boolean(appState?.state?.workspace?.videoLoaded || appState?.state?.project);
 
-    if (stepName === 'revisar' && slot3) {
+    if (stepName === 'avatar' && slot3) {
       if (videoZone.parentElement !== slot3) {
         slot3.appendChild(videoZone);
       }
       if (stageLabel) {
-        stageLabel.textContent = 'Video + Subtítulos + Avatar 3D LSEC';
+        stageLabel.textContent = 'Video y Subtítulos Sincronizados';
+      }
+      if (changeVideoBtn) {
+        changeVideoBtn.style.display = 'none';
       }
       setTimeout(() => {
-        if (window.studioAvatarBridge?.controller?.engine?.onResize) {
-          window.studioAvatarBridge.controller.engine.onResize();
+        if (window.studioAvatarBridge && typeof window.studioAvatarBridge.dockToStep3Stage === 'function') {
+          window.studioAvatarBridge.dockToStep3Stage();
         }
-      }, 60);
+        if (window.subtitleOverlay && typeof window.subtitleOverlay.render === 'function') {
+          window.subtitleOverlay.render(appState?.state?.playback?.currentTime || 0);
+        }
+      }, 50);
+    } else if (stepName === 'revisar' && slot4) {
+      if (videoZone.parentElement !== slot4) {
+        slot4.appendChild(videoZone);
+      }
+      if (stageLabel) {
+        stageLabel.textContent = 'Vista Previa Compuesta (Video + Subtítulos + Avatar 3D)';
+      }
+      if (changeVideoBtn) {
+        changeVideoBtn.style.display = 'none';
+      }
+      setTimeout(() => {
+        if (window.studioAvatarBridge && typeof window.studioAvatarBridge.dockToPip === 'function') {
+          window.studioAvatarBridge.dockToPip();
+        }
+        if (window.subtitleOverlay && typeof window.subtitleOverlay.render === 'function') {
+          window.subtitleOverlay.render(appState?.state?.playback?.currentTime || 0);
+        }
+      }, 50);
     } else if (slot1) {
       if (videoZone.parentElement !== slot1) {
         slot1.appendChild(videoZone);
@@ -108,6 +135,14 @@ document.addEventListener('DOMContentLoaded', () => {
       if (stageLabel) {
         stageLabel.textContent = 'MP4 / WebM Local';
       }
+      if (changeVideoBtn) {
+        changeVideoBtn.style.display = hasVideo ? 'inline-flex' : 'none';
+      }
+      setTimeout(() => {
+        if (window.subtitleOverlay && typeof window.subtitleOverlay.render === 'function') {
+          window.subtitleOverlay.render(appState?.state?.playback?.currentTime || 0);
+        }
+      }, 50);
     }
   }
 
@@ -115,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const normalized = STEP_ORDER.includes(stepName) ? stepName : 'preparar';
     const targetIdx = STEP_ORDER.indexOf(normalized);
 
-    // Actualizar visibilidad de las 3 ventanas independientes
+    // Actualizar visibilidad de las 4 ventanas independientes
     document.querySelectorAll('.wizard-window').forEach((win) => {
       const isMatch = win.dataset.wizardStep === normalized;
       win.classList.toggle('active', isMatch);
@@ -137,27 +172,40 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // Anclar el escenario de video compartido en Ventana 1 o Ventana 3
-    dockVideoZoneForStep(normalized);
-
-    // Sincronizar con el estado global
+    // Sincronizar con el estado global antes de acoplar el escenario para que SubtitleEngine conozca la etapa activa
     if (typeof appState !== 'undefined') {
       appState.state.workspace.stage = normalized;
       appState.emit('stageChanged', normalized);
     }
 
+    // Anclar el escenario de video compartido en Ventana 1, Ventana 3 o Ventana 4
+    dockVideoZoneForStep(normalized);
+
     if (normalized === 'traducir' && window.linguisticComparisonView) {
       window.linguisticComparisonView.renderAll();
-    } else if (normalized === 'revisar') {
+    } else if (normalized === 'avatar' || normalized === 'revisar') {
       renderStep3LiveSignMonitor();
     }
   };
 
   // Procesar traducción hacia Ventana 2
   async function processTranslationAndOpenStep2() {
-    const segments = appState?.state?.project?.segments || [];
-    if (segments.length === 0 && window.pipelineProcessor) {
-      await window.pipelineProcessor.runPipelineForCurrentVideo();
+    let segments = appState?.state?.project?.segments || [];
+    const glosses = appState?.state?.project?.glosses || [];
+    if (window.pipelineProcessor) {
+      if (segments.length === 0) {
+        if (window.pipelineProcessor.cachedVideoFile && !appState?.state?.workspace?.transcriptionReady) {
+          await window.pipelineProcessor.runPipelineForCurrentVideo();
+          segments = appState?.state?.project?.segments || [];
+        }
+        if (segments.length === 0) {
+          showToast('Agrega al menos una oración con "+ Oración" o carga un video con voz hablada antes de traducir a LSEC.', 'warning');
+          return;
+        }
+      }
+      if ((appState?.state?.project?.glosses || []).length === 0) {
+        await window.pipelineProcessor.translateProjectGlosses();
+      }
     }
     if (typeof appState !== 'undefined') {
       appState.state.workspace.transcriptionReady = true;
@@ -177,6 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const btnChangeVideo = document.getElementById('btn-stage-change-video');
   const btnUploadVideo = document.getElementById('btn-upload-video');
+  const btnRunPipeline = document.getElementById('btn-run-pipeline');
   const videoDropzone = document.getElementById('video-dropzone');
   const fileUploadInput = document.getElementById('file-upload-input');
   if (btnChangeVideo && fileUploadInput) {
@@ -187,6 +236,22 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   if (videoDropzone && fileUploadInput) {
     videoDropzone.addEventListener('click', () => fileUploadInput.click());
+    videoDropzone.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        fileUploadInput.click();
+      }
+    });
+  }
+  if (btnRunPipeline) {
+    btnRunPipeline.addEventListener('click', () => {
+      if (window.pipelineProcessor) {
+        window.transcriptWindow?.setExtractingState(true, 'Extrayendo audio y transcribiendo con Faster-Whisper...');
+        Promise.resolve(window.pipelineProcessor.runPipelineForCurrentVideo()).finally(() => {
+          window.transcriptWindow?.setExtractingState(false, 'Transcripción Whisper completada y sincronizada');
+        });
+      }
+    });
   }
 
   const btnLoadDemo = document.getElementById('btn-load-demo');
@@ -210,14 +275,55 @@ document.addEventListener('DOMContentLoaded', () => {
       if (typeof appState !== 'undefined' && typeof appState.confirmTranslationStage === 'function') {
         appState.confirmTranslationStage();
       }
-      window.switchWizardStep('revisar');
-      showToast('Glosas LSEC confirmadas. Avatar 3D VRM listo en vista previa.', 'success');
+      window.switchWizardStep('avatar');
+      showToast('Glosas LSEC confirmadas. Revisa la secuencia del Avatar 3D.', 'success');
     });
   }
 
   const btnStep3Back = document.getElementById('btn-step3-back-to-glosses');
   if (btnStep3Back) {
     btnStep3Back.addEventListener('click', () => window.switchWizardStep('traducir'));
+  }
+
+  const btnStep3ToStep4 = document.getElementById('btn-step3-to-step4');
+  if (btnStep3ToStep4) {
+    btnStep3ToStep4.addEventListener('click', () => {
+      window.switchWizardStep('revisar');
+      showToast('Ajusta los subtítulos y exporta el video final.', 'info');
+    });
+  }
+
+  const btnStep4BackToAvatar = document.getElementById('btn-step4-back-to-avatar');
+  if (btnStep4BackToAvatar) {
+    btnStep4BackToAvatar.addEventListener('click', () => window.switchWizardStep('avatar'));
+  }
+
+  function stepSentenceInMonitor(delta) {
+    const segments = appState?.state?.project?.segments || [];
+    if (segments.length === 0) return;
+    const currentTime = appState?.state?.playback?.currentTime || 0;
+    const getStart = (s) => Number(s?.start_time ?? s?.start_seconds ?? 0);
+    const getEnd = (s) => Number(s?.end_time ?? s?.end_seconds ?? 0);
+    let idx = segments.findIndex(s => currentTime >= getStart(s) && currentTime <= getEnd(s));
+    if (idx === -1) idx = 0;
+    const nextIdx = Math.max(0, Math.min(segments.length - 1, idx + delta));
+    const targetSeg = segments[nextIdx];
+    if (targetSeg) {
+      const targetTime = getStart(targetSeg) + 0.02;
+      appState.setCurrentTime(targetTime, 'sentence_nav');
+      appState.selectItem('segment', targetSeg.id, targetSeg);
+      renderStep3LiveSignMonitor(targetTime);
+    }
+  }
+
+  const btnStep3PrevSent = document.getElementById('btn-step3-prev-sentence');
+  if (btnStep3PrevSent) {
+    btnStep3PrevSent.addEventListener('click', () => stepSentenceInMonitor(-1));
+  }
+
+  const btnStep3NextSent = document.getElementById('btn-step3-next-sentence');
+  if (btnStep3NextSent) {
+    btnStep3NextSent.addEventListener('click', () => stepSentenceInMonitor(1));
   }
 
   const btnStep3Replay = document.getElementById('btn-step3-replay-sentence');
@@ -260,27 +366,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 6. Monitor en Vivo de Señas para la Ventana 3
   function classifyGlossSignType(glossItem) {
-    if (!glossItem) return { label: 'Seña CONADIS', css: 'gloss-chip-conadis', badgeBg: '#10b981' };
-    const token = String(glossItem.gloss || glossItem.text || glossItem || '').toUpperCase();
+    if (!glossItem) return { label: '✓ Seña CONADIS', symbol: '✓', css: 'gloss-chip-conadis', badgeBg: '#047857' };
+    const token = String(glossItem.gloss || glossItem.lemma || glossItem.text || glossItem || '').toUpperCase();
     const isManual = Boolean(
       glossItem.manually_edited ||
       glossItem.status === 'HUMAN_VERIFIED' ||
       glossItem.alignment_type === 'MANUAL_EDIT'
     );
+    const isSingleLetterHyphenated = token.includes('-') && token.split('-').filter(Boolean).every(p => p.trim().length === 1);
     const isFingerspell = Boolean(
       glossItem.source === 'FINGERSPELLING' ||
       glossItem.is_fingerspelling ||
+      glossItem.gloss_type === 'DACTILOLOGÍA' ||
       token.startsWith('FS:') ||
-      token.includes('-')
+      isSingleLetterHyphenated
     );
 
     if (isManual) {
-      return { label: 'Editada Manualmente', css: 'gloss-chip-edited', badgeBg: '#f59e0b' };
+      return { label: '✎ Editada', symbol: '✎', css: 'gloss-chip-edited', badgeBg: '#b45309' };
     }
     if (isFingerspell) {
-      return { label: 'Dactilología', css: 'gloss-chip-fingerspell', badgeBg: '#0284c7' };
+      return { label: '✦ Dactilología', symbol: '✦', css: 'gloss-chip-fingerspell', badgeBg: '#0369a1' };
     }
-    return { label: 'Seña CONADIS', css: 'gloss-chip-conadis', badgeBg: '#10b981' };
+    return { label: '✓ Seña CONADIS', symbol: '✓', css: 'gloss-chip-conadis', badgeBg: '#047857' };
+  }
+
+  function cleanGlossDisplay(rawToken) {
+    return String(rawToken || '')
+      .toUpperCase()
+      .replace(/^FS:/i, '')
+      .replace(/\[[^\]]*\]/g, '')
+      .trim();
   }
 
   function renderStep3LiveSignMonitor(currentTime = null) {
@@ -299,8 +415,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const getStart = (item) => Number(item?.start_time ?? item?.start_seconds ?? 0);
     const getEnd = (item) => Number(item?.end_time ?? item?.end_seconds ?? 0);
 
-    const activeSeg = segments.find(s => t >= getStart(s) && t <= getEnd(s)) || segments[0] || null;
+    const activeSegIdx = segments.findIndex(s => t >= getStart(s) && t <= getEnd(s));
+    const activeSeg = (activeSegIdx >= 0 ? segments[activeSegIdx] : segments[0]) || null;
+    const resolvedSegIdx = activeSegIdx >= 0 ? activeSegIdx : 0;
     const activeGloss = allGlosses.find(g => t >= getStart(g) && t <= getEnd(g)) || null;
+
+    const sentBadgeEl = document.getElementById('live-monitor-sentence-badge');
+    if (sentBadgeEl) {
+      sentBadgeEl.textContent = segments.length > 0 ? `Oración #${resolvedSegIdx + 1} de ${segments.length}` : 'Sin oraciones';
+    }
 
     const wordEl = document.getElementById('live-current-sign-word');
     const typeEl = document.getElementById('live-current-sign-type');
@@ -344,14 +467,16 @@ document.addEventListener('DOMContentLoaded', () => {
       itemsToRender.forEach((g) => {
         const info = classifyGlossSignType(g);
         const isExecuting = activeGloss && g.id && activeGloss.id === g.id;
+        const cleanTok = cleanGlossDisplay(g.gloss || g.lemma || g);
         const chip = document.createElement('span');
         chip.className = `gloss-chip-tactile ${info.css}`;
         if (isExecuting) {
           chip.style.outline = '3px solid #0f172a';
         }
+        chip.title = `${cleanTok} (${info.label}) — Clic para reproducir seña`;
         chip.innerHTML = `
-          <span>${g.gloss || g}</span>
-          <span class="gloss-chip-badge-tag">${info.label === 'Dactilología' ? 'DACTIL.' : (info.label === 'Editada Manualmente' ? 'EDITADA' : 'CONADIS')}</span>
+          <span class="gloss-chip-symbol" aria-hidden="true">${info.symbol}</span>
+          <span>${cleanTok}</span>
         `;
         chip.addEventListener('click', () => {
           const gStart = getStart(g);
@@ -390,7 +515,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // 7. Suscripciones de Sincronización en Segundo Plano
   if (typeof appState !== 'undefined') {
     appState.subscribe('timeChanged', (t) => {
-      if (appState.state.workspace.stage === 'revisar') {
+      const stg = appState.state.workspace.stage;
+      if (stg === 'avatar' || stg === 'revisar') {
         renderStep3LiveSignMonitor(t);
       }
     });
@@ -398,8 +524,13 @@ document.addEventListener('DOMContentLoaded', () => {
     appState.subscribe('projectLoaded', () => {
       const dropzone = document.getElementById('video-dropzone');
       const playerWrap = document.getElementById('video-player-wrapper');
+      const changeVideoBtn = document.getElementById('btn-stage-change-video');
       if (dropzone) dropzone.style.display = 'none';
       if (playerWrap) playerWrap.classList.add('active');
+      if (changeVideoBtn) {
+        const stg = appState.state.workspace?.stage;
+        changeVideoBtn.style.display = (stg === 'avatar' || stg === 'revisar') ? 'none' : 'inline-flex';
+      }
 
       const listEl = document.getElementById('live-all-sentences-list');
       if (listEl) listEl.dataset.renderedCount = '';
@@ -425,16 +556,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Utilidad Global de Notificaciones Toast
+  // Utilidad Global de Notificaciones Toast (WCAG 2.2 Criterio 4.1.3 Status Messages)
   window.showToast = function showToast(message, type = 'info') {
     const container = document.getElementById('toast-container');
     if (!container) return;
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
-    toast.textContent = message;
+    toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+    toast.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
+    const prefix = type === 'error' ? '✗ [ERROR] ' : (type === 'warning' ? '⚠ [AVISO] ' : '✓ ');
+    toast.textContent = `${prefix}${message}`;
     container.appendChild(toast);
     setTimeout(() => {
       toast.remove();
-    }, 3400);
+    }, 3800);
   };
 });
