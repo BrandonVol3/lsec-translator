@@ -93,9 +93,9 @@ export {
 export class SequenceCompiler {
   constructor(options = {}) {
     this.options = {
-      maxSpeed: 1.6,
+      maxSpeed: 1.0,
       minSpeed: 0.70,
-      maxLagSec: 1.0,
+      maxLagSec: Infinity,
       restGapThresholdSec: 1.5,
       extendEndForLag: true,
       minTransitionSec: 0.10,
@@ -130,9 +130,11 @@ export class SequenceCompiler {
    */
   compile(project, clipMap, overrideOptions = {}) {
     const opts = { ...this.options, ...overrideOptions };
-    const maxSpeed = Math.max(1.0, Number(opts.maxSpeed) || 1.6);
-    const minSpeed = Math.max(0.4, Math.min(1.0, Number(opts.minSpeed) || 0.70));
-    const maxLagSec = Math.max(0.1, Number(opts.maxLagSec) || 1.0);
+    const maxSpeed = Math.min(1.0, Math.max(0.1, Number(opts.maxSpeed) || 1.0));
+    const minSpeed = Math.max(0.4, Math.min(maxSpeed, Number(opts.minSpeed) || 0.70));
+    const maxLagSec = (opts.maxLagSec !== undefined && opts.maxLagSec !== null)
+      ? Number(opts.maxLagSec)
+      : Infinity;
     const restGapThresholdSec = Math.max(0.25, Number(opts.restGapThresholdSec) || 1.5);
     const minTrans = Math.max(0.06, Number(opts.minTransitionSec) || 0.10);
     const maxTrans = Math.max(minTrans, Number(opts.maxTransitionSec) || 0.35);
@@ -204,7 +206,10 @@ export class SequenceCompiler {
           intraSentenceRestDrops: 0,
           interSentenceRestDrops: 0,
           maxLagSec: 0,
-          maxSpeedUsed: 1.0
+          maxSpeedUsed: 1.0,
+          strokeRetainedPct: 100.0,
+          minStrokeRetainedPct: 100.0,
+          allStrokes100PctRetained: true
         }
       };
       this.compiled = this.plan;
@@ -231,10 +236,14 @@ export class SequenceCompiler {
     let maxLagFound = 0;
     let maxSpeedFound = 1.0;
     let adjustedCount = 0;
+    let minStrokeRetainedPct = 100.0;
     for (const pe of playableEntries) {
       if (pe.lagSec > maxLagFound) maxLagFound = pe.lagSec;
       if (pe.speed > maxSpeedFound) maxSpeedFound = pe.speed;
       if (pe.adjusted) adjustedCount++;
+      if (typeof pe.strokeRetainedPct === 'number' && pe.strokeRetainedPct < minStrokeRetainedPct) {
+        minStrokeRetainedPct = pe.strokeRetainedPct;
+      }
     }
 
     this.plan = {
@@ -253,7 +262,10 @@ export class SequenceCompiler {
         intraSentenceRestDrops,
         interSentenceRestDrops,
         maxLagSec: Number(maxLagFound.toFixed(4)),
-        maxSpeedUsed: Number(maxSpeedFound.toFixed(4))
+        maxSpeedUsed: Number(Math.min(1.0, maxSpeedFound).toFixed(4)),
+        strokeRetainedPct: Number(minStrokeRetainedPct.toFixed(2)),
+        minStrokeRetainedPct: Number(minStrokeRetainedPct.toFixed(2)),
+        allStrokes100PctRetained: Boolean(minStrokeRetainedPct >= 99.99)
       }
     };
     this.compiled = this.plan;

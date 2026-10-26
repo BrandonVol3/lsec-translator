@@ -189,12 +189,6 @@ export function schedulePlayableRunsWithLagBudget(entries, runs, params) {
       let sEnd = prep.strokeEnd;
       let sLen = prep.strokeDuration;
 
-      if (!it.isFingerspelling && prep.flags && prep.flags.repeatedStroke && sLen > 1.35 * it.slotDuration && sLen > 1.20) {
-        const singleLen = Math.max(0.60, sLen * 0.56);
-        sEnd = sStart + singleLen;
-        sLen = singleLen;
-      }
-
       origStrokeStart[j] = sStart;
       origStrokeEnd[j] = sEnd;
       origStrokeLen[j] = sLen;
@@ -249,22 +243,18 @@ export function schedulePlayableRunsWithLagBudget(entries, runs, params) {
 
         let speed = 1.0;
         const strokeLen = effStrokeLen[j];
-        if (strokeLen > availForTarget) {
+        if (maxSpeed > 1.0 && strokeLen > availForTarget) {
           const neededSpeed = strokeLen / availForTarget;
-          if (neededSpeed <= maxSpeed) {
-            speed = Math.max(1.0, neededSpeed);
-          } else {
-            speed = maxSpeed;
-          }
+          speed = Math.max(1.0, Math.min(maxSpeed, neededSpeed));
         }
-        speed = Math.min(maxSpeed, Math.max(minSpeedFloor[j], speed));
+        speed = Math.min(Math.min(1.0, maxSpeed), Math.max(minSpeedFloor[j], speed));
         const playDur = strokeLen / speed;
         const endSec = startSec + playDur;
 
         startArr[j] = startSec;
         endArr[j] = endSec;
         speedArr[j] = speed;
-        if ((strokeLen / availForSlotEnd) > maxSpeed + 0.05) {
+        if (maxSpeed > 1.0 && (strokeLen / availForSlotEnd) > maxSpeed + 0.05) {
           adjArr[j] = 1;
         }
         prevStrokeEndSec = endSec;
@@ -273,7 +263,7 @@ export function schedulePlayableRunsWithLagBudget(entries, runs, params) {
 
     runForwardSchedule();
 
-    const maxCompressIters = Math.max(16, m * 2);
+    const maxCompressIters = (maxSpeed > 1.0) ? Math.max(16, m * 2) : 0;
     for (let iter = 0; iter < maxCompressIters; iter++) {
       let violIdx = -1;
       let violExcess = 0;
@@ -326,33 +316,7 @@ export function schedulePlayableRunsWithLagBudget(entries, runs, params) {
         }
       }
 
-      if (neededReduction > 1e-4) {
-        const minPlayDur = 0.16;
-        let totalReduciblePlay = 0;
-        for (let k = j0; k <= strokeRangeEnd; k++) {
-          minSpeedFloor[k] = maxSpeed;
-          const playAtMax = effStrokeLen[k] / maxSpeed;
-          totalReduciblePlay += Math.max(0, playAtMax - minPlayDur);
-        }
-
-        if (totalReduciblePlay > 1e-5) {
-          for (let k = j0; k <= strokeRangeEnd; k++) {
-            const playAtMax = effStrokeLen[k] / maxSpeed;
-            const redPlay = Math.max(0, playAtMax - minPlayDur);
-            if (redPlay <= 0) continue;
-            const share = Math.min(redPlay, neededReduction * (redPlay / totalReduciblePlay));
-            const newPlayDur = playAtMax - share;
-            const newStrokeLen = newPlayDur * maxSpeed;
-            const deltaLen = effStrokeLen[k] - newStrokeLen;
-            if (deltaLen > 1e-5) {
-              effStrokeStart[k] += deltaLen * 0.35;
-              effStrokeEnd[k] = effStrokeStart[k] + newStrokeLen;
-              effStrokeLen[k] = newStrokeLen;
-              adjArr[k] = 1;
-            }
-          }
-        }
-      }
+      // Lag-induced stroke truncation eliminated: 100% stroke retention
 
       accDeficit = 0;
       for (let j = m - 1; j >= 0; j--) {
@@ -376,22 +340,11 @@ export function schedulePlayableRunsWithLagBudget(entries, runs, params) {
 
     for (let j = 0; j < m; j++) {
       const it = runItems[j];
-      let sStart = effStrokeStart[j];
-      let sEnd = effStrokeEnd[j];
-      let strokeLen = effStrokeLen[j];
-      if (it.isFingerspelling) {
-        sStart = origStrokeStart[j];
-        sEnd = origStrokeEnd[j];
-        strokeLen = origStrokeLen[j];
-      } else {
-        const minKeepLen = origStrokeLen[j] * 0.68;
-        if (strokeLen < minKeepLen) {
-          const trim = origStrokeLen[j] - minKeepLen;
-          sStart = origStrokeStart[j] + trim * 0.35;
-          sEnd = sStart + minKeepLen;
-          strokeLen = minKeepLen;
-        }
-      }
+      const sStart = origStrokeStart[j];
+      const sEnd = origStrokeEnd[j];
+      const strokeLen = origStrokeLen[j];
+      const origLen = origStrokeLen[j];
+      const strokeRetainedPct = origLen > 0 ? Number(((strokeLen / origLen) * 100).toFixed(2)) : 100.0;
       const startSec = startArr[j];
       const endSec = endArr[j];
       const speed = speedArr[j];
@@ -405,8 +358,10 @@ export function schedulePlayableRunsWithLagBudget(entries, runs, params) {
       const rawStartVel = it.prepared.sampleClipVelocityAt(sStart, 'forward');
       const rawEndVel = it.prepared.sampleClipVelocityAt(sEnd, 'backward');
       const sweepRate = playDur > 1e-6 ? (sEnd - sStart) / playDur : speed;
-      const exactSpeed = Math.min(maxSpeed, speed);
+      const exactSpeed = Math.min(1.0, Math.min(maxSpeed, speed));
 
+      it.origStrokeDuration = origLen;
+      it.strokeRetainedPct = strokeRetainedPct;
       it.strokeStart = sStart;
       it.strokeEnd = sEnd;
       it.strokeDuration = strokeLen;

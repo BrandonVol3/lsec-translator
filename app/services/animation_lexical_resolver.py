@@ -17,18 +17,15 @@ import os
 import re
 import unicodedata
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from app.config import settings
+from app.services.lexical_homonym_rules import (
+    DEFAULT_BASE_RESOLUTIONS, is_restricted_domain_folder, is_shielded_4letter_noun, resolve_homonym_with_context,
+)
 from app.services.animation_catalog_service import (
-    ensure_sign_animation_stabilized,
-    get_sign_metadata,
-    get_sign_stroke_entry,
-    get_v25_dir,
-    get_v26_dir,
-    get_v27_dir,
-    lsec_cnm,
-    normalize_text,
+    ensure_sign_animation_stabilized, get_sign_metadata, get_sign_stroke_entry,
+    get_v25_dir, get_v26_dir, get_v27_dir, lsec_cnm, normalize_text,
 )
 from app.services.animation_fingerspelling_service import (
     is_fingerspelling_query, synthesize_fingerspelling_animation, tokenize_lsec_fingerspelling,
@@ -47,114 +44,85 @@ def _load_raw_animation_json_cached(path_str: str, mtime_ns: int) -> Dict[str, A
     return data if isinstance(data, dict) else {}
 
 # Preferencias explícitas para homónimos con calificadores de dominio en el catálogo
-_PREFERRED_HOMONYMS: Dict[str, str] = {
-    "carrera": "Carrera, Estudios", "opcion": "Alternativa, Opción",
-    "educacion": "Educación", "formacion": "Formación, Manualidad",
-    "seguro": "Seguro", "fuerte": "Fuerte, Fuerza, Poder",
-    "persona": "Persona", "poder": "Poder", "querer": "Querer",
-    "mas": "Más", "con": "Con, Con(1)", "no": "No, De negación",
-    "si": "SÍ", "dia": "Día", "ano": "Año", "facil": "Fácil",
-}
+_PREFERRED_HOMONYMS: Dict[str, str] = dict(DEFAULT_BASE_RESOLUTIONS)
 
 # Alias léxicos y gramaticales LSEC hacia entradas reales de las 5,061 carpetas v2.6
 _LSEC_LEXICAL_ALIASES: Dict[str, Tuple[str, str]] = {
-    "pro1": ("Yo", "synonym"), "pro1pl": ("Nosotros(as)", "synonym"),
-    "pro2": ("Tú", "synonym"), "pro2pl": ("Ustedes", "synonym"),
-    "pro2mismo": ("Por sí mismo(a)", "synonym"), "pro3": ("El, Ella", "synonym"),
-    "pro3pl": ("Ellos, ellas", "synonym"), "esaspersonas": ("Ellos, ellas", "synonym"),
-    "eso": ("Este", "synonym"), "esto": ("Este", "synonym"),
-    "ese": ("Este", "synonym"), "esa": ("Este", "synonym"),
-    "esta": ("Este", "synonym"), "aquel": ("Este", "synonym"), "aquella": ("Este", "synonym"),
-    "masde": ("Más", "synonym"), "solamenteno": ("Solo", "synonym"), "solamente": ("Solo", "synonym"),
-    "aqui": ("Abajo, Aquí", "compound"), "hoy": ("Ahora", "synonym"),
-    "nadie": ("Ninguno(a)", "synonym"), "entre": ("Mitad", "synonym"),
-    "junto": ("Juntar, Juntos", "lemma"), "juntos": ("Juntar, Juntos", "compound"),
-    "primero": ("Primer", "lemma"), "primera": ("Primer", "lemma"),
-    "4500": ("Mil", "synonym"), "8": ("Ocho", "synonym"), "60": ("Sesenta", "synonym"),
-    "3000": ("Tres mil", "synonym"), "3200": ("Tres mil", "synonym"),
-    "2800": ("Dos mil", "synonym"), "90": ("Noventa", "synonym"),
-    "cinco": ("Cinco mil", "synonym"), "5": ("Cinco mil", "synonym"),
-    "cero": ("Nada", "synonym"), "0": ("Nada", "synonym"),
-    "quinientos": ("Quinientos", "synonym"), "quinientas": ("Quinientos", "synonym"),
-    "cientos": ("Cien", "synonym"), "ciento": ("Cien", "synonym"),
-    "proposito": ("Objetivo", "synonym"), "politecnica": ("Universidad", "synonym"),
-    "politecnico": ("Universidad", "synonym"), "liderar": ("Jefe(a)", "synonym"),
-    "lider": ("Jefe(a)", "synonym"), "liderazgo": ("Jefe(a)", "synonym"),
-    "estudiantil": ("Estudiante", "synonym"), "quinto": ("Cinco mil", "synonym"),
-    "quinta": ("Cinco mil", "synonym"), "registro": ("Inscribir, Inscripción", "synonym"),
-    "actualizado": ("Actualización", "lemma"), "actualizada": ("Actualización", "lemma"),
-    "actualizar": ("Actualización", "lemma"), "espacio": ("Local, Lugar", "synonym"),
-    "universitario": ("Universidad", "synonym"), "universitaria": ("Universidad", "synonym"),
-    "por": ("Por eso", "synonym"), "seguir": ("Continuar", "synonym"),
-    "intentar": ("Esforzarse, Esfuerzo", "synonym"), "requerido": ("Requisito", "lemma"),
-    "requerida": ("Requisito", "lemma"), "requerir": ("Requisito", "lemma"),
-    "quedar": ("Quedarse, permanecer en un lugar", "lemma"), "ningun": ("Ninguno(a)", "lemma"),
-    "practica": ("Practicar", "lemma"), "presente": ("En presencia", "synonym"),
-    "muestra": ("Mostrar", "lemma"), "artificial": ("Robot", "approximate"),
-    "hacia": ("Ir", "synonym"), "admision": ("Inscribir, Inscripción", "synonym"),
-    "whatsapp": ("Mensaje", "synonym"), "arroba": ("Correo electrónico", "synonym"),
-    "edu": ("Educación", "synonym"), "ec": ("Ecuador", "synonym"),
-    "central": ("Centro", "lemma"), "gran": ("Grande", "lemma"),
-    "joven": ("Joven, Juventud", "synonym"), "jovenes": ("Joven, Juventud", "synonym"),
-    "inscribete": ("Inscribir", "synonym"), "inscribirse": ("Inscribir", "synonym"),
-    "inscribir": ("Inscribir", "synonym"), "tecnologico": ("Tecnología", "synonym"),
-    "tecnologia": ("Tecnología", "synonym"), "evaluacion": ("Examinar, Evaluar", "synonym"),
-    "aspirante": ("Aspirar", "synonym"), "periodo": ("Período de tiempo, Transcurrir", "synonym"),
-    "deber": ("Deberes", "synonym"), "hora": ("¿Qué hora es", "synonym"),
-    "informacion": ("Extraer información", "synonym"), "iniciar": ("Empezar", "synonym"),
-    "registrar": ("Registro Civil", "synonym"), "opcionar": ("Alternativa, Opción", "synonym"),
-    "oferta": ("Ofrecer", "synonym"), "taller": ("Curso", "synonym"),
-    "dificil": ("Difícil", "synonym"), "diseno": ("Dibujar", "synonym"),
-    "dominar": ("Saber", "synonym"), "constante": ("Siempre", "synonym"),
-    "integracion": ("Integrar", "synonym"), "modalidad": ("Forma", "synonym"),
-    "presencial": ("En presencia", "synonym"), "desarrollo": ("Desarrollar", "synonym"),
+    "pro1": ("Yo", "synonym"), "pro1pl": ("Nosotros(as)", "synonym"), "pro2": ("Tú", "synonym"), "pro2pl": ("Ustedes", "synonym"),
+    "pro2mismo": ("Por sí mismo(a)", "synonym"), "pro3": ("El, Ella", "synonym"), "pro3pl": ("Ellos, ellas", "synonym"), "esaspersonas": ("Ellos, ellas", "synonym"),
+    "eso": ("Este", "synonym"), "esto": ("Este", "synonym"), "ese": ("Este", "synonym"), "esa": ("Este", "synonym"),
+    "esta": ("Este", "synonym"), "aquel": ("Este", "synonym"), "aquella": ("Este", "synonym"), "masde": ("Más", "synonym"),
+    "solamenteno": ("Solo", "synonym"), "solamente": ("Solo", "synonym"), "aqui": ("Abajo, Aquí", "compound"), "hoy": ("Ahora", "synonym"),
+    "nadie": ("Ninguno(a)", "synonym"), "entre": ("Mitad", "synonym"), "junto": ("Juntar, Juntos", "lemma"), "juntos": ("Juntar, Juntos", "compound"),
+    "primero": ("Primer", "lemma"), "primera": ("Primer", "lemma"), "4500": ("Mil", "synonym"), "8": ("Ocho", "synonym"), "60": ("Sesenta", "synonym"),
+    "3000": ("Tres mil", "synonym"), "3200": ("Tres mil", "synonym"), "2800": ("Dos mil", "synonym"), "90": ("Noventa", "synonym"),
+    "cinco": ("Cinco mil", "synonym"), "5": ("Cinco mil", "synonym"), "cero": ("O", "fingerspelling"), "0": ("O", "fingerspelling"),
+    "quinientos": ("Quinientos", "synonym"), "quinientas": ("Quinientos", "synonym"), "cientos": ("Cien", "synonym"), "ciento": ("Cien", "synonym"),
+    "proposito": ("Objetivo", "synonym"), "politecnica": ("Universidad", "synonym"), "politecnico": ("Universidad", "synonym"),
+    "liderar": ("Jefe(a)", "synonym"), "lider": ("Jefe(a)", "synonym"), "liderazgo": ("Jefe(a)", "synonym"), "estudiantil": ("Estudiante", "synonym"),
+    "quinto": ("Cinco mil", "synonym"), "quinta": ("Cinco mil", "synonym"), "registro": ("Inscribir, Inscripción", "synonym"),
+    "actualizado": ("Actualización", "lemma"), "actualizada": ("Actualización", "lemma"), "actualizar": ("Actualización", "lemma"),
+    "espacio": ("Local, Lugar", "synonym"), "universitario": ("Universidad", "synonym"), "universitaria": ("Universidad", "synonym"),
+    "por": ("Por eso", "synonym"), "seguir": ("Continuar", "synonym"), "intentar": ("Esforzarse, Esfuerzo", "synonym"),
+    "requerido": ("Requisito", "lemma"), "requerida": ("Requisito", "lemma"), "requerir": ("Requisito", "lemma"),
+    "quedar": ("Quedarse, permanecer en un lugar", "lemma"), "ningun": ("Ninguno(a)", "lemma"), "practica": ("Practicar", "lemma"),
+    "presente": ("En presencia", "synonym"), "muestra": ("Mostrar", "lemma"), "artificial": ("Robot", "approximate"),
+    "hacia": ("Ir", "synonym"), "admision": ("Inscribir, Inscripción", "synonym"), "whatsapp": ("Mensaje", "synonym"),
+    "arroba": ("Correo electrónico", "synonym"), "edu": ("Educación", "synonym"), "ec": ("Ecuador", "synonym"),
+    "central": ("Centro", "lemma"), "gran": ("Grande", "lemma"), "joven": ("Joven, Juventud", "synonym"), "jovenes": ("Joven, Juventud", "synonym"),
+    "inscribete": ("Inscribir", "synonym"), "inscribirse": ("Inscribir", "synonym"), "inscribir": ("Inscribir", "synonym"),
+    "tecnologico": ("Tecnología", "synonym"), "tecnologia": ("Tecnología", "synonym"), "evaluacion": ("Examinar, Evaluar", "synonym"),
+    "aspirante": ("Aspirar", "synonym"), "periodo": ("Período de tiempo, Transcurrir", "synonym"), "deber": ("Deberes", "synonym"),
+    "hora": ("¿Qué hora es", "synonym"), "informacion": ("Extraer información", "synonym"), "iniciar": ("Empezar", "synonym"),
+    "registrar": ("Inscribir, Inscripción", "synonym"), "opcionar": ("Alternativa, Opción", "synonym"), "oferta": ("Ofrecer", "synonym"),
+    "taller": ("Curso", "synonym"), "dificil": ("Difícil", "synonym"), "diseno": ("Dibujar", "synonym"),
+    "dominar": ("Saber", "synonym"), "constante": ("Siempre", "synonym"), "integracion": ("Integrar", "synonym"),
+    "modalidad": ("Forma", "synonym"), "presencial": ("En presencia", "synonym"), "desarrollo": ("Desarrollar", "synonym"),
     "sostenible": ("Cuidar", "synonym"), "semipresencial": ("En presencia", "synonym"),
     "seartesarrobaupecedues": ("Correo electrónico", "synonym"), "correo": ("Correo electrónico", "synonym"),
-    "academico": ("Carrera, Estudios", "synonym"), "academica": ("Carrera, Estudios", "synonym"),
-    "campus": ("Universidad", "synonym"), "conocimiento": ("Conocer", "lemma"),
-    "conocimientos": ("Conocer", "lemma"), "destacar": ("Importante", "synonym"),
-    "determinada": ("Decidir, Decisión", "synonym"), "determinado": ("Decidir, Decisión", "synonym"),
-    "determinar": ("Decidir, Decisión", "synonym"), "educar": ("Educación", "lemma"),
-    "excelencia": ("Excelente", "lemma"), "formar": ("Formación, Manualidad", "lemma"),
-    "incluir": ("Inclusión", "lemma"), "innovacion": ("Nuevo(a)", "synonym"),
-    "innovar": ("Nuevo(a)", "synonym"), "inspirar": ("Imaginar", "synonym"),
-    "inspiracion": ("Imaginar", "synonym"), "liberar": ("Libertad, Libre", "lemma"),
-    "obstaculo": ("Barrera", "synonym"), "obstaculos": ("Barrera", "synonym"),
-    "orgullo": ("Orgulloso(a)", "lemma"), "preparacion": ("Preparar", "lemma"),
-    "publica": ("Público, Pueblo", "lemma"), "publico": ("Público, Pueblo", "compound"),
-    "realidad": ("Real", "lemma"), "sostenibilidad": ("Cuidar", "synonym"),
-    "superar": ("Mejor, Mejorar", "synonym"), "trato": ("Tratar", "lemma"),
-    "tratos": ("Tratar", "lemma"), "cercano": ("Cerca", "lemma"),
-    "cercana": ("Cerca", "lemma"), "cercania": ("Cerca", "lemma"),
-    "porcentaje": ("Porcentaje", "synonym"), "porciento": ("Porcentaje", "synonym"),
-    "lugar": ("Local, Lugar", "synonym"), "puntaje": ("Punto", "synonym"),
-    "promedio": ("Promedio", "synonym"), "minimo": ("Mínimo", "synonym"),
-    "ingenieria": ("Ingeniero(a)", "synonym"), "computacion": ("Computadora", "synonym"),
-    "enfermeria": ("Enfermera", "synonym"), "agropecuaria": ("Agricultor(a), Agricultura", "synonym"),
-    "inicial": ("Primer", "synonym"), "exterior": ("Fuera", "synonym"),
+    "academico": ("Carrera, Estudios", "synonym"), "academica": ("Carrera, Estudios", "synonym"), "campus": ("Universidad", "synonym"),
+    "conocimiento": ("Conocer", "lemma"), "conocimientos": ("Conocer", "lemma"), "destacar": ("Importante", "synonym"),
+    "determinada": ("Decidir, Decisión", "synonym"), "determinado": ("Decidir, Decisión", "synonym"), "determinar": ("Decidir, Decisión", "synonym"),
+    "educar": ("Educación", "lemma"), "excelencia": ("Excelente", "lemma"), "formar": ("Formación, Manualidad", "lemma"),
+    "incluir": ("Inclusión", "lemma"), "innovacion": ("Nuevo(a)", "synonym"), "innovar": ("Nuevo(a)", "synonym"),
+    "inspirar": ("Imaginar", "synonym"), "inspiracion": ("Imaginar", "synonym"), "liberar": ("Libertad, Libre", "lemma"),
+    "obstaculo": ("Barrera", "synonym"), "obstaculos": ("Barrera", "synonym"), "orgullo": ("Orgulloso(a)", "lemma"),
+    "preparacion": ("Preparar", "lemma"), "publica": ("Público, Pueblo", "lemma"), "publico": ("Público, Pueblo", "compound"),
+    "realidad": ("Real", "lemma"), "sostenibilidad": ("Cuidar", "synonym"), "superar": ("Mejor, Mejorar", "synonym"),
+    "trato": ("Tratar", "lemma"), "tratos": ("Tratar", "lemma"), "cercano": ("Cerca", "lemma"), "cercana": ("Cerca", "lemma"),
+    "cercania": ("Cerca", "lemma"), "porcentaje": ("Porcentaje", "synonym"), "porciento": ("Porcentaje", "synonym"),
+    "lugar": ("Local, Lugar", "synonym"), "puntaje": ("Punto", "synonym"), "promedio": ("Promedio", "synonym"), "minimo": ("Mínimo", "synonym"),
+    "ingenieria": ("Ingeniero(a)", "synonym"), "computacion": ("Computadora", "synonym"), "enfermeria": ("Enfermera", "synonym"),
+    "agropecuaria": ("Agricultor(a), Agricultura", "synonym"), "inicial": ("Primer", "synonym"), "exterior": ("Fuera", "synonym"),
     "comercio": ("Comerciar, Compartir", "synonym"), "nivelacion": ("Comenzar, Empezar", "synonym"),
-    "cronograma": ("Horario, Cronograma", "synonym"), "semestre": ("Semestre", "synonym"),
-    "facultad": ("Facultad", "synonym"), "secretaria": ("Secretario(a)", "synonym"),
-    "coordinador": ("Coordinador(a)", "synonym"), "rector": ("Rector(a)", "synonym"),
-    "directora": ("Director(a)", "synonym"), "docente": ("Docente", "synonym"),
-    "becario": ("Beca", "synonym"), "matricula": ("Matrícula", "synonym"),
-    "certificado": ("Certificado, Certificar", "synonym"), "comprobante": ("Certificado, Certificar", "synonym"),
-    "carpeta": ("Carpeta", "synonym"), "requisito": ("Requisito", "synonym"),
-    "preferir": ("Preferir", "synonym"), "solicitar": ("Solicitud", "synonym"),
-    "reunir": ("Reunirse, Reunión", "synonym"), "fortalecer": ("Fuerte, Fuerza, Poder", "synonym"),
-    "legalizar": ("Poder legal", "synonym"), "financiar": ("Banco, Una institución financiera", "synonym"),
-    "postular": ("Inscribir, Inscripción", "synonym"), "debatir": ("Discutir", "synonym"),
-    "cubrir": ("Cubrir", "synonym"), "alcanzar": ("Alcanzar", "synonym"),
-    "preocupar": ("Preocuparse", "synonym"), "fallar": ("Falla", "synonym"),
-    "plataforma": ("Computadora", "approximate"), "tarea": ("Oficio, Trabajo", "synonym"),
-    "internet": ("Computadora", "approximate"), "duda": ("Dudar", "synonym"),
-    "dificultad": ("Difícil", "synonym"), "rendimiento": ("Mejor, Mejorar", "approximate"),
-    "bienestar": ("Salud, Saludable", "synonym"), "movilidad": ("Movilización, Transporte, Viático", "synonym"),
-    "entusiasmo": ("Emoción, Entusiasmarse, Simpático", "synonym"), "equipamiento": ("Equipo", "synonym"),
-    "intercultural": ("Cultura", "approximate"), "linguistico": ("Lingüista", "synonym"),
-    "linguistica": ("Lingüista", "synonym"), "antiguedad": ("Antiguo(a)", "synonym"),
-    "prestigio": ("Importante", "approximate"), "frontera": ("Frontera", "synonym"),
-    "mutuamente": ("Juntar, Juntos", "synonym"), "alguien": ("Algunos(as)", "approximate"),
+    "cronograma": ("Horario, Cronograma", "synonym"), "semestre": ("Semestre", "synonym"), "facultad": ("Facultad", "synonym"),
+    "secretaria": ("Secretario(a)", "synonym"), "coordinador": ("Coordinador(a)", "synonym"), "rector": ("Rector(a)", "synonym"),
+    "directora": ("Director(a)", "synonym"), "docente": ("Docente", "synonym"), "becario": ("Beca", "synonym"),
+    "matricula": ("Matrícula", "synonym"), "certificado": ("Certificado, Certificar", "synonym"),
+    "comprobante": ("Certificado, Certificar", "synonym"), "carpeta": ("Carpeta", "synonym"), "requisito": ("Requisito", "synonym"),
+    "preferir": ("Preferir", "synonym"), "solicitar": ("Solicitud", "synonym"), "reunir": ("Reunirse, Reunión", "synonym"),
+    "fortalecer": ("Fuerte, Fuerza, Poder", "synonym"), "legalizar": ("Poder legal", "synonym"),
+    "financiar": ("Banco, Una institución financiera", "synonym"), "postular": ("Inscribir, Inscripción", "synonym"),
+    "debatir": ("Discutir", "synonym"), "cubrir": ("Cubrir", "synonym"), "alcanzar": ("Alcanzar", "synonym"),
+    "preocupar": ("Preocuparse", "synonym"), "fallar": ("Falla", "synonym"), "plataforma": ("Computadora", "approximate"),
+    "tarea": ("Oficio, Trabajo", "synonym"), "internet": ("Computadora", "approximate"), "duda": ("Dudar", "synonym"),
+    "dificultad": ("Difícil", "synonym"), "rendimiento": ("Mejor, Mejorar", "approximate"), "bienestar": ("Salud, Saludable", "synonym"),
+    "movilidad": ("Movilización, Transporte, Viático", "synonym"), "entusiasmo": ("Emoción, Entusiasmarse, Simpático", "synonym"),
+    "equipamiento": ("Equipo", "synonym"), "intercultural": ("Cultura", "approximate"), "linguistico": ("Lingüista", "synonym"),
+    "linguistica": ("Lingüista", "synonym"), "antiguedad": ("Antiguo(a)", "synonym"), "prestigio": ("Importante", "approximate"),
+    "frontera": ("Frontera", "synonym"), "mutuamente": ("Juntar, Juntos", "synonym"), "alguien": ("Algunos(as)", "approximate"),
+    "asignatura": ("Curso", "synonym"), "asignaturas": ("Curso", "synonym"), "musica": ("Instrumento musical", "synonym"),
+    "experimental": ("E-X-P-E-R-I-M-E-N-T-A-L", "fingerspelling"), "seart": ("S-E-A-R-T-E-S", "fingerspelling"),
+    "seartes": ("S-E-A-R-T-E-S", "fingerspelling"), "2026a": ("Dos mil", "synonym"), "2026": ("Dos mil", "synonym"),
+    "estatal": ("Público, Pueblo", "synonym"), "estatales": ("Público, Pueblo", "synonym"), "constar": ("Tener", "synonym"),
+    "consta": ("Tener", "synonym"), "constan": ("Tener", "synonym"), "momento": ("Ahora", "synonym"),
+    "cupo": ("Local, Lugar", "synonym"), "cupos": ("Local, Lugar", "synonym"), "alrededor": ("Cerca", "synonym"),
+    "dentro": ("Adentro", "synonym"), "induccion": ("Comenzar, Empezar", "synonym"), "inducción": ("Comenzar, Empezar", "synonym"),
+    "jornada": ("Día", "synonym"), "jornadas": ("Día", "synonym"), "realizar": ("Hacer", "synonym"), "realizaremos": ("Hacer", "synonym"),
+    "realiza": ("Hacer", "synonym"), "realizan": ("Hacer", "synonym"), "aunque": ("Pero", "synonym"), "calor": ("Calentar, Caliente", "synonym"),
+    "promover": ("Apoyar", "synonym"), "promueve": ("Apoyar", "synonym"), "optar": ("Alternativa, Opción", "synonym"),
+    "optando": ("Alternativa, Opción", "synonym"), "seartesarrobaupeceduec": ("S-E-A-R-T-E-S", "fingerspelling"),
+    "automovilismo": ("Carrera, De autos", "synonym"),
 }
 
 
@@ -275,6 +243,7 @@ def _select_best_candidate(
     candidates: List[str],
     exact_map: Dict[str, str],
     preferred_geolect: Optional[str] = None,
+    context: Optional[str | Sequence[str]] = None,
 ) -> str:
     """Selecciona la mejor carpeta cuando existen múltiples variantes para un término."""
     if preferred_geolect:
@@ -284,20 +253,20 @@ def _select_best_candidate(
                 c_low = c.lower()
                 if f"({g_low})" in c_low or f"en la {g_low}" in c_low:
                     return c
-    if norm_key in _PREFERRED_HOMONYMS:
-        pref = _PREFERRED_HOMONYMS[norm_key]
+    ctx_pref = resolve_homonym_with_context(norm_key, context=context) or _PREFERRED_HOMONYMS.get(norm_key)
+    if ctx_pref:
         for c in candidates:
-            if unicodedata.normalize("NFC", c) == unicodedata.normalize("NFC", pref):
+            if unicodedata.normalize("NFC", c) == unicodedata.normalize("NFC", ctx_pref):
                 return c
         for c in candidates:
-            if normalize_text(c) == normalize_text(pref):
+            if normalize_text(c) == normalize_text(ctx_pref):
                 return c
     if norm_key in exact_map and exact_map[norm_key] in candidates:
         return exact_map[norm_key]
     scored = sorted(
         candidates,
         key=lambda c: (
-            1 if re.search(r",\s*de\s+", c, flags=re.IGNORECASE) else 0,
+            1 if is_restricted_domain_folder(c) else 0,
             len(c),
             c.lower(),
         ),
@@ -372,13 +341,20 @@ def _generate_morphological_candidates(gloss: str) -> List[str]:
         _add(norm[:-3] + "a")
     if norm.endswith("ana") and len(norm) > 5:
         _add(norm[:-3] + "a")
-    if norm.endswith("a") and len(norm) > 3:
-        _add(norm[:-1] + "o")
-        _add(norm[:-1])
-    if norm.endswith("o") and len(norm) > 3:
-        _add(norm[:-1] + "a")
-        _add(norm[:-1])
-        _add(norm[:-1] + "ar")
+    if norm == "medio":
+        _add("mitad")
+        _add("medioambiente")
+    elif norm == "cura":
+        _add("curar")
+    else:
+        if norm.endswith("a") and len(norm) > 3:
+            if not is_shielded_4letter_noun(norm):
+                _add(norm[:-1] + "o")
+                _add(norm[:-1])
+        if norm.endswith("o") and len(norm) > 3:
+            _add(norm[:-1] + "a")
+            _add(norm[:-1])
+            _add(norm[:-1] + "ar")
 
     if norm.endswith("ado") and len(norm) > 5:
         _add(norm[:-3] + "ar")
@@ -403,6 +379,7 @@ def resolve_gloss_to_sign(
     include_animation: bool = False,
     geolect: Optional[str] = None,
     preferred_geolect: Optional[str] = None,
+    context: Optional[str | Sequence[str]] = None,
 ) -> Dict[str, Any]:
     """
     Resuelve una glosa LSEC contra las carpetas reales del catálogo v2.7 (con respaldo v2.6 -> v2.5).
@@ -455,7 +432,12 @@ def resolve_gloss_to_sign(
     match_type: str = "none"
     status_label: str = "MISSING"
 
-    if norm_g in _PREFERRED_HOMONYMS:
+    homonym_target = resolve_homonym_with_context(norm_g, context=context)
+    if homonym_target and (homonym_target in v27_folders or homonym_target in v26_folders or homonym_target in v25_folders):
+        resolved_sign = homonym_target
+        match_type = "exact" if normalize_text(homonym_target) == norm_g else "compound"
+        status_label = "EXACT" if match_type == "exact" else "VARIANT"
+    elif norm_g in _PREFERRED_HOMONYMS:
         pref = _PREFERRED_HOMONYMS[norm_g]
         if pref in v27_folders or pref in v26_folders or pref in v25_folders:
             resolved_sign = pref
@@ -478,12 +460,12 @@ def resolve_gloss_to_sign(
         status_label = "EXACT"
 
     if not resolved_sign and norm_g in head_map:
-        resolved_sign = _select_best_candidate(norm_g, head_map[norm_g], exact_map, preferred_geolect=geolect)
+        resolved_sign = _select_best_candidate(norm_g, head_map[norm_g], exact_map, preferred_geolect=geolect, context=context)
         match_type = "compound"
         status_label = "VARIANT"
 
     if not resolved_sign and norm_g in part_map:
-        resolved_sign = _select_best_candidate(norm_g, part_map[norm_g], exact_map, preferred_geolect=geolect)
+        resolved_sign = _select_best_candidate(norm_g, part_map[norm_g], exact_map, preferred_geolect=geolect, context=context)
         match_type = "compound"
         status_label = "VARIANT"
 
@@ -491,32 +473,51 @@ def resolve_gloss_to_sign(
         try:
             from app.services.dictionary_service import get_dictionary_service
             dict_svc = get_dictionary_service()
-            entry = dict_svc.lookup_gloss(lookup_gloss)
-            if entry:
-                for cand_title in [entry.title, entry.head_word] + list(entry.synonyms or []):
-                    nc = normalize_text(cand_title)
-                    if not nc:
-                        continue
-                    if nc in exact_map:
-                        resolved_sign = exact_map[nc]
-                        match_type = "compound"
-                        status_label = "DICTIONARY"
-                        break
-                    if nc in head_map:
-                        resolved_sign = _select_best_candidate(nc, head_map[nc], exact_map)
-                        match_type = "compound"
-                        status_label = "DICTIONARY"
-                        break
-                    if nc in part_map:
-                        resolved_sign = _select_best_candidate(nc, part_map[nc], exact_map)
-                        match_type = "compound"
-                        status_label = "DICTIONARY"
-                        break
+            dmatch = dict_svc.lookup(lookup_gloss, context=context)
+            if dmatch and dmatch.entry and (dmatch.entry.title in v27_folders or dmatch.entry.title in v26_folders or dmatch.entry.title in v25_folders):
+                resolved_sign = dmatch.entry.title
+                match_type = "compound"
+                status_label = "DICTIONARY"
+            else:
+                entry = dict_svc.lookup_gloss(lookup_gloss)
+                if entry:
+                    for cand_title in [entry.title, entry.head_word] + list(entry.synonyms or []):
+                        nc = normalize_text(cand_title)
+                        if not nc:
+                            continue
+                        if nc in exact_map:
+                            resolved_sign = exact_map[nc]
+                            match_type = "compound"
+                            status_label = "DICTIONARY"
+                            break
+                        if nc in head_map:
+                            resolved_sign = _select_best_candidate(nc, head_map[nc], exact_map, context=context)
+                            match_type = "compound"
+                            status_label = "DICTIONARY"
+                            break
+                        if nc in part_map:
+                            resolved_sign = _select_best_candidate(nc, part_map[nc], exact_map, context=context)
+                            match_type = "compound"
+                            status_label = "DICTIONARY"
+                            break
         except Exception as exc:
             logger.debug("LSECDictionaryService lookup fallo para %s: %s", clean_gloss, exc)
 
-    if not resolved_sign and norm_g in _LSEC_LEXICAL_ALIASES:
-        alias_target, alias_mtype = _LSEC_LEXICAL_ALIASES[norm_g]
+    is_zeros_only = bool(norm_g and re.fullmatch(r"0+", norm_g))
+    if not resolved_sign and (norm_g in _LSEC_LEXICAL_ALIASES or is_zeros_only):
+        if is_zeros_only:
+            alias_target, alias_mtype = "O" * len(norm_g), "fingerspelling"
+        else:
+            alias_target, alias_mtype = _LSEC_LEXICAL_ALIASES[norm_g]
+        if alias_mtype == "fingerspelling" or _is_fingerspelling_gloss(alias_target):
+            fs_tokens = tokenize_lsec_fingerspelling(alias_target)
+            return {
+                "found": False, "gloss": clean_gloss, "resolved_gloss": None, "sign": None,
+                "match_type": "fingerspelling", "status": "FINGERSPELLING", "needs_review": False,
+                "warning": None, "version_served": "2.7", "is_fingerspelling": True,
+                "graphemes": [t["grapheme"] for t in fs_tokens], "tokens": fs_tokens, "qa": None,
+                "animation": synthesize_fingerspelling_animation(alias_target) if include_animation else None,
+            }
         nt = normalize_text(alias_target)
         if alias_target in v27_folders or alias_target in v26_folders or alias_target in v25_folders:
             resolved_sign = alias_target
@@ -527,7 +528,7 @@ def resolve_gloss_to_sign(
             match_type = alias_mtype
             status_label = "ALIAS" if alias_mtype == "synonym" else "APPROXIMATE"
         elif nt in part_map:
-            resolved_sign = _select_best_candidate(nt, part_map[nt], exact_map)
+            resolved_sign = _select_best_candidate(nt, part_map[nt], exact_map, context=context)
             match_type = alias_mtype
             status_label = "ALIAS" if alias_mtype == "synonym" else "APPROXIMATE"
 
@@ -544,12 +545,12 @@ def resolve_gloss_to_sign(
                 status_label = "APPROXIMATE"
                 break
             if morph_norm in head_map:
-                resolved_sign = _select_best_candidate(morph_norm, head_map[morph_norm], exact_map)
+                resolved_sign = _select_best_candidate(morph_norm, head_map[morph_norm], exact_map, context=context)
                 match_type = "lemma"
                 status_label = "APPROXIMATE"
                 break
             if morph_norm in part_map:
-                resolved_sign = _select_best_candidate(morph_norm, part_map[morph_norm], exact_map)
+                resolved_sign = _select_best_candidate(morph_norm, part_map[morph_norm], exact_map, context=context)
                 match_type = "lemma"
                 status_label = "APPROXIMATE"
                 break
@@ -557,7 +558,7 @@ def resolve_gloss_to_sign(
     if not resolved_sign and "-" in lookup_gloss:
         sub_tokens = [t.strip() for t in lookup_gloss.split("-") if len(t.strip()) >= 2]
         for sub_tok in sub_tokens:
-            sub_res = resolve_gloss_to_sign(sub_tok, version=version, include_animation=False)
+            sub_res = resolve_gloss_to_sign(sub_tok, version=version, include_animation=False, context=context)
             if sub_res.get("found"):
                 resolved_sign = sub_res["sign"]
                 match_type = "synonym"
@@ -565,19 +566,27 @@ def resolve_gloss_to_sign(
                 break
 
     if not resolved_sign:
+        fs_tokens = tokenize_lsec_fingerspelling(lookup_gloss)
+        synth_source = clean_gloss
+        if not fs_tokens and norm_g and re.fullmatch(r"\d+", norm_g):
+            synth_source = "".join("O" if c == "0" else c for c in norm_g)
+            fs_tokens = tokenize_lsec_fingerspelling(synth_source) or [
+                {"index": i, "grapheme": "O" if c == "0" else c, "display_char": c, "is_digraph": False, "is_static": True, "is_dynamic": False, "micro_rearticulation": False}
+                for i, c in enumerate(norm_g)
+            ]
+        if fs_tokens:
+            return {
+                "found": False, "gloss": clean_gloss, "resolved_gloss": None, "sign": None,
+                "match_type": "fingerspelling", "status": "FINGERSPELLING", "needs_review": False,
+                "warning": None, "version_served": "2.7", "is_fingerspelling": True,
+                "graphemes": [t["grapheme"] for t in fs_tokens], "tokens": fs_tokens, "qa": None,
+                "animation": synthesize_fingerspelling_animation(synth_source) if include_animation else None,
+            }
         return {
-            "found": False,
-            "gloss": clean_gloss,
-            "resolved_gloss": None,
-            "sign": None,
-            "match_type": "none",
-            "status": "MISSING",
-            "needs_review": False,
+            "found": False, "gloss": clean_gloss, "resolved_gloss": None, "sign": None,
+            "match_type": "none", "status": "MISSING", "needs_review": False,
             "warning": f"Sin animación en catálogo v2.7/v2.6 para '{lookup_gloss}'",
-            "version_served": None,
-            "is_fingerspelling": False,
-            "qa": None,
-            "animation": None,
+            "version_served": None, "is_fingerspelling": False, "qa": None, "animation": None,
         }
 
     anim_path: Optional[Path] = None
@@ -703,6 +712,7 @@ def resolve_batch_glosses_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     version = payload.get("version") or "2.7"
     include_animation = bool(payload.get("include_animation", False))
     geolect = payload.get("geolect")
+    context = payload.get("context")
 
     results: Dict[str, Dict[str, Any]] = {}
     items: List[Dict[str, Any]] = []
@@ -712,7 +722,7 @@ def resolve_batch_glosses_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
         g_str = str(g or "").strip()
         if not g_str:
             continue
-        res = resolve_gloss_to_sign(g_str, version=version, include_animation=include_animation, geolect=geolect)
+        res = resolve_gloss_to_sign(g_str, version=version, include_animation=include_animation, geolect=geolect, context=context)
         res.pop("anim_path", None)
         results[g_str] = res
         items.append(res)

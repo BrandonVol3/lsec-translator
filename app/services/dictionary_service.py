@@ -1,26 +1,10 @@
 """
 Servicio del Diccionario Oficial LSEC "Gabriel Román" (CONADIS).
-
 Convierte el catálogo `catalogo_lsec.json` (4.252 señas) en un índice léxico en memoria que:
-
-  1. Expande títulos con género/número y sinónimos:
-       "Abuelo(a)"                -> abuelo, abuela
-       "A diario, Cotidiano(a)"   -> a diario | cotidiano, cotidiana
-       "Capitán (ana), Vocal"     -> capitán, capitana | vocal
-       "Encontrar / Hallar"       -> encontrar | hallar
-       "CONADIS (Consejo ...)"    -> conadis | consejo nacional de discapacidad
-       "Cable (1)", "Mayo (Sierra)" -> cable, mayo (se descartan calificadores)
-  2. Resuelve glosas y palabras españolas a una seña oficial (exacta, normalizada, por lema o
-     flexionada en plural) y devuelve su ficha (video, ilustración, configuración manual...).
-  3. Aplica la cascada OOV sobre una secuencia de `GlossItem`:
-       - seña oficial CONADIS            -> `VERIFICADO_CONADIS`
-       - dactilología / partículas       -> exentas
-       - léxico curado del proyecto      -> `LEXICON_LOCAL`
-       - resto de glosas léxicas         -> `NO_VERIFICADO` + revisión nativa (si está activado)
+  1. Expande títulos con género/número y sinónimos ("Abuelo(a)", "Encontrar / Hallar", etc.).
+  2. Resuelve glosas y palabras españolas a una seña oficial y devuelve su ficha.
+  3. Aplica la cascada OOV sobre una secuencia de `GlossItem`.
   4. Ofrece búsqueda exacta/prefijo/difusa para los endpoints REST.
-
-ADVERTENCIA: figurar en el diccionario oficial no equivale a validación nativa; las salidas siguen
-siendo propuestas computacionales sujetas a revisión por personas sordas usuarias de LSEC.
 """
 
 from __future__ import annotations
@@ -37,12 +21,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, List, Optional, Sequence, Set, Tuple
 
-from app.core.schemas import (
-    AlignmentType,
-    DictionarySignMetadata,
-    GlossItem,
-    GlossType,
-)
+from app.core.schemas import AlignmentType, DictionarySignMetadata, GlossItem, GlossType
+from app.services.lexical_homonym_rules import get_conadis_homonym_priority, resolve_homonym_with_context
 
 logger = logging.getLogger(__name__)
 
@@ -52,12 +32,9 @@ INDEX_FILENAME = "lsec_dictionary_index.json"
 INDEX_SCHEMA_VERSION = 2
 MAX_PHRASE_WORDS = 6
 
-STATUS_VERIFIED = "VERIFICADO_CONADIS"
-STATUS_UNVERIFIED = "NO_VERIFICADO"
-STATUS_GRAMMATICAL = "EXENTO_GRAMATICAL"
-STATUS_FINGERSPELLING = "DACTILOLOGIA"
-STATUS_LOCAL_LEXICON = "LEXICON_LOCAL"
-STATUS_PARAPHRASE = "PARAFRASIS_REVISION"
+STATUS_VERIFIED, STATUS_UNVERIFIED = "VERIFICADO_CONADIS", "NO_VERIFICADO"
+STATUS_GRAMMATICAL, STATUS_FINGERSPELLING = "EXENTO_GRAMATICAL", "DACTILOLOGIA"
+STATUS_LOCAL_LEXICON, STATUS_PARAPHRASE = "LEXICON_LOCAL", "PARAFRASIS_REVISION"
 
 UNVERIFIED_REVIEW_REASON = (
     "La glosa '{gloss}' no figura en el Diccionario Oficial LSEC (CONADIS); "
@@ -75,19 +52,12 @@ _GRAMMATICAL_GLOSSES: Set[str] = {
     "POR-QUÉ", "PORQUÉ", "TERMINADO", "FIN", "DURATIVO", "REITERATIVO", "COMPLETIVO",
 }
 _GRAMMATICAL_PATTERNS: Tuple[re.Pattern[str], ...] = (
-    re.compile(r"^PRO[123]"),
-    re.compile(r"^(IX|POSS|REF)\d?([-_:].*)?$"),
-    re.compile(r"^CL[:\-]"),
-    re.compile(r"^\d+([.,]\d+)?$"),
-    re.compile(r"^\+\+$"),
+    re.compile(r"^PRO[123]"), re.compile(r"^(IX|POSS|REF)\d?([-_:].*)?$"),
+    re.compile(r"^CL[:\-]"), re.compile(r"^\d+([.,]\d+)?$"), re.compile(r"^\+\+$"),
 )
 _GRAMMATICAL_ALIGNMENTS: Set[Any] = {
-    AlignmentType.GRAMMATICAL,
-    AlignmentType.DEICTIC,
-    AlignmentType.DISCOURSE_MARKER,
-    AlignmentType.IMPLICIT,
-    AlignmentType.COREFERENCE,
-    AlignmentType.ENTITY_ALIAS,
+    AlignmentType.GRAMMATICAL, AlignmentType.DEICTIC, AlignmentType.DISCOURSE_MARKER,
+    AlignmentType.IMPLICIT, AlignmentType.COREFERENCE, AlignmentType.ENTITY_ALIAS,
     "GRAMMATICAL", "DEICTIC", "DISCOURSE_MARKER", "IMPLICIT", "COREFERENCE", "ENTITY_ALIAS",
 }
 _PRIVATE_ENYE = "\ue000"
@@ -345,7 +315,12 @@ class LSECDictionaryService:
         else:
             entries = self._parse_catalog(self.catalog_path)
             self.loaded_from = "catalog"
-        self._entries = entries
+        for e in (entries or []):
+            if normalize_key(e.title) == "curar curacion":
+                for extra in ("cura", "curas"):
+                    if extra not in e.forms:
+                        e.forms.append(extra)
+        self._entries = entries or []
         self._by_slug = {e.slug: e for e in entries}
         self._build_lookup()
         logger.info(
@@ -388,6 +363,10 @@ class LSECDictionaryService:
                 for f in v.forms:
                     if f not in forms:
                         forms.append(f)
+            if normalize_key(title) == "curar curacion":
+                for extra in ("cura", "curas"):
+                    if extra not in forms:
+                        forms.append(extra)
             cats = [str(c) for c in (item.get("categorias") or [])]
             hand = item.get("hand_configuration") or next((c for c in cats if c.startswith("configuracion_manual")), None)
             alpha = item.get("alphabetical_group") or next((c for c in cats if c.startswith("alfa-")), None)
@@ -433,7 +412,9 @@ class LSECDictionaryService:
                         if vk.split()[0][:3] == key.split()[0][:3]:
                             rank = r
                             break
-                prio = (0 if n_variants == 1 else (2 if ", de " in entry.title.lower() else 1), rank, n_variants, no_video)
+                hprio = get_conadis_homonym_priority(entry.title, form)
+                prio_tier = hprio if hprio is not None else (0 if n_variants == 1 else (2 if ", de " in entry.title.lower() else 1))
+                prio = (prio_tier, rank, n_variants, no_video)
                 index.setdefault(key, []).append((prio, idx, form))
         for key in index:
             index[key].sort(key=lambda t: (t[0], t[1]))
@@ -481,10 +462,21 @@ class LSECDictionaryService:
         if key.endswith("s"):
             yield key[:-1]
 
-    def _find(self, key: str, preferred_geolect: Optional[str] = None) -> Optional[Tuple[int, str]]:
+    def _find(
+        self,
+        key: str,
+        preferred_geolect: Optional[str] = None,
+        context: Optional[str | Sequence[str]] = None,
+    ) -> Optional[Tuple[int, str]]:
         hits = self._index.get(key)
         if not hits:
             return None
+        target = resolve_homonym_with_context(key, context=context)
+        if target:
+            tkey = normalize_key(target)
+            for _, idx, form in hits:
+                if normalize_key(self._entries[idx].title) == tkey:
+                    return idx, form
         if preferred_geolect:
             pref_norm = preferred_geolect.strip().capitalize()
             if pref_norm in ("Sierra", "Costa"):
@@ -495,24 +487,20 @@ class LSECDictionaryService:
         return idx, form
 
     def lookup(
-        self,
-        term: str,
-        *,
-        match_type: str = "exact",
-        allow_inflection: bool = True,
-        preferred_geolect: Optional[str] = None,
+        self, term: str, *, match_type: str = "exact", allow_inflection: bool = True,
+        preferred_geolect: Optional[str] = None, context: Optional[str | Sequence[str]] = None,
     ) -> Optional[DictionaryMatch]:
-        """Resuelve un término (palabra o frase) a una seña oficial, priorizando opcionalmente un geolecto."""
+        """Resuelve un término (palabra o frase) a una seña oficial, priorizando opcionalmente geolecto o contexto."""
         if not self.available or not term:
             return None
         key = normalize_key(term)
         if not key:
             return None
-        found = self._find(key, preferred_geolect=preferred_geolect)
+        found = self._find(key, preferred_geolect=preferred_geolect, context=context)
         label = match_type
         if found is None and allow_inflection:
             for cand in self._inflection_candidates(key):
-                found = self._find(cand, preferred_geolect=preferred_geolect)
+                found = self._find(cand, preferred_geolect=preferred_geolect, context=context)
                 if found is not None:
                     label = "inflected"
                     break
@@ -549,11 +537,8 @@ class LSECDictionaryService:
         return any(p.search(g) for p in _GRAMMATICAL_PATTERNS)
 
     def lookup_gloss(
-        self,
-        gloss: str,
-        normalized_word: Optional[str] = None,
-        source_word: Optional[str] = None,
-        preferred_geolect: Optional[str] = None,
+        self, gloss: str, normalized_word: Optional[str] = None,
+        source_word: Optional[str] = None, preferred_geolect: Optional[str] = None,
     ) -> Optional[DictionaryMatch]:
         """Resuelve una glosa generada probando glosa, palabra normalizada, fuente y lema verbal."""
         if not self.available:
@@ -785,8 +770,8 @@ def _main(argv: Optional[Sequence[str]] = None) -> int:  # pragma: no cover - ut
     import argparse
     parser = argparse.ArgumentParser(description="Utilidades del Diccionario LSEC (CONADIS)")
     parser.add_argument("--build-index", action="store_true", help="Genera data/lsec_dictionary_index.json")
-    parser.add_argument("--catalog", default=None, help="Ruta a catalogo_lsec.json")
-    parser.add_argument("--lookup", default=None, help="Consulta un término")
+    for flag, h in (("--catalog", "Ruta a catalogo_lsec.json"), ("--lookup", "Consulta un término")):
+        parser.add_argument(flag, default=None, help=h)
     args = parser.parse_args(argv)
     svc = LSECDictionaryService(catalog_path=args.catalog)
     if args.build_index: print(f"Índice escrito en: {svc.build_index_file()}")

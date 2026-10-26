@@ -17,9 +17,9 @@ export class StudioAvatarBridge {
     this.solidBgColor = '#cfe5da';
     this.fluidMode = true;
     this.compiler = new SequenceCompiler({
-      maxSpeed: 1.6,
+      maxSpeed: 1.0,
       minSpeed: 0.70,
-      maxLagSec: 1.0,
+      maxLagSec: Infinity,
       restGapThresholdSec: 1.5,
       extendEndForLag: true
     });
@@ -293,14 +293,18 @@ export class StudioAvatarBridge {
     const videoDuration = Number(project.media_info?.duration_seconds) ||
       Number(window.appState?.state?.playback?.duration) || 0;
 
-    return this.compiler.compile(project, this.clipMap, {
-      maxSpeed: 1.6,
+    const plan = this.compiler.compile(project, this.clipMap, {
+      maxSpeed: 1.0,
       minSpeed: 0.70,
-      maxLagSec: 1.0,
+      maxLagSec: Infinity,
       restGapThresholdSec: 1.5,
       extendEndForLag: true,
       videoDuration
     });
+    if (window.appState && typeof window.appState.setSequenceEndTime === 'function') {
+      window.appState.setSequenceEndTime(plan.sequenceEndTime);
+    }
+    return plan;
   }
 
   /**
@@ -427,8 +431,9 @@ export class StudioAvatarBridge {
     const isPlaying = Boolean(window.appState?.state?.playback?.isPlaying);
     if (isPlaying) {
       const videoEl = document.getElementById('main-video-element');
+      const isExtendedTail = Boolean(window.appState?.state?.playback?.isExtendedTail);
       let t = Number(window.appState?.state?.playback?.currentTime) || 0;
-      if (videoEl && !videoEl.paused && videoEl.readyState >= 2 && Number.isFinite(videoEl.currentTime)) {
+      if (!isExtendedTail && videoEl && !videoEl.paused && videoEl.readyState >= 2 && Number.isFinite(videoEl.currentTime)) {
         t = videoEl.currentTime;
       }
       this._extendedTailActive = false;

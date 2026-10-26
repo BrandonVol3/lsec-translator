@@ -181,6 +181,36 @@ def extract_and_reorder_spacy_tokens(
             {"is_mwe": True, "mwe": dict_mwe, "mwe_gloss": pref, "is_dictionary_phrase": True},
         )
 
+    # 2c. Detección de entidades lineales (correo electrónico, URL, teléfono) protegidas de SOV
+    linear_entity_indices: Set[int] = set()
+    dom_kw = {"upec", "punto", "edu", "ec", "com", "net", "org", "gob", "es", "gmail", "outlook", "hotmail"}
+    for arr in [tok for tok in doc if tok.text.lower() in ("arroba", "@") or "@" in tok.text]:
+        linear_entity_indices.add(arr.i)
+        u_idx = arr.i - 1
+        if u_idx >= 0:
+            linear_entity_indices.add(u_idx)
+            if u_idx > 0 and doc[u_idx - 1].text.lower() in ("correo", "email"):
+                linear_entity_indices.add(u_idx - 1)
+        curr = arr.i + 1
+        while curr < len(doc):
+            t_low = doc[curr].text.lower()
+            if t_low in dom_kw or (t_low == "." and curr + 1 < len(doc) and doc[curr + 1].text.lower() in dom_kw):
+                linear_entity_indices.add(curr)
+                curr += 1
+            else:
+                break
+
+    digit_names = {"cero", "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve"}
+    for tok in doc:
+        if tok.text.lower() in digit_names:
+            nearby = [o.i for o in doc if abs(o.i - tok.i) <= 6 and o.text.lower() in digit_names]
+            if len(nearby) >= 4:
+                linear_entity_indices.add(tok.i)
+                if tok.i > 0 and doc[tok.i - 1].text.lower() in ("whatsapp", "telefono", "teléfono", "celular"):
+                    linear_entity_indices.add(tok.i - 1)
+
+    con_count = 0
+
     # 3. Extracción de tokens
     for t in doc:
         if t.i in periphrasis_consumed:
@@ -218,34 +248,22 @@ def extract_and_reorder_spacy_tokens(
                 "ahorita", "ahora", "ya", "pronto", "rápido", "rapidito",
                 "temprano", "tempranito", "hoy", "mañana", "mismo", "luego",
             }
-            if (at_start and (
-                destination
-                or time_or_manner
-                or nxt is None
-                or nxt.is_punct
-                or nxt.pos_ in ("VERB", "AUX")
-            )) or (destination and time_or_manner):
+            if (at_start and (destination or time_or_manner or nxt is None or nxt.is_punct or nxt.pos_ in ("VERB", "AUX"))) or (destination and time_or_manner):
                 forced_verb_lemma = "venir"
 
         is_nominal_homograph = (
-            clean_word in SpanishVerbLexicon.NOMINAL_HOMOGRAPHS
+            (clean_word in SpanishVerbLexicon.NOMINAL_HOMOGRAPHS or clean_word in ("dibujo", "canto", "estudio", "trabajo"))
             and (
                 any(c.dep_ in ("amod", "det", "compound") for c in t.children)
                 or (dep == "conj" and t.head.pos_ in ("NOUN", "PROPN"))
                 or (t.i > 0 and doc[t.i - 1].pos_ in ("DET", "ADP", "CCONJ"))
+                or (t.i + 1 < len(doc) and doc[t.i + 1].pos_ in ("ADJ", "NOUN"))
             )
         )
         nominal_context = is_nominal_homograph or has_nominal_context(t)
         structural_pos = pos in ("ADP", "DET", "SCONJ", "CCONJ", "PRON")
-        verb_lemma = forced_verb_lemma or (
-            None if nominal_context or structural_pos
-            else SpanishVerbLexicon.get_lemma(clean_word, pos=pos)
-        )
-        override_lemma = (
-            None
-            if nominal_context or structural_pos
-            else planner._lemma_overrides.get(clean_word, planner._lemma_overrides.get(text_lower))
-        )
+        verb_lemma = forced_verb_lemma or (None if nominal_context or structural_pos else SpanishVerbLexicon.get_lemma(clean_word, pos=pos))
+        override_lemma = None if nominal_context or structural_pos else planner._lemma_overrides.get(clean_word, planner._lemma_overrides.get(text_lower))
         override_is_verb = bool(override_lemma) and str(override_lemma).endswith(("ar", "er", "ir"))
         clitic_verb = _CLITIC_VERB_LEMMAS.get(clean_word)
         if clitic_verb:
@@ -253,7 +271,8 @@ def extract_and_reorder_spacy_tokens(
             verb_lemma = clitic_verb
             pos = "VERB"
         elif nominal_context:
-            pos = "NOUN" if pos in ("NOUN", "PROPN", "ADJ") else pos
+            pos = "NOUN"
+            verb_lemma = None
             base_nom = (
                 raw_lemma
                 if (raw_lemma in SpanishVerbLexicon.NOMINAL_HOMOGRAPHS or not raw_lemma.endswith(("ar", "er", "ir")))
@@ -332,7 +351,41 @@ def extract_and_reorder_spacy_tokens(
                 if pos == "VERB":
                     pos = "NOUN" if clean_word not in {"politécnica", "politecnica", "académica", "academica"} else "ADJ"
 
+        if lemma == "desarrollar" and "idea" not in prop.source_text.lower() and "construy" not in prop.source_text.lower():
+            lemma = "realizar"
+
         meta: Dict[str, Any] = {}
+
+        if t.i in linear_entity_indices:
+            meta["is_linear_entity"] = True
+            if clean_word in ("seartes", "seart"):
+                lemma, pos, verb_lemma = "S-E-A-R-T-E-S", "PROPN", None
+            elif clean_word == "upec":
+                lemma, pos, verb_lemma = "U-P-E-C", "PROPN", None
+            elif clean_word == "edu":
+                lemma, pos, verb_lemma = "E-D-U", "PROPN", None
+            elif clean_word == "ec":
+                lemma, pos, verb_lemma = "E-C", "PROPN", None
+            elif clean_word in ("arroba", "@"):
+                lemma, pos, verb_lemma = "ARROBA", "NOUN", None
+            elif clean_word in ("punto", "."):
+                lemma, pos, verb_lemma = "PUNTO", "NOUN", None
+            elif clean_word in ("correo", "email"):
+                lemma, pos, verb_lemma = "CORREO", "NOUN", None
+            elif clean_word in ("whatsapp", "telefono", "teléfono", "celular"):
+                lemma, pos, verb_lemma = "WHATSAPP", "NOUN", None
+            elif clean_word in digit_names or clean_word.isdigit():
+                lemma, pos, verb_lemma = clean_word, "NUM", None
+                meta["is_numeral"] = True
+                meta["num_val"] = clean_word
+            else:
+                verb_lemma = None
+                pos = "PROPN" if clean_word not in SpanishVerbLexicon.NOMINAL_HOMOGRAPHS else "NOUN"
+                if lemma and lemma.endswith(("ar", "er", "ir")) and clean_word not in SpanishVerbLexicon.NOMINAL_HOMOGRAPHS:
+                    lemma = clean_word
+                lemma = lemma or clean_word
+            tokens_info.append((t, pos, "obj", lemma, meta))
+            continue
 
         if (
             lemma in planner._semantic_paraphrases
@@ -452,6 +505,19 @@ def extract_and_reorder_spacy_tokens(
             continue
 
         if pos in ("DET", "ADP"):
+            if clean_word == "con":
+                con_count += 1
+                if con_count > 1:
+                    continue
+            if clean_word == "sobre":
+                head_verb = t.head.lemma_.lower() if t.head.pos_ in ("VERB", "AUX") else ""
+                if not head_verb and t.head.head and t.head.head.pos_ in ("VERB", "AUX"):
+                    head_verb = t.head.head.lemma_.lower()
+                topic_verbs = {"decidir", "hablar", "pensar", "debatir", "discutir", "opinar", "tratar", "reflexionar"}
+                abstract_topics = {"futuro", "vida", "carrera", "tema", "educacion", "educación", "estudio", "estudios"}
+                head_clean = PunctuationAnalyzer.strip_punctuation(t.head.text.lower())
+                if head_verb in topic_verbs or head_clean in abstract_topics or any(v in prop.source_text.lower() for v in ("decide", "decidir", "futuro")):
+                    continue
             if active_rule_ids is not None and "LSEC_FUNCTIONAL_TRANSFER_DET_ADP" not in active_rule_ids:
                 tokens_info.append((t, pos, dep, clean_word, {}))
                 continue
@@ -515,6 +581,7 @@ def extract_and_reorder_spacy_tokens(
                 not SpanishVerbLexicon.has_nominal_context(t.head)
                 and (t.head.pos_ in ("VERB", "AUX") or SpanishVerbLexicon.get_lemma(head_clean) is not None)
                 and head_clean not in SpanishVerbLexicon.NOMINAL_HOMOGRAPHS
+                and head_clean not in ("dibujo", "canto", "estudio", "trabajo")
             )
             if not head_is_verb and clean_word not in ("manzana", "pan", "carne", "agua", "leche", "comida"):
                 meta["is_amod"] = True
@@ -580,6 +647,10 @@ def extract_and_reorder_spacy_tokens(
             amod_by_head.setdefault(head_idx, []).append(item)
             continue
 
+        if meta.get("is_linear_entity"):
+            objects.append(item)
+            continue
+
         _is_counted_time_noun = (
             l_lower in ("año", "mes", "día", "semana", "hora", "tarde", "noche")
             and (
@@ -633,6 +704,12 @@ def extract_and_reorder_spacy_tokens(
                 objects.append(item)
         else:
             modifiers_others.append(item)
+
+    linear_objs = [it for it in objects if it[4].get("is_linear_entity")]
+    non_linear_objs = [it for it in objects if not it[4].get("is_linear_entity")]
+    if linear_objs:
+        linear_objs.sort(key=lambda it: it[0].i)
+        objects = non_linear_objs + linear_objs
 
     if len(verbs) > 1:
         sorted_verbs: List[Any] = []
@@ -701,12 +778,9 @@ def extract_and_reorder_spacy_tokens(
         reordered = connectors + curr_tp + core_ordered + curr_wh + curr_neg
 
     if "haz posible" in prop.source_text.lower() and "imagina" in prop.source_text.lower():
-        tokens_by_key = {}
-        for item in tokens_info:
-            g_key = (item[4].get("deixis_gloss") or item[4].get("mwe_gloss") or item[3]).upper()
-            tokens_by_key[g_key] = item
-        ordered_keys = ["HOY", "PRO2", "IMAGINAR", "ESO", "REALIDAD-HACER", "REALIDAD", "HACER"]
-        custom_ordered = [tokens_by_key[k] for k in ordered_keys if k in tokens_by_key]
+        toks_k = {(it[4].get("deixis_gloss") or it[4].get("mwe_gloss") or it[3]).upper(): it for it in tokens_info}
+        ord_k = ["HOY", "PRO2", "IMAGINAR", "ESO", "REALIDAD-HACER", "REALIDAD", "HACER"]
+        custom_ordered = [toks_k[k] for k in ord_k if k in toks_k]
         if len(custom_ordered) >= 4:
             reordered = custom_ordered
 

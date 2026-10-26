@@ -63,29 +63,18 @@ class CorrectionRecord:
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            "id": self.id,
-            "normalization_id": self.normalization_id or self.id,
-            "asr_text": self.asr_text,
-            "normalized_text": self.normalized_text,
-            "original": self.asr_text,
-            "corrected": self.normalized_text,
-            "type": self.reason,
-            "source_char_start": self.source_char_start,
-            "source_char_end": self.source_char_end,
+            "id": self.id, "normalization_id": self.normalization_id or self.id,
+            "asr_text": self.asr_text, "normalized_text": self.normalized_text,
+            "original": self.asr_text, "corrected": self.normalized_text, "type": self.reason,
+            "source_char_start": self.source_char_start, "source_char_end": self.source_char_end,
             "source_token_indexes": self.source_token_indexes,
             "global_source_token_indexes": self.global_source_token_indexes or self.source_token_indexes,
-            "source_start_seconds": self.source_start_seconds,
-            "source_end_seconds": self.source_end_seconds,
-            "alignment_type": self.alignment_type,
-            "alignment_confidence": self.alignment_confidence,
-            "asr_confidence": self.asr_confidence,
-            "normalization_confidence": self.normalization_confidence,
-            "correction_confidence": self.correction_confidence,
-            "correction_reason": self.correction_reason,
-            "reason": self.reason,
-            "requires_human_review": self.requires_human_review,
-            "alternative_candidates": self.alternative_candidates,
-            "position": self.position,
+            "source_start_seconds": self.source_start_seconds, "source_end_seconds": self.source_end_seconds,
+            "alignment_type": self.alignment_type, "alignment_confidence": self.alignment_confidence,
+            "asr_confidence": self.asr_confidence, "normalization_confidence": self.normalization_confidence,
+            "correction_confidence": self.correction_confidence, "correction_reason": self.correction_reason,
+            "reason": self.reason, "requires_human_review": self.requires_human_review,
+            "alternative_candidates": self.alternative_candidates, "position": self.position,
         }
 
 
@@ -109,7 +98,7 @@ _DEFAULT_ENTITY_REGISTRY: Dict[str, EntityInfo] = {
         entity_type="organization",
         preferred_gloss="U-P-E-C",
         default_spatial_location="center",
-        aliases=["Politécnica del Carchi", "Politécnica Carchi", "Universidad Politécnica Estatal del Carchi", "UPEC", "la universidad", "la institución"],
+        aliases=["Politécnica del Carchi", "Politécnica Carchi", "Universidad Politécnica Estatal del Carchi", "UPEC", "la universidad", "la institución", "Universidad Politécnica", "Estatal del Carchi"],
     ),
     "Tulcán": EntityInfo(full_name="Tulcán", entity_type="location", preferred_gloss="T-U-L-C-Á-N", default_spatial_location="left", aliases=["Tulkán", "Tulkan", "campus Tulcán"]),
     "Cayambe": EntityInfo(full_name="Cayambe", entity_type="location", preferred_gloss="C-A-Y-A-M-B-E", default_spatial_location="right", aliases=["Callambe", "Callambé", "campus Cayambe"]),
@@ -127,6 +116,14 @@ _DEFAULT_CONTEXTUAL_CORRECTIONS: List[Dict[str, Any]] = [
     {"pattern": r"\bcampos\s+Tulc[aá]n\b", "replacement": "campus Tulcán", "asr_confidence": 0.650, "normalization_confidence": 0.99, "reason": "contextual: universidad tiene campus, no campos", "requires_human_review": False, "alternative_candidates": ["campus Tulcán"]},
     {"pattern": r"\bTulk[aá]n\b", "replacement": "Tulcán", "asr_confidence": 0.700, "normalization_confidence": 0.98, "reason": "topónimo oficial Carchi", "requires_human_review": False, "alternative_candidates": ["Tulcán"]},
     {"pattern": r"\b[Cc]allambe\b", "replacement": "Cayambe", "asr_confidence": 0.720, "normalization_confidence": 0.98, "reason": "topónimo oficial Pichincha", "requires_human_review": False, "alternative_candidates": ["Cayambe"]},
+    {"pattern": r"\bEstandel\s+(?:Karczym|Karchim)\b", "replacement": "Estatal del Carchi", "asr_confidence": 0.50, "normalization_confidence": 0.99, "reason": "corrección fonética ASR: 'Estandel Karczym' -> 'Estatal del Carchi'", "requires_human_review": False, "alternative_candidates": ["Estatal del Carchi"]},
+    {"pattern": r"\b20[-–]26[aA]\b", "replacement": "2026-A", "asr_confidence": 0.85, "normalization_confidence": 0.98, "reason": "periodo académico ASR: '20-26a' -> '2026-A'", "requires_human_review": False, "alternative_candidates": ["2026-A"]},
+    {"pattern": r"\b(?:8|ocho)\s+y\s+cuarto\b", "replacement": "ocho y quince", "asr_confidence": 0.95, "normalization_confidence": 0.98, "reason": "expresión horaria: '8 y cuarto' -> 'ocho y quince'", "requires_human_review": False, "alternative_candidates": ["ocho y quince"]},
+    {"pattern": r"\b(\d{1,2})\s+y\s+cuarto\b", "replacement": r"\1 y quince", "asr_confidence": 0.95, "normalization_confidence": 0.98, "reason": "expresión horaria: 'X y cuarto' -> 'X y quince'", "requires_human_review": False, "alternative_candidates": ["X y quince"]},
+    {"pattern": r"\bopcionando\b", "replacement": "optando", "asr_confidence": 0.85, "normalization_confidence": 0.95, "reason": "neologismo administrativo 'opcionando' -> 'optando'", "requires_human_review": False, "alternative_candidates": ["optando"]},
+    {"pattern": r"\bopcionan\b", "replacement": "optan", "asr_confidence": 0.85, "normalization_confidence": 0.95, "reason": "neologismo administrativo 'opcionan' -> 'optan'", "requires_human_review": False, "alternative_candidates": ["optan"]},
+    {"pattern": r"\bopcionar\b", "replacement": "optar", "asr_confidence": 0.85, "normalization_confidence": 0.95, "reason": "neologismo administrativo 'opcionar' -> 'optar'", "requires_human_review": False, "alternative_candidates": ["optar"]},
+    {"pattern": r"\bdesarrolla\s+la\s+etapa\b", "replacement": "realiza la etapa", "asr_confidence": 0.90, "normalization_confidence": 0.95, "reason": "desarrollar etapa administrativa -> realiza la etapa", "requires_human_review": False, "alternative_candidates": ["realiza la etapa"]},
     {"pattern": r"\bexcelencia\s+cad[eé]nica\b", "replacement": "excelencia académica", "asr_confidence": 0.550, "normalization_confidence": 0.99, "reason": "colocación semántica académica", "requires_human_review": False, "alternative_candidates": ["excelencia académica"]},
     {"pattern": r"\bcad[eé]nica\b", "replacement": "académica", "asr_confidence": 0.600, "normalization_confidence": 0.97, "reason": "corrección fonética ASR", "requires_human_review": False, "alternative_candidates": ["académica"]},
     {"pattern": r"\bcadenica\b", "replacement": "académica", "asr_confidence": 0.600, "normalization_confidence": 0.97, "reason": "corrección fonética ASR", "requires_human_review": False, "alternative_candidates": ["académica"]},
@@ -199,6 +196,18 @@ def _clock_time_replacer(match: "re.Match[str]") -> str:
     return f"hora {match.group(1)} {match.group(2)}"
 
 
+_DIGIT_SPOKEN_MAP: Dict[str, str] = {
+    "0": "cero", "1": "uno", "2": "dos", "3": "tres", "4": "cuatro",
+    "5": "cinco", "6": "seis", "7": "siete", "8": "ocho", "9": "nueve",
+}
+
+
+def _phone_number_replacer(match: "re.Match[str]") -> str:
+    """Convierte secuencias de números telefónicos (ej. 099 28 72 993) en dígitos hablados."""
+    digits = [c for c in match.group(0) if c.isdigit()]
+    return " ".join(_DIGIT_SPOKEN_MAP[d] for d in digits if d in _DIGIT_SPOKEN_MAP)
+
+
 def _upec_email_replacer(match: "re.Match[str]") -> str:
     """Separa un correo UPEC en unidades que el planificador puede glosar."""
     user = match.group(1)
@@ -241,7 +250,8 @@ def _de_una_replacer(match: "re.Match[str]") -> str:
 
 
 _DEFAULT_CONTEXTUAL_CORRECTIONS.extend([
-    {"pattern": r"\b([a-záéíóúñü]+)arrobaupec\.edu\.es\b", "replacement": "", "replacer": _upec_email_replacer, "asr_confidence": 0.92, "normalization_confidence": 0.98, "reason": "correo institucional ASR: dominio UPEC normalizado a .edu.ec", "requires_human_review": False, "alternative_candidates": ["usuario arroba UPEC punto edu punto ec"]},
+    {"pattern": r"\b([a-zA-Z0-9._%+-]+)(?:arrobaupec\.edu\.(?:es|ec)|@upec\.edu\.(?:es|ec))\b", "replacement": "", "replacer": _upec_email_replacer, "asr_confidence": 0.92, "normalization_confidence": 0.98, "reason": "correo institucional ASR: dominio UPEC normalizado a .edu.ec", "requires_human_review": False, "alternative_candidates": ["usuario arroba UPEC punto edu punto ec"]},
+    {"pattern": r"(?:(?:\+593|\b593)[\s.-]?0?|\b0)\d(?:[\s.-]?\d){7,9}\b", "replacement": "", "replacer": _phone_number_replacer, "asr_confidence": 0.95, "normalization_confidence": 0.98, "reason": "número telefónico -> dígitos hablados", "requires_human_review": False, "alternative_candidates": ["cero nueve ..."]},
     {"pattern": _DAME_GERUND_RE, "replacement": "", "replacer": _dame_gerund_replacer, "asr_confidence": 0.90, "normalization_confidence": 0.95, "reason": "cortesía indirecta ecuatoriana: 'dame + gerundio' → 'por favor + infinitivo'", "requires_human_review": False, "alternative_candidates": ["por favor + infinitivo"]},
     {"pattern": r"\b(?:ñaños?|ñañas?|guaguas?)\b", "replacement": "", "replacer": _slang_noun_replacer, "asr_confidence": 0.90, "normalization_confidence": 0.95, "reason": "quechuismo/coloquialismo ecuatoriano → léxico general LSEC", "requires_human_review": False, "alternative_candidates": ["hermano", "niño"]},
     # 'pana' (amigo) no debe confundirse con la tela: 'pantalón de pana'.
@@ -370,18 +380,12 @@ class TextNormalizer:
         self._min_confidence = min_confidence
         from app.services.spoken_text_cleaner import SpokenTextCleaner
         self._spoken_cleaner: Optional[SpokenTextCleaner] = SpokenTextCleaner()
-        self._dubious_words: List[Dict[str, Any]] = [
-            {
-                "word": "liberan",
-                "contextual_sense_confidence": 0.35,
-                "asr_confidence": 0.989,
-                "requires_audio_review": True,
-                "review_reason": "high_acoustic_confidence_but_low_contextual_coherence",
-                "contextual_hypotheses": ["lideran", "crean", "proyectan"],
-                "acoustic_candidates": [],
-                "alternative_candidates": ["lideran", "crean", "proyectan"],
-            }
-        ]
+        self._dubious_words: List[Dict[str, Any]] = [{
+            "word": "liberan", "contextual_sense_confidence": 0.35, "asr_confidence": 0.989,
+            "requires_audio_review": True, "review_reason": "high_acoustic_confidence_but_low_contextual_coherence",
+            "contextual_hypotheses": ["lideran", "crean", "proyectan"], "acoustic_candidates": [],
+            "alternative_candidates": ["lideran", "crean", "proyectan"],
+        }]
 
         raw_corrections = corrections or list(_DEFAULT_CONTEXTUAL_CORRECTIONS)
         self._compiled_corrections: List[Dict[str, Any]] = []
@@ -507,7 +511,7 @@ class TextNormalizer:
             while match:
                 original_fragment = match.group(0)
                 start_pos, end_pos = match.start(), match.end()
-                replacement = replacer(match) if replacer else entry["replacement"]
+                replacement = replacer(match) if replacer else match.expand(entry["replacement"])
 
                 if original_fragment.lower() != replacement.lower():
                     # Offsets reales en el texto ORIGINAL (tras depuración y reemplazos previos)
@@ -718,7 +722,7 @@ class PunctuationAnalyzer:
     Separa los signos de interrogación y exclamación para determinar modalidad
     y límites discursivos, garantizando que nunca contaminen los lemas o tokens léxicos.
     """
-    PUNCT_CHARS = set("¿?¡!,.;:\"'«»—–-()[]{}")
+    PUNCT_CHARS = set("¿?¡!,.;:\"'«»—–-()[]{}/\\")
 
     @classmethod
     def analyze(cls, text: str) -> PunctuationInfo:

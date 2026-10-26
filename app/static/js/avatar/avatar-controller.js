@@ -530,12 +530,13 @@ export class AvatarPanelController {
         const baseRate = (typeof options.basePlaybackRate === 'number' && options.basePlaybackRate > 0)
           ? options.basePlaybackRate
           : 1.0;
-        targetSpeed = Math.max(0.70, Math.min(1.6, fitRatio)) * baseRate;
+        targetSpeed = Math.min(1.0, Math.max(0.70, fitRatio)) * Math.min(1.0, baseRate);
       } else if (typeof options.speed === 'number' && options.speed > 0) {
-        targetSpeed = options.speed;
+        targetSpeed = Math.min(1.0, options.speed);
       } else if (clip.metadata && typeof clip.metadata.recommendedSpeed === 'number') {
-        targetSpeed = Math.min(1.6, clip.metadata.recommendedSpeed);
+        targetSpeed = Math.min(1.0, clip.metadata.recommendedSpeed);
       }
+      targetSpeed = Math.min(1.0, targetSpeed);
       this.player.setSpeed(targetSpeed);
       this.player.play(clip, {
         coarticulate: options.coarticulate !== undefined ? options.coarticulate : true,

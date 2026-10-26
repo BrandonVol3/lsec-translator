@@ -323,7 +323,7 @@ export function createLSECFingerspellingWordClip(wordOrGloss, options = {}) {
     ? Math.max(0.60, Number(options.targetDurationSec))
     : (prepSec + rawBodySec + recSec);
 
-  const minScale = hasExplicitTarget ? 0.25 : 0.55;
+  const minScale = 1.0;
   const scale = Math.max(minScale, (targetDurationSec - prepSec - recSec) / Math.max(0.15, rawBodySec));
   const letterHoldSec = perLetterSec * scale;
   const letterTransSec = interLetterTransitionSec * scale;

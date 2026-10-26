@@ -619,7 +619,7 @@ async function testV27StandardizedAnimationAndSyncVersion() {
   console.log(`PASS: Seña v2.7 "Abanico" (${clipV27.metadata.handStandardization.template_id}) convertida y AvatarSyncController configurado en v2.7 por defecto con aislamiento de caché.`);
 }
 
-console.log('--- TEST 14: SequenceCompiler, coarticulación C¹, tope 1.6x, no-retorno <= 1.5s y extensión PiP ---');
+console.log('--- TEST 14: SequenceCompiler, coarticulación C¹, ritmo 1.0x, 100% retención, no-retorno <= 1.5s y extensión PiP ---');
 async function testSequenceCompilerAndCoarticulation() {
   const strokeIdxPath = path.join(__dirname, '../data/stroke_index_v27.json');
   if (!fs.existsSync(strokeIdxPath)) {
@@ -649,8 +649,8 @@ async function testSequenceCompilerAndCoarticulation() {
   ]);
 
   const compiler = new SequenceCompiler({
-    maxSpeed: 1.6,
-    maxLagSec: 1.0,
+    maxSpeed: 1.0,
+    maxLagSec: Infinity,
     restGapThresholdSec: 1.5,
     extendEndForLag: true
   });
@@ -667,18 +667,18 @@ async function testSequenceCompilerAndCoarticulation() {
 
   // 14b. Caso: pausa intra-oración <= 1.5s NO cae a reposo; pausa > 1.5s SÍ retorna a reposo
   const seqProject = {
-    media_info: { duration_seconds: 10.0 },
+    media_info: { duration_seconds: 15.0 },
     glosses: [
-      { id: 'g1', gloss: 'HOLA', start_seconds: 0.4, end_seconds: 1.3, proposition_id: 'p1' },
+      { id: 'g1', gloss: 'HOLA', start_seconds: 0.4, end_seconds: 2.9, proposition_id: 'p1' },
       // Hueco de 0.70s (<= 1.5s) dentro de p1 -> debe mantener pose / coarticular sin caer a REST_POSE
-      { id: 'g2', gloss: 'ABANICO', start_seconds: 2.0, end_seconds: 3.1, proposition_id: 'p1' },
-      // Hueco de 1.45s (<= 1.5s) -> tampoco debe caer a REST_POSE
-      { id: 'g3', gloss: 'HOLA', start_seconds: 4.55, end_seconds: 5.5, proposition_id: 'p1' },
+      { id: 'g2', gloss: 'ABANICO', start_seconds: 3.6, end_seconds: 5.7, proposition_id: 'p1' },
+      // Hueco de 1.10s (<= 1.5s) -> tampoco debe caer a REST_POSE
+      { id: 'g3', gloss: 'HOLA', start_seconds: 6.8, end_seconds: 9.3, proposition_id: 'p1' },
       // Hueco de 2.20s (> 1.5s) hacia p2 -> SÍ debe retornar a REST_POSE
-      { id: 'g4', gloss: 'ABANICO', start_seconds: 7.7, end_seconds: 8.8, proposition_id: 'p2' }
+      { id: 'g4', gloss: 'ABANICO', start_seconds: 11.5, end_seconds: 13.6, proposition_id: 'p2' }
     ]
   };
-  const plan = compiler.compile(seqProject, clipMap, { videoDuration: 10.0 });
+  const plan = compiler.compile(seqProject, clipMap, { videoDuration: 15.0 });
   if (plan.stats.intraSentenceRestDrops !== 0) {
     throw new Error(`FAIL: intraSentenceRestDrops esperado 0, obtenido ${plan.stats.intraSentenceRestDrops}`);
   }
@@ -686,18 +686,18 @@ async function testSequenceCompilerAndCoarticulation() {
     throw new Error(`FAIL: interSentenceRestDrops esperado 1 en hueco de 2.20s, obtenido ${plan.stats.interSentenceRestDrops}`);
   }
 
-  // Verificar que en la mitad del hueco de 1.45s (t = 3.8s) la fase sea 'hold' o 'transition', NUNCA 'rest'
-  const midGapSample = compiler.pose(3.8);
+  // Verificar que en la pausa de hueco <= 1.5s (t = 3.2s) la fase sea 'hold' o 'transition', NUNCA 'rest'
+  const midGapSample = compiler.pose(3.2);
   if (midGapSample.phase === 'rest') {
-    throw new Error('FAIL: El avatar cayó a REST_POSE durante una pausa de 1.45s (<= 1.5s)');
+    throw new Error('FAIL: El avatar cayó a REST_POSE durante una pausa de hueco <= 1.5s');
   }
-  // Y en la mitad del hueco de 2.20s (t = 6.6s) sí esté en 'rest'
-  const longGapSample = compiler.pose(6.6);
+  // Y en la mitad del hueco de 2.20s (t = 10.4s) sí esté en 'rest'
+  const longGapSample = compiler.pose(10.4);
   if (longGapSample.phase !== 'rest') {
     throw new Error(`FAIL: El avatar no retornó a REST_POSE durante una pausa de 2.20s (> 1.5s); phase=${longGapSample.phase}`);
   }
 
-  // 14c. Caso: ráfaga densa al final del video -> respeta maxSpeed <= 1.6x, startLag <= 1.0s y endLag <= 1.0s reales sin clamp artificial, y extiende PiP
+  // 14c. Caso: ráfaga densa al final del video -> respeta ritmo natural maxSpeed <= 1.0x, 100% de trazo retenido y extiende cola
   const denseProject = {
     media_info: { duration_seconds: 1.50 },
     glosses: [
@@ -708,21 +708,14 @@ async function testSequenceCompilerAndCoarticulation() {
     ]
   };
   const densePlan = compiler.compile(denseProject, clipMap, { videoDuration: 1.50 });
-  if (densePlan.stats.maxSpeedUsed > 1.6001) {
-    throw new Error(`FAIL: Tope de velocidad violado: ${densePlan.stats.maxSpeedUsed} > 1.6x`);
+  if (densePlan.stats.maxSpeedUsed > 1.0001) {
+    throw new Error(`FAIL: Tope de velocidad violado: ${densePlan.stats.maxSpeedUsed} > 1.0x`);
   }
-  if (densePlan.stats.maxLagSec > 1.0001) {
-    throw new Error(`FAIL: Presupuesto de lag violado: ${densePlan.stats.maxLagSec} > 1.0s`);
-  }
-  for (const pe of densePlan.playableEntries) {
-    const realStartLag = pe.startSec - pe.slotStart;
-    const realEndLag = pe.endSec - pe.slotEnd;
-    if (realStartLag > 1.001 || realEndLag > 1.001) {
-      throw new Error(`FAIL: Lag real no acotado en ${pe.gloss}: startLag=${realStartLag.toFixed(4)}s, endLag=${realEndLag.toFixed(4)}s`);
-    }
+  if (!densePlan.stats.allStrokes100PctRetained || densePlan.stats.minStrokeRetainedPct < 99.99) {
+    throw new Error(`FAIL: Trazo recortado: minStrokeRetainedPct=${densePlan.stats.minStrokeRetainedPct}`);
   }
   if (densePlan.sequenceEndTime <= 1.50) {
-    throw new Error(`FAIL: El PiP no se extendió al final pese al lag acumulado (sequenceEndTime=${densePlan.sequenceEndTime})`);
+    throw new Error(`FAIL: La cola no se extendió al final pese al tiempo requerido (sequenceEndTime=${densePlan.sequenceEndTime})`);
   }
 
   // 14d. Determinismo exacto: muestreo secuencial vs acceso aleatorio
@@ -763,20 +756,20 @@ async function testSequenceCompilerAndCoarticulation() {
       { id: 'f3', gloss: 'ABANICO', start_seconds: 2.3, end_seconds: 3.4, proposition_id: 'p_fs' }
     ]
   };
-  compiler.compile(fsProject, clipMap, { videoDuration: 6.0 });
-  const fsSample = compiler.pose(1.85);
+  compiler.compile(fsProject, clipMap, { videoDuration: 10.0 });
+  const fsSample = compiler.pose(3.5);
   if (fsSample.phase === 'rest') {
     throw new Error('FAIL: El avatar cayó a REST_POSE durante una glosa deletreada intra-oración');
   }
   if (!fsSample.activeEntry || fsSample.activeGloss !== 'U-P-E-C') {
-    throw new Error(`FAIL: La glosa deletreada U-P-E-C fue suprimida en sample(1.85); activeGloss=${fsSample.activeGloss}`);
+    throw new Error(`FAIL: La glosa deletreada U-P-E-C fue suprimida en sample(3.5); activeGloss=${fsSample.activeGloss}`);
   }
-  const postRunSample = compiler.pose(5.2);
+  const postRunSample = compiler.pose(8.0);
   if (postRunSample.activeEntry !== null || postRunSample.activeGloss !== null) {
-    throw new Error(`FAIL: En reposo posterior (t=5.2s) activeEntry debe ser null; obtenido ${postRunSample.activeGloss}`);
+    throw new Error(`FAIL: En reposo posterior (t=8.0s) activeEntry debe ser null; obtenido ${postRunSample.activeGloss}`);
   }
 
-  console.log('PASS: SequenceCompiler cumple C¹ exacto (u=0 y u=1), no-retorno <= 1.5s, tope 1.6x, lag <= 1.0s, preservación de dactilología, extensión PiP y determinismo 0.0°.');
+  console.log('PASS: SequenceCompiler cumple C¹ exacto (u=0 y u=1), no-retorno <= 1.5s, ritmo 1.0x, 100% retención, extensión PiP y determinismo 0.0°.');
 }
 
 (async () => {

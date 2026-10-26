@@ -340,7 +340,7 @@ def test_fluid_sequence_compiler_frontend_wiring():
 
     assert "export class SequenceCompiler" in seq_compiler
     assert "interpolateSO3HermiteC1" in seq_compiler
-    assert "maxSpeed: 1.6" in seq_compiler
+    assert "maxSpeed: 1.0" in seq_compiler
     assert "restGapThresholdSec: 1.5" in seq_compiler
     assert "SequenceCompiler" in bridge_js
     assert "getSequenceEndTime" in bridge_js

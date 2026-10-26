@@ -203,19 +203,62 @@ class VideoPlayerController {
         }
       });
       this.videoEl.addEventListener('ended', () => {
-        if (appState.state.playback.isLooping) {
-          this.videoEl.currentTime = appState.state.playback.inPoint || 0;
-          this.videoEl.play();
+        const vDur = (Number.isFinite(this.videoEl.duration) && this.videoEl.duration > 0)
+          ? this.videoEl.duration
+          : (appState.state.playback.videoDuration || appState.state.playback.duration || 0);
+        const seqEnd = appState.state.playback.sequenceEndTime ||
+          (window.studioAvatarBridge?.getSequenceEndTime ? window.studioAvatarBridge.getSequenceEndTime(vDur) : vDur);
+
+        if (seqEnd > vDur + 0.05) {
+          this.videoEl.pause();
+          this.videoEl.currentTime = Math.max(0, vDur - 0.01);
+          this.startExtendedTailPlaybackLoop(vDur, seqEnd);
         } else {
-          const endDur = Number.isFinite(this.videoEl.duration) && this.videoEl.duration > 0
-            ? this.videoEl.duration
-            : (appState.state.playback.duration || this.videoEl.currentTime || 0);
-          if (endDur > 0) {
-            appState.setCurrentTime(endDur, 'end');
+          if (appState.state.playback.isLooping) {
+            this.videoEl.currentTime = appState.state.playback.inPoint || 0;
+            this.videoEl.play();
+          } else {
+            if (vDur > 0) {
+              appState.setCurrentTime(vDur, 'end');
+            }
+            appState.setIsPlaying(false);
           }
-          appState.setIsPlaying(false);
         }
       });
+    }
+  }
+
+  startExtendedTailPlaybackLoop(vDur, seqEnd) {
+    if (this._tailRafId && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(this._tailRafId);
+      this._tailRafId = null;
+    }
+    let lastTs = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    const tailLoop = (currentTs) => {
+      if (!appState.state.playback.isPlaying) {
+        this._tailRafId = null;
+        return;
+      }
+      const nowTs = currentTs || ((typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now());
+      const deltaSec = Math.min(0.1, Math.max(0, (nowTs - lastTs) / 1000.0));
+      lastTs = nowTs;
+      const rate = Number(appState.state.playback.playbackRate) || 1.0;
+      const curTime = Number(appState.state.playback.currentTime) || vDur;
+      const nextTime = curTime + deltaSec * rate;
+
+      if (nextTime >= seqEnd) {
+        this._tailRafId = null;
+        appState.setCurrentTime(seqEnd, 'end');
+        appState.setIsPlaying(false);
+      } else {
+        appState.setCurrentTime(nextTime, 'extended_tail');
+        if (typeof requestAnimationFrame === 'function') {
+          this._tailRafId = requestAnimationFrame(tailLoop);
+        }
+      }
+    };
+    if (typeof requestAnimationFrame === 'function') {
+      this._tailRafId = requestAnimationFrame(tailLoop);
     }
   }
 
@@ -325,9 +368,11 @@ class VideoPlayerController {
       this.updateTimeDisplay(time);
       this.updateProgressBar(time);
 
-      if (this.videoEl && !this.isUsingCanvasFallback && source !== 'html5_video') {
-        if (Math.abs(this.videoEl.currentTime - time) > 0.05) {
-          this.videoEl.currentTime = time;
+      if (this.videoEl && !this.isUsingCanvasFallback && source !== 'html5_video' && source !== 'extended_tail') {
+        const vDur = appState.state.playback.videoDuration || this.videoEl.duration || 0;
+        const targetSeek = (vDur > 0 && time > vDur) ? Math.max(0, vDur - 0.01) : time;
+        if (Math.abs(this.videoEl.currentTime - targetSeek) > 0.05) {
+          this.videoEl.currentTime = targetSeek;
         }
       }
     });
@@ -341,6 +386,10 @@ class VideoPlayerController {
           this.startCanvasAnimationLoop();
         }
       } else {
+        if (this._tailRafId && typeof cancelAnimationFrame === 'function') {
+          cancelAnimationFrame(this._tailRafId);
+          this._tailRafId = null;
+        }
         if (this.videoEl && !this.isUsingCanvasFallback) {
           this.videoEl.pause();
         }

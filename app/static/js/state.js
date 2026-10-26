@@ -25,6 +25,9 @@ class LSECStateStore {
       playback: {
         currentTime: 0.0,
         duration: 0.0,
+        videoDuration: 0.0,
+        sequenceEndTime: 0.0,
+        isExtendedTail: false,
         isPlaying: false,
         playbackRate: 1.0,
         volume: 0.9,
@@ -163,7 +166,11 @@ class LSECStateStore {
     projectData = this.normalizeLoadedProjectData(projectData, filename);
 
     this.state.project = projectData;
-    this.state.playback.duration = projectData.media_info?.duration_seconds || 48.850;
+    const vDur = projectData.media_info?.duration_seconds || 48.850;
+    this.state.playback.videoDuration = vDur;
+    this.state.playback.sequenceEndTime = vDur;
+    this.state.playback.duration = vDur;
+    this.state.playback.isExtendedTail = false;
     this.state.playback.currentTime = 0.0;
     this.state.unsavedChangesCount = 0;
     this.setSaveStatus('saved');
@@ -627,9 +634,34 @@ class LSECStateStore {
   // Control de Reproducción Audiovisual y Sincronización
   // ============================================================
 
+  setDuration(duration) {
+    if (typeof duration !== 'number' || duration <= 0) return;
+    this.state.playback.videoDuration = duration;
+    const eff = Math.max(duration, this.state.playback.sequenceEndTime || 0);
+    this.state.playback.duration = eff;
+    this.emit('durationChanged', eff);
+  }
+
+  setSequenceEndTime(seqEndSec) {
+    if (typeof seqEndSec !== 'number' || seqEndSec <= 0) return;
+    this.state.playback.sequenceEndTime = seqEndSec;
+    const eff = Math.max(this.state.playback.videoDuration || 0, seqEndSec);
+    if (this.state.playback.duration !== eff) {
+      this.state.playback.duration = eff;
+      this.emit('durationChanged', eff);
+    }
+  }
+
   setCurrentTime(time, source = 'unknown') {
-    const clamped = Math.max(0, Math.min(this.state.playback.duration || 1000, time));
+    const maxDur = Math.max(
+      this.state.playback.duration || 0,
+      this.state.playback.videoDuration || 0,
+      this.state.playback.sequenceEndTime || 0
+    ) || 1000;
+    const clamped = Math.max(0, Math.min(maxDur, time));
     this.state.playback.currentTime = clamped;
+    const vDur = this.state.playback.videoDuration || 0;
+    this.state.playback.isExtendedTail = Boolean(vDur > 0 && clamped > vDur + 0.05);
 
     if (this.state.playback.isLooping && this.state.playback.outPoint !== null) {
       if (clamped >= this.state.playback.outPoint) {

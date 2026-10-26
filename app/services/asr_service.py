@@ -20,6 +20,11 @@ from app.core.schemas import TranscriptionResult, WordTimestamp
 
 logger = logging.getLogger(__name__)
 
+DOMAIN_INITIAL_PROMPT = (
+    "UPEC, Tulcán, Cayambe, Carchi, Universidad Politécnica Estatal del Carchi, "
+    "2026-A, seartes@upec.edu.ec, WhatsApp, admisiones, evaluación, aspirantes, carreras de grado."
+)
+
 
 class WhisperASRService:
     """
@@ -42,6 +47,7 @@ class WhisperASRService:
         self._model = None
         self._fallback_occurred: bool = False
         self._fallback_reason: str | None = None
+        self.default_initial_prompt: str = DOMAIN_INITIAL_PROMPT
 
         if self._device.lower() == "cpu":
             logger.warning(
@@ -154,6 +160,7 @@ class WhisperASRService:
         self,
         file_path: Union[str, Path],
         language: str = "es",
+        initial_prompt: str | None = None,
     ) -> TranscriptionResult:
         """
         Transcribe un archivo de audio desde disco.
@@ -161,6 +168,7 @@ class WhisperASRService:
         Args:
             file_path: Ruta al archivo de audio.
             language: Código de idioma ISO 639-1 (default: 'es').
+            initial_prompt: Prompt inicial opcional de dominio (default: DOMAIN_INITIAL_PROMPT).
 
         Returns:
             TranscriptionResult con texto, confianza y timestamps.
@@ -174,6 +182,7 @@ class WhisperASRService:
             raise FileNotFoundError(f"Archivo de audio no encontrado: {file_path}")
 
         self._load_model()
+        effective_prompt = DOMAIN_INITIAL_PROMPT if initial_prompt is None else initial_prompt
 
         try:
             segments, info = self._model.transcribe(
@@ -182,6 +191,7 @@ class WhisperASRService:
                 beam_size=5,
                 word_timestamps=True,
                 vad_filter=True,
+                initial_prompt=effective_prompt,
             )
 
             words: list[WordTimestamp] = []
@@ -258,6 +268,7 @@ class WhisperASRService:
         self,
         audio_data: bytes,
         language: str = "es",
+        initial_prompt: str | None = None,
     ) -> TranscriptionResult:
         """
         Transcribe un buffer binario de audio.
@@ -268,6 +279,7 @@ class WhisperASRService:
         Args:
             audio_data: Bytes crudos del audio.
             language: Código de idioma ISO 639-1 (default: 'es').
+            initial_prompt: Prompt inicial opcional de dominio (default: DOMAIN_INITIAL_PROMPT).
 
         Returns:
             TranscriptionResult con texto, confianza y timestamps.
@@ -285,7 +297,7 @@ class WhisperASRService:
             tmp_path = tmp.name
             tmp.write(audio_data)
             tmp.close()  # Cerrar antes de que faster-whisper lo abra
-            return self.transcribe_file(tmp_path, language=language)
+            return self.transcribe_file(tmp_path, language=language, initial_prompt=initial_prompt)
         except (ValueError, FileNotFoundError):
             raise
         except Exception as exc:

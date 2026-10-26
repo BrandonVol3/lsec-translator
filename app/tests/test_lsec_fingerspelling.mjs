@@ -243,11 +243,11 @@ assert(plan.playableEntries.length === 4, `Las 4 glosas (incluyendo dígrafo CH 
 assert(plan.stats.intraSentenceRestDrops === 0, 'Cero caídas a reposo intra-oración durante deletreo continuo');
 const sampleMid1 = compiler.pose(1.1);
 const sampleMid2 = compiler.pose(3.0);
-const sampleMid3 = compiler.pose(5.0);
-const sampleMid4 = compiler.pose(7.1);
+const sampleMid3 = compiler.pose(7.0);
+const sampleMid4 = compiler.pose(12.0);
 assert(sampleMid1.phase === 'stroke' && sampleMid1.activeGloss === 'U-P-E-C', 'U-P-E-C debe estar articulando su stroke en t=1.1s');
 assert(sampleMid2.phase === 'stroke' && sampleMid2.activeGloss === 'T-U-L-C-Á-N', 'T-U-L-C-Á-N debe estar articulando su stroke en t=3.0s');
-assert(sampleMid3.phase === 'stroke' && sampleMid3.activeGloss === 'CH-I-M-B-O-R-A-Z-O', 'CH-I-M-B-O-R-A-Z-O debe estar articulando su stroke en t=5.0s');
-assert(sampleMid4.phase === 'stroke' && sampleMid4.activeGloss === 'XILÓFONO', 'Palabra OOV XILÓFONO debe articularse por dactilología automática en t=7.1s');
+assert(sampleMid3.phase === 'stroke' && sampleMid3.activeGloss === 'CH-I-M-B-O-R-A-Z-O', 'CH-I-M-B-O-R-A-Z-O debe estar articulando su stroke en t=7.0s');
+assert(sampleMid4.phase === 'stroke' && sampleMid4.activeGloss === 'XILÓFONO', 'Palabra OOV XILÓFONO debe articularse por dactilología automática en t=12.0s');
 
 console.log('\n=== TODOS LOS TESTS DE DACTILOLOGÍA LSEC (30 SEÑAS) PASARON SATISFACTORIAMENTE ===');

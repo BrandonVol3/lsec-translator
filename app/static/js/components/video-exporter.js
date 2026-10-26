@@ -289,15 +289,13 @@ class CompositeVideoExporter {
       window.studioAvatarBridge.beginDeterministicExport();
     }
 
-    // Iniciar grabación de stream
     mediaRecorder.start(200);
 
-    // 6. Ciclo de Renderizado Determinista a 30.0 FPS constantes (dt = 1/30 s)
-    // Si el avatar tiene desfase al final (política "se extiende el PiP"), extender hasta sequenceEndTime
-    // manteniendo el último fotograma del video fuente mientras el intérprete concluye su secuencia.
-    const effectiveEndTime = (includeInterpreter && window.studioAvatarBridge && typeof window.studioAvatarBridge.getSequenceEndTime === 'function')
-      ? Math.max(duration, window.studioAvatarBridge.getSequenceEndTime(duration))
-      : duration;
+    // 6. Ciclo de Renderizado Determinista a 30.0 FPS constantes (dt = 1/30 s) con extensión de cola
+    const seqEnd = (includeInterpreter && window.studioAvatarBridge?.getSequenceEndTime)
+      ? window.studioAvatarBridge.getSequenceEndTime(duration)
+      : (window.appState?.state?.playback?.sequenceEndTime || duration);
+    const effectiveEndTime = Math.max(duration, seqEnd);
     const totalFrames = Math.max(1, Math.round(effectiveEndTime * TARGET_FPS));
 
     try {
@@ -794,5 +792,4 @@ class CompositeVideoExporter {
     }
   }
 }
-
 window.compositeVideoExporter = new CompositeVideoExporter();

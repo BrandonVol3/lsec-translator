@@ -532,7 +532,7 @@ export class AvatarSyncController {
 
       if (clip) {
         const clipDurSec = Math.max(0.35, (clip.durationMs || 1000) / 1000.0);
-        const recommendedSpeed = Math.max(1.0, Math.min(1.6, Number((clipDurSec / slotSec).toFixed(2))));
+        const recommendedSpeed = 1.0;
         const clipWithSpeed = {
           ...clip,
           gloss: glossName,
