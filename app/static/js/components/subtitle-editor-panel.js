@@ -526,12 +526,24 @@ class SubtitleEditorPanel {
   }
 
   subscribeState() {
+    const refreshSegmentsDropdown = () => {
+      const prevId = this.currentSegmentId;
+      this.populateSegmentsDropdown();
+      if (prevId && this.segSelect && Array.from(this.segSelect.options).some(o => o.value === prevId)) {
+        this.segSelect.value = prevId;
+        this.currentSegmentId = prevId;
+      }
+    };
+
     appState.subscribe('projectLoaded', () => {
       this.populateSegmentsDropdown();
       if (appState.state.playback.selectedItem?.type === 'segment') {
         this.loadSegmentStyle(appState.state.playback.selectedItem.id);
       }
     });
+
+    appState.subscribe('segmentsChanged', refreshSegmentsDropdown);
+    appState.subscribe('projectUpdated', refreshSegmentsDropdown);
 
     appState.subscribe('selectionChanged', (selection) => {
       if (selection && selection.type === 'segment') {

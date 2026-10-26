@@ -256,11 +256,14 @@ class VideoPlayerController {
 
     if (this.videoEl) {
       this.videoEl.onloadedmetadata = () => {
-        const dur = this.videoEl.duration || 0;
-        appState.setDuration(dur);
-        if (appState.state.project && appState.state.project.media_info) {
-          appState.state.project.media_info.duration_seconds = dur;
-          appState.state.project.media_info.resolution = `${this.videoEl.videoWidth || 1920}x${this.videoEl.videoHeight || 1080}`;
+        const rawDur = this.videoEl.duration;
+        const dur = (Number.isFinite(rawDur) && rawDur > 0) ? rawDur : (appState.state.playback.duration || 0);
+        if (dur > 0) {
+          appState.setDuration(dur);
+          if (appState.state.project && appState.state.project.media_info) {
+            appState.state.project.media_info.duration_seconds = dur;
+            appState.state.project.media_info.resolution = `${this.videoEl.videoWidth || 1920}x${this.videoEl.videoHeight || 1080}`;
+          }
         }
         console.log(`Archivo '${file.name}' listo en reproductor (${dur.toFixed(2)}s).`);
       };
@@ -303,11 +306,14 @@ class VideoPlayerController {
 
     if (this.videoEl) {
       this.videoEl.onloadedmetadata = () => {
-        const dur = this.videoEl.duration || 0;
-        appState.setDuration(dur);
-        if (appState.state.project && appState.state.project.media_info) {
-          appState.state.project.media_info.duration_seconds = dur;
-          appState.state.project.media_info.resolution = `${this.videoEl.videoWidth || 1920}x${this.videoEl.videoHeight || 1080}`;
+        const rawDur = this.videoEl.duration;
+        const dur = (Number.isFinite(rawDur) && rawDur > 0) ? rawDur : (appState.state.playback.duration || 0);
+        if (dur > 0) {
+          appState.setDuration(dur);
+          if (appState.state.project && appState.state.project.media_info) {
+            appState.state.project.media_info.duration_seconds = dur;
+            appState.state.project.media_info.resolution = `${this.videoEl.videoWidth || 1920}x${this.videoEl.videoHeight || 1080}`;
+          }
         }
         console.log(`Video '${filename}' listo en reproductor (${dur.toFixed(2)}s).`);
       };
@@ -382,6 +388,7 @@ class VideoPlayerController {
     appState.subscribe('projectLoaded', (proj) => {
       this.updateEmptyState();
       this.renderTimelineMarkers();
+      this.updateTimeDisplay(appState.state.playback.currentTime || 0);
       
       const hud = document.getElementById('hud-res');
       if (hud && proj && proj.media_info) {
@@ -455,14 +462,15 @@ class VideoPlayerController {
 
   updateTimeDisplay(time) {
     const formatTime = (secs) => {
-      if (secs === undefined || secs === null || isNaN(secs) || secs < 0) return '00:00.0';
+      if (secs === undefined || secs === null || !Number.isFinite(secs) || secs < 0) return '00:00.0';
       const m = Math.floor(secs / 60);
       const s = Math.floor(secs % 60);
       const tenths = Math.floor((secs % 1) * 10);
       return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${tenths}`;
     };
 
-    const duration = appState.state.playback.duration || 0;
+    const rawDur = appState.state.playback.duration;
+    const duration = (Number.isFinite(rawDur) && rawDur > 0) ? rawDur : 0;
     if (this.timecodeCurrentEl && this.timecodeDurationEl) {
       this.timecodeCurrentEl.textContent = formatTime(time);
       this.timecodeDurationEl.textContent = formatTime(duration);

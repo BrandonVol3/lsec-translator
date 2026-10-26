@@ -223,9 +223,10 @@ class PipelineProcessor {
    * Traduce un segmento de texto editado mediante el motor lingüístico del backend (/api/v1/translate)
    */
   async translateSegmentViaBackend(text, startTime, endTime, segId) {
-    if (!text) return [];
+    const cleanText = String(text || '').trim();
+    if (!cleanText) return [];
     try {
-      const res = await fetch('/api/v1/translate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text, mode: 'detailed', paraphrase_budget: 'compact' }) });
+      const res = await fetch('/api/v1/translate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: cleanText, mode: 'detailed', paraphrase_budget: 'compact' }) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const glossOut = await res.json();
       const rawGlosses = glossOut.glosses || [];
@@ -353,7 +354,7 @@ class PipelineProcessor {
       const url = URL.createObjectURL(file);
       const tempVideo = document.createElement('video');
       tempVideo.preload = 'metadata'; tempVideo.src = url;
-      tempVideo.onloadedmetadata = () => resolve({ filename: file.name, duration: tempVideo.duration || 0.0, width: tempVideo.videoWidth || 1280, height: tempVideo.videoHeight || 720, size_bytes: file.size, fps: 30.0, objectUrl: url });
+      tempVideo.onloadedmetadata = () => resolve({ filename: file.name, duration: (Number.isFinite(tempVideo.duration) && tempVideo.duration > 0) ? tempVideo.duration : 0.0, width: tempVideo.videoWidth || 1280, height: tempVideo.videoHeight || 720, size_bytes: file.size, fps: 30.0, objectUrl: url });
       tempVideo.onerror = () => resolve({ filename: file.name, duration: 0.0, width: 1280, height: 720, size_bytes: file.size, fps: 30.0, objectUrl: url });
     });
   }

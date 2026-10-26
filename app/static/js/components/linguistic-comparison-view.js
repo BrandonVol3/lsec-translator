@@ -532,6 +532,9 @@ class LinguisticComparisonView {
     const currentVal = String(glossObj.gloss || glossObj.lemma || '').toUpperCase();
     const input = document.createElement('input');
     input.type = 'text';
+    input.id = `inline-gloss-edit-${rowIndex + 1}-${gIdx + 1}`;
+    input.name = `inline_gloss_edit_${rowIndex + 1}_${gIdx + 1}`;
+    input.setAttribute('aria-label', `Editar glosa ${currentVal} en oración ${rowIndex + 1}`);
     input.value = currentVal;
     input.className = 'transcript-seg-input';
     input.style.width = `${Math.max(96, currentVal.length * 12 + 28)}px`;
@@ -540,9 +543,12 @@ class LinguisticComparisonView {
     input.style.textTransform = 'uppercase';
     input.style.fontWeight = '800';
 
-    const commit = () => {
+    let committed = false;
+    const finish = (save) => {
+      if (committed) return;
+      committed = true;
       const nextToken = input.value.trim().toUpperCase();
-      if (nextToken && nextToken !== currentVal) {
+      if (save && nextToken && nextToken !== currentVal) {
         this.updateGlossInRow(seg, glossObj, gIdx, nextToken, rowIndex);
       } else {
         this.renderAll();
@@ -552,12 +558,13 @@ class LinguisticComparisonView {
     input.addEventListener('keydown', (ev) => {
       if (ev.key === 'Enter') {
         ev.preventDefault();
-        commit();
+        finish(true);
       } else if (ev.key === 'Escape') {
-        this.renderAll();
+        ev.preventDefault();
+        finish(false);
       }
     });
-    input.addEventListener('blur', commit);
+    input.addEventListener('blur', () => finish(true));
 
     chipEl.innerHTML = '';
     chipEl.appendChild(input);
@@ -568,6 +575,9 @@ class LinguisticComparisonView {
   openInlineNewGlossInput(rackEl, addBtnEl, seg, rowIndex) {
     const input = document.createElement('input');
     input.type = 'text';
+    input.id = `inline-gloss-new-${rowIndex + 1}`;
+    input.name = `inline_gloss_new_${rowIndex + 1}`;
+    input.setAttribute('aria-label', `Agregar nueva glosa a oración ${rowIndex + 1}`);
     input.placeholder = 'NUEVA GLOSA...';
     input.className = 'transcript-seg-input';
     input.style.width = '135px';
