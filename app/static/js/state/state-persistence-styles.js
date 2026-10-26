@@ -112,6 +112,12 @@ const LSECStatePersistenceStyles = {
   markUnsavedChange() {
     this.state.unsavedChangesCount++;
     this.setSaveStatus('unsaved');
+    if (this.state.project) {
+      try {
+        localStorage.setItem('lsec_studio_project', JSON.stringify(this.state.project));
+        sessionStorage.setItem('lsec_studio_active_session', '1');
+      } catch (_) {}
+    }
   },
 
   setSaveStatus(status) {

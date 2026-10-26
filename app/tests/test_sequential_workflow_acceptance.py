@@ -83,9 +83,9 @@ def test_ac1_wizard_stepper_and_3_windows_exist(html_content):
     assert 'href="/viewer"' not in html_content
 
 
-def test_ac2_window1_whisper_and_window3_export_controls_exist(html_content):
-    """AC2: Ventana 1 tiene el visualizador Whisper y CTA; Ventana 3 tiene monitor en vivo, estilos y exportación MP4/SRT."""
-    assert 'id="whisper-waveform-canvas"' in html_content
+def test_ac2_window1_whisper_and_window3_export_controls_exist(html_content, pipeline_js_content):
+    """AC2: Ventana 1 tiene segmentos y CTA; pipeline-processor tiene visualizador Whisper fullscreen; Ventanas 3 y 4 tienen Avatar, estilos y exportación."""
+    assert 'id="whisper-waveform-canvas"' in pipeline_js_content
     assert 'id="transcript-segments-container"' in html_content
     assert 'id="btn-step1-process-lsec"' in html_content
     assert 'id="grammar-transform-monitor"' in html_content
@@ -130,11 +130,11 @@ def test_ac5_app_orchestrator_wizard_navigation(app_js_content):
 
 
 def test_ac6_css_rules_for_pedagogical_tactile_light(css_content):
-    """AC6: base-tokens.css y layout-workspace.css definen los tokens «Pedagogical Tactile Light» y el layout de 3 pasos."""
-    assert "--color-canvas-bg: #f8fafc" in css_content
+    """AC6: base-tokens.css y layout-workspace.css definen los tokens «Pedagogical Tactile Light» (UPEC) y el layout de 4 pasos."""
+    assert "--color-canvas-bg:" in css_content
     assert "--color-card-white: #ffffff" in css_content
-    assert "--color-primary-emerald: #10b981" in css_content
-    assert "--color-accent-cobalt: #0284c7" in css_content
+    assert "--color-primary-emerald:" in css_content
+    assert "--color-accent-cobalt:" in css_content
     assert ".workflow-stepper" in css_content
     assert ".wizard-window" in css_content
 

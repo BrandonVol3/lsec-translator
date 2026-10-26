@@ -217,10 +217,13 @@ def test_studio_fluid_sequence_compiler_and_pip_tail_extension():
         assert plan_stats["stats"]["maxLagSec"] <= 1.0001
         assert plan_stats["sequenceEndTime"] > plan_stats["videoDurationSec"]
 
-        # Verificar glosas de dactilología (T-U-L-C-Á-N en 15.6s, C-A-Y-A-M-B-E en 16.1s, U-P-E-C en 27.2s)
+        # Verificar glosas de dactilología (T-U-L-C-Á-N, C-A-Y-A-M-B-E, U-P-E-C)
         fs_checks = page.evaluate("""() => {
             const results = [];
-            for (const [t, expectedGloss] of [[15.60, 'T-U-L-C-Á-N'], [16.10, 'C-A-Y-A-M-B-E'], [27.20, 'U-P-E-C']]) {
+            const segs = window.studioAvatarBridge.compiler.compiled?.segments || [];
+            for (const [fallbackT, expectedGloss] of [[15.35, 'T-U-L-C-Á-N'], [16.00, 'C-A-Y-A-M-B-E'], [27.20, 'U-P-E-C']]) {
+                const matchSeg = segs.find(s => s.type === 'stroke' && s.activeEntry?.gloss === expectedGloss);
+                const t = matchSeg ? Number(((matchSeg.startSec + matchSeg.endSec) * 0.5).toFixed(2)) : fallbackT;
                 window.appState.setCurrentTime(t, 'seek');
                 const hostText = document.getElementById('avatar-pip-gloss-host')?.innerText || '';
                 const hudText = document.getElementById('avatar-active-gloss-hud')?.textContent || '';

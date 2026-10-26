@@ -84,9 +84,9 @@ def test_ac4_app_js_coordination_and_video_docking(app_js_content):
 
 
 def test_ac5_wizard_step_switching(app_js_content):
-    """AC5: app.js expone switchWizardStep para navegar entre preparar, traducir y revisar."""
+    """AC5: app.js expone switchWizardStep para navegar entre las 4 ventanas (preparar, traducir, avatar, revisar)."""
     assert "window.switchWizardStep" in app_js_content
-    assert "STEP_ORDER = ['preparar', 'traducir', 'revisar']" in app_js_content
+    assert "STEP_ORDER = ['preparar', 'traducir', 'avatar', 'revisar']" in app_js_content
 
 
 def test_ac6_modals_and_export_dialogs(modals_js_content):

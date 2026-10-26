@@ -48,18 +48,12 @@ class LinguisticComparisonView {
   }
 
   bindGlobalEvents() {
-    if (this.btnRetranslateAll) {
-      this.btnRetranslateAll.addEventListener('click', () => this.retranslateAllRows());
-    }
+    if (this.btnRetranslateAll) this.btnRetranslateAll.addEventListener('click', () => this.retranslateAllRows());
   }
 
   subscribeToState() {
     if (typeof appState === 'undefined') return;
-
-    appState.subscribe('projectLoaded', () => {
-      this.selectedSegmentIndex = 0;
-      this.renderAll();
-    });
+    appState.subscribe('projectLoaded', () => { this.selectedSegmentIndex = 0; this.renderAll(); });
     appState.subscribe('projectUpdated', () => this.renderAll());
     appState.subscribe('segmentsChanged', () => this.renderAll());
     appState.subscribe('glossesChanged', () => this.renderAll());
@@ -77,20 +71,14 @@ class LinguisticComparisonView {
       const currNorm = this.formatCleanGlossLabel(g?.gloss || g?.lemma || '');
       const prev = result[result.length - 1];
       const prevNorm = prev ? this.formatCleanGlossLabel(prev?.gloss || prev?.lemma || '') : null;
-      if (prev && currNorm && currNorm === prevNorm && !g?.manually_edited) {
-        continue;
-      }
+      if (prev && currNorm && currNorm === prevNorm && !g?.manually_edited) continue;
       result.push(g);
     }
     return result;
   }
 
   formatCleanGlossLabel(rawToken) {
-    return String(rawToken || '')
-      .toUpperCase()
-      .replace(/^FS:/i, '')
-      .replace(/\[[^\]]*\]/g, '')
-      .trim();
+    return String(rawToken || '').toUpperCase().replace(/^FS:/i, '').replace(/\[[^\]]*\]/g, '').trim();
   }
 
   getGlossObjectsForSegment(seg) {
@@ -205,10 +193,7 @@ class LinguisticComparisonView {
   }
 
   updateCoverageBadge(segments) {
-    if (!this.coverageBadgeEl) return;
-    let total = 0;
-    let conadisCount = 0;
-    let editedCount = 0;
+    let total = 0, conadisCount = 0, editedCount = 0;
     segments.forEach((seg) => {
       const glosses = this.getGlossObjectsForSegment(seg);
       glosses.forEach((g) => {
@@ -218,9 +203,17 @@ class LinguisticComparisonView {
         if (info.statusKey === 'HUMAN_VERIFIED') editedCount++;
       });
     });
-    this.coverageBadgeEl.textContent = total > 0
-      ? `${conadisCount}/${total} Señas CONADIS · ${editedCount} Editadas`
-      : '4.252 Fichas CONADIS';
+    if (this.coverageBadgeEl) {
+      this.coverageBadgeEl.textContent = total > 0
+        ? `${conadisCount}/${total} Señas CONADIS · ${editedCount} Editadas`
+        : '4.142 Fichas CONADIS';
+    }
+    const footerSummaryEl = document.getElementById('step2-footer-summary');
+    if (footerSummaryEl) {
+      footerSummaryEl.textContent = segments.length > 0
+        ? `${segments.length} ${segments.length === 1 ? 'oración' : 'oraciones'} · ${total} señas LSEC listas${editedCount > 0 ? ` (${editedCount} editadas)` : ''}`
+        : '';
+    }
   }
 
   renderGrammarMonitor(seg, index = 0) {
@@ -346,26 +339,38 @@ class LinguisticComparisonView {
       const spanishText = seg.normalized_text || seg.raw_text || seg.original_text || '';
       const timeRange = this.formatTimeRange(seg.start_time ?? seg.start_seconds, seg.end_time ?? seg.end_seconds);
       const glossObjects = this.getGlossObjectsForSegment(seg);
+      const rowNumFormatted = String(rowIndex + 1).padStart(2, '0');
+      const estRows = Math.max(1, Math.min(4, Math.ceil(spanishText.length / 56)));
 
-      // 1. Columna Izquierda: Español (Diseño limpio, botón de re-traducir solo bajo demanda)
+      // Activar fila al hacer clic en cualquier zona
+      row.addEventListener('click', () => {
+        if (this.selectedSegmentIndex !== rowIndex) {
+          this.selectedSegmentIndex = rowIndex;
+          this.renderGrammarMonitor(seg, rowIndex);
+          this.highlightSelectedRow();
+        }
+      });
+
+      // 1. Columna Izquierda: Español (Editorial, limpio y sin recortes verticales)
       const leftCell = document.createElement('div');
       leftCell.className = 'comparative-cell-spanish';
       leftCell.innerHTML = `
         <div class="comparative-cell-meta-bar">
-          <button type="button" class="comparative-row-meta" data-action="select-and-seek" title="Reproducir video desde este fragmento">
-            <span class="comparative-row-num">#${rowIndex + 1}</span>
+          <button type="button" class="comparative-row-meta" data-action="select-and-seek" title="Escuchar este fragmento del video">
+            <span class="comparative-row-num">${rowNumFormatted}</span>
             <span class="comparative-row-time">${timeRange}</span>
           </button>
-          <button type="button" class="btn btn-sm comparative-retranslate-btn" data-action="retranslate-row" title="Actualizar glosas según el texto editado">
-            Actualizar glosas
+          <button type="button" class="btn btn-sm comparative-retranslate-btn" data-action="retranslate-row" title="Re-traducir esta oración con el motor LSEC">
+            Re-traducir
           </button>
         </div>
-        <textarea id="comparative-seg-input-${rowIndex + 1}" name="comparative_segment_${rowIndex + 1}" class="transcript-seg-input comparative-spanish-input" rows="2" aria-label="Oración en español fila ${rowIndex + 1}">${this.escapeHtml(spanishText)}</textarea>
+        <textarea id="comparative-seg-input-${rowIndex + 1}" name="comparative_segment_${rowIndex + 1}" class="transcript-seg-input comparative-spanish-input" rows="${estRows}" aria-label="Oración en español fila ${rowIndex + 1}">${this.escapeHtml(spanishText)}</textarea>
       `;
 
       const selectSeekBtn = leftCell.querySelector('[data-action="select-and-seek"]');
       if (selectSeekBtn) {
-        selectSeekBtn.addEventListener('click', () => {
+        selectSeekBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
           this.selectedSegmentIndex = rowIndex;
           this.renderGrammarMonitor(seg, rowIndex);
           this.highlightSelectedRow();
@@ -385,59 +390,81 @@ class LinguisticComparisonView {
           this.highlightSelectedRow();
         });
         textarea.addEventListener('input', () => {
-          if (retranslateBtn) {
-            retranslateBtn.classList.add('is-dirty');
-          }
+          textarea.rows = Math.max(1, Math.min(5, Math.ceil(textarea.value.length / 56)));
+          if (retranslateBtn) retranslateBtn.classList.add('is-dirty');
         });
         textarea.addEventListener('change', (e) => {
           const newText = e.target.value.trim();
-          appState.updateSegment(seg.id, {
-            normalized_text: newText,
-            raw_text: newText,
-            status: 'CORRECTED'
-          });
+          appState.updateSegment(seg.id, { normalized_text: newText, raw_text: newText, status: 'CORRECTED' });
         });
       }
 
       if (retranslateBtn) {
-        retranslateBtn.addEventListener('click', async () => {
+        retranslateBtn.addEventListener('mousedown', (e) => e.preventDefault());
+        retranslateBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
           const currentText = textarea ? textarea.value.trim() : spanishText;
           retranslateBtn.disabled = true;
-          retranslateBtn.textContent = 'Actualizando...';
+          retranslateBtn.textContent = 'Traduciendo...';
           try {
             await this.retranslateSingleRow(seg, currentText, rowIndex);
             retranslateBtn.classList.remove('is-dirty');
           } finally {
             retranslateBtn.disabled = false;
-            retranslateBtn.textContent = 'Actualizar glosas';
+            retranslateBtn.textContent = 'Re-traducir';
           }
         });
       }
 
-      // 2. Columna Derecha: Glosas LSEC (Fichas limpias con acciones al pasar el cursor)
+      // 2. Columna Derecha: Secuencia de Señas LSEC (Fluida con conectores → y revelación progresiva)
       const rightCell = document.createElement('div');
       rightCell.className = 'comparative-cell-glosses';
+
+      const topLine = document.createElement('div');
+      topLine.className = 'comparative-glosses-topline';
 
       const rack = document.createElement('div');
       rack.className = 'gloss-chips-rack';
 
       glossObjects.forEach((glossObj, gIdx) => {
+        if (gIdx > 0) {
+          const arrow = document.createElement('span');
+          arrow.className = 'gloss-seq-arrow';
+          arrow.setAttribute('aria-hidden', 'true');
+          arrow.textContent = '→';
+          rack.appendChild(arrow);
+        }
         const chipEl = this.createTactileGlossChip(seg, glossObj, gIdx, glossObjects.length, rowIndex);
         rack.appendChild(chipEl);
       });
 
-      // Botón sutil "+ Glosa"
+      // Botón discreto "+ Agregar seña" (visible solo en fila activa o hover)
       const addBtn = document.createElement('button');
       addBtn.type = 'button';
       addBtn.className = 'gloss-add-chip-btn';
-      addBtn.textContent = '+ Glosa';
-      addBtn.title = 'Agregar nueva glosa LSEC a esta oración';
-      addBtn.addEventListener('click', () => {
+      addBtn.textContent = '+ Agregar seña';
+      addBtn.title = 'Agregar nueva glosa LSEC al final de esta oración';
+      addBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.selectedSegmentIndex = rowIndex;
+        this.highlightSelectedRow();
         this.openInlineNewGlossInput(rack, addBtn, seg, rowIndex);
       });
       rack.appendChild(addBtn);
 
-      rightCell.appendChild(rack);
+      const countMeta = document.createElement('span');
+      countMeta.className = 'comparative-sign-count';
+      countMeta.textContent = `${glossObjects.length} ${glossObjects.length === 1 ? 'seña' : 'señas'}`;
+
+      topLine.appendChild(rack);
+      topLine.appendChild(countMeta);
+      rightCell.appendChild(topLine);
+
+      const rowHint = document.createElement('div');
+      rowHint.className = 'comparative-row-hint';
+      rowHint.textContent = 'Clic en cualquier seña para cambiarla · Pasa el cursor sobre una seña para moverla o quitarla';
+      rightCell.appendChild(rowHint);
+
       row.appendChild(leftCell);
       row.appendChild(rightCell);
       this.rowsContainer.appendChild(row);
@@ -576,7 +603,10 @@ class LinguisticComparisonView {
     input.focus();
   }
 
-  syncSegmentGlossesToProject(seg, updatedGlossObjects) {
+  syncSegmentGlossesToProject(seg, updatedGlossObjects, pushHistory = true) {
+    if (pushHistory && typeof appState !== 'undefined' && typeof appState.pushHistory === 'function') {
+      appState.pushHistory();
+    }
     seg.gloss_sequence = updatedGlossObjects.map(g => String(g.gloss || g.lemma || '').toUpperCase());
     seg.status = 'HUMAN_VERIFIED';
     seg.human_reviewed = true;
@@ -679,10 +709,8 @@ class LinguisticComparisonView {
     this.selectedSegmentIndex = rowIndex;
     const list = [...this.getGlossObjectsForSegment(seg)];
     if (toIdx < 0 || toIdx >= list.length) return;
-    const [moved] = list.splice(fromIdx, 1);
-    moved.status = 'HUMAN_VERIFIED';
-    moved.manually_edited = true;
-    moved.alignment_type = 'MANUAL_EDIT';
+    const [rawMoved] = list.splice(fromIdx, 1);
+    const moved = { ...rawMoved, status: 'HUMAN_VERIFIED', manually_edited: true, alignment_type: 'MANUAL_EDIT' };
     list.splice(toIdx, 0, moved);
     this.syncSegmentGlossesToProject(seg, list);
   }
@@ -703,7 +731,7 @@ class LinguisticComparisonView {
       const glossList = Array.isArray(result) ? result : (result && Array.isArray(result.glosses) ? result.glosses : []);
       if (glossList.length > 0) {
         if (result && result.applied_rules) seg.applied_rules = result.applied_rules;
-        this.syncSegmentGlossesToProject(seg, glossList);
+        this.syncSegmentGlossesToProject(seg, glossList, false);
         if (typeof window.showToast === 'function') {
           window.showToast(`Fila #${rowIndex + 1} re-traducida con motor lingüístico LSEC.`, 'info');
         }
@@ -726,7 +754,7 @@ class LinguisticComparisonView {
       status: 'VALIDATED',
       manually_edited: false
     }));
-    this.syncSegmentGlossesToProject(seg, fallbackObjects);
+    this.syncSegmentGlossesToProject(seg, fallbackObjects, false);
   }
 
   async retranslateAllRows() {

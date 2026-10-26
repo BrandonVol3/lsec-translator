@@ -639,11 +639,16 @@ class SubtitleEditorPanel {
       });
     }
 
-    if (this.textColor) this.textColor.value = style.textColor || '#ffffff';
-    if (this.textColorHex) this.textColorHex.value = style.textColor || '#ffffff';
+    const toHexColor = (val, fallback = '#000000') => {
+      const s = String(val || '').trim();
+      return /^#[0-9A-Fa-f]{6}$/.test(s) ? s : fallback;
+    };
 
-    if (this.bgColor) this.bgColor.value = (style.bgColor && style.bgColor !== 'transparent') ? style.bgColor : '#000000';
-    if (this.bgColorHex) this.bgColorHex.value = (style.bgColor && style.bgColor !== 'transparent') ? style.bgColor : '#000000';
+    if (this.textColor) this.textColor.value = toHexColor(style.textColor, '#ffffff');
+    if (this.textColorHex) this.textColorHex.value = toHexColor(style.textColor, '#ffffff');
+
+    if (this.bgColor) this.bgColor.value = toHexColor(style.bgColor, '#000000');
+    if (this.bgColorHex) this.bgColorHex.value = toHexColor(style.bgColor, '#000000');
 
     if (this.bgOpacity) {
       const opPct = Math.round((style.bgOpacity !== undefined ? style.bgOpacity : 0.0) * 100);
@@ -655,14 +660,14 @@ class SubtitleEditorPanel {
       this.outlineWidth.value = style.outlineWidth !== undefined ? style.outlineWidth : 0;
       this.outlineWidthVal.textContent = `${style.outlineWidth !== undefined ? style.outlineWidth : 0}px`;
     }
-    if (this.outlineColor) this.outlineColor.value = style.outlineColor || '#000000';
+    if (this.outlineColor) this.outlineColor.value = toHexColor(style.outlineColor, '#000000');
 
     if (this.shadowToggle) this.shadowToggle.checked = style.shadow !== false;
     if (this.shadowBlur) {
       this.shadowBlur.value = style.shadowBlur !== undefined ? style.shadowBlur : 4;
       this.shadowBlurVal.textContent = `${style.shadowBlur !== undefined ? style.shadowBlur : 4}px`;
     }
-    if (this.shadowColor) this.shadowColor.value = style.shadowColor || '#000000';
+    if (this.shadowColor) this.shadowColor.value = toHexColor(style.shadowColor, '#000000');
 
     if (this.posX) {
       this.posX.value = style.positionX !== undefined ? style.positionX : 50;

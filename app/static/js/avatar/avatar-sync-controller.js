@@ -195,7 +195,7 @@ export class AvatarSyncController {
   async fetchDirectClip(glossName, options = {}) {
     if (!glossName || typeof glossName !== 'string') return null;
     const clean = glossName.trim();
-    if (!clean) return null;
+    if (!clean || clean.length > 80 || /[<>/\\]/.test(clean)) return null;
     const normKey = clean.toUpperCase();
     const verTag = (options && options.version) ? String(options.version) : (this.preferredVersion || '2.7');
     const shouldTrim = options && options.trimStroke !== undefined ? Boolean(options.trimStroke) : true;

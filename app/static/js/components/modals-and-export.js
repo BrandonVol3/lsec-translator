@@ -76,6 +76,14 @@ class ModalsAndExportController {
     return this.downloadSRT();
   }
 
+  escapeHtml(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
   // --- Diccionario Oficial CONADIS (4.252 Fichas) ---
   async openDictionaryDialog() {
     if (!this.modalBackdrop || !this.modalTitle || !this.modalBody) return;
@@ -136,15 +144,17 @@ class ModalsAndExportController {
               const categoryLabel = ((Array.isArray(entry.categories) && entry.categories.length > 0)
                 ? entry.categories.join(' · ')
                 : (entry.category || it.category || 'Léxico Oficial CONADIS')) + geoBadge;
+              const safeGloss = this.escapeHtml(glossLabel);
+              const safeCategory = this.escapeHtml(categoryLabel);
               return `
                 <div style="padding:10px 12px; border:2px solid var(--color-border-subtle); border-radius:10px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
                   <div>
-                    <strong style="color:var(--color-primary-emerald-dark); font-family:var(--font-display);">${glossLabel}</strong>
-                    <div style="font-size:0.76rem; color:var(--color-text-secondary);">${categoryLabel}</div>
+                    <strong style="color:var(--color-primary-emerald-dark); font-family:var(--font-display);">${safeGloss}</strong>
+                    <div style="font-size:0.76rem; color:var(--color-text-secondary);">${safeCategory}</div>
                   </div>
                   <div style="display:flex; align-items:center; gap:6px;">
                     <span class="gloss-chip-tactile gloss-chip-conadis" style="font-size:0.74rem; padding:3px 8px;">✓ CONADIS</span>
-                    <button type="button" class="btn btn-sm btn-dict-copy-gloss" data-gloss="${String(glossLabel).replace(/"/g, '&quot;')}" title="Copiar glosa o previsualizar en Avatar">Usar glosa</button>
+                    <button type="button" class="btn btn-sm btn-dict-copy-gloss" data-gloss="${safeGloss}" title="Copiar glosa o previsualizar en Avatar">Usar glosa</button>
                   </div>
                 </div>
               `;
@@ -168,7 +178,7 @@ class ModalsAndExportController {
           }
         }
       } catch (_) {}
-      resultsEl.innerHTML = `<div class="empty-state-box">Si el término "${q.toUpperCase()}" no figura en CONADIS, el motor activa automáticamente el respaldo por <strong>Dactilología</strong>.</div>`;
+      resultsEl.innerHTML = `<div class="empty-state-box">Si el término "${this.escapeHtml(q.toUpperCase())}" no figura en CONADIS, el motor activa automáticamente el respaldo por <strong>Dactilología</strong>.</div>`;
     };
 
     this.modalBody.querySelector('#btn-dict-search-go')?.addEventListener('click', runSearch);
@@ -189,7 +199,7 @@ class ModalsAndExportController {
     this.modalBody.innerHTML = `
       <div style="display:flex; flex-direction:column; gap:14px;">
         <div style="padding:12px; border:2px solid var(--color-border-subtle); border-radius:12px; background:var(--color-canvas-bg);">
-          <div style="font-weight:800;">Proyecto Actual: ${project.project_name || project.title || project.media_info?.filename || 'Proyecto LSEC'}</div>
+          <div style="font-weight:800;">Proyecto Actual: ${this.escapeHtml(project.project_name || project.title || project.media_info?.filename || 'Proyecto LSEC')}</div>
           <div style="font-size:0.85rem; color:var(--color-text-secondary);">
             Oraciones: ${(project.segments || []).length} · Glosas LSEC: ${(project.glosses || []).length}
           </div>
@@ -332,7 +342,7 @@ class ModalsAndExportController {
     this.modalBody.innerHTML = `
       <div style="display:flex; flex-direction:column; gap:14px;" id="composite-export-container">
         <div style="display:flex; justify-content:space-between; align-items:center; background:var(--color-canvas-bg); padding:8px 12px; border-radius:8px; font-size:0.8rem; border:2px solid var(--color-border-subtle);">
-          <div><strong>Archivo:</strong> <span>${filename}</span></div>
+          <div><strong>Archivo:</strong> <span>${this.escapeHtml(filename)}</span></div>
           <div><strong>Duración:</strong> <span style="font-family:var(--font-mono);">${duration.toFixed(2)}s</span></div>
         </div>
 
@@ -509,6 +519,9 @@ class ModalsAndExportController {
   }
 
   downloadSRT() {
+    if (this._isDownloadingSrt) return;
+    this._isDownloadingSrt = true;
+    setTimeout(() => { this._isDownloadingSrt = false; }, 350);
     const segments = appState.state.project?.segments || [];
     const formatSrtTime = (sec) => {
       const val = Number(sec) || 0;

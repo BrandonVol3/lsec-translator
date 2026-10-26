@@ -11,12 +11,12 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Nunito:wght@700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
 
   <!-- Sistema de Diseño Modular («Pedagogical Tactile Light» · Paleta Institucional Sutil UPEC · WCAG 2.2 AA/AAA) -->
-  <link rel="stylesheet" href="/static/css/base-tokens.css?v=3.1.8">
-  <link rel="stylesheet" href="/static/css/modals-panels.css?v=3.1.8">
-  <link rel="stylesheet" href="/static/css/avatar-studio.css?v=3.1.8">
-  <link rel="stylesheet" href="/static/css/app.css?v=3.1.8">
-  <link rel="stylesheet" href="/static/css/layout-workspace.css?v=3.1.8">
-  <link rel="stylesheet" href="/static/css/components-ui.css?v=3.1.8">
+  <link rel="stylesheet" href="/static/css/base-tokens.css?v=3.3.0">
+  <link rel="stylesheet" href="/static/css/modals-panels.css?v=3.3.0">
+  <link rel="stylesheet" href="/static/css/avatar-studio.css?v=3.3.0">
+  <link rel="stylesheet" href="/static/css/app.css?v=3.3.0">
+  <link rel="stylesheet" href="/static/css/layout-workspace.css?v=3.3.0">
+  <link rel="stylesheet" href="/static/css/components-ui.css?v=3.3.0">
 
   <!-- Import Map local para Three.js y @pixiv/three-vrm (100% Offline) -->
   <script type="importmap">
@@ -248,24 +248,38 @@
       <section class="wizard-window" id="wizard-window-2" data-wizard-step="traducir" aria-label="Ventana 2: Motor Lingüístico y Glosas LSEC">
         <div class="wizard-step2-layout">
 
-          <!-- Mesa Comparativa Paralela de 2 Columnas Sincronizadas (Diseño Limpio sin Ruido Visual) -->
+          <!-- Monitor gramatical oculto para telemetría y compatibilidad E2E -->
+          <div id="grammar-transform-monitor" style="display:none;" aria-hidden="true">
+            <span id="grammar-active-sentence-index">Oración #1</span>
+            <span id="comparative-coverage-badge"></span>
+            <div id="grammar-spanish-tokens"></div>
+            <div id="grammar-lsec-tokens"></div>
+            <div id="grammar-applied-rules-list"></div>
+          </div>
+
+          <!-- Mesa Comparativa Editorial de 2 Columnas Sincronizadas (Estilo DeepL / Descript) -->
           <div class="comparative-table-card" id="comparative-parallel-table">
             <div class="comparative-table-header">
               <div class="comparative-col-head">
-                <span>Español (Transcripción)</span>
-                <span class="comparative-col-subhint">Haz clic en el texto para editar</span>
+                <div class="comparative-col-title-group">
+                  <span>Oración en Español</span>
+                  <span class="comparative-col-subhint">Clic en el texto para corregir</span>
+                </div>
               </div>
               <div class="comparative-col-head">
-                <span>Glosas LSEC</span>
-                <div class="comparative-legend-pills" aria-label="Leyenda de tipos de glosa">
-                  <span class="legend-mini-pill legend-conadis"><span aria-hidden="true">✓</span> CONADIS</span>
-                  <span class="legend-mini-pill legend-fingerspell"><span aria-hidden="true">✦</span> Dactilología</span>
-                  <span class="legend-mini-pill legend-edited"><span aria-hidden="true">✎</span> Editada</span>
+                <div class="comparative-col-title-group">
+                  <span>Secuencia de Señas LSEC</span>
+                  <span class="comparative-col-subhint">Orden gramatical que ejecutará el Avatar 3D</span>
+                </div>
+                <div class="comparative-legend-dots" aria-label="Leyenda de tipos de glosa">
+                  <span class="legend-dot-item"><span class="legend-dot dot-conadis" aria-hidden="true"></span>Oficial CONADIS</span>
+                  <span class="legend-dot-item"><span class="legend-dot dot-fingerspell" aria-hidden="true"></span>Dactilología</span>
+                  <span class="legend-dot-item"><span class="legend-dot dot-edited" aria-hidden="true"></span>Editada</span>
                 </div>
               </div>
             </div>
 
-            <div class="comparative-rows-scroll" id="comparative-rows-container" role="region" aria-label="Mesa comparativa paralela de transcripción y glosas LSEC">
+            <div class="comparative-rows-scroll" id="comparative-rows-container" tabindex="0" role="region" aria-label="Mesa comparativa paralela de transcripción y glosas LSEC">
               <!-- Filas paralelas renderizadas dinámicamente por LinguisticComparisonView -->
             </div>
 
@@ -274,12 +288,10 @@
               <button class="btn" id="btn-step2-back" type="button">
                 &lt;- Volver a Transcripción
               </button>
-              <div style="display:flex; align-items:center; gap:12px;">
-                <span style="font-size:0.82rem; font-weight:700; color:var(--color-text-secondary);" id="step2-footer-summary"></span>
-                <button class="btn btn-primary btn-tactile-cta" id="btn-step2-confirm-glosses" type="button">
-                  CONFIRMAR GLOSAS Y VER AVATAR 3D -&gt;
-                </button>
-              </div>
+              <span class="comparative-footer-summary" id="step2-footer-summary"></span>
+              <button class="btn btn-primary btn-tactile-cta" id="btn-step2-confirm-glosses" type="button">
+                CONFIRMAR GLOSAS Y VER AVATAR 3D -&gt;
+              </button>
             </div>
           </div>
 
@@ -430,25 +442,25 @@
   </div>
 
   <!-- Scripts Modulares de LSEC Studio (Sin timeline.js en la interfaz) -->
-  <script src="/static/js/demo-data.js?v=3.1.8"></script>
-  <script src="/static/js/state/state-project-hydration.js?v=3.1.8"></script>
-  <script src="/static/js/state/state-gloss-mutations.js?v=3.1.8"></script>
-  <script src="/static/js/state/state-persistence-styles.js?v=3.1.8"></script>
-  <script src="/static/js/state.js?v=3.1.8"></script>
-  <script src="/static/js/components/subtitle-engine.js?v=3.1.8"></script>
-  <script src="/static/js/components/pipeline-processor.js?v=3.1.8"></script>
-  <script src="/static/js/components/video-player.js?v=3.1.8"></script>
-  <script src="/static/js/components/subtitle-overlay.js?v=3.1.8"></script>
-  <script src="/static/js/components/subtitle-editor-panel.js?v=3.1.8"></script>
-  <script src="/static/js/components/gloss-overlay.js?v=3.1.8"></script>
-  <script src="/static/js/components/structural-validator.js?v=3.1.8"></script>
-  <script src="/static/js/components/sentence-engine.js?v=3.1.8"></script>
-  <script src="/static/js/components/transcript-window.js?v=3.1.8"></script>
-  <script src="/static/js/components/linguistic-comparison-view.js?v=3.1.8"></script>
-  <script src="/static/js/components/sidebar-panels.js?v=3.1.8"></script>
-  <script src="/static/js/components/video-exporter.js?v=3.1.8"></script>
-  <script src="/static/js/components/modals-and-export.js?v=3.1.8"></script>
-  <script src="/static/js/app.js?v=3.1.8"></script>
-  <script type="module" src="/static/js/avatar/studio-avatar-bridge.js?v=3.1.8"></script>
+  <script src="/static/js/demo-data.js?v=3.3.0"></script>
+  <script src="/static/js/state/state-project-hydration.js?v=3.3.0"></script>
+  <script src="/static/js/state/state-gloss-mutations.js?v=3.3.0"></script>
+  <script src="/static/js/state/state-persistence-styles.js?v=3.3.0"></script>
+  <script src="/static/js/state.js?v=3.3.0"></script>
+  <script src="/static/js/components/subtitle-engine.js?v=3.3.0"></script>
+  <script src="/static/js/components/pipeline-processor.js?v=3.3.0"></script>
+  <script src="/static/js/components/video-player.js?v=3.3.0"></script>
+  <script src="/static/js/components/subtitle-overlay.js?v=3.3.0"></script>
+  <script src="/static/js/components/subtitle-editor-panel.js?v=3.3.0"></script>
+  <script src="/static/js/components/gloss-overlay.js?v=3.3.0"></script>
+  <script src="/static/js/components/structural-validator.js?v=3.3.0"></script>
+  <script src="/static/js/components/sentence-engine.js?v=3.3.0"></script>
+  <script src="/static/js/components/transcript-window.js?v=3.3.0"></script>
+  <script src="/static/js/components/linguistic-comparison-view.js?v=3.3.0"></script>
+  <script src="/static/js/components/sidebar-panels.js?v=3.3.0"></script>
+  <script src="/static/js/components/video-exporter.js?v=3.3.0"></script>
+  <script src="/static/js/components/modals-and-export.js?v=3.3.0"></script>
+  <script src="/static/js/app.js?v=3.3.0"></script>
+  <script type="module" src="/static/js/avatar/studio-avatar-bridge.js?v=3.3.0"></script>
 </body>
 </html>

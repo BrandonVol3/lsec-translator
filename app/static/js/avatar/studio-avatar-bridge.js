@@ -70,7 +70,16 @@ export class StudioAvatarBridge {
     this.subscribeAppState();
     this.subscribeSidebarTabs();
     if (window.appState?.state?.project) {
-      this.preloadProjectSigns(window.appState.state.project);
+      const deferPreload = (attempt = 0) => {
+        if (this.controller?.engine?.currentModel || attempt >= 25) {
+          if (window.appState?.state?.project) {
+            this.preloadProjectSigns(window.appState.state.project);
+          }
+        } else {
+          setTimeout(() => deferPreload(attempt + 1), 150);
+        }
+      };
+      deferPreload();
     }
   }
 

@@ -391,6 +391,15 @@ document.addEventListener('DOMContentLoaded', () => {
     return { label: '✓ Seña CONADIS', symbol: '✓', css: 'gloss-chip-conadis', badgeBg: '#047857' };
   }
 
+  function escapeHtml(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function cleanGlossDisplay(rawToken) {
     return String(rawToken || '')
       .toUpperCase()
@@ -476,7 +485,7 @@ document.addEventListener('DOMContentLoaded', () => {
         chip.title = `${cleanTok} (${info.label}) — Clic para reproducir seña`;
         chip.innerHTML = `
           <span class="gloss-chip-symbol" aria-hidden="true">${info.symbol}</span>
-          <span>${cleanTok}</span>
+          <span>${escapeHtml(cleanTok)}</span>
         `;
         chip.addEventListener('click', () => {
           const gStart = getStart(g);
@@ -500,7 +509,7 @@ document.addEventListener('DOMContentLoaded', () => {
         rowBtn.style.justifyContent = 'flex-start';
         rowBtn.style.textAlign = 'left';
         const segText = seg.normalized_text || seg.original_text || seg.raw_text || '';
-        rowBtn.innerHTML = `<strong>#${i + 1}</strong> <span>${segText.slice(0, 52)}</span>`;
+        rowBtn.innerHTML = `<strong>#${i + 1}</strong> <span>${escapeHtml(segText.slice(0, 52))}</span>`;
         rowBtn.addEventListener('click', () => {
           const sTime = getStart(seg);
           appState.setCurrentTime(sTime, true);
@@ -511,6 +520,24 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
   }
+
+  // Atajos globales de teclado Undo / Redo (Ctrl+Z / Ctrl+Y)
+  window.addEventListener('keydown', (e) => {
+    const tag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target?.isContentEditable) {
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && !e.altKey) {
+      const key = String(e.key || '').toLowerCase();
+      if (key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        if (typeof appState !== 'undefined' && typeof appState.undo === 'function') appState.undo();
+      } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
+        e.preventDefault();
+        if (typeof appState !== 'undefined' && typeof appState.redo === 'function') appState.redo();
+      }
+    }
+  });
 
   // 7. Suscripciones de Sincronización en Segundo Plano
   if (typeof appState !== 'undefined') {

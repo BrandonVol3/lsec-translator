@@ -131,6 +131,9 @@ def test_translate_numbers_and_symbols(http_client: httpx.Client):
         "El año 2026 tiene 365 días y 12 meses.",
         "La temperatura es -5 grados y el precio es $15.50 dólares.",
         "3.1415926535",
+        "4500",
+        "0992872993",
+        "14:30",
     ]
     for text in test_cases:
         resp = http_client.post("/api/v1/translate", json={"text": text})
@@ -138,6 +141,25 @@ def test_translate_numbers_and_symbols(http_client: httpx.Client):
         data = resp.json()
         assert "glosses" in data
         assert len(data["glosses"]) > 0
+
+
+def test_translate_xss_emojis_and_nested_symbols(http_client: httpx.Client):
+    """
+    Test XSS injection payloads, emojis, math symbols, nested punctuation, and +1500 char paragraphs.
+    Must return HTTP 200 without throwing 500 Internal Server Error.
+    """
+    long_1500 = "La educación inclusiva universitaria en la UPEC fortalece la Lengua de Señas Ecuatoriana. " * 20
+    assert len(long_1500) > 1500
+    payloads = [
+        "<script>alert('xss')</script><img src=x onerror=alert(1)>",
+        "🔥🔥 ¿¿¿Hola??? ¡¡¡100% @#$%^&*()!!!",
+        long_1500,
+    ]
+    for p in payloads:
+        resp = http_client.post("/api/v1/translate", json={"text": p})
+        assert resp.status_code == 200, f"Payload '{p[:40]}' failed with {resp.status_code}"
+        data = resp.json()
+        assert "glosses" in data and isinstance(data["glosses"], list)
 
 
 def test_translate_acronyms_and_institutions(http_client: httpx.Client):

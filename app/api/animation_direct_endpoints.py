@@ -190,7 +190,7 @@ async def get_fingerspelling_animation(text: str, fps: int = Query(30, ge=15, le
     return synthesize_fingerspelling_animation(text, fps=fps)
 
 
-@animation_router.get("/resolve/{gloss}", summary="Resuelve una glosa LSEC en el catálogo v2.7/v2.6 sin lanzar 404")
+@animation_router.get("/resolve/{gloss:path}", summary="Resuelve una glosa LSEC en el catálogo v2.7/v2.6 sin lanzar 404")
 async def resolve_single_gloss(
     gloss: str,
     version: Optional[str] = Query("2.7", description="Versión preferida: '2.7', '2.6' o '2.5'"),
@@ -294,7 +294,7 @@ animation_direct_alias_router.add_api_route("/non-manual-standard", get_non_manu
 animation_direct_alias_router.add_api_route("/stroke-index", get_stroke_index_endpoint, methods=["GET"])
 animation_direct_alias_router.add_api_route("/fingerspelling/catalog", get_fingerspelling_catalog, methods=["GET"])
 animation_direct_alias_router.add_api_route("/fingerspelling/{text}", get_fingerspelling_animation, methods=["GET"])
-animation_direct_alias_router.add_api_route("/resolve/{gloss}", resolve_single_gloss, methods=["GET"])
+animation_direct_alias_router.add_api_route("/resolve/{gloss:path}", resolve_single_gloss, methods=["GET"])
 animation_direct_alias_router.add_api_route("/resolve", resolve_batch_glosses, methods=["POST"])
 animation_direct_alias_router.add_api_route("/stats", animation_stats, methods=["GET"])
 animation_direct_alias_router.add_api_route("/list", list_animations, methods=["GET"])
