@@ -153,13 +153,7 @@ export class SequenceCompiler {
       const isOovFallback = Boolean(
         !clip &&
         !item.isFingerspelling &&
-        opts.fingerspellOovFallback !== false &&
-        (
-          item.raw?.validation?.fallback_fingerspelling_gloss ||
-          item.raw?.dictionary_metadata?.status === 'NO_VERIFICADO' ||
-          item.raw?.verified_in_conadis === false ||
-          opts.fingerspellAllMissing === true
-        )
+        opts.fingerspellOovFallback !== false
       );
       const effectiveFingerspelling = Boolean(item.isFingerspelling || isOovFallback);
       if (effectiveFingerspelling && opts.synthesizeFingerspelling !== false) {
