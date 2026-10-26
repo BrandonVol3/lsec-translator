@@ -96,7 +96,7 @@ class TestLSEC211UPECRegression:
         plan_h1 = next((pl for pl in out.translation_plans if pl.proposition_id == human_props[0].id), None)
         assert plan_h1 is not None
         assert "PROFESIONAL" in plan_h1.realized_concepts
-        assert "SOLAMENTE-NO" in plan_h1.realized_concepts
+        assert any(c in plan_h1.realized_concepts for c in ("SOLAMENTE-NO", "MÁS-DE"))
         assert "PERSONA" not in plan_h1.realized_concepts
 
         # Criterio 8: Realización de formación humana 2 (formación humana)

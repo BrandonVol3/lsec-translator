@@ -157,15 +157,24 @@ export class SequenceCompiler {
         (
           item.raw?.validation?.fallback_fingerspelling_gloss ||
           item.raw?.dictionary_metadata?.status === 'NO_VERIFICADO' ||
+          item.raw?.verified_in_conadis === false ||
           opts.fingerspellAllMissing === true
         )
       );
       const effectiveFingerspelling = Boolean(item.isFingerspelling || isOovFallback);
-      if (!clip && effectiveFingerspelling && opts.synthesizeFingerspelling !== false) {
-        const fsTarget = item.raw?.validation?.fallback_fingerspelling_gloss || item.raw?.source_word || item.gloss;
-        clip = createLSECFingerspellingWordClip(fsTarget, {
-          targetDurationSec: Math.max(0.65, Number(item.slotDuration) || 1.2)
-        });
+      if (effectiveFingerspelling && opts.synthesizeFingerspelling !== false) {
+        const fsTarget = item.isFingerspelling
+          ? item.gloss
+          : (item.raw?.validation?.fallback_fingerspelling_gloss || item.gloss || item.raw?.source_word);
+        const slotDur = Math.max(0.55, Number(item.slotDuration) || 1.0);
+        const needsProceduralWordClip = !clip
+          || clip.stroke?.source !== 'fingerspelling_word_lsec'
+          || (clip.stroke?.durationSec > slotDur * maxSpeed * 1.05);
+        if (needsProceduralWordClip) {
+          clip = createLSECFingerspellingWordClip(fsTarget, {
+            targetDurationSec: Math.max(0.65, slotDur * 1.35)
+          });
+        }
       }
       const prepared = clip ? buildPreparedClipDescriptor(clip) : null;
       return {
@@ -370,10 +379,9 @@ export class SequenceCompiler {
     if (seg.type === 'stroke') {
       const entry = seg.activeEntry;
       const prep = entry.prepared;
-      const localClipSec = Math.min(
-        entry.strokeEnd,
-        Math.max(entry.strokeStart, entry.strokeStart + (t - entry.startSec) * entry.speed)
-      );
+      const playSpan = Math.max(1e-6, entry.endSec - entry.startSec);
+      const uStroke = Math.min(1.0, Math.max(0.0, (t - entry.startSec) / playSpan));
+      const localClipSec = entry.strokeStart + uStroke * (entry.strokeEnd - entry.strokeStart);
       const snap = prep.sampleClipPoseAt(localClipSec);
       const resolvedEntry = this.resolveActiveEntryAt(t, seg) || entry;
       return {

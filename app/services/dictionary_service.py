@@ -433,7 +433,7 @@ class LSECDictionaryService:
                         if vk.split()[0][:3] == key.split()[0][:3]:
                             rank = r
                             break
-                prio = (0 if n_variants == 1 else 1, rank, n_variants, no_video)
+                prio = (0 if n_variants == 1 else (2 if ", de " in entry.title.lower() else 1), rank, n_variants, no_video)
                 index.setdefault(key, []).append((prio, idx, form))
         for key in index:
             index[key].sort(key=lambda t: (t[0], t[1]))

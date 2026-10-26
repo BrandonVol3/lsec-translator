@@ -178,6 +178,9 @@ export function schedulePlayableRunsWithLagBudget(entries, runs, params) {
     const effStrokeLen = new Float64Array(m);
     const effStrokeStart = new Float64Array(m);
     const effStrokeEnd = new Float64Array(m);
+    const origStrokeStart = new Float64Array(m);
+    const origStrokeEnd = new Float64Array(m);
+    const origStrokeLen = new Float64Array(m);
 
     for (let j = 0; j < m; j++) {
       const it = runItems[j];
@@ -186,12 +189,15 @@ export function schedulePlayableRunsWithLagBudget(entries, runs, params) {
       let sEnd = prep.strokeEnd;
       let sLen = prep.strokeDuration;
 
-      if (prep.flags && prep.flags.repeatedStroke && sLen > 1.35 * it.slotDuration && sLen > 1.20) {
+      if (!it.isFingerspelling && prep.flags && prep.flags.repeatedStroke && sLen > 1.35 * it.slotDuration && sLen > 1.20) {
         const singleLen = Math.max(0.60, sLen * 0.56);
         sEnd = sStart + singleLen;
         sLen = singleLen;
       }
 
+      origStrokeStart[j] = sStart;
+      origStrokeEnd[j] = sEnd;
+      origStrokeLen[j] = sLen;
       effStrokeStart[j] = sStart;
       effStrokeEnd[j] = sEnd;
       effStrokeLen[j] = sLen;
@@ -370,9 +376,22 @@ export function schedulePlayableRunsWithLagBudget(entries, runs, params) {
 
     for (let j = 0; j < m; j++) {
       const it = runItems[j];
-      const sStart = effStrokeStart[j];
-      const sEnd = effStrokeEnd[j];
-      const strokeLen = effStrokeLen[j];
+      let sStart = effStrokeStart[j];
+      let sEnd = effStrokeEnd[j];
+      let strokeLen = effStrokeLen[j];
+      if (it.isFingerspelling) {
+        sStart = origStrokeStart[j];
+        sEnd = origStrokeEnd[j];
+        strokeLen = origStrokeLen[j];
+      } else {
+        const minKeepLen = origStrokeLen[j] * 0.68;
+        if (strokeLen < minKeepLen) {
+          const trim = origStrokeLen[j] - minKeepLen;
+          sStart = origStrokeStart[j] + trim * 0.35;
+          sEnd = sStart + minKeepLen;
+          strokeLen = minKeepLen;
+        }
+      }
       const startSec = startArr[j];
       const endSec = endArr[j];
       const speed = speedArr[j];
@@ -385,7 +404,8 @@ export function schedulePlayableRunsWithLagBudget(entries, runs, params) {
       const endSnap = it.prepared.sampleClipPoseAt(sEnd);
       const rawStartVel = it.prepared.sampleClipVelocityAt(sStart, 'forward');
       const rawEndVel = it.prepared.sampleClipVelocityAt(sEnd, 'backward');
-      const exactSpeed = playDur > 1e-6 ? (sEnd - sStart) / playDur : speed;
+      const sweepRate = playDur > 1e-6 ? (sEnd - sStart) / playDur : speed;
+      const exactSpeed = Math.min(maxSpeed, speed);
 
       it.strokeStart = sStart;
       it.strokeEnd = sEnd;
@@ -401,8 +421,8 @@ export function schedulePlayableRunsWithLagBudget(entries, runs, params) {
       it.adjusted = Boolean(adjArr[j]);
       it.startSnapshot = startSnap;
       it.endSnapshot = endSnap;
-      it.startVel = scaleVelMap(rawStartVel, exactSpeed);
-      it.endVel = scaleVelMap(rawEndVel, exactSpeed);
+      it.startVel = scaleVelMap(rawStartVel, sweepRate);
+      it.endVel = scaleVelMap(rawEndVel, sweepRate);
       it.runIndex = rIdx;
       it.indexInRun = j;
     }

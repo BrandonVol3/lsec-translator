@@ -424,10 +424,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const getStart = (item) => Number(item?.start_time ?? item?.start_seconds ?? 0);
     const getEnd = (item) => Number(item?.end_time ?? item?.end_seconds ?? 0);
 
-    const activeSegIdx = segments.findIndex(s => t >= getStart(s) && t <= getEnd(s));
-    const activeSeg = (activeSegIdx >= 0 ? segments[activeSegIdx] : segments[0]) || null;
+    const bridgeEntry = window.studioAvatarBridge?.lastSampleResult?.activeEntry || null;
+    const activeGloss = (bridgeEntry && allGlosses.find(g => g.id === bridgeEntry.id || g.gloss === bridgeEntry.gloss && Math.abs(getStart(g) - bridgeEntry.slotStart) < 0.05))
+      || allGlosses.find(g => t >= getStart(g) && t <= getEnd(g))
+      || null;
+    let activeSegIdx = segments.findIndex(s => t >= getStart(s) && t <= getEnd(s));
+    if (activeSegIdx < 0 && activeGloss) {
+      const propId = activeGloss.proposition_id || activeGloss.origin_proposition_id || activeGloss.segment_id;
+      if (propId) activeSegIdx = segments.findIndex(s => s.id === propId);
+    }
+    if (activeSegIdx < 0) {
+      for (let i = segments.length - 1; i >= 0; i--) {
+        if (t >= getStart(segments[i])) { activeSegIdx = i; break; }
+      }
+    }
     const resolvedSegIdx = activeSegIdx >= 0 ? activeSegIdx : 0;
-    const activeGloss = allGlosses.find(g => t >= getStart(g) && t <= getEnd(g)) || null;
+    const activeSeg = segments[resolvedSegIdx] || null;
 
     const sentBadgeEl = document.getElementById('live-monitor-sentence-badge');
     if (sentBadgeEl) {
@@ -467,7 +479,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (rackEl) {
       rackEl.innerHTML = '';
       const segGlosses = activeSeg
-        ? allGlosses.filter(g => g.segment_id === activeSeg.id || (getStart(g) >= getStart(activeSeg) - 0.1 && getEnd(g) <= getEnd(activeSeg) + 0.1))
+        ? allGlosses.filter(g =>
+          g.segment_id === activeSeg.id ||
+          g.proposition_id === activeSeg.id ||
+          g.origin_proposition_id === activeSeg.id ||
+          (getStart(g) >= getStart(activeSeg) - 0.15 && getEnd(g) <= getEnd(activeSeg) + 0.45)
+        )
         : [];
       const itemsToRender = segGlosses.length > 0
         ? segGlosses
