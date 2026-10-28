@@ -391,6 +391,13 @@ class TranscriptWindowController {
 
       const textarea = card.querySelector('.transcript-seg-input');
       if (textarea) {
+        textarea.addEventListener('input', (e) => {
+          const liveText = e.target.value;
+          seg.normalized_text = liveText.trim();
+          seg.raw_text = liveText.trim();
+          seg.original_text = liveText.trim();
+          seg.status = 'CORRECTED';
+        });
         textarea.addEventListener('change', (e) => {
           const updatedText = e.target.value.trim();
           appState.updateSegment(seg.id, {
@@ -448,7 +455,24 @@ class TranscriptWindowController {
     this.viewMode = 'cards';
     this.updateViewModeButton();
     if (typeof appState.addSegment === 'function') {
-      appState.addSegment(newStart, newEnd, 'Nueva oración educativa en español.');
+      const added = appState.addSegment(newStart, newEnd, 'Nueva oración educativa en español.');
+      if (added && added.id) {
+        this.focusedSegmentId = added.id;
+        this.renderSegments();
+        requestAnimationFrame(() => {
+          const targetCard = this.segmentsContainer?.querySelector(
+            `.transcript-seg-card[data-seg-id="${CSS.escape(String(added.id))}"]`
+          );
+          if (targetCard) {
+            targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const ta = targetCard.querySelector('.transcript-seg-input');
+            if (ta) {
+              ta.focus();
+              ta.select();
+            }
+          }
+        });
+      }
     }
   }
 

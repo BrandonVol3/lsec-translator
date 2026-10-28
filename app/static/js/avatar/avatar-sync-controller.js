@@ -183,6 +183,36 @@ export class AvatarSyncController {
   }
 
   /**
+   * Extrae el texto contextual de la oración activa para desambiguar homónimos (ej. BATERÍA, CORONA, PLANTA, BANCO).
+   * @param {string|Array<string>} [explicitContext]
+   * @returns {string}
+   */
+  _resolveContextString(explicitContext = null) {
+    if (explicitContext) {
+      if (Array.isArray(explicitContext)) return explicitContext.filter(Boolean).join(' ').trim();
+      if (typeof explicitContext === 'string') return explicitContext.trim();
+    }
+    if (typeof window !== 'undefined' && window.appState?.state?.project) {
+      const proj = window.appState.state.project;
+      const parts = [];
+      if (typeof proj.text === 'string' && proj.text.trim()) parts.push(proj.text.trim());
+      if (Array.isArray(proj.segments)) {
+        for (const s of proj.segments) {
+          if (s?.text) parts.push(s.text);
+        }
+      }
+      if (Array.isArray(proj.glosses)) {
+        for (const g of proj.glosses) {
+          if (g?.source_word) parts.push(g.source_word);
+          else if (g?.gloss) parts.push(g.gloss);
+        }
+      }
+      return parts.join(' ').slice(0, 320).trim();
+    }
+    return '';
+  }
+
+  /**
    * Obtiene y convierte la animación de una seña usando el endpoint libre de 404
    * (/api/animations-direct/resolve/{gloss}?version=2.7) sobre las señas estandarizadas v2.7 (con fallback a v2.6 / v2.5).
    * Recorta automáticamente los frames muertos de reposo al stroke activo.
@@ -190,23 +220,34 @@ export class AvatarSyncController {
    * @param {Object} [options]
    * @param {string} [options.version='2.7'] - Versión solicitada ('2.7', '2.6' o '2.5')
    * @param {boolean} [options.trimStroke=true] - Recortar frames muertos de entrada/salida
+   * @param {string} [options.context] - Contexto oracional opcional para desambiguar homónimos
    * @returns {Promise<Object|null>} SignClip compatible con SignPlayer o null si no existe.
    */
   async fetchDirectClip(glossName, options = {}) {
     if (!glossName || typeof glossName !== 'string') return null;
-    const clean = glossName.trim();
+    const rawTrimmed = glossName.trim();
+    const clean = rawTrimmed.replace(/\[[^\]]*\]/g, '').trim();
     if (!clean || clean.length > 80 || /[<>/\\]/.test(clean)) return null;
     const normKey = clean.toUpperCase();
+    const rawNormKey = rawTrimmed.toUpperCase();
     const verTag = (options && options.version) ? String(options.version) : (this.preferredVersion || '2.7');
     const shouldTrim = options && options.trimStroke !== undefined ? Boolean(options.trimStroke) : true;
+    const ctxStr = this._resolveContextString(options?.context);
     const verPrefix = this._versionPrefix(verTag);
-    const cacheKey = `${verPrefix}${shouldTrim ? 'trim_' : 'raw_'}${normKey}`;
+    const isHomonymCandidate = /^(RAT[OÓ]N|LLAMAR|CARRERA|RECETA|LIMPIO|MENOS|BLANC[OA]|EXPLOTAR|BABEAR|TORRE|POLVO|CURAS?|REGISTRAR|MEDIO|COLA|BANCO|PLANTA|ROMPER|LENGUA|DEBER)(\+{1,2})?$/i.test(normKey);
+    const cacheKey = isHomonymCandidate && ctxStr
+      ? `${verPrefix}${shouldTrim ? 'trim_' : 'raw_'}${normKey}__ctx_${ctxStr.toLowerCase()}`
+      : `${verPrefix}${shouldTrim ? 'trim_' : 'raw_'}${normKey}`;
 
     // 1. Revisar caché en memoria
     let cached = defaultAnimationCache.getClip(cacheKey);
-    if (cached) return cached;
+    if (cached) {
+      this.clipCache.set(normKey, cached);
+      this.clipCache.set(`${verPrefix}${normKey}`, cached);
+      return cached;
+    }
 
-    if (this.resolutionCache.has(`${verPrefix}${normKey}`)) {
+    if (!isHomonymCandidate && this.resolutionCache.has(`${verPrefix}${normKey}`)) {
       const prevRes = this.resolutionCache.get(`${verPrefix}${normKey}`);
       if (prevRes && prevRes.found === false) {
         return null;
@@ -222,10 +263,11 @@ export class AvatarSyncController {
     if (typeof fetch === 'function') {
       const reqPromise = (async () => {
         try {
-          const resolveUrl = `/api/animations-direct/resolve/${encodeURIComponent(clean)}?version=${encodeURIComponent(verTag)}&include_animation=true`;
+          const ctxQuery = ctxStr ? `&context=${encodeURIComponent(ctxStr)}` : '';
+          const resolveUrl = `/api/animations-direct/resolve/${encodeURIComponent(clean)}?version=${encodeURIComponent(verTag)}&include_animation=true${ctxQuery}`;
           let res = await fetch(resolveUrl);
           if (!res || !res.ok) {
-            res = await fetch(`/api/v1/animations/resolve/${encodeURIComponent(clean)}?version=${encodeURIComponent(verTag)}&include_animation=true`);
+            res = await fetch(`/api/v1/animations/resolve/${encodeURIComponent(clean)}?version=${encodeURIComponent(verTag)}&include_animation=true${ctxQuery}`);
           }
 
           if (res && res.ok) {
@@ -279,6 +321,14 @@ export class AvatarSyncController {
                 defaultAnimationCache.setClip(`${verPrefix}${normKey}`, clip);
                 this.clipCache.set(normKey, clip);
                 this.clipCache.set(`${verPrefix}${normKey}`, clip);
+                if (rawNormKey && rawNormKey !== normKey) {
+                  defaultAnimationCache.setClip(`${verPrefix}${shouldTrim ? 'trim_' : 'raw_'}${rawNormKey}`, clip);
+                  defaultAnimationCache.setClip(`${verPrefix}${rawNormKey}`, clip);
+                  this.clipCache.set(rawNormKey, clip);
+                  this.clipCache.set(`${verPrefix}${rawNormKey}`, clip);
+                  const resEntry = this.resolutionCache.get(`${verPrefix}${normKey}`);
+                  if (resEntry) this.resolutionCache.set(`${verPrefix}${rawNormKey}`, resEntry);
+                }
                 if (clip.clipId) {
                   defaultAnimationCache.setClip(clip.clipId, clip);
                 }
@@ -324,24 +374,22 @@ export class AvatarSyncController {
    * @returns {Object|null}
    */
   getCachedClip(glossName, version = null) {
-    const normKey = (glossName || '').trim().toUpperCase();
+    const rawKey = (glossName || '').trim().toUpperCase();
+    const normKey = rawKey.replace(/\[[^\]]*\]/g, '').trim();
     if (!normKey) return null;
     const effVer = version || this.preferredVersion || '2.7';
     const verPrefix = this._versionPrefix(effVer);
-    if (this.clipCache.has(`${verPrefix}${normKey}`)) {
-      return this.clipCache.get(`${verPrefix}${normKey}`);
-    }
-    const verCached =
-      defaultAnimationCache.getClip(`${verPrefix}trim_${normKey}`) ||
-      defaultAnimationCache.getClip(`${verPrefix}raw_${normKey}`) ||
-      defaultAnimationCache.getClip(`${verPrefix}${normKey}`);
-    if (verCached) return verCached;
-
-    if (!version && this.clipCache.has(normKey)) {
-      const genericClip = this.clipCache.get(normKey);
-      const clipVer = genericClip?.metadata?.versionServed || genericClip?.metadata?.version_served;
-      if (!clipVer || String(clipVer) === String(effVer)) {
-        return genericClip;
+    for (const k of (rawKey !== normKey ? [rawKey, normKey] : [normKey])) {
+      if (this.clipCache.has(`${verPrefix}${k}`)) return this.clipCache.get(`${verPrefix}${k}`);
+      const verCached =
+        defaultAnimationCache.getClip(`${verPrefix}trim_${k}`) ||
+        defaultAnimationCache.getClip(`${verPrefix}raw_${k}`) ||
+        defaultAnimationCache.getClip(`${verPrefix}${k}`);
+      if (verCached) return verCached;
+      if (!version && this.clipCache.has(k)) {
+        const genericClip = this.clipCache.get(k);
+        const clipVer = genericClip?.metadata?.versionServed || genericClip?.metadata?.version_served;
+        if (!clipVer || String(clipVer) === String(effVer)) return genericClip;
       }
     }
     return null;
@@ -353,11 +401,12 @@ export class AvatarSyncController {
    * @param {string} [version]
    */
   getResolutionMetadata(glossName, version = null) {
-    const normKey = (glossName || '').trim().toUpperCase();
+    const rawKey = (glossName || '').trim().toUpperCase();
+    const normKey = rawKey.replace(/\[[^\]]*\]/g, '').trim();
     if (!normKey) return null;
     const effVer = version || this.preferredVersion || '2.7';
     const verPrefix = this._versionPrefix(effVer);
-    return this.resolutionCache.get(`${verPrefix}${normKey}`) || null;
+    return this.resolutionCache.get(`${verPrefix}${rawKey}`) || this.resolutionCache.get(`${verPrefix}${normKey}`) || null;
   }
 
   getResolutionMeta(glossName, version = this.preferredVersion || '2.7') {
@@ -379,7 +428,7 @@ export class AvatarSyncController {
       : (reqVersion === '2.6' ? ['2.6', '2.5'] : ['2.7', '2.6', '2.5']);
 
     for (const ver of versionChain) {
-      const directClip = await this.fetchDirectClip(glossName, { version: ver, trimStroke: shouldTrim });
+      const directClip = await this.fetchDirectClip(glossName, { version: ver, trimStroke: shouldTrim, context: options.context });
       if (directClip) {
         this.clipCache.set(key, directClip);
         return directClip;

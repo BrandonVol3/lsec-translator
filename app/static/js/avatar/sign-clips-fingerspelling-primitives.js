@@ -44,11 +44,12 @@ export const VRM_RIGHT_ARM_REST_POS = Object.freeze({
 
 /**
  * Espacio neutro de dactilología frente al hemitórax superior derecho:
- * - X = -0.172 m (costado pectoral derecho, fuera del cono visual del rostro [-0.14, 0.14])
- * - Y = 1.225 m (debajo del mentón 1.28 m, altura de hemitórax superior)
- * - Z = 0.215 m (7.77 cm por delante de la superficie torácica CHEST_SURFACE_Z = 0.1373 m)
+ * - X = -0.202 m (costado pectoral derecho, fuera del cono visual del rostro [-0.14, 0.14])
+ * - Y = 1.255 m (debajo del mentón 1.28 m, altura pectoral superior; los dedos contrastan
+ *   sobre el fondo claro en lugar del chaleco negro)
+ * - Z = 0.220 m (8.27 cm por delante de la superficie torácica CHEST_SURFACE_Z = 0.1373 m)
  */
-export const NEUTRAL_FINGERSPELLING_LOCUS = Object.freeze([-0.172, 1.225, 0.215]);
+export const NEUTRAL_FINGERSPELLING_LOCUS = Object.freeze([-0.202, 1.255, 0.220]);
 
 /**
  * Ejes espaciales oficiales según Página 9 de Guia-Uso-ilustraciones.pdf

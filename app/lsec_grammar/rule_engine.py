@@ -42,7 +42,6 @@ class RuleApplication:
     scope: RuleScope
     actions_applied: List[str] = field(default_factory=list)
     confidence_delta: float = 0.0
-    requires_review: bool = False
     notes: str = ""
     affected_gloss_ids: List[str] = field(default_factory=list)
 
@@ -102,7 +101,6 @@ class RuleEngine:
                     scope=rule.scope,
                     actions_applied=[a.action_type for a in rule.actions],
                     confidence_delta=-0.05 if rule.reduces_confidence else 0.0,
-                    requires_review=rule.requires_review,
                 )
                 applied.append(app)
                 activated_ids.add(rule.rule_id)
@@ -292,7 +290,7 @@ class RuleEngine:
                             if verb_idx > 0:
                                 v_item = non_time[verb_idx]
                                 rest = [g for i, g in enumerate(non_time) if i != verb_idx]
-                                current_glosses = time_items + [v_item] + rest
+                                current_glosses = time_items + rest + [v_item]
                                 app.affected_gloss_ids.append(str(v_item.id))
 
                     elif pattern == "topic_first":
@@ -344,21 +342,12 @@ class RuleEngine:
 
                 # 6. Clasificador candidato
                 elif atype in ("set_classifier", "generate_classifier_candidate"):
-                    app.requires_review = True
                     candidate_info = {
                         "status": "CLASSIFIER_CANDIDATE",
-                        "requires_review": True,
                         "requires_lexical_support": True,
                         "rule_id": rule.rule_id,
                     }
                     frame.setdefault("classifier_candidates", []).append(candidate_info)
-
-                # 7. Marcación de revisión
-                elif atype == "mark_review":
-                    app.requires_review = True
-                    for g in current_glosses:
-                        if str(g.id) in app.affected_gloss_ids:
-                            g.requires_review = True
 
         # Normalizar orden secuencial monótono
         for i, g in enumerate(current_glosses):

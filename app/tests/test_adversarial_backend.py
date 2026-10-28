@@ -245,8 +245,11 @@ def test_resolve_non_existent_gloss(http_client: httpx.Client):
         assert resp.status_code == 200, f"Failed for {gloss}: expected 200, got {resp.status_code}"
         data = resp.json()
         assert data.get("found") is False, f"Expected found=False for {gloss}, got {data.get('found')}"
-        assert data.get("status") in ("MISSING", "none"), f"Unexpected status: {data.get('status')}"
-        assert data.get("animation") is None
+        assert data.get("status") in ("MISSING", "none", "FINGERSPELLING"), f"Unexpected status: {data.get('status')}"
+        if data.get("status") in ("MISSING", "none"):
+            assert data.get("animation") is None
+        else:
+            assert isinstance(data.get("animation"), dict)
 
 
 def test_resolve_case_insensitivity(http_client: httpx.Client):

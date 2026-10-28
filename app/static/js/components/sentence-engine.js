@@ -235,9 +235,6 @@ class SentenceGroupingEngine {
     const propositionIds = [];
     const discourseBlockIds = [];
     const containedWords = [];
-    const reviewReasons = [];
-
-    let hasReviewRequired = false;
 
     segments.forEach(s => {
       // Proposiciones
@@ -259,13 +256,6 @@ class SentenceGroupingEngine {
       if (s.words && Array.isArray(s.words)) {
         containedWords.push(...s.words);
       }
-
-      // Estado de revisión
-      if (s.status === 'REVIEW_REQUIRED' || s.status === 'NATIVE_REVIEW' || s.status === 'AUDIO_REVIEW' || s.status === 'BLOCKED') {
-        hasReviewRequired = true;
-        if (s.review_reason) reviewReasons.push(s.review_reason);
-        else if (s.status_label) reviewReasons.push(`${s.id}: ${s.status_label}`);
-      }
     });
 
     // Recopilar glosas LSEC vinculadas a esta frase
@@ -273,14 +263,6 @@ class SentenceGroupingEngine {
 
     // Secuencia canónica de nombres de glosa
     const glossSequence = sentenceGlosses.map(g => g.gloss || g.lemma || 'GLOSA');
-
-    // Revisión en glosas
-    sentenceGlosses.forEach(g => {
-      if (g.status === 'AUDIO_REVIEW' || g.status === 'NATIVE_REVIEW' || g.status === 'BLOCKED' || g.status === 'REVIEW_REQUIRED') {
-        hasReviewRequired = true;
-        if (g.notes) reviewReasons.push(`Glosa ${g.gloss}: ${g.notes}`);
-      }
-    });
 
     return {
       id: `sentence_${String(index).padStart(2, '0')}`,
@@ -299,10 +281,8 @@ class SentenceGroupingEngine {
       words: containedWords,
       glosses: sentenceGlosses,
       gloss_sequence: glossSequence,
-      status: hasReviewRequired ? 'REVIEW_REQUIRED' : 'VALIDATED',
-      status_label: hasReviewRequired ? 'Requiere Revisión' : 'Validado',
-      has_review: hasReviewRequired,
-      review_reasons: reviewReasons,
+      status: 'READY',
+      status_label: 'Listo',
       confidence: segments.reduce((acc, s) => acc + (s.confidence || 0.95), 0) / Math.max(1, segments.length)
     };
   }

@@ -11,9 +11,7 @@ Orquestador principal del pipeline lingüístico LSEC 2.1.1:
   7. ENLACE EXHAUSTIVO DE METADATOS DE EJECUCIÓN (ExecutionMetadataLinker)
   8. ALINEACIÓN TEMPORAL Y TRAZABILIDAD FUENTE (SourceAlignmentService)
   9. TEMPORIZACIÓN Y SINCRONIZACIÓN (TimingService)
-  10. VALIDACIÓN ESTRUCTURAL Y BLOQUEOS (StructuralValidator)
-  11. CÁLCULO DE CONFIANZA MULTIDIMENSIONAL Y ESTADO DE EJECUCIÓN (READY, REVIEW_REQUIRED, BLOCKED)
-  12. RESPUESTA API (Modos: Legacy, Detailed, Debug)
+  10. RESPUESTA API (Modos: Legacy, Detailed, Debug)
 """
 
 from __future__ import annotations
@@ -28,40 +26,34 @@ from uuid import UUID, uuid4
 from app.config import settings
 from app.core.schemas import (
     DiscourseBlock,
-    ExecutionStatus,
     FacialExpression,
     GlossItem,
     GlossOutput,
     GlossType,
-    MultidimensionalConfidence,
     NonManualMarker,
     NonManualSpan,
     SemanticProposition,
     SpatialOperation,
     SpatialReferent,
-    StructuralValidationError,
     TimingPlan,
     TranslationMode,
     TranslationPlan,
     TranscriptionInput,
     TranscriptionResult,
-    ValidationMetadata,
-    ValidationSeverity,
     WordTimestamp,
 )
 from app.core.audio_reference import get_word_timestamps_for_text
 from app.services.alignment_service import SourceAlignmentService
 from app.services.discourse_planner import DiscoursePlanner
 from app.services.discourse_segmenter import DiscourseSegmenter, DiscourseUnit
+from app.services.discourse_group_optimizer import DiscourseGroupOptimizer
 from app.services.duplicate_resolver import DuplicatePlanResolver
 from app.services.metadata_linker import ExecutionMetadataLinker
 from app.services.mwe_detector import MWEDetector
-from app.services.review_service import ReviewPropagationService
 from app.services.semantic_parser import SemanticParser
 from app.services.linguistic_analyzer import EnhancedLinguisticAnalyzer
-from app.services.text_normalizer import CorrectionRecord, DubiousWordFinding, EntityInfo, TextNormalizer
+from app.services.text_normalizer import CorrectionRecord, EntityInfo, TextNormalizer
 from app.services.timing_service import TimingService
-from app.services.validator import StructuralValidator
 
 logger = logging.getLogger(__name__)
 
@@ -141,8 +133,6 @@ class LSECTranslatorService:
         self._metadata_linker = ExecutionMetadataLinker()
         self._alignment_service = SourceAlignmentService()
         self._timing_service = TimingService()
-        self._validator = StructuralValidator()
-        self._review_service = ReviewPropagationService()
 
         logger.info(
             "LSECTranslatorService 2.1.1 inicializado exitosamente (spaCy: %s).",
@@ -249,7 +239,6 @@ class LSECTranslatorService:
                 "concept": "persona determinada que avanza y supera obstáculos",
                 "default_gloss_sequence": ["PERSONA", "FUERTE", "AVANZAR"],
                 "gloss_sequence": ["PERSONA", "FUERTE", "AVANZAR"],
-                "requires_review": True,
                 "realizations": {
                     "compact": ["PERSONA", "FUERTE", "AVANZAR"],
                     "expanded": ["PERSONA", "FUERTE", "OBSTÁCULO", "SUPERAR", "AVANZAR"],
@@ -259,19 +248,16 @@ class LSECTranslatorService:
                 "concept": "proximidad relacional / calidez humana / acompañamiento",
                 "default_gloss_sequence": ["ACOMPAÑAR"],
                 "gloss_sequence": ["ACOMPAÑAR"],
-                "requires_review": True,
             },
             "lograr": {
                 "concept": "meta alcanzada con éxito",
                 "default_gloss_sequence": ["LOGRAR"],
                 "gloss_sequence": ["LOGRAR"],
-                "requires_review": False,
             },
             "evolucionar": {
                 "concept": "progreso continuo y desarrollo hacia adelante",
                 "default_gloss_sequence": ["AVANZAR"],
                 "gloss_sequence": ["AVANZAR"],
-                "requires_review": True,
                 "realizations": {
                     "compact": ["AVANZAR"],
                     "medium": ["AVANZAR"],
@@ -311,6 +297,8 @@ class LSECTranslatorService:
         source_audio_duration: Optional[float] = None,
         transcription: Optional[Union[TranscriptionInput, TranscriptionResult, Dict[str, Any]]] = None,
         exclude_rule_ids: Optional[Set[str]] = None,
+        condense_level: Optional[str] = None,
+        context_before: Optional[str] = None,
     ) -> GlossOutput:
         """
         Traduce texto o audio transcrito a representación intermedia y glosas LSEC 2.1.1.
@@ -334,19 +322,32 @@ class LSECTranslatorService:
         # Paso 1: Normalización Contextual Trazable
         normalized_text, corrections = self._normalizer.normalize(text, word_timestamps=word_timestamps)
         detected_numbers = self._normalizer.detect_numbers(normalized_text)
-        dubious_words = self._normalizer.check_dubious_words(normalized_text, word_timestamps=word_timestamps)
 
         # Paso 2: Segmentación en Unidades Discursivas / Proposiciones
         discourse_units = self._segmenter.segment(normalized_text)
 
         # Paso 3: Representación Semántica Intermedia
+        # Contexto previo opcional (p. ej. la oración anterior al editar un segmento): se analiza solo para
+        # resolver correferencias y relaciones de discurso; sus proposiciones NO forman parte de la salida.
+        context_props: List[SemanticProposition] = []
+        if context_before and context_before.strip():
+            for cu in self._segmenter.segment(self._normalizer.normalize(context_before.strip())[0]):
+                for cp in self._semantic_parser.parse_unit_to_propositions(
+                    unit=cu, prev_propositions=context_props, active_speaker="narrator",
+                ):
+                    cp.id = f"ctx_{cp.id}"
+                    context_props.append(cp)
+
         all_propositions: List[SemanticProposition] = []
         for du in discourse_units:
             props = self._semantic_parser.parse_unit_to_propositions(
                 unit=du,
-                prev_propositions=all_propositions,
+                prev_propositions=context_props + all_propositions,
                 active_speaker="narrator",
             )
+            for _p in props:
+                _p.sentence_id = du.sentence_id
+                _p.sentence_text = du.sentence_text
             all_propositions.extend(props)
 
         # Paso 3b: Enriquecimiento Lingüístico Avanzado
@@ -426,7 +427,6 @@ class LSECTranslatorService:
             operations,
             spans,
             repairs_applied,
-            unresolvable_errors,
         ) = self._duplicate_resolver.resolve_and_repair(
             propositions=all_propositions,
             plans=plans,
@@ -437,8 +437,27 @@ class LSECTranslatorService:
             spans=spans,
         )
 
-        # Paso 5b: Diccionario Oficial LSEC (idempotente; cubre glosas creadas durante la reparación)
+        # Paso 5b: Diccionario LSEC (idempotente; cubre glosas creadas durante la reparación)
         self._planner.apply_dictionary(glosses)
+
+        # Paso 5c: Consolidación por oración (idea completa): duplicados en fronteras de proposición,
+        # deixis inferida redundante y verbos paralelos. Auditable vía condensation_log.
+        (
+            glosses,
+            blocks,
+            referents,
+            operations,
+            spans,
+            condensation_log,
+        ) = DiscourseGroupOptimizer(settings.discourse_condense_level).optimize(
+            propositions=all_propositions,
+            glosses=glosses,
+            blocks=blocks,
+            referents=referents,
+            operations=operations,
+            spans=spans,
+            level=condense_level or settings.discourse_condense_level,
+        )
 
         # Paso 6: Enlace Bidireccional de Metadatos de Ejecución
         (
@@ -474,128 +493,6 @@ class LSECTranslatorService:
             source_audio_duration_seconds=source_audio_duration,
         )
 
-        # Paso 9: Propagación Centralizada de Banderas de Revisión
-        (
-            all_propositions,
-            plans,
-            glosses,
-            blocks,
-            rev_meta,
-        ) = self._review_service.propagate_reviews(
-            propositions=all_propositions,
-            plans=plans,
-            glosses=glosses,
-            blocks=blocks,
-            dubious_words=dubious_words,
-        )
-        has_audio_review = rev_meta.requires_audio_review
-        has_native_review = rev_meta.requires_native_review
-        combined_reasons = rev_meta.review_reasons
-
-        unresolved_items: List[Dict[str, Any]] = []
-        for dub in dubious_words:
-            unresolved_items.append(dub.to_dict())
-
-        # Paso 10: Validación Estructural Completa
-        validation_warnings = self._validator.validate(
-            original_text=text,
-            normalized_text=normalized_text,
-            propositions=all_propositions,
-            glosses=glosses,
-            blocks=blocks,
-            referents=referents,
-            operations=operations,
-            spans=spans,
-            plans=plans,
-            timing_plan=timing_plan,
-            corrections=[c.to_dict() for c in corrections],
-            unresolved_items=unresolved_items,
-            word_timestamps=word_timestamps,
-            validation_metadata=rev_meta,
-        )
-        validation_warnings.extend(unresolvable_errors)
-
-        if transcription:
-            c_asr = getattr(transcription, "asr_confidence", getattr(transcription, "confidence", 0.98))
-            if isinstance(transcription, dict):
-                c_asr = transcription.get("asr_confidence", transcription.get("confidence", 0.98))
-            if c_asr is None or c_asr <= 0.0:
-                c_asr = 0.98
-        else:
-            c_asr = 0.98
-        c_seg = 0.95 if len(all_propositions) > 0 else 0.80
-        c_sem = 0.92
-        c_plan = 0.92
-        c_spatial = 0.95 if operations else 1.0
-        c_non_manual = 0.92 if spans else 1.0
-        c_timing = 0.95
-        c_align = round(sum(g.alignment_confidence for g in glosses) / max(len(glosses), 1), 3) if glosses else 0.95
-
-        # Penalizaciones por advertencias o errores estructurales
-        penalties = 0.0
-        for w in validation_warnings:
-            if w.severity == ValidationSeverity.ERROR:
-                penalties += 0.20
-            elif w.severity == ValidationSeverity.WARNING:
-                penalties += 0.04
-        penalties = min(penalties, 0.50)
-
-        # Media geométrica de dimensiones centrales (puntuación técnica/estructural)
-        c_geom = (
-            (c_asr ** 0.15) *
-            (c_seg ** 0.15) *
-            (c_sem ** 0.20) *
-            (c_plan ** 0.20) *
-            (c_align ** 0.10) *
-            (c_timing ** 0.10) *
-            (c_spatial ** 0.05) *
-            (c_non_manual ** 0.05)
-        )
-        c_structural = max(min(round(c_geom * (1.0 - penalties), 3), 1.0), 0.0)
-
-        # Puntuación global restringida por dudas acústicas o paráfrasis no validadas
-        c_global = c_structural
-        if has_audio_review:
-            c_global = min(c_global, 0.65)
-        elif has_native_review:
-            c_global = min(c_global, 0.88)
-
-        c_global = max(min(round(c_global, 3), 1.0), 0.0)
-
-        confidence_meta = MultidimensionalConfidence(
-            overall_score=c_structural,
-            overall_linguistic_confidence=c_global,
-            structural_confidence=c_structural,
-            asr_confidence=c_asr,
-            segmentation_confidence=c_seg,
-            semantic_confidence=c_sem,
-            planning_confidence=c_plan,
-            structural_penalties=round(penalties, 2),
-            spatial_confidence=c_spatial,
-            non_manual_confidence=c_non_manual,
-            timing_confidence=c_timing,
-            alignment_confidence=c_align,
-        )
-
-        # Paso 12: Determinación del Estado de Ejecución y Validación
-        blocking_issues = [w.code for w in validation_warnings if w.blocking or w.severity == ValidationSeverity.ERROR]
-        has_blocking = bool(blocking_issues) or any(w.severity == ValidationSeverity.ERROR for w in validation_warnings)
-        if has_blocking:
-            execution_status = ExecutionStatus.BLOCKED
-            review_status_str = "BLOCKED"
-        elif has_audio_review and has_native_review:
-            execution_status = ExecutionStatus.REVIEW_REQUIRED
-            review_status_str = "PENDING_NATIVE_AND_AUDIO_REVIEW"
-        elif has_audio_review:
-            execution_status = ExecutionStatus.REVIEW_REQUIRED
-            review_status_str = "PENDING_AUDIO_REVIEW"
-        elif has_native_review or any(w.severity == ValidationSeverity.WARNING for w in validation_warnings):
-            execution_status = ExecutionStatus.REVIEW_REQUIRED
-            review_status_str = "PENDING_NATIVE_REVIEW"
-        else:
-            execution_status = ExecutionStatus.READY
-            review_status_str = "AUTO_VERIFIED"
-
         # Paso 13: Resumen de Entidades
         entities_summary: List[Dict[str, Any]] = []
         for r in referents:
@@ -606,63 +503,10 @@ class LSECTranslatorService:
                 "type": r.entity_type or "unknown",
             })
 
-        validation_metadata = ValidationMetadata(
-            schema_version="2.1",
-            engine_version="2.1.1",
-            pipeline_version="2.1.1",
-            execution_status=execution_status,
-            multidimensional_confidence=confidence_meta,
-            overall_linguistic_confidence=c_global,
-            native_reviewed=False,
-            requires_native_review=has_native_review,
-            requires_audio_review=has_audio_review,
-            requires_review=has_audio_review or has_native_review,
-            review_status=review_status_str,
-            review_reasons=combined_reasons,
-            pending_review_types=getattr(rev_meta, "pending_review_types", ["NATIVE_LINGUISTIC", "AUDIO"] if (has_native_review and has_audio_review) else (["AUDIO"] if has_audio_review else (["NATIVE_LINGUISTIC"] if has_native_review else []))),
-            pending_native_review_gloss_ids=getattr(rev_meta, "pending_native_review_gloss_ids", []),
-            pending_audio_review_ids=getattr(rev_meta, "pending_audio_review_ids", []),
-            pending_semantic_review_ids=getattr(rev_meta, "pending_semantic_review_ids", []),
-            blocking_issue_codes=blocking_issues,
-            warnings_count=len(validation_warnings),
-            errors_count=len([w for w in validation_warnings if w.severity == ValidationSeverity.ERROR]),
-            propositions_count=len(all_propositions),
-            plans_count=len(plans),
-            glosses_count=len(glosses),
-            blocks_count=len(blocks),
-            spatial_referents_count=len(referents),
-            spatial_operations_count=len(operations),
-            non_manual_spans_count=len(spans),
-            automatic_repairs_applied=repairs_applied,
-            computational_proposal_notice="Propuesta computacional sujeta a validación por personas sordas usuarias nativas de LSEC.",
-        )
-
-        validation_summary = {
-            "schema_version": "2.1",
-            "engine_version": "2.1.1",
-            "pipeline_version": "2.1.1",
-            "execution_status": execution_status.value,
-            "overall_linguistic_confidence": c_global,
-            "native_reviewed": False,
-            "requires_audio_review": has_audio_review,
-            "requires_native_review": has_native_review,
-            "requires_review": has_audio_review or has_native_review,
-            "review_status": review_status_str,
-            "warnings_count": len(validation_warnings),
-            "propositions_count": len(all_propositions),
-            "plans_count": len(plans),
-            "glosses_count": len(glosses),
-            "blocks_count": len(blocks),
-            "spatial_referents_count": len(referents),
-            "spatial_operations_count": len(operations),
-            "non_manual_spans_count": len(spans),
-            "computational_proposal_notice": "Propuesta computacional sujeta a validación por personas sordas usuarias nativas de LSEC.",
-        }
-
         grammar_notes = (
-            f"LSEC 2.1.1 Pipeline [{execution_status.value}]: {len(all_propositions)} proposiciones semánticas | "
+            f"LSEC 2.1.1 Pipeline: {len(all_propositions)} proposiciones semánticas | "
             f"{len(blocks)} bloques discursivos | {len(referents)} referentes espaciales | "
-            f"{len(spans)} spans no manuales. Confianza global: {c_global}."
+            f"{len(spans)} spans no manuales."
         )
 
         output = GlossOutput(
@@ -670,7 +514,6 @@ class LSECTranslatorService:
             engine_version="2.1.1",
             pipeline_version="2.1.1",
             mode=trans_mode,
-            execution_status=execution_status,
             session_id=uuid4(),
             original_text=text,
             normalized_text=normalized_text,
@@ -685,12 +528,9 @@ class LSECTranslatorService:
             non_manual_spans=spans,
             timing_plan=timing_plan,
             total_duration_ms=timing_plan.planned_duration_ms,
-            validation_metadata=validation_metadata,
-            validation_summary=validation_summary,
-            unresolved_items=unresolved_items,
-            warnings=validation_warnings,
             grammar_notes=grammar_notes,
             automatic_repairs_applied=repairs_applied,
+            condensation_log=condensation_log,
         )
 
         return output
@@ -717,16 +557,9 @@ class LSECTranslatorService:
         glosses, plans, blocks, refs, ops, spans = self._planner.plan_and_generate(props)
         timing = self._timing_service.create_timing_plan(glosses, blocks)
 
-        validation_summary = {
-            "schema_version": "2.1",
-            "execution_status": "READY",
-            "overall_linguistic_confidence": 0.85,
-        }
-
         return GlossOutput(
             schema_version="2.1",
             mode=TranslationMode.LEGACY,
-            execution_status=ExecutionStatus.READY,
             original_text=text,
             normalized_text=normalized,
             glosses=glosses,
@@ -736,7 +569,6 @@ class LSECTranslatorService:
             spatial_operations=ops,
             non_manual_spans=spans,
             total_duration_ms=timing.planned_duration_ms,
-            validation_summary=validation_summary,
             corrections_applied=[c.to_dict() for c in corrections],
         )
 

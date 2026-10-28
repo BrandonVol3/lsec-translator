@@ -209,10 +209,6 @@ class SourceAlignmentService:
                 if g.lexical_strategy == "semantic_paraphrase" or (g.alignment_type == AlignmentType.PARAPHRASE):
                     g.alignment_type = AlignmentType.PARAPHRASE
                     g.alignment_confidence = 0.85
-                    g.requires_review = True
-                    g.requires_native_review = True
-                    if "Propuesta de paráfrasis semántica sujeta a validación nativa LSEC." not in g.review_reasons:
-                        g.review_reasons.append("Propuesta de paráfrasis semántica sujeta a validación nativa LSEC.")
                 elif g.alignment_type == AlignmentType.DEICTIC or (g.notes and "deixis" in g.notes.lower()):
                     g.alignment_type = AlignmentType.DEICTIC
                     g.alignment_confidence = 0.90

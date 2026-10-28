@@ -341,7 +341,16 @@ export function sampleExpressionTrackAt(track, localSec) {
   return Math.max(0, Math.min(1, v));
 }
 
-export function buildPreparedClipDescriptor(clip) {
+/**
+ * Excursión angular máxima (°) permitida respecto al reposo para cabeza, cuello y tronco.
+ * Los clips derivados de video 2D (p. ej. CARCHI) traen giros de ~65° de torso/cabeza que dejan al
+ * avatar de perfil; el intérprete debe permanecer siempre de frente a la cámara.
+ */
+const HEAD_EXCURSION_LIMITS_DEG = Object.freeze([
+  ['head', 22], ['neck', 12], ['upperChest', 8], ['chest', 8], ['spine', 8], ['hips', 6]
+]);
+
+export function buildPreparedClipDescriptor(clip, prepOpts = {}) {
   if (!clip || typeof clip !== 'object' || !Array.isArray(clip.boneTracks)) return null;
 
   const isTrimmed = Boolean(clip.metadata && clip.metadata.isStrokeTrimmed);
@@ -396,6 +405,37 @@ export function buildPreparedClipDescriptor(clip) {
     strokeEnd = totalClipSec;
   }
 
+  const isFsClip = Boolean(clip.metadata?.isFingerspelling || clip.stroke?.source?.startsWith('fingerspelling'));
+  const coreMax = Number(prepOpts.coreStrokeMaxSec) || 0;
+  if (coreMax > 0 && !isFsClip && (strokeEnd - strokeStart) > coreMax) {
+    const rawSpan = strokeEnd - strokeStart;
+    // Ventana nuclear amplia con apex hold: preparación corta + golpe completo + postura final legibles.
+    const targetDur = Math.max(0.68, Math.min(coreMax, rawSpan * 0.52));
+    const steps = 16;
+    const dt = rawSpan / steps;
+    let bestCenter = strokeStart + rawSpan * 0.46;
+    let bestScore = -1;
+    const probeBones = ['rightUpperArm', 'rightLowerArm', 'leftUpperArm', 'leftLowerArm'];
+    for (let s = 1; s < steps; s++) {
+      const tC = strokeStart + s * dt;
+      const tP = Math.max(strokeStart, tC - dt);
+      let sc = 0;
+      for (const b of probeBones) {
+        const tr = trackMap.get(b);
+        if (!tr) continue;
+        const qC = sampleBoneTrackAt(tr, tC);
+        const qP = sampleBoneTrackAt(tr, tP);
+        sc += quatAngleDeg(qC, CANONICAL_REST_BONES[b] || [0, 0, 0, 1]) * 0.35 + quatAngleDeg(qC, qP) * 2.2;
+      }
+      if (sc > bestScore) {
+        bestScore = sc;
+        bestCenter = tC;
+      }
+    }
+    strokeStart = Math.max(strokeStart, Math.min(strokeEnd - targetDur, bestCenter - targetDur * 0.48));
+    strokeEnd = Math.min(strokeEnd, strokeStart + targetDur);
+  }
+
   const strokeDuration = Math.max(0.08, strokeEnd - strokeStart);
   const rawActiveHands = (strokeMeta && strokeMeta.activeHands)
     || (clip.metadata && clip.metadata.kinematicStabilizer && clip.metadata.kinematicStabilizer.activeHands)
@@ -424,6 +464,28 @@ export function buildPreparedClipDescriptor(clip) {
     faceOnly: Boolean(clip.metadata && (clip.metadata.faceOnly || clip.metadata.armsInRestPose))
   };
 
+  if (!flags.faceOnly && (!activeHands.left || !activeHands.right)) {
+    const midT = 0.5 * (strokeStart + strokeEnd);
+    const armExcursionDeg = (uBone, lBone) => {
+      const trU = trackMap.get(uBone);
+      const trL = trackMap.get(lBone);
+      const qU = trU ? sampleBoneTrackAt(trU, midT) : null;
+      const qL = trL ? sampleBoneTrackAt(trL, midT) : null;
+      const dU = qU ? quatAngleDeg(qU, CANONICAL_REST_BONES[uBone] || [0, 0, 0, 1]) : 0;
+      const dL = qL ? quatAngleDeg(qL, CANONICAL_REST_BONES[lBone] || [0, 0, 0, 1]) : 0;
+      return dU + 0.6 * dL;
+    };
+    if (armExcursionDeg('leftUpperArm', 'leftLowerArm') > 38 && armExcursionDeg('rightUpperArm', 'rightLowerArm') > 38) {
+      activeHands = { left: true, right: true, dominant: 'right' };
+      flags.oneHanded = false;
+    }
+  }
+
+  const mirrorLeftToRight = Boolean(!flags.faceOnly && activeHands.left && !activeHands.right);
+  if (mirrorLeftToRight) {
+    activeHands = { left: false, right: true, dominant: 'right' };
+  }
+
   const sampleClipPoseAt = (clipTimeSec) => {
     const bones = {};
     for (const bName of ALL_COMPILER_BONES) {
@@ -435,9 +497,27 @@ export function buildPreparedClipDescriptor(clip) {
         bones[bName] = [...(CANONICAL_REST_BONES[bName] || [0, 0, 0, 1])];
         continue;
       }
+      if (mirrorLeftToRight) {
+        const srcName = RIGHT_CHAIN_SET.has(bName) ? ('left' + bName.slice(5)) : bName;
+        const tr = trackMap.get(srcName);
+        const q = tr ? sampleBoneTrackAt(tr, clipTimeSec) : null;
+        bones[bName] = q ? [q[0], -q[1], -q[2], q[3]] : [...(CANONICAL_REST_BONES[bName] || [0, 0, 0, 1])];
+        continue;
+      }
       const tr = trackMap.get(bName);
       const q = tr ? sampleBoneTrackAt(tr, clipTimeSec) : null;
       bones[bName] = q || [...(CANONICAL_REST_BONES[bName] || [0, 0, 0, 1])];
+    }
+    // Saneamiento de giros extremos de cabeza/cuello heredados del video 2D (p. ej. CARCHI):
+    // el avatar siempre mantiene el rostro orientado hacia la cámara.
+    for (const [hb, maxDeg] of HEAD_EXCURSION_LIMITS_DEG) {
+      const restQ = CANONICAL_REST_BONES[hb] || [0, 0, 0, 1];
+      const curQ = bones[hb];
+      if (!curQ) continue;
+      const angDeg = quatAngleDeg(curQ, restQ);
+      if (angDeg > maxDeg) {
+        bones[hb] = quatSlerp(restQ, quatEnsureSameHemisphere(restQ, curQ), maxDeg / angDeg);
+      }
     }
     const expressions = {};
     for (const eName of FACIAL_EXPRESSION_NAMES) {

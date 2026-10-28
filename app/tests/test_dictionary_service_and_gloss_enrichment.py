@@ -1,5 +1,5 @@
 """
-Pruebas de integración del Diccionario Oficial LSEC (CONADIS) en la generación de glosas.
+Pruebas de integración del Diccionario LSEC (CONADIS) en la generación de glosas.
 
 Cubre: análisis de títulos (género, sinónimos, siglas), resolución léxica, cascada OOV,
 enriquecimiento de `GlossItem`, validador, aprendizaje activo, índice pre-calculado y endpoints REST.
@@ -16,7 +16,6 @@ from fastapi.testclient import TestClient
 
 from app.api.dictionary_endpoints import dictionary_router
 from app.core.schemas import GlossItem, GlossType
-from app.services.active_learning_service import ActiveLearningService
 from app.services.dictionary_service import (
     LSECDictionaryService,
     STATUS_FINGERSPELLING,
@@ -151,7 +150,7 @@ class TestLookup:
 
     def test_metadata_card(self, synthetic_service):
         meta = synthetic_service.lookup("comer").to_metadata()
-        assert meta.status == STATUS_VERIFIED and meta.verified_in_conadis
+        assert meta.status == STATUS_VERIFIED and meta.in_dictionary
         assert meta.hand_configuration == "configuracion_manual_1"
         assert meta.alphabetical_group == "alfa-c"
         assert meta.video_url.endswith("v3")
@@ -174,7 +173,7 @@ class TestEnrichGlosses:
             _gloss("PERRITO", 4, normalized_word="perrito"),
         ]
         counts = synthetic_service.enrich_glosses(
-            glosses, known_glosses={"EXCELENCIA-ACADÉMICA"}, flag_unverified=True
+            glosses, known_glosses={"EXCELENCIA-ACADÉMICA"}
         )
         statuses = [g.dictionary_metadata.status for g in glosses]
         assert statuses == [
@@ -182,39 +181,18 @@ class TestEnrichGlosses:
         ]
         assert counts[STATUS_VERIFIED] == 1
 
-    def test_unverified_gloss_is_flagged_for_native_review(self, synthetic_service):
-        g = _gloss("PERRITO", 0, normalized_word="perrito")
-        synthetic_service.enrich_glosses([g], flag_unverified=True)
-        assert g.requires_native_review and g.requires_review
-        assert any("CONADIS" in r for r in g.review_reasons)
-        assert g.dictionary_metadata.lexical_alternatives == ["PERRO"]
-        assert not g.dictionary_metadata.verified_in_conadis
-
-    def test_flagging_can_be_disabled(self, synthetic_service):
-        g = _gloss("PERRITO", 0, normalized_word="perrito")
-        synthetic_service.enrich_glosses([g], flag_unverified=False)
-        assert g.dictionary_metadata.status == STATUS_UNVERIFIED
-        assert not g.requires_native_review and g.review_reasons == []
 
     def test_verified_gloss_gets_synonym_alternatives(self, synthetic_service):
         g = _gloss("A-DIARIO", 0)
-        synthetic_service.enrich_glosses([g], flag_unverified=True)
+        synthetic_service.enrich_glosses([g])
         assert g.alternatives == ["COTIDIANO"]
-        assert not g.requires_native_review
 
-    def test_is_idempotent(self, synthetic_service):
-        g = _gloss("PERRITO", 0, normalized_word="perrito")
-        synthetic_service.enrich_glosses([g], flag_unverified=True)
-        reasons = list(g.review_reasons)
-        synthetic_service.enrich_glosses([g], flag_unverified=True)
-        assert g.review_reasons == reasons
 
     def test_missing_catalog_is_a_safe_noop(self, tmp_path):
         svc = LSECDictionaryService(catalog_path=tmp_path / "no_existe.json", index_path=tmp_path / "i.json")
         assert not svc.available
         g = _gloss("ALGO", 0)
-        assert svc.enrich_glosses([g], flag_unverified=True) == {}
-        assert g.dictionary_metadata is None and not g.requires_native_review
+        assert svc.enrich_glosses([g]) == {}
 
 
 # ---------------------------------------------------------------------------
@@ -289,33 +267,13 @@ class TestTranslationIntegration:
         card = by_gloss["MANZANA"].dictionary_metadata
         assert card.conadis_slug == "manzana"
         assert card.video_url and card.hand_configuration
-        assert by_gloss["COMER"].dictionary_metadata.verified_in_conadis
+        assert by_gloss["COMER"].dictionary_metadata.in_dictionary
         assert by_gloss["PRO1"].dictionary_metadata.status == STATUS_GRAMMATICAL
 
-    @pytest.mark.asyncio
-    async def test_unknown_word_is_flagged_and_reported(self, translator):
-        out = await translator.translate_to_gloss("El perrito juega con la pelota.", mode="detailed")
-        perrito = next(g for g in out.glosses if g.gloss == "PERRITO")
-        assert perrito.dictionary_metadata.status == STATUS_UNVERIFIED
-        assert perrito.requires_native_review
-        assert "PERRO" in perrito.dictionary_metadata.lexical_alternatives
-        assert out.execution_status.value == "REVIEW_REQUIRED"
-        assert any(w.code == "UNVERIFIED_LEXICAL_SIGN" for w in out.warnings)
 
     @pytest.mark.asyncio
     async def test_fully_verified_sentence_stays_ready(self, translator):
         out = await translator.translate_to_gloss("¿Tú comes manzana?", mode="detailed")
-        assert out.execution_status.value == "READY"
-        assert not any(w.code == "UNVERIFIED_LEXICAL_SIGN" for w in out.warnings)
-
-    @pytest.mark.asyncio
-    async def test_active_learning_ranks_unverified_sentence_higher(self, translator):
-        ok = await translator.translate_to_gloss("¿Tú comes manzana?", mode="detailed")
-        oov = await translator.translate_to_gloss("El perrito juega con la pelota.", mode="detailed")
-        s_ok, _ = ActiveLearningService.calculate_uncertainty_score(ok)
-        s_oov, reasons = ActiveLearningService.calculate_uncertainty_score(oov)
-        assert s_oov > s_ok
-        assert any("Diccionario Oficial LSEC" in r for r in reasons)
 
 
 # ---------------------------------------------------------------------------
@@ -414,7 +372,6 @@ class TestPhraseIntegration:
         card = next(g for g in out.glosses if g.gloss == "A-DIARIO").dictionary_metadata
         assert card.status == STATUS_VERIFIED and card.conadis_slug == "a-diario"
         assert "COTIDIANO" in card.lexical_alternatives
-        assert out.execution_status.value == "READY"
 
     @pytest.mark.asyncio
     async def test_greeting_and_courtesy_phrases(self, translator):
@@ -428,13 +385,6 @@ class TestPhraseIntegration:
         monkeypatch.setattr(settings, "lsec_dictionary_phrase_matching", False)
         out = await LSECTranslatorService().translate_to_gloss("Mi abuelo come manzana a diario.", mode="detailed")
         assert "A-DIARIO" not in [g.gloss for g in out.glosses]
-
-    @pytest.mark.asyncio
-    async def test_local_time_markers_are_not_flagged(self, translator):
-        out = await translator.translate_to_gloss("Hoy como manzana.", mode="detailed")
-        hoy = next(g for g in out.glosses if g.gloss == "HOY")
-        assert hoy.dictionary_metadata.status == STATUS_LOCAL_LEXICON
-        assert not hoy.requires_native_review
 
 
 class TestGlossForm:

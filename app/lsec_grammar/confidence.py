@@ -86,8 +86,6 @@ class ConfidenceCalculator:
             deltas = [a.confidence_delta for a in applications]
             base = 0.85
             vec.linguistic = min(max(base + sum(deltas), 0.3), 1.0)
-            if any(a.requires_review for a in applications):
-                vec.linguistic *= 0.90
 
         # 2. Confianza léxica
         vec.lexical = min(max(lexicon_hit_ratio, 0.0), 1.0)

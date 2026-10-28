@@ -43,7 +43,6 @@ class CorrectionRecord:
     correction_confidence: float = 0.95  # Alias retrocompatible
     correction_reason: str = "contextual"
     reason: str = "contextual"
-    requires_human_review: bool = False
     alternative_candidates: List[str] = field(default_factory=list)
     position: Optional[int] = None  # Alias retrocompatible
 
@@ -73,7 +72,7 @@ class CorrectionRecord:
             "alignment_type": self.alignment_type, "alignment_confidence": self.alignment_confidence,
             "asr_confidence": self.asr_confidence, "normalization_confidence": self.normalization_confidence,
             "correction_confidence": self.correction_confidence, "correction_reason": self.correction_reason,
-            "reason": self.reason, "requires_human_review": self.requires_human_review,
+            "reason": self.reason,
             "alternative_candidates": self.alternative_candidates, "position": self.position,
         }
 
@@ -112,27 +111,27 @@ _DEFAULT_ENTITY_REGISTRY: Dict[str, EntityInfo] = {
 # ============================================================
 
 _DEFAULT_CONTEXTUAL_CORRECTIONS: List[Dict[str, Any]] = [
-    {"pattern": r"\bcampos\s+Tulk[aá]n\b", "replacement": "campus Tulcán", "asr_confidence": 0.588, "normalization_confidence": 0.99, "reason": "contextual: universidad tiene campus, no campos agrícolas", "requires_human_review": False, "alternative_candidates": ["campus Tulcán"]},
-    {"pattern": r"\bcampos\s+Tulc[aá]n\b", "replacement": "campus Tulcán", "asr_confidence": 0.650, "normalization_confidence": 0.99, "reason": "contextual: universidad tiene campus, no campos", "requires_human_review": False, "alternative_candidates": ["campus Tulcán"]},
-    {"pattern": r"\bTulk[aá]n\b", "replacement": "Tulcán", "asr_confidence": 0.700, "normalization_confidence": 0.98, "reason": "topónimo oficial Carchi", "requires_human_review": False, "alternative_candidates": ["Tulcán"]},
-    {"pattern": r"\b[Cc]allambe\b", "replacement": "Cayambe", "asr_confidence": 0.720, "normalization_confidence": 0.98, "reason": "topónimo oficial Pichincha", "requires_human_review": False, "alternative_candidates": ["Cayambe"]},
-    {"pattern": r"\bEstandel\s+(?:Karczym|Karchim)\b", "replacement": "Estatal del Carchi", "asr_confidence": 0.50, "normalization_confidence": 0.99, "reason": "corrección fonética ASR: 'Estandel Karczym' -> 'Estatal del Carchi'", "requires_human_review": False, "alternative_candidates": ["Estatal del Carchi"]},
-    {"pattern": r"\b20[-–]26[aA]\b", "replacement": "2026-A", "asr_confidence": 0.85, "normalization_confidence": 0.98, "reason": "periodo académico ASR: '20-26a' -> '2026-A'", "requires_human_review": False, "alternative_candidates": ["2026-A"]},
-    {"pattern": r"\b(?:8|ocho)\s+y\s+cuarto\b", "replacement": "ocho y quince", "asr_confidence": 0.95, "normalization_confidence": 0.98, "reason": "expresión horaria: '8 y cuarto' -> 'ocho y quince'", "requires_human_review": False, "alternative_candidates": ["ocho y quince"]},
-    {"pattern": r"\b(\d{1,2})\s+y\s+cuarto\b", "replacement": r"\1 y quince", "asr_confidence": 0.95, "normalization_confidence": 0.98, "reason": "expresión horaria: 'X y cuarto' -> 'X y quince'", "requires_human_review": False, "alternative_candidates": ["X y quince"]},
-    {"pattern": r"\bopcionando\b", "replacement": "optando", "asr_confidence": 0.85, "normalization_confidence": 0.95, "reason": "neologismo administrativo 'opcionando' -> 'optando'", "requires_human_review": False, "alternative_candidates": ["optando"]},
-    {"pattern": r"\bopcionan\b", "replacement": "optan", "asr_confidence": 0.85, "normalization_confidence": 0.95, "reason": "neologismo administrativo 'opcionan' -> 'optan'", "requires_human_review": False, "alternative_candidates": ["optan"]},
-    {"pattern": r"\bopcionar\b", "replacement": "optar", "asr_confidence": 0.85, "normalization_confidence": 0.95, "reason": "neologismo administrativo 'opcionar' -> 'optar'", "requires_human_review": False, "alternative_candidates": ["optar"]},
-    {"pattern": r"\bdesarrolla\s+la\s+etapa\b", "replacement": "realiza la etapa", "asr_confidence": 0.90, "normalization_confidence": 0.95, "reason": "desarrollar etapa administrativa -> realiza la etapa", "requires_human_review": False, "alternative_candidates": ["realiza la etapa"]},
-    {"pattern": r"\bexcelencia\s+cad[eé]nica\b", "replacement": "excelencia académica", "asr_confidence": 0.550, "normalization_confidence": 0.99, "reason": "colocación semántica académica", "requires_human_review": False, "alternative_candidates": ["excelencia académica"]},
-    {"pattern": r"\bcad[eé]nica\b", "replacement": "académica", "asr_confidence": 0.600, "normalization_confidence": 0.97, "reason": "corrección fonética ASR", "requires_human_review": False, "alternative_candidates": ["académica"]},
-    {"pattern": r"\bcadenica\b", "replacement": "académica", "asr_confidence": 0.600, "normalization_confidence": 0.97, "reason": "corrección fonética ASR", "requires_human_review": False, "alternative_candidates": ["académica"]},
-    {"pattern": r"\bya\s+le\s+hicieron\b", "replacement": "ya lo hicieron", "asr_confidence": 0.850, "normalization_confidence": 0.95, "reason": "corrección anafórica pronominal", "requires_human_review": False, "alternative_candidates": ["ya lo hicieron"]},
-    {"pattern": r"\bhas\s+posible\b", "replacement": "haz posible", "asr_confidence": 0.900, "normalization_confidence": 0.99, "reason": "imperativo de hacer", "requires_human_review": False, "alternative_candidates": ["haz posible"]},
-    {"pattern": r"\bqui[eé]n\s+quiere\s+ser\b", "replacement": "quién quieres ser", "asr_confidence": 0.800, "normalization_confidence": 0.93, "reason": "concordancia segunda persona", "requires_human_review": False, "alternative_candidates": ["quién quieres ser"]},
-    {"pattern": r"\bpolit[eé]cnica\s+del\s+carchi\b", "replacement": "Politécnica del Carchi", "asr_confidence": 0.880, "normalization_confidence": 0.95, "reason": "normalización institucional", "requires_human_review": False, "alternative_candidates": ["Politécnica del Carchi"]},
-    {"pattern": r"\bseres\s+humanos\b", "replacement": "seres humanos", "asr_confidence": 0.920, "normalization_confidence": 0.90, "reason": "preservación de locución nominal", "requires_human_review": False, "alternative_candidates": ["seres humanos"]},
-    {"pattern": r"\bcampos\b(?!\s+(?:de|del|magnético|eléctrico|visual))", "replacement": "campus", "asr_confidence": 0.750, "normalization_confidence": 0.85, "reason": "contextual: 'campus' universitario", "requires_human_review": False, "alternative_candidates": ["campus"]},
+    {"pattern": r"\bcampos\s+Tulk[aá]n\b", "replacement": "campus Tulcán", "asr_confidence": 0.588, "normalization_confidence": 0.99, "reason": "contextual: universidad tiene campus, no campos agrícolas", "alternative_candidates": ["campus Tulcán"]},
+    {"pattern": r"\bcampos\s+Tulc[aá]n\b", "replacement": "campus Tulcán", "asr_confidence": 0.650, "normalization_confidence": 0.99, "reason": "contextual: universidad tiene campus, no campos", "alternative_candidates": ["campus Tulcán"]},
+    {"pattern": r"\bTulk[aá]n\b", "replacement": "Tulcán", "asr_confidence": 0.700, "normalization_confidence": 0.98, "reason": "topónimo oficial Carchi", "alternative_candidates": ["Tulcán"]},
+    {"pattern": r"\b[Cc]allambe\b", "replacement": "Cayambe", "asr_confidence": 0.720, "normalization_confidence": 0.98, "reason": "topónimo oficial Pichincha", "alternative_candidates": ["Cayambe"]},
+    {"pattern": r"\bEstandel\s+(?:Karczym|Karchim)\b", "replacement": "Estatal del Carchi", "asr_confidence": 0.50, "normalization_confidence": 0.99, "reason": "corrección fonética ASR: 'Estandel Karczym' -> 'Estatal del Carchi'", "alternative_candidates": ["Estatal del Carchi"]},
+    {"pattern": r"\b20[-–]26[aA]\b", "replacement": "2026-A", "asr_confidence": 0.85, "normalization_confidence": 0.98, "reason": "periodo académico ASR: '20-26a' -> '2026-A'", "alternative_candidates": ["2026-A"]},
+    {"pattern": r"\b(?:8|ocho)\s+y\s+cuarto\b", "replacement": "ocho y quince", "asr_confidence": 0.95, "normalization_confidence": 0.98, "reason": "expresión horaria: '8 y cuarto' -> 'ocho y quince'", "alternative_candidates": ["ocho y quince"]},
+    {"pattern": r"\b(\d{1,2})\s+y\s+cuarto\b", "replacement": r"\1 y quince", "asr_confidence": 0.95, "normalization_confidence": 0.98, "reason": "expresión horaria: 'X y cuarto' -> 'X y quince'", "alternative_candidates": ["X y quince"]},
+    {"pattern": r"\bopcionando\b", "replacement": "optando", "asr_confidence": 0.85, "normalization_confidence": 0.95, "reason": "neologismo administrativo 'opcionando' -> 'optando'", "alternative_candidates": ["optando"]},
+    {"pattern": r"\bopcionan\b", "replacement": "optan", "asr_confidence": 0.85, "normalization_confidence": 0.95, "reason": "neologismo administrativo 'opcionan' -> 'optan'", "alternative_candidates": ["optan"]},
+    {"pattern": r"\bopcionar\b", "replacement": "optar", "asr_confidence": 0.85, "normalization_confidence": 0.95, "reason": "neologismo administrativo 'opcionar' -> 'optar'", "alternative_candidates": ["optar"]},
+    {"pattern": r"\bdesarrolla\s+la\s+etapa\b", "replacement": "realiza la etapa", "asr_confidence": 0.90, "normalization_confidence": 0.95, "reason": "desarrollar etapa administrativa -> realiza la etapa", "alternative_candidates": ["realiza la etapa"]},
+    {"pattern": r"\bexcelencia\s+cad[eé]nica\b", "replacement": "excelencia académica", "asr_confidence": 0.550, "normalization_confidence": 0.99, "reason": "colocación semántica académica", "alternative_candidates": ["excelencia académica"]},
+    {"pattern": r"\bcad[eé]nica\b", "replacement": "académica", "asr_confidence": 0.600, "normalization_confidence": 0.97, "reason": "corrección fonética ASR", "alternative_candidates": ["académica"]},
+    {"pattern": r"\bcadenica\b", "replacement": "académica", "asr_confidence": 0.600, "normalization_confidence": 0.97, "reason": "corrección fonética ASR", "alternative_candidates": ["académica"]},
+    {"pattern": r"\bya\s+le\s+hicieron\b", "replacement": "ya lo hicieron", "asr_confidence": 0.850, "normalization_confidence": 0.95, "reason": "corrección anafórica pronominal", "alternative_candidates": ["ya lo hicieron"]},
+    {"pattern": r"\bhas\s+posible\b", "replacement": "haz posible", "asr_confidence": 0.900, "normalization_confidence": 0.99, "reason": "imperativo de hacer", "alternative_candidates": ["haz posible"]},
+    {"pattern": r"\bqui[eé]n\s+quiere\s+ser\b", "replacement": "quién quieres ser", "asr_confidence": 0.800, "normalization_confidence": 0.93, "reason": "concordancia segunda persona", "alternative_candidates": ["quién quieres ser"]},
+    {"pattern": r"\bpolit[eé]cnica\s+del\s+carchi\b", "replacement": "Politécnica del Carchi", "asr_confidence": 0.880, "normalization_confidence": 0.95, "reason": "normalización institucional", "alternative_candidates": ["Politécnica del Carchi"]},
+    {"pattern": r"\bseres\s+humanos\b", "replacement": "seres humanos", "asr_confidence": 0.920, "normalization_confidence": 0.90, "reason": "preservación de locución nominal", "alternative_candidates": ["seres humanos"]},
+    {"pattern": r"\bcampos\b(?!\s+(?:de|del|magnético|eléctrico|visual))", "replacement": "campus", "asr_confidence": 0.750, "normalization_confidence": 0.85, "reason": "contextual: 'campus' universitario", "alternative_candidates": ["campus"]},
 ]
 
 
@@ -250,16 +249,16 @@ def _de_una_replacer(match: "re.Match[str]") -> str:
 
 
 _DEFAULT_CONTEXTUAL_CORRECTIONS.extend([
-    {"pattern": r"\b([a-zA-Z0-9._%+-]+)(?:arrobaupec\.edu\.(?:es|ec)|@upec\.edu\.(?:es|ec))\b", "replacement": "", "replacer": _upec_email_replacer, "asr_confidence": 0.92, "normalization_confidence": 0.98, "reason": "correo institucional ASR: dominio UPEC normalizado a .edu.ec", "requires_human_review": False, "alternative_candidates": ["usuario arroba UPEC punto edu punto ec"]},
-    {"pattern": r"(?:(?:\+593|\b593)[\s.-]?0?|\b0)\d(?:[\s.-]?\d){7,9}\b", "replacement": "", "replacer": _phone_number_replacer, "asr_confidence": 0.95, "normalization_confidence": 0.98, "reason": "número telefónico -> dígitos hablados", "requires_human_review": False, "alternative_candidates": ["cero nueve ..."]},
-    {"pattern": _DAME_GERUND_RE, "replacement": "", "replacer": _dame_gerund_replacer, "asr_confidence": 0.90, "normalization_confidence": 0.95, "reason": "cortesía indirecta ecuatoriana: 'dame + gerundio' → 'por favor + infinitivo'", "requires_human_review": False, "alternative_candidates": ["por favor + infinitivo"]},
-    {"pattern": r"\b(?:ñaños?|ñañas?|guaguas?)\b", "replacement": "", "replacer": _slang_noun_replacer, "asr_confidence": 0.90, "normalization_confidence": 0.95, "reason": "quechuismo/coloquialismo ecuatoriano → léxico general LSEC", "requires_human_review": False, "alternative_candidates": ["hermano", "niño"]},
+    {"pattern": r"\b([a-zA-Z0-9._%+-]+)(?:arrobaupec\.edu\.(?:es|ec)|@upec\.edu\.(?:es|ec))\b", "replacement": "", "replacer": _upec_email_replacer, "asr_confidence": 0.92, "normalization_confidence": 0.98, "reason": "correo institucional ASR: dominio UPEC normalizado a .edu.ec", "alternative_candidates": ["usuario arroba UPEC punto edu punto ec"]},
+    {"pattern": r"(?:(?:\+593|\b593)[\s.-]?0?|\b0)\d(?:[\s.-]?\d){7,9}\b", "replacement": "", "replacer": _phone_number_replacer, "asr_confidence": 0.95, "normalization_confidence": 0.98, "reason": "número telefónico -> dígitos hablados", "alternative_candidates": ["cero nueve ..."]},
+    {"pattern": _DAME_GERUND_RE, "replacement": "", "replacer": _dame_gerund_replacer, "asr_confidence": 0.90, "normalization_confidence": 0.95, "reason": "cortesía indirecta ecuatoriana: 'dame + gerundio' → 'por favor + infinitivo'", "alternative_candidates": ["por favor + infinitivo"]},
+    {"pattern": r"\b(?:ñaños?|ñañas?|guaguas?)\b", "replacement": "", "replacer": _slang_noun_replacer, "asr_confidence": 0.90, "normalization_confidence": 0.95, "reason": "quechuismo/coloquialismo ecuatoriano → léxico general LSEC", "alternative_candidates": ["hermano", "niño"]},
     # 'pana' (amigo) no debe confundirse con la tela: 'pantalón de pana'.
-    {"pattern": r"(?<!de )(?<!la )(?<!una )\bpanas?\b", "replacement": "", "replacer": _slang_noun_replacer, "asr_confidence": 0.90, "normalization_confidence": 0.90, "reason": "coloquialismo ecuatoriano 'pana' → 'amigo'", "requires_human_review": False, "alternative_candidates": ["amigo"]},
-    {"pattern": r"\bachachay\b", "replacement": "frío", "asr_confidence": 0.90, "normalization_confidence": 0.95, "reason": "interjección quechua 'achachay' (¡qué frío!)", "requires_human_review": False, "alternative_candidates": ["frío"]},
-    {"pattern": r"\barrarray\b", "replacement": "calor", "asr_confidence": 0.90, "normalization_confidence": 0.95, "reason": "interjección quechua 'arrarray' (¡qué calor!)", "requires_human_review": False, "alternative_candidates": ["calor"]},
-    {"pattern": r"\bde\s+una\b", "replacement": "", "replacer": _de_una_replacer, "asr_confidence": 0.85, "normalization_confidence": 0.90, "reason": "locución adverbial ecuatoriana 'de una' → 'ahora'", "requires_human_review": False, "alternative_candidates": ["ahora", "de inmediato"]},
-    {"pattern": r"\bya\s+(?:regreso|vuelvo)\s+no\s?m[aá]s\b", "replacement": "vuelvo pronto", "asr_confidence": 0.90, "normalization_confidence": 0.95, "reason": "locución ecuatoriana 'ya regreso nomás' → 'vuelvo pronto'", "requires_human_review": False, "alternative_candidates": ["vuelvo pronto"]},
+    {"pattern": r"(?<!de )(?<!la )(?<!una )\bpanas?\b", "replacement": "", "replacer": _slang_noun_replacer, "asr_confidence": 0.90, "normalization_confidence": 0.90, "reason": "coloquialismo ecuatoriano 'pana' → 'amigo'", "alternative_candidates": ["amigo"]},
+    {"pattern": r"\bachachay\b", "replacement": "frío", "asr_confidence": 0.90, "normalization_confidence": 0.95, "reason": "interjección quechua 'achachay' (¡qué frío!)", "alternative_candidates": ["frío"]},
+    {"pattern": r"\barrarray\b", "replacement": "calor", "asr_confidence": 0.90, "normalization_confidence": 0.95, "reason": "interjección quechua 'arrarray' (¡qué calor!)", "alternative_candidates": ["calor"]},
+    {"pattern": r"\bde\s+una\b", "replacement": "", "replacer": _de_una_replacer, "asr_confidence": 0.85, "normalization_confidence": 0.90, "reason": "locución adverbial ecuatoriana 'de una' → 'ahora'", "alternative_candidates": ["ahora", "de inmediato"]},
+    {"pattern": r"\bya\s+(?:regreso|vuelvo)\s+no\s?m[aá]s\b", "replacement": "vuelvo pronto", "asr_confidence": 0.90, "normalization_confidence": 0.95, "reason": "locución ecuatoriana 'ya regreso nomás' → 'vuelvo pronto'", "alternative_candidates": ["vuelvo pronto"]},
 ])
 
 # ============================================================
@@ -268,19 +267,19 @@ _DEFAULT_CONTEXTUAL_CORRECTIONS.extend([
 
 _DEFAULT_CONTEXTUAL_CORRECTIONS.extend([
     # 'de ley' es certeza, no el sustantivo jurídico.
-    {"pattern": r"\bde\s+ley\b", "replacement": "seguro", "asr_confidence": 0.90, "normalization_confidence": 0.95, "reason": "locución ecuatoriana 'de ley' → certeza ('seguro')", "requires_human_review": False, "alternative_candidates": ["seguro", "cierto"]},
+    {"pattern": r"\bde\s+ley\b", "replacement": "seguro", "asr_confidence": 0.90, "normalization_confidence": 0.95, "reason": "locución ecuatoriana 'de ley' → certeza ('seguro')", "alternative_candidates": ["seguro", "cierto"]},
     # 'Atatai' expresa asco; nunca debe ir a dactilología.
-    {"pattern": r"\bat[aá]tai\b", "replacement": "asco", "asr_confidence": 0.88, "normalization_confidence": 0.93, "reason": "interjección ecuatoriana 'atatai' → asco", "requires_human_review": False, "alternative_candidates": ["asco"]},
+    {"pattern": r"\bat[aá]tai\b", "replacement": "asco", "asr_confidence": 0.88, "normalization_confidence": 0.93, "reason": "interjección ecuatoriana 'atatai' → asco", "alternative_candidates": ["asco"]},
     # 'Ayayay' acompaña una queja de dolor.
-    {"pattern": r"\bay(?:ay)+\b", "replacement": "dolor", "asr_confidence": 0.88, "normalization_confidence": 0.92, "reason": "interjección ecuatoriana 'ayayay' → dolor", "requires_human_review": False, "alternative_candidates": ["dolor"]},
+    {"pattern": r"\bay(?:ay)+\b", "replacement": "dolor", "asr_confidence": 0.88, "normalization_confidence": 0.92, "reason": "interjección ecuatoriana 'ayayay' → dolor", "alternative_candidates": ["dolor"]},
     # Diminutivos adverbiales andinos: base léxica, sin sufijo.
-    {"pattern": r"\bahorita\b", "replacement": "ahora", "asr_confidence": 0.92, "normalization_confidence": 0.96, "reason": "diminutivo adverbial andino 'ahorita' → ahora", "requires_human_review": False, "alternative_candidates": ["ahora"]},
-    {"pattern": r"\btempranito\b", "replacement": "temprano", "asr_confidence": 0.92, "normalization_confidence": 0.96, "reason": "diminutivo adverbial andino 'tempranito' → temprano", "requires_human_review": False, "alternative_candidates": ["temprano"]},
-    {"pattern": r"\brapidito\b", "replacement": "rápido", "asr_confidence": 0.92, "normalization_confidence": 0.96, "reason": "diminutivo adverbial andino 'rapidito' → rápido", "requires_human_review": False, "alternative_candidates": ["rápido"]},
+    {"pattern": r"\bahorita\b", "replacement": "ahora", "asr_confidence": 0.92, "normalization_confidence": 0.96, "reason": "diminutivo adverbial andino 'ahorita' → ahora", "alternative_candidates": ["ahora"]},
+    {"pattern": r"\btempranito\b", "replacement": "temprano", "asr_confidence": 0.92, "normalization_confidence": 0.96, "reason": "diminutivo adverbial andino 'tempranito' → temprano", "alternative_candidates": ["temprano"]},
+    {"pattern": r"\brapidito\b", "replacement": "rápido", "asr_confidence": 0.92, "normalization_confidence": 0.96, "reason": "diminutivo adverbial andino 'rapidito' → rápido", "alternative_candidates": ["rápido"]},
     # El porcentaje se realiza con la seña existente PORCENTAJE.
-    {"pattern": r"\bpor\s+ciento\b", "replacement": "porcentaje", "asr_confidence": 0.95, "normalization_confidence": 0.98, "reason": "porcentaje léxico: 'por ciento' → 'porcentaje'", "requires_human_review": False, "alternative_candidates": ["porcentaje"]},
+    {"pattern": r"\bpor\s+ciento\b", "replacement": "porcentaje", "asr_confidence": 0.95, "normalization_confidence": 0.98, "reason": "porcentaje léxico: 'por ciento' → 'porcentaje'", "alternative_candidates": ["porcentaje"]},
     # 14:15 → hora 14 15; el planificador compone HORA + numerales.
-    {"pattern": r"(?<!\d)(\d{1,2}):(\d{2})(?!\d)", "replacement": "", "replacer": _clock_time_replacer, "asr_confidence": 0.95, "normalization_confidence": 0.98, "reason": "horario 24h: se antepone HORA y se separan sus componentes", "requires_human_review": False, "alternative_candidates": ["hora + hora + minutos"]},
+    {"pattern": r"(?<!\d)(\d{1,2}):(\d{2})(?!\d)", "replacement": "", "replacer": _clock_time_replacer, "asr_confidence": 0.95, "normalization_confidence": 0.98, "reason": "horario 24h: se antepone HORA y se separan sus componentes", "alternative_candidates": ["hora + hora + minutos"]},
 ])
 
 
@@ -319,49 +318,6 @@ class DetectedNumber:
 
 
 # ============================================================
-# Palabras Contextualmente Dudosas
-# ============================================================
-
-@dataclass
-class DubiousWordFinding:
-    """Hallazgo de palabra con alta confianza acústica pero baja coherencia contextual."""
-    source_word: str
-    global_source_token_indexes: List[int] = field(default_factory=list)
-    source_start_seconds: Optional[float] = None
-    source_end_seconds: Optional[float] = None
-    acoustic_candidates: List[str] = field(default_factory=list)
-    contextual_hypotheses: List[str] = field(default_factory=lambda: ["lideran", "crean", "proyectan"])
-    selected_candidate: Optional[str] = None
-    asr_confidence: float = 0.989
-    contextual_sense_confidence: float = 0.35
-    requires_audio_review: bool = True
-    review_reason: str = "high_acoustic_confidence_but_low_contextual_coherence"
-    alternative_candidates: List[str] = field(default_factory=list)
-    char_position: Optional[int] = None
-
-    def __post_init__(self) -> None:
-        if not self.alternative_candidates and self.contextual_hypotheses:
-            self.alternative_candidates = list(self.contextual_hypotheses)
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "source_word": self.source_word,
-            "global_source_token_indexes": self.global_source_token_indexes,
-            "source_start_seconds": self.source_start_seconds,
-            "source_end_seconds": self.source_end_seconds,
-            "acoustic_candidates": self.acoustic_candidates,
-            "contextual_hypotheses": self.contextual_hypotheses,
-            "selected_candidate": self.selected_candidate,
-            "asr_confidence": self.asr_confidence,
-            "contextual_sense_confidence": self.contextual_sense_confidence,
-            "requires_audio_review": self.requires_audio_review,
-            "review_reason": self.review_reason,
-            "alternative_candidates": self.contextual_hypotheses,
-            "char_position": self.char_position,
-        }
-
-
-# ============================================================
 # Servicio de Normalización
 # ============================================================
 
@@ -380,13 +336,6 @@ class TextNormalizer:
         self._min_confidence = min_confidence
         from app.services.spoken_text_cleaner import SpokenTextCleaner
         self._spoken_cleaner: Optional[SpokenTextCleaner] = SpokenTextCleaner()
-        self._dubious_words: List[Dict[str, Any]] = [{
-            "word": "liberan", "contextual_sense_confidence": 0.35, "asr_confidence": 0.989,
-            "requires_audio_review": True, "review_reason": "high_acoustic_confidence_but_low_contextual_coherence",
-            "contextual_hypotheses": ["lideran", "crean", "proyectan"], "acoustic_candidates": [],
-            "alternative_candidates": ["lideran", "crean", "proyectan"],
-        }]
-
         raw_corrections = corrections or list(_DEFAULT_CONTEXTUAL_CORRECTIONS)
         self._compiled_corrections: List[Dict[str, Any]] = []
 
@@ -402,7 +351,6 @@ class TextNormalizer:
                         "asr_confidence": 0.70,
                         "normalization_confidence": conf,
                         "reason": reason,
-                        "requires_human_review": False,
                         "alternative_candidates": [repl],
                     })
                 except re.error as exc:
@@ -418,7 +366,6 @@ class TextNormalizer:
                         "asr_confidence": item.get("asr_confidence", 0.70),
                         "normalization_confidence": item.get("normalization_confidence", item.get("confidence", 0.95)),
                         "reason": item.get("reason", "contextual"),
-                        "requires_human_review": item.get("requires_human_review", False),
                         "alternative_candidates": item.get("alternative_candidates", [repl]),
                         "replacer": item.get("replacer"),
                     })
@@ -485,7 +432,7 @@ class TextNormalizer:
                         source_start_seconds=s_sec, source_end_seconds=e_sec, alignment_type="NORMALIZED",
                         alignment_confidence=0.97, asr_confidence=0.90, normalization_confidence=0.97, correction_confidence=0.97,
                         reason=f"disfluencia oral eliminada: {seg.reason}", correction_reason=f"disfluencia oral eliminada: {seg.reason}",
-                        requires_human_review=False, alternative_candidates=[], position=seg.start,
+                        alternative_candidates=[], position=seg.start,
                     ))
                 result = clean_res.text
                 char_map = list(clean_res.char_map)
@@ -540,7 +487,7 @@ class TextNormalizer:
                         alignment_type=align_type, alignment_confidence=conf,
                         asr_confidence=entry["asr_confidence"], normalization_confidence=conf, correction_confidence=conf,
                         reason=entry["reason"], correction_reason=entry["reason"],
-                        requires_human_review=entry["requires_human_review"], alternative_candidates=entry["alternative_candidates"],
+                        alternative_candidates=entry["alternative_candidates"],
                         position=orig_s,
                     )
                     corrections.append(rec)
@@ -571,70 +518,6 @@ class TextNormalizer:
             except ValueError:
                 continue
         return numbers
-
-    def check_dubious_words(
-        self,
-        text: str,
-        word_timestamps: Optional[List[Any]] = None,
-    ) -> List[DubiousWordFinding]:
-        """
-        Detecta palabras que requieren revisión contextual o auditiva.
-        """
-        findings: List[DubiousWordFinding] = []
-        if not word_timestamps:
-            from app.core.audio_reference import get_word_timestamps_for_text
-            word_timestamps = get_word_timestamps_for_text(text)
-
-        token_spans: List[Tuple[int, int]] = []
-        if word_timestamps:
-            curr_c = 0
-            for wt in word_timestamps:
-                w_str = wt.word if hasattr(wt, "word") else wt.get("word", "")
-                idx_c = text.lower().find(w_str.lower(), curr_c)
-                if idx_c == -1:
-                    idx_c = curr_c
-                end_c = idx_c + len(w_str)
-                token_spans.append((idx_c, end_c))
-                curr_c = end_c
-        else:
-            for m in re.finditer(r"\b[\wáéíóúñüÁÉÍÓÚÑÜ\-]+\b", text):
-                token_spans.append((m.start(), m.end()))
-
-        for dub in self._dubious_words:
-            w = dub["word"]
-            pattern = re.compile(r"\b" + re.escape(w) + r"\b", re.IGNORECASE)
-            for m in pattern.finditer(text):
-                char_start, char_end = m.start(), m.end()
-                matching_tok_idxs: List[int] = [t_idx for t_idx, (ts_start, ts_end) in enumerate(token_spans) if max(char_start, ts_start) < min(char_end, ts_end)]
-
-                if not matching_tok_idxs and word_timestamps:
-                    w_clean = re.sub(r"[^\wáéíóúñüÁÉÍÓÚÑÜ\-]", "", w.lower())
-                    for t_idx, wt in enumerate(word_timestamps):
-                        wt_w = wt.word if hasattr(wt, "word") else wt.get("word", "")
-                        if re.sub(r"[^\wáéíóúñüÁÉÍÓÚÑÜ\-]", "", wt_w.lower()) == w_clean:
-                            matching_tok_idxs.append(t_idx)
-
-                src_start_sec: Optional[float] = None
-                src_end_sec: Optional[float] = None
-                if word_timestamps and matching_tok_idxs:
-                    valid_t = [i for i in matching_tok_idxs if i < len(word_timestamps)]
-                    if valid_t:
-                        wt_first, wt_last = word_timestamps[valid_t[0]], word_timestamps[valid_t[-1]]
-                        src_start_sec = wt_first.start if hasattr(wt_first, "start") else wt_first.get("start")
-                        src_end_sec = wt_last.end if hasattr(wt_last, "end") else wt_last.get("end")
-
-                findings.append(DubiousWordFinding(
-                    source_word=m.group(0), global_source_token_indexes=matching_tok_idxs,
-                    source_start_seconds=src_start_sec, source_end_seconds=src_end_sec,
-                    acoustic_candidates=dub.get("acoustic_candidates", []),
-                    contextual_hypotheses=dub.get("contextual_hypotheses", ["lideran", "crean", "proyectan"]),
-                    selected_candidate=None, asr_confidence=dub.get("asr_confidence", 0.989),
-                    contextual_sense_confidence=dub.get("contextual_sense_confidence", 0.35),
-                    requires_audio_review=dub.get("requires_audio_review", True),
-                    review_reason=dub.get("review_reason", "high_acoustic_confidence_but_low_contextual_coherence"),
-                    alternative_candidates=[], char_position=char_start,
-                ))
-        return findings
 
     def get_entity_info(self, name: str) -> Optional[EntityInfo]:
         """Busca información de una entidad por nombre o alias."""
@@ -670,7 +553,6 @@ class TextNormalizer:
                             "asr_confidence": item.get("asr_confidence", 0.70),
                             "normalization_confidence": item.get("normalization_confidence", item.get("confidence", 0.95)),
                             "reason": item.get("reason", "lexicon"),
-                            "requires_human_review": item.get("requires_human_review", False),
                             "alternative_candidates": item.get("alternative_candidates", [repl]),
                         })
                     except re.error:
@@ -687,9 +569,6 @@ class TextNormalizer:
                     default_spatial_location=info_dict.get("default_spatial_location", "center"),
                     aliases=info_dict.get("aliases", []),
                 )
-
-        if "dubious_words_registry" in lexicon_data:
-            self._dubious_words = list(lexicon_data["dubious_words_registry"])
 
         logger.info(
             "Lexicón cargado en TextNormalizer: %d correcciones, %d entidades.",

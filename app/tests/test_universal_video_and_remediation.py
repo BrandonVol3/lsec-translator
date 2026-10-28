@@ -14,7 +14,7 @@ Verifica:
 import pytest
 import tempfile
 import os
-from app.core.schemas import ExecutionStatus
+
 from app.services.nlp_service import LSECTranslatorService
 from app.api.endpoints import validate_media_magic_bytes
 
@@ -81,8 +81,6 @@ class TestUniversalVideoAndRemediation:
 
         assert out is not None
         assert len(out.glosses) > 0
-        assert out.execution_status in (ExecutionStatus.READY, ExecutionStatus.REVIEW_REQUIRED)
-        assert out.execution_status != ExecutionStatus.BLOCKED
 
         # Ningún forzado hacia la UPEC
         for g in out.glosses:
@@ -99,7 +97,6 @@ class TestUniversalVideoAndRemediation:
         raw_text = "Estudiantes de arquitectura presentan maquetas modernas en Cuenca."
         out = await translator.translate_to_gloss(raw_text, mode="detailed")
 
-        assert out.execution_status in (ExecutionStatus.READY, ExecutionStatus.REVIEW_REQUIRED)
         gloss_tokens = [g.gloss for g in out.glosses]
         assert any(t in gloss_tokens for t in ("ESTUDIANTE", "ARQUITECTURA", "PRESENTAR", "MAQUETA", "C-U-E-N-C-A"))
 
@@ -128,5 +125,3 @@ class TestUniversalVideoAndRemediation:
             transcription=tr,
         )
         assert out is not None
-        assert out.validation_metadata.multidimensional_confidence.asr_confidence == 0.94
-        assert out.execution_status in (ExecutionStatus.READY, ExecutionStatus.REVIEW_REQUIRED)

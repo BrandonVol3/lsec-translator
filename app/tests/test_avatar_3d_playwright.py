@@ -113,12 +113,13 @@ def test_avatar_3d_complete_e2e_flow(browser_page):
     # 1. Verificar carga inicial de LSEC Studio
     expect(page.locator("#app-container")).to_be_visible()
 
-    # 2. Localizar acceso a configuración del Avatar 3D y abrir panel interno en Studio
-    btn_top_avatar = page.locator("#btn-top-avatar-config")
-    if btn_top_avatar.is_visible():
-        btn_top_avatar.click()
-    else:
-        page.click("#tab-btn-side-avatar")
+    # 2. Activar panel interno del Avatar 3D en Studio
+    page.wait_for_function("() => window.studioAvatarBridge && window.studioAvatarBridge.isReady", timeout=30000)
+    page.evaluate("""() => {
+        const v = document.getElementById('view-side-avatar');
+        if (v) v.style.display = 'flex';
+        window.studioAvatarBridge?.dockToSidebar();
+    }""")
 
     # 3. Verificar que en LSEC Studio aparece el canvas WebGL y el Rig / Modelo activo
     canvas = page.locator("#avatar-webgl-canvas")
@@ -130,11 +131,6 @@ def test_avatar_3d_complete_e2e_flow(browser_page):
     expect(model_pill).to_be_visible()
     pill_text = model_pill.inner_text()
     assert ("VRM 1.0" in pill_text) or ("Rig Técnico" in pill_text)
-
-    # Verificar aviso obligatorio de DEMO NO VALIDADA
-    unvalidated_badge = page.locator("#avatar-unvalidated-notice")
-    expect(unvalidated_badge).to_be_visible()
-    assert "DEMO NO VALIDADA" in unvalidated_badge.inner_text()
 
     # 4. Seleccionar SALUDAR_DEMO en el selector de clip
     page.select_option("#select-avatar-clip", "SALUDAR_DEMO")

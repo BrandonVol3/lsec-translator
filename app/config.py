@@ -83,14 +83,19 @@ class Settings(BaseSettings):
     grammar_engine_version: str = "0.1.0"
     default_animation_version: str = "2.7"
 
-    # --- Diccionario Oficial LSEC (CONADIS) ---
+    # --- Diccionario LSEC (CONADIS) ---
     # Ruta al catálogo; si está vacía se resuelve automáticamente (data/ → ../Diccionario LSEC/).
     lsec_dictionary_catalog_path: str = ""
     lsec_dictionary_enabled: bool = True
-    # Marca para revisión nativa las glosas léxicas ausentes del diccionario (política OOV).
-    lsec_dictionary_flag_unverified: bool = True
     # Detecta entradas de varias palabras del diccionario ("a diario", "buenos días") como una sola seña.
     lsec_dictionary_phrase_matching: bool = True
+
+    # Consolidación por oración de glosas redundantes en fronteras de proposición (auditable).
+    # 'off' | 'conservative' (por defecto) | 'balanced'. Ver services/discourse_group_optimizer.py.
+    discourse_condense_level: str = "conservative"
+    # Emite la glosa conectora PERO en relaciones adversativas. Desactivado: el contraste se marca con
+    # componentes no manuales y desplazamiento corporal hasta que lo valide FENASEC.
+    emit_contrast_connector: bool = False
 
     @field_validator("cors_origins", mode="before")
     @classmethod

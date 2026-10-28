@@ -151,6 +151,10 @@ class CompositeVideoExporter {
       // Intentar empaquetado final determinista a MP4 (H.264 + AAC a 30.0 FPS constantes)
       let finalBlob = rawBlob;
       let ext = selectedMime.includes('mp4') ? 'mp4' : 'webm';
+      const customOutputDir = String(options.outputDir ?? localStorage.getItem('lsec_export_custom_dir') ?? '').trim();
+      let savedPath = '';
+      let savedDir = customOutputDir;
+      let savedFilename = '';
 
       try {
         onProgress({
@@ -164,6 +168,10 @@ class CompositeVideoExporter {
         const formData = new FormData();
         formData.append('video_file', rawBlob, `capture.${ext}`);
         formData.append('fps', String(TARGET_FPS));
+        formData.append('output_filename', `${baseFilename}_con_interprete_y_glosas.mp4`);
+        if (customOutputDir) {
+          formData.append('output_dir', customOutputDir);
+        }
 
         // Adjuntar fuente de audio original si el video tiene un src accesible
         if (videoEl && videoEl.src) {
@@ -186,6 +194,13 @@ class CompositeVideoExporter {
         });
 
         if (mp4Res && mp4Res.ok) {
+          const hdrPath = mp4Res.headers.get('X-Export-Saved-Path');
+          const hdrDir = mp4Res.headers.get('X-Export-Saved-Dir');
+          const hdrName = mp4Res.headers.get('X-Export-Saved-Filename');
+          if (hdrPath) savedPath = decodeURIComponent(hdrPath);
+          if (hdrDir) savedDir = decodeURIComponent(hdrDir);
+          if (hdrName) savedFilename = decodeURIComponent(hdrName);
+
           const mp4Blob = await mp4Res.blob();
           if (mp4Blob && mp4Blob.size > 0) {
             finalBlob = new Blob([mp4Blob], { type: 'video/mp4' });
@@ -196,9 +211,37 @@ class CompositeVideoExporter {
         console.warn('[CompositeVideoExporter] Fallback a contenedor local por error en finalize-export-mp4:', muxErr);
       }
 
+      const outputFilename = savedFilename || `${baseFilename}_con_interprete_y_glosas.${ext}`;
+
+      if (!savedPath) {
+        try {
+          const saveForm = new FormData();
+          saveForm.append('video_file', finalBlob, outputFilename);
+          saveForm.append('output_filename', outputFilename);
+          if (customOutputDir) {
+            saveForm.append('output_dir', customOutputDir);
+          }
+          const saveRes = await fetch('/api/v1/animations/save-exported-video', {
+            method: 'POST',
+            body: saveForm
+          });
+          if (saveRes && saveRes.ok) {
+            const saveData = await saveRes.json();
+            savedPath = saveData.saved_path || '';
+            savedDir = saveData.directory || savedDir;
+            savedFilename = saveData.filename || outputFilename;
+          }
+        } catch (saveErr) {
+          console.warn('[CompositeVideoExporter] Aviso guardando respaldo en carpeta de exportación:', saveErr);
+        }
+      }
+
       this.isExporting = false;
-      const outputFilename = `${baseFilename}_con_interprete_y_glosas.${ext}`;
-      onComplete(finalBlob, outputFilename);
+      onComplete(finalBlob, outputFilename, {
+        savedPath,
+        savedDir,
+        savedFilename: savedFilename || outputFilename
+      });
     };
 
     // 5. Guardar estado previo y preparar exportación determinista cuadro a cuadro
@@ -439,20 +482,29 @@ class CompositeVideoExporter {
     if (opts.includeSubtitles) {
       this.drawSubtitles(ctx, width, height, currentTime, segments, opts);
     }
+
+    // 4. Aviso de prototipo (letra pequeña, en todos los fotogramas)
+    if (window.LSECExportDisclaimer) {
+      const geom = opts.includeInterpreter ? this.getPipLayoutMetrics(width, height, opts) : null;
+      const m = Math.max(6, Math.round(width * 0.012));
+      const safe = !geom ? null : (opts.pipPosition === 'bottom-left'
+        ? { x: geom.cardX + geom.cardWidth + m, w: width - (geom.cardX + geom.cardWidth + m) - m }
+        : { x: m, w: geom.cardX - m * 2 });
+      window.LSECExportDisclaimer.draw(ctx, width, height, safe);
+    }
   }
 
   /**
-   * Calcula las dimensiones del recuadro PiP garantizando el cumplimiento matemático estricto
-   * de la Norma Técnica Ecuatoriana NTE INEN 3198 y el Reglamento LOC Abril 2026 (CDPIC-DTN-PNRD-2B-26):
-   * - Área mínima exclusiva del intérprete >= 1/9 (11.11%) de la pantalla total.
-   * - Relación de aspecto de busto LSEC (1 : 1.15) que abarca Planos 1 a 4 (cabeza a cintura).
+   * Calcula las dimensiones del recuadro PiP del intérprete:
+   * - Área mínima del avatar de 1/9 del cuadro, para que las manos y el rostro sean legibles.
+   * - Relación de aspecto de busto (1 : 1.15) que abarca de la cabeza a la cintura.
    * - Zócalo inferior de glosas desacoplado para no superponerse ni recortar las manos.
    */
-  getComplianceMetrics(width = 1280, height = 720, opts = {}) {
+  getPipLayoutMetrics(width = 1280, height = 720, opts = {}) {
     const screenArea = Math.max(1, width * height);
-    const minInenArea = screenArea / 9.0; // Mínimo legal 1/9 (11.111%)
-    const minInenWidth = Math.ceil(Math.sqrt(minInenArea / 1.15));
-    const cardWidth = Math.max(Math.round(width * 0.245), minInenWidth);
+    const minPipArea = screenArea / 9.0;
+    const minPipWidth = Math.ceil(Math.sqrt(minPipArea / 1.15));
+    const cardWidth = Math.max(Math.round(width * 0.245), minPipWidth);
     const cardHeight = Math.round(cardWidth * 1.15);
     const includeGlosses = opts.includeGlosses !== false;
     const badgeFooterH = includeGlosses ? Math.round(cardHeight * 0.18) : 0;
@@ -463,80 +515,26 @@ class CompositeVideoExporter {
     const cardX = isLeft ? margin : (width - cardWidth - margin);
     const cardY = Math.max(margin, height - totalBoxHeight - margin - Math.round(height * 0.015));
 
-    const interpreterArea = cardWidth * cardHeight;
-    const interpreterRatio = interpreterArea / screenArea;
-    const totalBoxRatio = (cardWidth * totalBoxHeight) / screenArea;
-
     return {
-      standard: 'NTE INEN 3198 / Reglamento LOC CDPIC-DTN-PNRD-2B-26 (Abril 2026)',
       screenWidth: width,
       screenHeight: height,
-      screenAreaPx: screenArea,
-      minRequiredRatio: 1 / 9,
-      minRequiredRatioPct: 11.11,
       cardX,
       cardY,
       cardWidth,
       cardHeight,
       badgeFooterH,
       totalBoxHeight,
-      interpreterAreaPx: interpreterArea,
-      interpreterRatio,
-      interpreterRatioPct: Number((interpreterRatio * 100).toFixed(2)),
-      totalBoxRatioPct: Number((totalBoxRatio * 100).toFixed(2)),
-      meetsInen3198MinimumArea: interpreterArea >= Math.floor(minInenArea),
-      noSigningSpaceOcclusion: true,
       solidContrastBackgroundHex: '#cfe5da',
       constantFps: 30
     };
   }
 
   /**
-   * Genera un manifiesto auditable de cumplimiento técnico y normativo (Art. 26 Reglamento 2026)
-   */
-  buildComplianceReport(options = {}) {
-    const videoEl = document.getElementById('main-video-element');
-    const project = (window.appState && window.appState.state?.project) || {};
-    const is720p = options.resolution === '720p';
-    const width = (!is720p && videoEl && videoEl.videoWidth > 0) ? videoEl.videoWidth : 1280;
-    const height = (!is720p && videoEl && videoEl.videoHeight > 0) ? videoEl.videoHeight : 720;
-    const metrics = this.getComplianceMetrics(width, height, options);
-    const segments = project.segments || [];
-    const glosses = project.glosses || [];
-    const verifiedCount = glosses.filter(g => g.dictionary_metadata?.verified_in_conadis || g.status === 'VERIFICADO_CONADIS').length;
-
-    return {
-      reportVersion: '1.0',
-      generatedAt: new Date().toISOString(),
-      regulatoryFramework: [
-        'Ley Orgánica de las Personas con Discapacidad (2025, Arts. 72-74, 80)',
-        'Norma Técnica Ecuatoriana NTE INEN 3198 (Recuadro mínimo 1/9 de pantalla)',
-        'Reglamento para el Acceso a la Información y Comunicación de las Personas con Discapacidad (CDPIC-DTN-PNRD-2B-26, Abril 2026, Arts. 8, 9, 10, 12, 26)'
-      ],
-      projectSummary: {
-        title: project.project_name || project.title || project.media_info?.filename || 'Proyecto LSEC Studio',
-        durationSeconds: Number((window.appState?.state?.playback?.duration || project.media_info?.duration_seconds || 0).toFixed(2)),
-        segmentsCount: segments.length,
-        glossesCount: glosses.length,
-        conadisVerifiedGlossesCount: verifiedCount
-      },
-      pipTechnicalCompliance: metrics,
-      subtitlingComplianceArt8: {
-        completeDialogueTranscription: segments.length > 0,
-        speakerIdentificationEnabled: true,
-        soundDescriptionTagsSupported: true,
-        wcagContrastCompliance: 'AA/AAA (Fondo semitransparente oscuro >= 4.5:1)',
-        pipNonOverlappingConfinement: true
-      }
-    };
-  }
-
-  /**
-   * Renderiza la tarjeta Picture-in-Picture del intérprete con paridad de aspect ratio (1 : 1.15),
-   * área >= 1/9 de la pantalla (NTE INEN 3198) y zócalo inferior desacoplado para glosas
+   * Renderiza la tarjeta Picture-in-Picture del intérprete con relación de aspecto 1 : 1.15,
+   * área mínima de 1/9 del cuadro y zócalo inferior desacoplado para glosas
    */
   drawInterpreterPiPCard(ctx, width, height, currentTime, allGlosses, segments, opts) {
-    const geom = this.getComplianceMetrics(width, height, opts);
+    const geom = this.getPipLayoutMetrics(width, height, opts);
     const { cardX, cardY, cardWidth, cardHeight, badgeFooterH, totalBoxHeight } = geom;
     const radius = 8;
 
@@ -548,7 +546,7 @@ class CompositeVideoExporter {
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 6;
 
-    // Fondo sólido contrastante (#cfe5da) calibrado según NTE INEN 3198 para contrastar con ropa oscura y manos
+    // Fondo sólido contrastante (#cfe5da) calibrado para contrastar con ropa oscura y manos
     ctx.beginPath();
     ctx.roundRect(cardX, cardY, cardWidth, totalBoxHeight, radius);
     ctx.fillStyle = '#cfe5da';
@@ -703,17 +701,9 @@ class CompositeVideoExporter {
       const isParaphrase = activeGloss.is_paraphrase || (activeGloss.type_badge === 'paráfrasis');
       
       let typeLabel = activeGloss.gloss_type || 'SEÑA LÉXICA';
-      if (isFingerspelling) typeLabel = 'DACTILOLOGÍA (PENDIENTE)';
+      const fsLetter = (isFingerspelling && sampleEntry && window.lsecFingerspellingLetterAt) ? window.lsecFingerspellingLetterAt(sampleEntry, currentTime) : null;
+      if (isFingerspelling) typeLabel = fsLetter ? `DELETREO LSEC · LETRA [ ${fsLetter} ]` : 'DELETREO LSEC';
       if (isParaphrase) typeLabel = 'PARÁFRASIS LSEC';
-
-      const resMeta = (!isFingerspelling && window.studioAvatarBridge && typeof window.studioAvatarBridge.getResolutionMetaForGloss === 'function')
-        ? window.studioAvatarBridge.getResolutionMetaForGloss(glossName)
-        : null;
-      if (resMeta && ((resMeta.matchType && !['exact', 'fingerspelling', 'none'].includes(resMeta.matchType)) || resMeta.needsReview)) {
-        typeLabel = (resMeta.matchType && resMeta.matchType !== 'exact' && resMeta.resolvedGloss)
-          ? `⚠ APROX: ${resMeta.resolvedGloss.toUpperCase()}`
-          : '⚠ REVISIÓN QA';
-      }
 
       // Fondo del badge activo
       ctx.beginPath();

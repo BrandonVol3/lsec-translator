@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LSEC Studio — Auditoría Visual 1:1 del Avatar 3D</title>
-  <meta name="description" content="Entorno de desarrollo simplificado para la auditoría visual 1:1 entre el Avatar VRM v2.7.3 y los videos originales Ultra HD del Diccionario Oficial LSEC.">
+  <meta name="description" content="Entorno de desarrollo simplificado para la auditoría visual 1:1 entre el Avatar VRM v2.7.3 y los videos originales Ultra HD del Diccionario LSEC.">
 
   <!-- Tipografía Libre («Pedagogical Tactile Light»): Nunito + Plus Jakarta Sans + JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -49,7 +49,6 @@
         </div>
       </a>
       <span class="audit-pill audit-pill-mint" id="avatar-model-source-info">VRM 1.0</span>
-      <span class="audit-pill audit-pill-verified" id="verification-progress-pill">✓ 0 / 4.142 VERIFICADAS</span>
     </div>
 
     <div class="top-bar-center">
@@ -156,7 +155,7 @@
               </div>
               <div class="uhd-header-actions">
                 <button class="btn btn-sm" id="btn-uhd-open-cm-sheet" title="Ver Lámina de Configuración Manual" style="display:none;">🖐️ <span id="uhd-cm-pill-text">CM —</span></button>
-                <button class="btn btn-sm" id="btn-toggle-uhd-illustration" title="Superponer ilustración oficial (Tecla I)" style="display:none;">🖼️ Ilustración</button>
+                <button class="btn btn-sm" id="btn-toggle-uhd-illustration" title="Superponer ilustración del diccionario (Tecla I)" style="display:none;">🖼️ Ilustración</button>
                 <span class="audit-pill audit-pill-mono" id="uhd-catalog-pos-pill">#—</span>
                 <span class="audit-pill audit-pill-mint" id="uhd-quality-badge">UHD</span>
               </div>
@@ -166,20 +165,20 @@
               <video id="avatar-uhd-video" class="avatar-uhd-video-element" playsinline loop preload="auto"></video>
               <div id="uhd-illustration-overlay" class="uhd-illustration-overlay">
                 <div class="uhd-overlay-bar">
-                  <span id="uhd-illustration-overlay-title">🖼️ Ilustración Oficial</span>
+                  <span id="uhd-illustration-overlay-title">🖼️ Ilustración del Diccionario</span>
                   <div style="display:flex; gap:6px;">
                     <button class="btn btn-sm" id="btn-expand-uhd-illustration">🔍 Ampliar</button>
                     <button class="btn btn-sm" id="btn-close-uhd-illustration">✕ Cerrar</button>
                   </div>
                 </div>
                 <div class="uhd-overlay-body">
-                  <img id="uhd-illustration-overlay-img" src="" alt="Ilustración oficial LSEC">
+                  <img id="uhd-illustration-overlay-img" src="" alt="Ilustración LSEC">
                 </div>
               </div>
               <div id="avatar-uhd-fallback" class="avatar-uhd-fallback" style="display:none;">
                 <span style="font-size:2rem; margin-bottom:6px;">📺</span>
                 <strong id="uhd-fallback-title">Video local no encontrado</strong>
-                <p id="uhd-fallback-desc">Consulta la ilustración oficial o el enlace externo del diccionario.</p>
+                <p id="uhd-fallback-desc">Consulta la ilustración o el enlace externo del diccionario.</p>
                 <a id="btn-uhd-open-remote" href="#" target="_blank" class="btn btn-primary btn-sm" style="display:none;">Abrir referencia externa ↗</a>
               </div>
             </div>
@@ -267,10 +266,6 @@
             <button class="btn btn-sm" id="btn-sign-random" title="Seña aleatoria">🎲 Azar</button>
           </div>
 
-          <button class="btn btn-sm" id="btn-verify-sign" style="width:100%; justify-content:center;">
-            <span id="verify-sign-label">✓ Marcar como Verificada</span>
-          </button>
-
           <!-- Filtros compactos de Configuración Manual, Geolecto y RNM -->
           <div class="cm-filter-section" id="cm-explorer-panel">
             <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -323,10 +318,10 @@
           </div>
         </div>
 
-        <!-- TARJETA 2: REFERENCIA VISUAL DE MANO E ILUSTRACIÓN OFICIAL -->
+        <!-- TARJETA 2: REFERENCIA VISUAL DE MANO E ILUSTRACIÓN DEL DICCIONARIO -->
         <div class="avatar-config-card" id="card-sign-qa">
           <div class="avatar-config-card-header">
-            <span class="avatar-config-card-title">📋 Referencia Oficial de la Seña</span>
+            <span class="avatar-config-card-title">📋 Referencia de la Seña</span>
             <span class="audit-pill audit-pill-mint" id="qa-status-pill">✓ v2.7.3</span>
           </div>
 
@@ -335,7 +330,7 @@
             <span id="reextracted-sign-tag" class="reextracted-sign-tag" style="display:none;">✨ GPU</span>
           </div>
 
-          <!-- Recuadro de Configuración Manual Oficial -->
+          <!-- Recuadro de Configuración Manual -->
           <div class="cm-active-ref-box" id="active-sign-cm-box">
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <span class="section-mini-label">🖐️ Forma de la Mano</span>
@@ -357,14 +352,14 @@
             </div>
           </div>
 
-          <!-- Ilustración Oficial del Diccionario -->
+          <!-- Ilustración del Diccionario -->
           <div id="sign-illustration-container" class="audit-meta-box">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
               <span class="section-mini-label">🖼️ Ilustración Diccionario</span>
               <span id="illustration-status-badge" style="font-size:0.70rem; font-weight:700; color:var(--color-primary-emerald);">—</span>
             </div>
             <div id="illustration-img-box" class="illustration-preview-box" title="Clic para ampliar">
-              <img id="sign-illustration-img" class="illustration-preview-img" src="" alt="Ilustración oficial LSEC">
+              <img id="sign-illustration-img" class="illustration-preview-img" src="" alt="Ilustración LSEC">
               <div id="sign-illustration-fallback" style="display:none; padding:12px; color:var(--text-muted); font-size:0.74rem; text-align:center;">
                 <span>Ilustración no disponible</span>
                 <a id="illustration-remote-link" href="#" target="_blank" style="display:none;">Ver externo ↗</a>
@@ -383,7 +378,7 @@
               </div>
             </div>
             <div class="audit-meta-row"><span>Posición Catálogo:</span><strong id="info-catalog-pos">#—</strong></div>
-            <div class="audit-meta-row"><span>Palabra Oficial:</span><strong id="info-catalog-palabra">—</strong></div>
+            <div class="audit-meta-row"><span>Palabra del Diccionario:</span><strong id="info-catalog-palabra">—</strong></div>
             <div class="audit-meta-row"><span>Slug:</span><code id="info-catalog-slug">—</code></div>
             <div class="audit-meta-row"><span>Categoría:</span><span id="info-catalog-categories">—</span></div>
           </div>
@@ -402,24 +397,6 @@
               <button type="button" id="card-btn-v26"></button>
               <button type="button" id="card-btn-v25"></button>
             </div>
-            <section id="phase3-review-card">
-              <span id="phase3-review-progress"></span>
-              <span id="phase3-sample-count"></span>
-              <select id="phase3-sample-sign"></select>
-              <select id="phase3-visualAgainstSource"><option value="PENDING"></option></select>
-              <select id="phase3-avatarFidelity"><option value="PENDING"></option></select>
-              <select id="phase3-abruptRotation"><option value="PENDING"></option></select>
-              <select id="phase3-handPenetration"><option value="PENDING"></option></select>
-              <select id="phase3-handConfiguration"><option value="PENDING"></option></select>
-              <select id="phase3-nonManualExpression"><option value="PENDING"></option></select>
-              <select id="phase3-sourceQuality"><option value="PENDING"></option></select>
-              <select id="phase3-decision"><option value="PENDING"></option></select>
-              <textarea id="phase3-notes"></textarea>
-              <button type="button" id="phase3-save-review"></button>
-              <button type="button" id="phase3-next-pending"></button>
-              <button type="button" id="phase3-export-reviews"></button>
-              <div id="phase3-review-status"></div>
-            </section>
           </div>
         </div>
       </aside>
@@ -430,11 +407,11 @@
   <div id="illustration-lightbox" class="illustration-lightbox">
     <div class="lightbox-card">
       <div class="lightbox-header">
-        <span id="lightbox-title">🖼️ Ilustración Oficial LSEC</span>
+        <span id="lightbox-title">🖼️ Ilustración LSEC</span>
         <button class="btn btn-sm" id="btn-close-lightbox">✕ Cerrar (Esc)</button>
       </div>
       <div class="lightbox-body">
-        <img id="lightbox-img" src="" alt="Ilustración oficial LSEC ampliada">
+        <img id="lightbox-img" src="" alt="Ilustración LSEC ampliada">
       </div>
     </div>
   </div>

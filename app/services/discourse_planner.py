@@ -37,7 +37,6 @@ from app.core.schemas import (
     SpatialReferent,
     StrategyType,
     TranslationPlan,
-    ValidationMetadata,
 )
 from app.lsec_grammar.confidence import ConfidenceCalculator, ConfidenceVector
 from app.lsec_grammar.conflict_resolver import ConflictResolver
@@ -157,7 +156,7 @@ class DiscoursePlanner:
         self._conflict_resolver = ConflictResolver()
         self._linguistic_analyzer = LinguisticAnalyzer()
 
-        # Diccionario Oficial LSEC (CONADIS): fuente de verdad léxica y cascada OOV
+        # Diccionario LSEC (CONADIS): fuente de verdad léxica y cascada OOV
         if use_dictionary is None:
             try:
                 from app.config import settings
@@ -244,7 +243,7 @@ class DiscoursePlanner:
         source_text: str,
         blocked_token_ids: Set[int],
     ) -> List[Tuple[MWEMatch, Any]]:
-        """Detecta entradas de varias palabras del Diccionario Oficial LSEC en el documento spaCy."""
+        """Detecta entradas de varias palabras del Diccionario LSEC en el documento spaCy."""
         return detect_dictionary_phrases(self, doc, source_text, blocked_token_ids)
 
     def apply_dictionary(self, glosses: List[GlossItem]) -> Dict[str, int]:
@@ -330,7 +329,7 @@ class DiscoursePlanner:
                 p.coreference_id is not None for p in prop.participants
             ),
             has_spatial=bool(prop.context_info.get("spatial_entities")),
-            has_unresolved=prop.requires_review,
+            has_unresolved=False,
         )
 
         return frame, applications, confidence_vec
@@ -501,7 +500,7 @@ class DiscoursePlanner:
                         ):
                             g.non_manual.expression = FacialExpression.RHETORICAL
 
-            # 2c. Diccionario Oficial LSEC (CONADIS)
+            # 2c. Diccionario LSEC (CONADIS)
             self.apply_dictionary(prop_glosses)
 
             # 3. Registrar operaciones espaciales y loci contrastivos

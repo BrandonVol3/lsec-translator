@@ -6,12 +6,7 @@ del motor LSEC 2.1.1 en 10 oraciones arbitrarias del dominio educativo e institu
 """
 
 import pytest
-from app.core.schemas import (
-    ExecutionStatus,
-    FacialExpression,
-    GlossType,
-    TranslationMode,
-)
+from app.core.schemas import FacialExpression, GlossType, TranslationMode
 from app.services.nlp_service import LSECTranslatorService
 
 
@@ -32,7 +27,6 @@ class TestLSEC211Generalization:
         # Debe tener glosa de pregunta o reflexión
         gloss_texts = [g.gloss for g in out.glosses]
         assert any(gt in ("CÓMO", "POSTULAR", "EXPLICAR", "UNIVERSIDAD") for gt in gloss_texts)
-        assert out.execution_status in (ExecutionStatus.READY, ExecutionStatus.REVIEW_REQUIRED)
 
     @pytest.mark.asyncio
     async def test_s2_high_numeral_and_group(self, translator: LSECTranslatorService):
@@ -40,7 +34,7 @@ class TestLSEC211Generalization:
         text = "Más de 1.200 estudiantes se matricularon."
         out = await translator.translate_to_gloss(text, mode="detailed")
         gloss_texts = [g.gloss for g in out.glosses]
-        assert any("1200" in gt or "1.200" in gt for gt in gloss_texts)
+        assert all(gt in gloss_texts for gt in ("UNO", "MIL", "DOSCIENTOS"))
         # Invariante: no debe duplicar con VARIOS
         assert "VARIOS" not in gloss_texts
 
@@ -114,5 +108,3 @@ class TestLSEC211Generalization:
         text = "Estudiamos con rigor académico, con proyectos que crecen contigo."
         out = await translator.translate_to_gloss(text, mode="detailed")
         assert len(out.glosses) >= 3
-        assert out.validation_metadata is not None
-        assert out.validation_metadata.multidimensional_confidence.overall_score > 0.0

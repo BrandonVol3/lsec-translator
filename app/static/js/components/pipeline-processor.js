@@ -186,10 +186,6 @@ class PipelineProcessor {
       if (translationResult.discourse_blocks) project.discourse_blocks = translationResult.discourse_blocks;
       if (translationResult.non_manual_spans) project.non_manual_spans = translationResult.non_manual_spans;
       if (translationResult.spatial_operations) project.spatial_operations = translationResult.spatial_operations;
-      if (translationResult.validation_metadata) project.validation_metadata = translationResult.validation_metadata;
-      if (translationResult.unresolved_items) project.unresolved_items = translationResult.unresolved_items;
-      if (translationResult.validation_warnings) project.validation_warnings = translationResult.validation_warnings;
-      project.execution_status = 'REVIEW_REQUIRED';
 
       // Garantizar intervalos secuenciales en orden gramatical LSEC (SOV) para el Timeline y tarjetas
       appState.resolveOverlappingGlossIntervals(project.glosses, project.segments);
@@ -222,35 +218,31 @@ class PipelineProcessor {
   /**
    * Traduce un segmento de texto editado mediante el motor lingüístico del backend (/api/v1/translate)
    */
-  async translateSegmentViaBackend(text, startTime, endTime, segId) {
+  async translateSegmentViaBackend(text, startTime, endTime, segId, ctx = {}) {
     const cleanText = String(text || '').trim();
     if (!cleanText) return [];
     try {
-      const res = await fetch('/api/v1/translate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: cleanText, mode: 'detailed', paraphrase_budget: 'compact' }) });
+      const res = await fetch('/api/v1/translate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: cleanText, mode: 'detailed', paraphrase_budget: 'compact', context_before: ctx.contextBefore || null, word_timestamps: (ctx.words && ctx.words.length) ? ctx.words.map(w => ({ word: w.word, start: w.start ?? w.start_time, end: w.end ?? w.end_time })) : null }) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const glossOut = await res.json();
       const rawGlosses = glossOut.glosses || [];
       if (rawGlosses.length === 0) return this.generateGlossesFromText(text, startTime, endTime, segId);
       const duration = Math.max(0.6, (endTime || (startTime + 2.5)) - (startTime || 0)), glossDur = duration / Math.max(1, rawGlosses.length);
       return rawGlosses.map((g, idx) => {
-        const start = parseFloat(((startTime || 0) + idx * glossDur).toFixed(3)), end = parseFloat((start + Math.min(glossDur, 0.55)).toFixed(3));
+        const hasSrc = Number.isFinite(g.source_start_seconds) && Number.isFinite(g.source_end_seconds), start = parseFloat((hasSrc ? g.source_start_seconds : (startTime || 0) + idx * glossDur).toFixed(3)), end = parseFloat((hasSrc ? Math.max(g.source_end_seconds, start + 0.25) : start + glossDur).toFixed(3)); // tiempos reales de palabra cuando existen; si no, ranura completa (sin tope de 0.55 s)
         const gText = String(g.gloss || g.lemma || '').trim();
         const isSingleLetterHyphenated = gText.includes('-') && gText.split('-').filter(Boolean).every(p => p.trim().length === 1);
         const isFs = Boolean(g.is_fingerspelling || (g.gloss_type === 'DACTILOLOGÍA') || (g.gloss_type === 'FINGERSPELLING') || isSingleLetterHyphenated);
-        const isUnverifiedLex = g.dictionary_metadata && g.dictionary_metadata.status === 'NO_VERIFICADO';
-        const needsRev = Boolean(g.requires_native_review || g.requires_review || isUnverifiedLex);
-        const gStatus = g.requires_audio_review ? 'AUDIO_REVIEW' : (needsRev ? 'REVIEW_REQUIRED' : (g.status || 'VALIDATED'));
         return {
           ...g, id: g.id || `g_${segId}_${idx + 1}`, order: g.order !== undefined ? g.order : idx,
           gloss: g.gloss || g.lemma || 'GLOSA', lemma: g.lemma || g.gloss || 'GLOSA',
           source_word: g.source_word || null, normalized_word: g.normalized_word || null,
           alignment_type: g.alignment_type || 'DIRECT', dictionary_metadata: g.dictionary_metadata || null,
-          requires_review: needsRev, requires_native_review: needsRev, requires_audio_review: Boolean(g.requires_audio_review),
-          review_reasons: g.review_reasons || [], start_seconds: start, end_seconds: end, start_time: start, end_time: end, start, end,
+          start_seconds: start, end_seconds: end, start_time: start, end_time: end, start, end,
           proposition_id: segId, origin_proposition_id: segId, duration_ms: g.duration_ms || Math.round((end - start) * 1000),
           gloss_type: isFs ? 'DACTILOLOGÍA' : (g.gloss_type || 'SEÑA'), syntactic_role: g.syntactic_role || 'ARGUMENT',
-          color: g.color || (isFs ? 'fingerspelling' : (needsRev ? 'review' : 'validated')),
-          confidence: g.confidence !== undefined ? g.confidence : 0.94, status: gStatus, manual_code: g.manual_code || 'STD_SIGN', non_manual: g.non_manual || null
+          color: g.color || (isFs ? 'fingerspelling' : 'sign'),
+          confidence: g.confidence !== undefined ? g.confidence : 0.94, status: g.status || 'READY', manual_code: g.manual_code || 'STD_SIGN', non_manual: g.non_manual || null
         };
       });
     } catch (err) {
@@ -270,18 +262,26 @@ class PipelineProcessor {
       const updatedSegments = [];
       for (let idx = 0; idx < (project.segments || []).length; idx++) {
         const seg = project.segments[idx];
-        const fullSeg = (fullProj.segments || [])[idx] || {};
-        const isModified = seg.status === 'CORRECTED' || ((seg.normalized_text || seg.original_text) !== (fullSeg.normalized_text || fullSeg.original_text));
+        const fullSeg = (fullProj.segments || []).find(s => s.id === seg.id) || (fullProj.segments || [])[idx] || {};
+        const hasExistingFullGlosses = Array.isArray(fullSeg.glosses) && fullSeg.glosses.length > 0 && fullSeg.id === seg.id;
+        const isModified = seg.status === 'CORRECTED' ||
+          seg.status === 'DRAFT' ||
+          !hasExistingFullGlosses ||
+          ((seg.normalized_text || seg.original_text) !== (fullSeg.normalized_text || fullSeg.original_text));
+        const sStart = seg.start_seconds !== undefined ? seg.start_seconds : (seg.start_time || 0);
+        const sEnd = seg.end_seconds !== undefined ? seg.end_seconds : (seg.end_time || (sStart + 3.0));
         const segGlosses = isModified
-          ? await this.translateSegmentViaBackend(seg.normalized_text || seg.original_text, seg.start_seconds, seg.end_seconds, seg.id)
+          ? await this.translateSegmentViaBackend(seg.normalized_text || seg.original_text, sStart, sEnd, seg.id, { contextBefore: (project.segments[idx - 1] || {}).normalized_text, words: seg.words })
           : (fullSeg.glosses || []);
         const effectiveGlosses = segGlosses.length > 0 ? segGlosses : (fullSeg.glosses || []);
-        const hasRevGloss = effectiveGlosses.some(g => g.status === 'REVIEW_REQUIRED' || g.requires_review || g.requires_native_review);
         updatedSegments.push({
           ...fullSeg,
           ...seg,
-          status: seg.status === 'CORRECTED' ? 'CORRECTED' : (fullSeg.requires_audio_review ? 'AUDIO_REVIEW' : ((fullSeg.requires_native_review || hasRevGloss) ? 'REVIEW_REQUIRED' : (fullSeg.status || 'VALIDATED'))),
-          requires_native_review: Boolean(fullSeg.requires_native_review || hasRevGloss),
+          start_seconds: sStart,
+          end_seconds: sEnd,
+          start_time: sStart,
+          end_time: sEnd,
+          status: seg.status === 'CORRECTED' ? 'CORRECTED' : 'READY',
           glosses: effectiveGlosses,
           gloss_sequence: effectiveGlosses.map(g => g.gloss || g.lemma)
         });
@@ -291,8 +291,7 @@ class PipelineProcessor {
         glosses: updatedSegments.flatMap(s => s.glosses),
         segments: updatedSegments.length > 0 ? updatedSegments : fullProj.segments,
         discourse_blocks: fullProj.discourse_blocks, non_manual_spans: fullProj.non_manual_spans,
-        spatial_operations: fullProj.spatial_operations, validation_metadata: fullProj.validation_metadata,
-        unresolved_items: fullProj.unresolved_items, validation_warnings: fullProj.validation_warnings
+        spatial_operations: fullProj.spatial_operations
       };
     }
 
@@ -302,7 +301,7 @@ class PipelineProcessor {
       const sStart = seg.start_seconds !== undefined ? seg.start_seconds : (seg.start_time || 0);
       const sEnd = seg.end_seconds !== undefined ? seg.end_seconds : (seg.end_time || (sStart + 3.0));
       const sDur = parseFloat(Math.max(0, sEnd - sStart).toFixed(3));
-      const segGlosses = await this.translateSegmentViaBackend(seg.normalized_text || seg.original_text, sStart, sEnd, seg.id);
+      const segGlosses = await this.translateSegmentViaBackend(seg.normalized_text || seg.original_text, sStart, sEnd, seg.id, { contextBefore: (updatedSegments[updatedSegments.length - 1] || {}).normalized_text, words: seg.words });
       allGlosses.push(...segGlosses);
       updatedSegments.push({ ...seg, start_seconds: sStart, end_seconds: sEnd, duration: sDur, glosses: segGlosses, gloss_sequence: segGlosses.map(g => g.gloss || g.lemma) });
     }
@@ -313,7 +312,7 @@ class PipelineProcessor {
         { id: 'b_1', label: 'Inicio', start_seconds: 0, end_seconds: (project.media_info?.duration_seconds || 10) * 0.5, rst_relation: 'NARRATIVE' },
         { id: 'b_2', label: 'Cierre', start_seconds: (project.media_info?.duration_seconds || 10) * 0.5, end_seconds: project.media_info?.duration_seconds || 10, rst_relation: 'SUMMARY' }
       ],
-      non_manual_spans: [], spatial_operations: [], validation_metadata: null, unresolved_items: [], validation_warnings: []
+      non_manual_spans: [], spatial_operations: []
     };
   }
 
@@ -392,8 +391,6 @@ class PipelineProcessor {
     const tx = apiResponse.transcription || {}, glossOut = apiResponse.gloss_output || {};
     const duration = mediaInfo.duration || tx.duration_seconds || 48.85;
     const rawGlosses = glossOut.glosses || [], rawProps = glossOut.semantic_propositions || glossOut.propositions || [], wordTimestamps = tx.word_timestamps || [];
-    const pendingSemIds = (glossOut.validation_metadata && glossOut.validation_metadata.pending_semantic_review_ids) || [];
-    const pendingAudIds = (glossOut.validation_metadata && glossOut.validation_metadata.pending_audio_review_ids) || [];
 
     // Formatear glosas con soporte completo de timestamps reales de Whisper y tipos
     const glosses = rawGlosses.map((g, idx) => {
@@ -403,22 +400,18 @@ class PipelineProcessor {
       const gText = String(g.gloss || g.lemma || '').trim();
       const isSingleLetterHyphenated = gText.includes('-') && gText.split('-').filter(Boolean).every(p => p.trim().length === 1);
       const isFs = Boolean(g.is_fingerspelling || (g.gloss_type === 'DACTILOLOGÍA') || (g.gloss_type === 'FINGERSPELLING') || isSingleLetterHyphenated);
-      const isUnverifiedLex = g.dictionary_metadata && g.dictionary_metadata.status === 'NO_VERIFICADO';
-      const needsRev = Boolean(g.requires_native_review || g.requires_review || isUnverifiedLex);
-      const gStatus = g.requires_audio_review ? 'AUDIO_REVIEW' : (needsRev ? 'REVIEW_REQUIRED' : (g.status || 'VALIDATED'));
       return {
         ...g, id: g.id || `g_${idx + 1}`, order: g.order !== undefined ? g.order : idx,
         gloss: g.gloss || g.lemma || 'GLOSA', lemma: g.lemma || g.gloss || 'GLOSA',
         source_word: g.source_word || null, normalized_word: g.normalized_word || null,
         alignment_type: g.alignment_type || 'DIRECT', dictionary_metadata: g.dictionary_metadata || null,
-        requires_review: needsRev, requires_native_review: needsRev, requires_audio_review: Boolean(g.requires_audio_review),
-        review_reasons: g.review_reasons || [], source_start_seconds: start, source_end_seconds: end,
+        source_start_seconds: start, source_end_seconds: end,
         start_seconds: start, end_seconds: end, start_time: start, end_time: end, start, end,
         proposition_id: g.proposition_id || g.origin_proposition_id || null, origin_proposition_id: g.origin_proposition_id || g.proposition_id || null,
         duration_ms: g.duration_ms || Math.round((end - start) * 1000),
         gloss_type: isFs ? 'DACTILOLOGÍA' : (g.gloss_type || 'SEÑA'), syntactic_role: g.syntactic_role || 'ARGUMENT',
-        color: g.color || (isFs ? 'fingerspelling' : (needsRev ? 'review' : 'validated')),
-        confidence: g.confidence !== undefined ? g.confidence : 0.94, status: gStatus, manual_code: g.manual_code || 'STD_SIGN', non_manual: g.non_manual || null
+        color: g.color || (isFs ? 'fingerspelling' : 'sign'),
+        confidence: g.confidence !== undefined ? g.confidence : 0.94, status: g.status || 'READY', manual_code: g.manual_code || 'STD_SIGN', non_manual: g.non_manual || null
       };
     });
 
@@ -439,18 +432,13 @@ class PipelineProcessor {
 
         // Glosas asociadas (por proposition_id o coincidencia temporal)
         const segGlosses = glosses.filter(g => g.proposition_id === segId || g.origin_proposition_id === segId || (p.gloss_ids && p.gloss_ids.includes(g.id)) || (!g.proposition_id && g.start_seconds >= start - 0.15 && g.end_seconds <= end + 0.15));
-        const reqAudio = Boolean(p.requires_audio_review || pendingAudIds.includes(segId) || segGlosses.some(g => g.requires_audio_review));
-        const reqNative = Boolean(p.requires_native_review || p.requires_review || pendingSemIds.includes(segId) || segGlosses.some(g => g.requires_review || g.requires_native_review));
-        const segStatus = reqAudio ? 'AUDIO_REVIEW' : (reqNative ? 'REVIEW_REQUIRED' : 'VALIDATED');
-        const segStatusLabel = reqAudio ? 'Revisión Auditiva' : (reqNative ? 'Requiere Revisión' : 'Validado');
         // Calcular confianza acústica real a partir de las palabras alineadas si están disponibles
         const wordConfs = segWords.map(w => w.confidence).filter(c => typeof c === 'number');
         const avgWordConf = wordConfs.length > 0 ? Number((wordConfs.reduce((a, b) => a + b, 0) / wordConfs.length).toFixed(3)) : (p.confidence || 0.93);
 
         return {
           id: segId, index: idx + 1, start_seconds: start, end_seconds: end, start_time: start, end_time: end,
-          original_text: text, normalized_text: norm, confidence: avgWordConf, status: segStatus, status_label: segStatusLabel,
-          requires_audio_review: reqAudio, requires_native_review: reqNative, review_reasons: p.review_reasons || [],
+          original_text: text, normalized_text: norm, confidence: avgWordConf, status: 'READY', status_label: 'Listo',
           words: segWords.length > 0 ? segWords : norm.split(' ').filter(Boolean).map((w, wIdx, arr) => ({ word: w, start: start + (wIdx * (end - start)) / Math.max(1, arr.length), end: start + ((wIdx + 1) * (end - start)) / Math.max(1, arr.length), confidence: 0.95 })),
           glosses: segGlosses
         };
@@ -462,8 +450,7 @@ class PipelineProcessor {
         const start = idx * segDur, end = (idx + 1) * segDur, text = st.trim();
         return {
           id: `seg_${String(idx + 1).padStart(2, '0')}`, index: idx + 1, start_seconds: start, end_seconds: end, start_time: start, end_time: end,
-          original_text: text, normalized_text: text, confidence: tx.confidence || 0.92, status: 'VALIDATED', status_label: 'Validado',
-          requires_audio_review: false, requires_native_review: false,
+          original_text: text, normalized_text: text, confidence: tx.confidence || 0.92, status: 'READY', status_label: 'Listo',
           words: wordTimestamps.filter(w => w.start >= start && w.end <= end), glosses: glosses.filter(g => g.start >= start && g.end <= end)
         };
       });
@@ -476,35 +463,19 @@ class PipelineProcessor {
       seg.gloss_sequence = seg.glosses.map(g => g.gloss || g.lemma);
     }
 
-    // Construir lista de incidencias (unresolved_items) para la pista 8 del Timeline
-    const rawUnresolved = (glossOut.unresolved_items && glossOut.unresolved_items.length > 0) ? glossOut.unresolved_items : ((glossOut.validation_metadata && glossOut.validation_metadata.unresolved_items) || []);
-    const warningItems = (glossOut.validation_warnings || []).filter(w => w && (w.severity === 'WARNING' || w.severity === 'ERROR')).map((w, idx) => {
-      const targetSeg = segments.find(s => s.id === w.target_id) || null, targetGloss = glosses.find(g => String(g.id) === String(w.target_id)) || null;
-      const st = targetGloss ? targetGloss.start_seconds : (targetSeg ? targetSeg.start_seconds : idx * 2.0);
-      const et = targetGloss ? targetGloss.end_seconds : (targetSeg ? targetSeg.end_seconds : st + 1.2);
-      return { id: `warn_${idx + 1}`, code: w.code || 'WARNING', word: targetGloss ? targetGloss.gloss : (targetSeg ? targetSeg.id : (w.code || 'Incidencia')), type: w.code || 'WARNING', reason: w.message || '', start_seconds: st, end_seconds: et };
-    });
-    const unresolvedItems = [...rawUnresolved, ...warningItems];
-
-    const validationMeta = glossOut.validation_metadata || glossOut.confidence || {
-      overall_linguistic_confidence: tx.confidence || 0.92, execution_status: glossOut.execution_status || 'READY',
-      multidimensional_confidence: { lexical_coverage: 0.95, syntactic_validity: 0.90, spatial_consistency: 0.88, non_manual_synchrony: 0.85, timing_feasibility: 0.92 },
-      unresolved_items: unresolvedItems
-    };
-    if (!validationMeta.unresolved_items || validationMeta.unresolved_items.length === 0) validationMeta.unresolved_items = unresolvedItems;
-
     const discourseBlocks = (glossOut.discourse_blocks || []).map((b, idx) => ({ id: b.id !== undefined ? `b_${b.id}` : `b_${idx + 1}`, label: b.label || b.topic || `Bloque ${idx + 1}`, start_seconds: b.start_seconds ?? b.start_time ?? idx * 5.0, end_seconds: b.end_seconds ?? b.end_time ?? (idx + 1) * 5.0 }));
-    const nonManualSpans = (glossOut.non_manual_spans || []).map((s, idx) => ({ id: s.id || `span_${idx + 1}`, expression: s.facial_expression || s.expression || 'Facial', start_seconds: s.start_seconds ?? s.start_time ?? idx * 2.5, end_seconds: s.end_seconds ?? s.end_time ?? (idx + 1) * 2.5 }));
+    // Se conservan type/head_movement/intensity/priority; la ventana temporal real se deriva de las glosas
+    // vinculadas (gloss.non_manual_span_ids) al compilar el plan del avatar (no se inventan tiempos sintéticos).
+    const nonManualSpans = (glossOut.non_manual_spans || []).map((s, idx) => ({ ...s, id: s.id || `span_${idx + 1}`, expression: s.facial_expression || s.expression || 'Facial', start_seconds: s.start_seconds ?? s.start_time ?? null, end_seconds: s.end_seconds ?? s.end_time ?? null }));
     const spatialOps = (glossOut.spatial_operations || []).map((op, idx) => ({ id: op.id || `op_${idx + 1}`, target_space: op.target_space || op.location || 'CENTRO', start_seconds: op.time_seconds ?? op.start_time ?? idx * 3.0 }));
 
     return {
       session_id: String(glossOut.session_id || `lsec_${Date.now()}`), created_at: new Date().toISOString(),
-      schema_version: '2.1.1', execution_status: glossOut.execution_status || 'READY',
+      schema_version: '2.1.1',
       media_info: { filename: file.name, duration_seconds: duration, resolution: `${mediaInfo.width || 1920}x${mediaInfo.height || 1080}`, fps: mediaInfo.fps || 30.0, filesize_mb: parseFloat((file.size / (1024 * 1024)).toFixed(2)) },
       transcription: tx, subtitles: segments, segments, propositions: rawProps, glosses,
       discourse_blocks: discourseBlocks, non_manual_spans: nonManualSpans, spatial_operations: spatialOps,
-      corrections: glossOut.corrections_applied || [], corrections_applied: glossOut.corrections_applied || [],
-      unresolved_items: unresolvedItems, validation_warnings: glossOut.validation_warnings || [], validation_metadata: validationMeta
+      corrections: glossOut.corrections_applied || [], corrections_applied: glossOut.corrections_applied || []
     };
   }
 
@@ -555,9 +526,9 @@ class PipelineProcessor {
             <div class="grammar-rules-bar">
               <div class="grammar-tokens-flow" id="pipeline-grammar-rules-badges"><span class="grammar-rule-badge">Reordenamiento Sintáctico SVO -&gt; SOV</span><span class="grammar-rule-badge">Elisión de Artículos/Copulativos</span><span class="grammar-rule-badge">Verbos en Infinitivo</span></div>
               <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; font-size:0.78rem; font-weight:700; color:var(--color-text-secondary);">
-                <span style="display:inline-flex; align-items:center; gap:5px;"><span aria-hidden="true">✓</span> <strong>[CONADIS]</strong> Seña Oficial</span>
+                <span style="display:inline-flex; align-items:center; gap:5px;"><span aria-hidden="true">✓</span> <strong>[CONADIS]</strong> Seña del Diccionario</span>
                 <span style="display:inline-flex; align-items:center; gap:5px;"><span aria-hidden="true">✦</span> <strong>[DACTILOLOGÍA]</strong> Deletreo Manual</span>
-                <span style="display:inline-flex; align-items:center; gap:5px;"><span aria-hidden="true">✎</span> <strong>[EDITADO]</strong> Verificada por Humano</span>
+                <span style="display:inline-flex; align-items:center; gap:5px;"><span aria-hidden="true">✎</span> <strong>[EDITADO]</strong> Editada Manualmente</span>
               </div>
             </div>
           </div>

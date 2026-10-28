@@ -661,6 +661,30 @@ export function convertDirectAnimationToSignClip(data, defaultName = 'SEÑA_LSEC
   const clipId = (rawSlug && rawSlug.length > 0) ? rawSlug : 'custom_clip';
 
   const boneTracks = Array.from(boneMap.values());
+  const rawAh = (meta.stroke && meta.stroke.activeHands) || (meta.kinematicStabilizer && meta.kinematicStabilizer.activeHands) || null;
+  const isLeftUnimanual = !isFaceOnlyRestArms && Boolean(
+    Array.isArray(rawAh) ? (rawAh.includes('left') && !rawAh.includes('right')) : (rawAh && rawAh.left && !rawAh.right)
+  );
+  if (isLeftUnimanual) {
+    for (const track of boneTracks) {
+      if (!track || !track.boneName) continue;
+      if (track.boneName.startsWith('left')) track.boneName = 'right' + track.boneName.slice(4);
+      else if (track.boneName.startsWith('right')) track.boneName = 'left' + track.boneName.slice(5);
+      const rots = track.rotations;
+      if (Array.isArray(rots)) {
+        for (let k = 0; k < rots.length; k += 4) {
+          rots[k + 1] = -rots[k + 1];
+          rots[k + 2] = -rots[k + 2];
+        }
+      }
+    }
+    if (meta.stroke && typeof meta.stroke === 'object') {
+      meta.stroke = { ...meta.stroke, dominantHand: 'right', activeHands: { left: false, right: true, dominant: 'right' } };
+    }
+    if (meta.kinematicStabilizer && typeof meta.kinematicStabilizer === 'object') {
+      meta.kinematicStabilizer = { ...meta.kinematicStabilizer, dominantHand: 'right', activeHands: ['right'] };
+    }
+  }
   // Garantizar continuidad antipodal (<q_k, q_{k-1}> >= 0) en todas las pistas óseas
   // para prevenir giros espurios de 360° en interpoladores SLERP/lineales.
   for (const track of boneTracks) {

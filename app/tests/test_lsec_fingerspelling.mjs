@@ -230,7 +230,7 @@ const project = {
       gloss: 'XILÓFONO',
       source_word: 'xilófono',
       gloss_type: 'SEÑA',
-      dictionary_metadata: { status: 'NO_VERIFICADO' },
+      dictionary_metadata: { status: 'FUERA_DE_DICCIONARIO' },
       validation: { fallback_fingerspelling_gloss: 'X-I-L-Ó-F-O-N-O' },
       start_seconds: 6.2,
       end_seconds: 8.1,

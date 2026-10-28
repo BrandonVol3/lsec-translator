@@ -1,6 +1,6 @@
 """
 Router REST para consultar y servir animaciones VRM 1:1 generadas por el Pipeline LSEC v2.5/v2.6/v2.7
-y videos originales Ultra HD del Diccionario Oficial LSEC.
+y videos originales Ultra HD del Diccionario LSEC.
 
 Proporciona:
   GET /api/v1/animations/list?q=...&limit=50   (Ordenado estrictamente según catalogo_lsec.json)
@@ -12,13 +12,14 @@ Proporciona:
 
 Nota arquitectónica (Patrón Fachada):
   La lógica pesada de catálogo, resolución léxica/morfológica e integridad de medios
-  reside en `app.services.animation_catalog_service`, `app.services.animation_lexical_resolver`
-  y `app.services.animation_media_service`. Se re-exportan todos los símbolos públicos y privados
-  para preservar el 100 % de retrocompatibilidad en tests y servicios.
+  reside en `app.services.animation_catalog_service`, `app.services.animation_lexical_resolver`,
+  `app.services.animation_media_service` y `app.services.video_export_service`.
+  Se re-exportan todos los símbolos públicos y privados para preservar el 100 % de retrocompatibilidad.
 """
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -84,12 +85,22 @@ from app.services.animation_lexical_resolver import (
 )
 from app.services.animation_media_service import (
     _is_video_stream_healthy,
-    encode_deterministic_mp4_response,
     resolve_sign_animation_response,
     resolve_sign_illustration_response,
     resolve_sign_info_response,
     resolve_sign_qa_response,
     resolve_sign_video_response,
+)
+from app.services.video_export_service import (
+    DEFAULT_EXPORT_FOLDER_NAME,
+    encode_deterministic_mp4_response,
+    get_default_export_directory,
+    get_export_directory_status,
+    open_export_directory_in_os,
+    resolve_export_target_directory,
+    save_video_bytes_to_export_dir,
+    select_export_directory_native_dialog,
+    set_export_directory_preference,
 )
 
 animation_router = APIRouter(prefix="/api/v1/animations", tags=["Animaciones Directas 1:1 (VRM)"])
@@ -196,8 +207,9 @@ async def resolve_single_gloss(
     version: Optional[str] = Query("2.7", description="Versión preferida: '2.7', '2.6' o '2.5'"),
     include_animation: bool = Query(True, description="Incluir el JSON completo de animation.json"),
     geolect: Optional[str] = Query(None, description="Preferencia geolectal opcional: 'Sierra', 'Costa' o 'Nacional'"),
+    context: Optional[str] = Query(None, description="Contexto oracional opcional para desambiguar homónimos"),
 ) -> Dict[str, Any]:
-    res = resolve_gloss_to_sign(gloss, version=version or "2.7", include_animation=include_animation, geolect=geolect)
+    res = resolve_gloss_to_sign(gloss, version=version or "2.7", include_animation=include_animation, geolect=geolect, context=context)
     res.pop("anim_path", None)
     return res
 
@@ -205,6 +217,100 @@ async def resolve_single_gloss(
 @animation_router.post("/resolve", summary="Resuelve un lote de glosas LSEC contra el catálogo v2.7/v2.6 sin 404")
 async def resolve_batch_glosses(payload: Dict[str, Any]) -> Dict[str, Any]:
     return resolve_batch_glosses_payload(payload)
+
+
+# ============================================================
+# Gestión de Carpeta de Exportación de Videos (Escritorio + Ruta Personalizada)
+# ============================================================
+
+@animation_router.get("/export-directory", summary="Obtiene la carpeta por defecto en el Escritorio y la ruta activa para guardar videos exportados")
+async def get_export_directory_endpoint() -> Dict[str, Any]:
+    return get_export_directory_status()
+
+
+@animation_router.post("/export-directory", summary="Configura una ruta personalizada para guardar los videos exportados o restaura la carpeta del Escritorio")
+async def set_export_directory_endpoint(payload: Dict[str, Any]) -> Dict[str, Any]:
+    reset = bool(payload.get("reset") or payload.get("reset_to_default"))
+    directory = payload.get("directory") or payload.get("custom_dir") or payload.get("path")
+    return set_export_directory_preference(directory=directory, reset_to_default=reset)
+
+
+@animation_router.post("/select-export-directory", summary="Abre el selector nativo de carpetas de Windows para elegir dónde guardar los videos exportados")
+async def select_export_directory_endpoint(payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    initial_dir = (payload or {}).get("initial_dir") or (payload or {}).get("directory")
+    return await asyncio.to_thread(select_export_directory_native_dialog, initial_dir)
+
+
+@animation_router.post("/open-export-directory", summary="Abre la carpeta de exportación en el Explorador de Archivos de Windows")
+async def open_export_directory_endpoint(payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    directory = (payload or {}).get("directory")
+    filename = (payload or {}).get("filename")
+    return await asyncio.to_thread(open_export_directory_in_os, directory, filename)
+
+
+@animation_router.post("/save-exported-video", summary="Guarda directamente un video exportado en la carpeta del Escritorio o ruta personalizada, creándola si no existe")
+async def save_exported_video_endpoint(request: Request) -> Dict[str, Any]:
+    form = await request.form()
+    video_upload = form.get("video_file")
+    if video_upload is None:
+        raise HTTPException(status_code=400, detail="Falta 'video_file' en el formulario.")
+    video_bytes = await video_upload.read()
+    output_dir = str(form.get("output_dir") or "").strip() or None
+    output_filename = str(form.get("output_filename") or getattr(video_upload, "filename", "") or "video_lsec.mp4").strip()
+    saved_path, target_dir, safe_filename = await asyncio.to_thread(
+        save_video_bytes_to_export_dir,
+        video_bytes,
+        output_dir,
+        output_filename,
+        ".mp4",
+    )
+    return {
+        "saved": True,
+        "saved_path": str(saved_path),
+        "directory": str(target_dir),
+        "filename": safe_filename,
+        "size_bytes": len(video_bytes),
+    }
+
+
+@animation_router.post("/finalize-export-mp4", summary="Remuxea/codifica video determinista a MP4 H.264 + AAC a 30.0 FPS constantes y lo guarda en la carpeta destino")
+async def finalize_export_mp4(request: Request):
+    """
+    Recibe un archivo de video renderizado cuadro a cuadro desde el navegador (WebM o MP4)
+    y opcionalmente el archivo de video/audio original, genera un MP4 (H.264 + AAC)
+    con tasa de cuadros constante exacta (por defecto 30.0 FPS) y lo guarda automáticamente
+    en la carpeta por defecto del Escritorio (o en la ruta personalizada indicada),
+    creando la carpeta automáticamente si no existe.
+    """
+    form = await request.form()
+    video_upload = form.get("video_file")
+    audio_upload = form.get("audio_file")
+    target_fps = int(float(form.get("fps") or 30))
+    if target_fps <= 0:
+        target_fps = 30
+
+    if video_upload is None:
+        raise HTTPException(status_code=400, detail="Falta 'video_file' en el formulario.")
+
+    output_dir_raw = form.get("output_dir")
+    output_dir = str(output_dir_raw).strip() if output_dir_raw is not None else None
+    output_filename_raw = form.get("output_filename")
+    output_filename = str(output_filename_raw).strip() if output_filename_raw is not None else None
+    save_to_disk_raw = form.get("save_to_disk")
+    save_to_disk = True if save_to_disk_raw is None else (str(save_to_disk_raw).lower() not in ("false", "0", "no"))
+
+    video_bytes = await video_upload.read()
+    audio_bytes = await audio_upload.read() if audio_upload is not None else None
+
+    return await asyncio.to_thread(
+        encode_deterministic_mp4_response,
+        video_bytes=video_bytes,
+        audio_bytes=audio_bytes,
+        target_fps=target_fps,
+        output_dir=output_dir,
+        output_filename=output_filename,
+        save_to_disk=save_to_disk,
+    )
 
 
 @animation_router.get("/{sign_name}", summary="Obtiene el archivo animation.json de una seña específica")
@@ -258,33 +364,6 @@ async def get_sign_illustration(sign_name: str):
     return resolve_sign_illustration_response(sign_name=sign_name)
 
 
-@animation_router.post("/finalize-export-mp4", summary="Remuxea/codifica video determinista a MP4 H.264 + AAC a 30.0 FPS constantes")
-async def finalize_export_mp4(request: Request):
-    """
-    Recibe un archivo de video renderizado cuadro a cuadro desde el navegador (WebM o MP4)
-    y opcionalmente el archivo de video/audio original, y genera un MP4 (H.264 + AAC)
-    con tasa de cuadros constante exacta (por defecto 30.0 FPS) y audio original sincronizado.
-    """
-    form = await request.form()
-    video_upload = form.get("video_file")
-    audio_upload = form.get("audio_file")
-    target_fps = int(float(form.get("fps") or 30))
-    if target_fps <= 0:
-        target_fps = 30
-
-    if video_upload is None:
-        raise HTTPException(status_code=400, detail="Falta 'video_file' en el formulario.")
-
-    video_bytes = await video_upload.read()
-    audio_bytes = await audio_upload.read() if audio_upload is not None else None
-
-    return encode_deterministic_mp4_response(
-        video_bytes=video_bytes,
-        audio_bytes=audio_bytes,
-        target_fps=target_fps,
-    )
-
-
 # Router alias en /api/animations-direct para compatibilidad directa con el frontend
 animation_direct_alias_router = APIRouter(
     prefix="/api/animations-direct",
@@ -299,6 +378,11 @@ animation_direct_alias_router.add_api_route("/resolve", resolve_batch_glosses, m
 animation_direct_alias_router.add_api_route("/stats", animation_stats, methods=["GET"])
 animation_direct_alias_router.add_api_route("/list", list_animations, methods=["GET"])
 animation_direct_alias_router.add_api_route("/handshapes", get_handshapes_catalog, methods=["GET"])
+animation_direct_alias_router.add_api_route("/export-directory", get_export_directory_endpoint, methods=["GET"])
+animation_direct_alias_router.add_api_route("/export-directory", set_export_directory_endpoint, methods=["POST"])
+animation_direct_alias_router.add_api_route("/select-export-directory", select_export_directory_endpoint, methods=["POST"])
+animation_direct_alias_router.add_api_route("/open-export-directory", open_export_directory_endpoint, methods=["POST"])
+animation_direct_alias_router.add_api_route("/save-exported-video", save_exported_video_endpoint, methods=["POST"])
 animation_direct_alias_router.add_api_route("/finalize-export-mp4", finalize_export_mp4, methods=["POST"])
 animation_direct_alias_router.add_api_route("/{sign_name}", get_sign_animation, methods=["GET"])
 animation_direct_alias_router.add_api_route("/{sign_name}/stroke", get_sign_stroke_endpoint, methods=["GET"])

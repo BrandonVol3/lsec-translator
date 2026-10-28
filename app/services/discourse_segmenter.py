@@ -58,6 +58,9 @@ class DiscourseUnit:
     focus: Optional[str] = None
     source_char_start: int = 0
     source_char_end: int = 0
+    # Oración de origen (idea completa) a la que pertenece esta proposición.
+    sentence_id: int = 0
+    sentence_text: str = ""
 
 
 # ============================================================
@@ -154,7 +157,7 @@ class DiscourseSegmenter:
         units: List[DiscourseUnit] = []
         unit_id = 0
 
-        for sent in raw_sentences:
+        for sent_idx, sent in enumerate(raw_sentences):
             sent = sent.strip()
             if not sent:
                 continue
@@ -170,6 +173,8 @@ class DiscourseSegmenter:
                     "tag_question": True,
                 }
             for su in sub_units:
+                su.sentence_id = sent_idx
+                su.sentence_text = sent
                 if "¿" in su.text and "?" not in su.text:
                     su.text = su.text.rstrip() + "?"
                 su.id = unit_id

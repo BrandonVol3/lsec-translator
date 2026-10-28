@@ -65,7 +65,7 @@ _DIRECTIONAL_VERBS_DEFAULT: Set[str] = {
     "EXPLICAR", "ENVIAR", "ENGAÑAR", "INVITAR", "JUZGAR", "FASTIDIAR",
     "OBLIGAR", "OBEDECER", "ODIAR", "RECHAZAR", "TRAICIONAR", "RESPETAR",
     "VISITAR", "VENCER", "DECIR", "MIRAR", "APOYAR", "LLAMAR-CON-LA-MANO",
-    "REVISAR", "AVISAR", "DAR", "PREGUNTAR", "INFORMAR", "MOSTRAR", "ENTREGAR",
+    "REVISAR", "AVISAR", "DAR", "PREGUNTAR", "INFORMAR", "MOSTRAR", "ENTREGAR", "ASALTAR",
 }
 _INVERSE_VERBS_DEFAULT: Set[str] = {"ROBAR"}
 _BODY_ANCHORED_VERBS_DEFAULT: Set[str] = {"ABRAZAR", "ACEPTAR", "BUSCAR"}
@@ -339,7 +339,6 @@ def apply_directional_verbs(items: List[GlossItem], doc: Any, proposition: Any =
             clean_norm = (verb.normalized_word or clean_gloss).lower()
             if clean_norm in _COMMUNICATION_TRANSFER_LEMMAS:
                 verb.notes = "DIRECTIONAL_CANDIDATE (Revisión requerida)"
-                verb.requires_review = True
             continue
 
         # Proceso para 'directional' e 'inverse'
@@ -502,7 +501,6 @@ def apply_intensity_duplication(items: List[GlossItem], doc: Any) -> None:
                 tok.head is not None and any(getattr(c, "dep_", "") == "neg" for c in tok.head.children)
             )
             if has_neg:
-                it.requires_review = True
                 it.notes = "Intensidad bajo negación - revisión requerida"
                 continue
 

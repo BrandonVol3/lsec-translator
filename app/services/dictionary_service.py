@@ -1,5 +1,5 @@
 """
-Servicio del Diccionario Oficial LSEC "Gabriel Román" (CONADIS).
+Servicio del Diccionario LSEC "Gabriel Román" (CONADIS).
 Convierte el catálogo `catalogo_lsec.json` (4.252 señas) en un índice léxico en memoria que:
   1. Expande títulos con género/número y sinónimos ("Abuelo(a)", "Encontrar / Hallar", etc.).
   2. Resuelve glosas y palabras españolas a una seña oficial y devuelve su ficha.
@@ -32,14 +32,10 @@ INDEX_FILENAME = "lsec_dictionary_index.json"
 INDEX_SCHEMA_VERSION = 2
 MAX_PHRASE_WORDS = 6
 
-STATUS_VERIFIED, STATUS_UNVERIFIED = "VERIFICADO_CONADIS", "NO_VERIFICADO"
+STATUS_VERIFIED, STATUS_UNVERIFIED = "EN_DICCIONARIO", "FUERA_DE_DICCIONARIO"
 STATUS_GRAMMATICAL, STATUS_FINGERSPELLING = "EXENTO_GRAMATICAL", "DACTILOLOGIA"
-STATUS_LOCAL_LEXICON, STATUS_PARAPHRASE = "LEXICON_LOCAL", "PARAFRASIS_REVISION"
+STATUS_LOCAL_LEXICON, STATUS_PARAPHRASE = "LEXICON_LOCAL", "PARAFRASIS"
 
-UNVERIFIED_REVIEW_REASON = (
-    "La glosa '{gloss}' no figura en el Diccionario Oficial LSEC (CONADIS); "
-    "requiere validación por personas sordas usuarias nativas de LSEC."
-)
 
 # Sufijos de género que aparecen entre paréntesis en los títulos: "Abogado(a)", "Capitán (ana)".
 _GENDER_SUFFIXES: Set[str] = {"a", "as", "es", "ana", "ora", "iza", "triz"}
@@ -50,6 +46,7 @@ _GRAMMATICAL_GLOSSES: Set[str] = {
     "VARIOS", "AHORA", "PASADO", "FUTURO", "PRESENTE", "HACIA", "IX", "NO", "NUNCA", "JAMÁS",
     "QUÉ", "QUIÉN", "QUIÉNES", "DÓNDE", "CUÁNDO", "CÓMO", "CUÁL", "CUÁLES", "CUÁNTO", "CUÁNTOS",
     "POR-QUÉ", "PORQUÉ", "TERMINADO", "FIN", "DURATIVO", "REITERATIVO", "COMPLETIVO",
+    "ESE", "ESA", "ESTE", "ESTA", "ESTO", "ESO", "AQUEL", "AQUELLA",
 }
 _GRAMMATICAL_PATTERNS: Tuple[re.Pattern[str], ...] = (
     re.compile(r"^PRO[123]"), re.compile(r"^(IX|POSS|REF)\d?([-_:].*)?$"),
@@ -208,7 +205,7 @@ class DictionaryMatch:
     def to_metadata(self) -> DictionarySignMetadata:
         e = self.entry
         return DictionarySignMetadata(
-            verified_in_conadis=True,
+            in_dictionary=True,
             status=STATUS_VERIFIED,
             conadis_slug=e.slug,
             official_sign_title=e.title,
@@ -251,7 +248,7 @@ class PhraseMatch:
 # ======================================================================
 
 class LSECDictionaryService:
-    """Índice léxico en memoria del Diccionario Oficial LSEC (CONADIS)."""
+    """Índice léxico en memoria del Diccionario LSEC (CONADIS)."""
 
     def __init__(self, catalog_path: Optional[str | Path] = None, index_path: Optional[str | Path] = None) -> None:
         self._entries: List[DictionaryEntry] = []
@@ -519,8 +516,9 @@ class LSECDictionaryService:
 
     @staticmethod
     def clean_gloss_text(gloss: str) -> str:
-        """Quita marcas de duplicación ('++') y convierte guiones en espacios para la búsqueda."""
-        g = re.sub(r"\+{1,2}$", "", (gloss or "").strip())
+        """Quita vectores direccionales ('[1->2]'), marcas de duplicación ('++') y convierte guiones en espacios."""
+        g = re.sub(r"\[[^\]]*\]", "", (gloss or "").strip())
+        g = re.sub(r"\+{1,2}$", "", g.strip())
         return g.replace("-", " ").strip()
 
     @staticmethod
@@ -539,8 +537,9 @@ class LSECDictionaryService:
     def lookup_gloss(
         self, gloss: str, normalized_word: Optional[str] = None,
         source_word: Optional[str] = None, preferred_geolect: Optional[str] = None,
+        context: Optional[str | Sequence[str]] = None,
     ) -> Optional[DictionaryMatch]:
-        """Resuelve una glosa generada probando glosa, palabra normalizada, fuente y lema verbal."""
+        """Resuelve una glosa generada probando glosa, palabra normalizada, fuente, lema verbal y alias LSEC."""
         if not self.available:
             return None
         attempts: List[Tuple[str, str]] = []
@@ -561,9 +560,37 @@ class LSECDictionaryService:
             if marker in seen:
                 continue
             seen.add(marker)
-            match = self.lookup(term, match_type=label, preferred_geolect=preferred_geolect)
+            match = self.lookup(term, match_type=label, preferred_geolect=preferred_geolect, context=context)
             if match is not None:
                 return match
+        try:
+            from app.services.animation_lexical_resolver import _LSEC_LEXICAL_ALIASES
+            for term, _ in attempts:
+                alias_key = normalize_key(term).replace(" ", "")
+                if alias_key in _LSEC_LEXICAL_ALIASES:
+                    alias_target, alias_mtype = _LSEC_LEXICAL_ALIASES[alias_key]
+                    if alias_mtype != "fingerspelling":
+                        match = self.lookup(alias_target, match_type=alias_mtype, preferred_geolect=preferred_geolect, context=context)
+                        if match is not None:
+                            return match
+                        first_part = alias_target.split(",")[0].strip()
+                        if first_part and first_part != alias_target:
+                            match = self.lookup(first_part, match_type=alias_mtype, preferred_geolect=preferred_geolect, context=context)
+                            if match is not None:
+                                return match
+                        stripped_parens = re.sub(r"\s*\([^)]*\)", "", first_part or alias_target).strip()
+                        if stripped_parens and stripped_parens != alias_target:
+                            match = self.lookup(stripped_parens, match_type=alias_mtype, preferred_geolect=preferred_geolect, context=context)
+                            if match is not None:
+                                return match
+            from app.services.animation_lexical_resolver import _generate_morphological_candidates
+            for term, _ in attempts:
+                for morph_cand in _generate_morphological_candidates(term):
+                    match = self.lookup(morph_cand, match_type="lemma", preferred_geolect=preferred_geolect, context=context)
+                    if match is not None:
+                        return match
+        except Exception:
+            pass
         return None
 
     # ------------------------------------------------------------ consulta
@@ -681,38 +708,37 @@ class LSECDictionaryService:
     # ------------------------------------------------------------ enriquecimiento
 
     def enrich_glosses(
-        self, glosses: Sequence[GlossItem], *, known_glosses: Optional[Iterable[str]] = None, flag_unverified: Optional[bool] = None
+        self, glosses: Sequence[GlossItem], *, known_glosses: Optional[Iterable[str]] = None
     ) -> Dict[str, int]:
         """
         Aplica la cascada de resolución sobre `glosses` (modifica los elementos in situ).
 
         Devuelve un conteo por estado. Si el catálogo no está disponible no hace nada
-        (nunca marca glosas como no verificadas sin poder consultar el diccionario).
+        (nunca clasifica glosas como ausentes sin poder consultar el diccionario).
         """
         counts: Dict[str, int] = {}
         if not self.available:
             return counts
-        if flag_unverified is None:
-            try:
-                from app.config import settings
-                flag_unverified = bool(settings.lsec_dictionary_flag_unverified)
-            except Exception:  # pragma: no cover
-                flag_unverified = True
         known: Set[str] = {k.upper() for k in (known_glosses or ()) if k}
+        context_tokens: List[str] = [
+            str(g.source_word or g.normalized_word or g.gloss)
+            for g in glosses
+            if (g.source_word or g.normalized_word or g.gloss)
+        ]
 
         for g in glosses:
             if g.dictionary_metadata is not None:
                 continue
-            meta = self._classify(g, known)
+            meta = self._classify(g, known, context=context_tokens)
             if meta is None:
-                meta = self._flag_unverified(g, flag_unverified)
-            elif meta.verified_in_conadis and not g.alternatives and meta.lexical_alternatives:
+                meta = self._out_of_dictionary_metadata(g)
+            elif meta.in_dictionary and not g.alternatives and meta.lexical_alternatives:
                 g.alternatives = [a for a in meta.lexical_alternatives if a != g.gloss.upper()]
             g.dictionary_metadata = meta
             counts[meta.status] = counts.get(meta.status, 0) + 1
         return counts
 
-    def _classify(self, g: GlossItem, known: Set[str]) -> Optional[DictionarySignMetadata]:
+    def _classify(self, g: GlossItem, known: Set[str], context: Optional[Sequence[str]] = None) -> Optional[DictionarySignMetadata]:
         """Estado de una glosa; `None` indica que es léxica y no figura en CONADIS (OOV)."""
         gloss_up = (g.gloss or "").strip().upper()
         if g.gloss_type == GlossType.FINGERSPELLING or self.is_fingerspelling_gloss(gloss_up):
@@ -723,7 +749,7 @@ class LSECDictionaryService:
         if any(p.search(re.sub(r"\+{1,2}$", "", gloss_up)) for p in _GRAMMATICAL_PATTERNS):
             return DictionarySignMetadata(status=STATUS_GRAMMATICAL)
 
-        match = self.lookup_gloss(g.gloss, g.normalized_word, g.source_word)
+        match = self.lookup_gloss(g.gloss, g.normalized_word, g.source_word, context=context)
         if match is not None:
             return match.to_metadata()
 
@@ -733,20 +759,14 @@ class LSECDictionaryService:
             return DictionarySignMetadata(status=STATUS_GRAMMATICAL)
         if gloss_up in known or re.sub(r"\+{1,2}$", "", gloss_up) in known or g.spatial_ref:
             return DictionarySignMetadata(status=STATUS_LOCAL_LEXICON)
-        if g.alignment_type in (AlignmentType.PARAPHRASE, "PARAPHRASE") or g.requires_native_review:
+        if g.alignment_type in (AlignmentType.PARAPHRASE, "PARAPHRASE"):
             return DictionarySignMetadata(status=STATUS_PARAPHRASE)
         return None
 
-    def _flag_unverified(self, g: GlossItem, flag: bool) -> DictionarySignMetadata:
+    def _out_of_dictionary_metadata(self, g: GlossItem) -> DictionarySignMetadata:
         probe = g.normalized_word or g.source_word or self.clean_gloss_text(g.gloss)
         suggestions = self.suggest(probe) if probe else []
         meta = DictionarySignMetadata(status=STATUS_UNVERIFIED, lexical_alternatives=suggestions)
-        if flag:
-            g.requires_review = True
-            g.requires_native_review = True
-            reason = UNVERIFIED_REVIEW_REASON.format(gloss=g.gloss)
-            if reason not in g.review_reasons:
-                g.review_reasons.append(reason)
         return meta
 
 

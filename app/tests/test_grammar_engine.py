@@ -49,12 +49,10 @@ class TestGrammarRuleSchema:
     def test_rule_provisional_reduces_confidence(self) -> None:
         rule = GrammarRule(rule_id="PROV_RULE", name="Provisional", validation_status=RuleValidationStatus.PROVISIONAL)
         assert rule.reduces_confidence is True
-        assert rule.requires_review is True
 
     def test_rule_validated_does_not_reduce_confidence(self) -> None:
         rule = GrammarRule(rule_id="VAL_RULE", name="Validada", validation_status=RuleValidationStatus.COMMUNITY_VALIDATED)
         assert rule.reduces_confidence is False
-        assert rule.requires_review is False
 
     def test_rule_with_conditions_and_actions(self) -> None:
         rule = GrammarRule(
@@ -587,21 +585,6 @@ class TestRuleCoveragePositiveNegativeAmbiguousCounterexamplesConflicts:
         assert not any(a.rule_id == "LSEC_PRODROP_EXPLICIT" for a in imp_apps)
 
     # 9. Clasificador candidato con requisito de revisión
-    def test_classifier_candidate_requires_review(self, setup_engine) -> None:
-        registry, engine, _ = setup_engine
-        all_rules = registry.get_executable()
-
-        # Positivo: verbo de movimiento con paciente -> CLASSIFIER_CANDIDATE
-        mov_frame = {"predicate_type": "MOVEMENT", "patient": "auto"}
-        mov_apps = engine.apply_rules(all_rules, mov_frame)
-        cl_app = next((a for a in mov_apps if a.rule_id == "LSEC_CLASSIFIER_MOVEMENT"), None)
-        assert cl_app is not None
-        assert cl_app.requires_review is True
-
-        # Negativo: verbo cognitivo sin disposición física
-        cog_frame = {"predicate_type": "COGNITIVE", "patient": "idea"}
-        cog_apps = engine.apply_rules(all_rules, cog_frame)
-        assert not any(a.rule_id == "LSEC_CLASSIFIER_MOVEMENT" for a in cog_apps)
 
     # 10. Transferencia funcional de DET y ADP
     def test_functional_transfer_det_adp_positive_negative(self, setup_engine) -> None:

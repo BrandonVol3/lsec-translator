@@ -41,7 +41,7 @@ def detect_dictionary_phrases(
     blocked_token_ids: Set[int],
 ) -> List[Tuple[MWEMatch, Any]]:
     """
-    Detecta entradas de varias palabras del Diccionario Oficial LSEC en el documento spaCy.
+    Detecta entradas de varias palabras del Diccionario LSEC en el documento spaCy.
     """
     if not planner._phrase_matching or planner._dictionary is None:
         return []
@@ -87,7 +87,6 @@ def detect_dictionary_phrases(
                 semantic_concept="conadis_phrase",
                 prevent_component_parsing=True,
                 preferred_gloss=to_gloss_form(pm.matched_form),
-                requires_native_review=False,
                 confidence=0.95,
             ),
             root,
@@ -252,7 +251,7 @@ def extract_and_reorder_spacy_tokens(
                 forced_verb_lemma = "venir"
 
         is_nominal_homograph = (
-            (clean_word in SpanishVerbLexicon.NOMINAL_HOMOGRAPHS or clean_word in ("dibujo", "canto", "estudio", "trabajo"))
+            (clean_word in SpanishVerbLexicon.NOMINAL_HOMOGRAPHS or clean_word in ("dibujo", "canto", "estudio", "trabajo")) and not (t.i > 0 and doc[t.i - 1].text.lower() in ("yo", "tú", "él", "ella"))
             and (
                 any(c.dep_ in ("amod", "det", "compound") for c in t.children)
                 or (dep == "conj" and t.head.pos_ in ("NOUN", "PROPN"))
@@ -260,7 +259,7 @@ def extract_and_reorder_spacy_tokens(
                 or (t.i + 1 < len(doc) and doc[t.i + 1].pos_ in ("ADJ", "NOUN"))
             )
         )
-        nominal_context = is_nominal_homograph or has_nominal_context(t)
+        nominal_context = is_nominal_homograph or has_nominal_context(t) or (clean_word == "ayuda" and t.i > 0 and PunctuationAnalyzer.strip_punctuation(doc[t.i - 1].text.lower()) in ("necesito", "necesitas", "necesita", "necesitamos", "pido", "pide", "busco", "quiero"))
         structural_pos = pos in ("ADP", "DET", "SCONJ", "CCONJ", "PRON")
         verb_lemma = forced_verb_lemma or (None if nominal_context or structural_pos else SpanishVerbLexicon.get_lemma(clean_word, pos=pos))
         override_lemma = None if nominal_context or structural_pos else planner._lemma_overrides.get(clean_word, planner._lemma_overrides.get(text_lower))
@@ -528,6 +527,7 @@ def extract_and_reorder_spacy_tokens(
                 if ft.target_action == "omit_structural":
                     continue
                 elif ft.target_gloss:
+                    if (clean_word in ("su", "sus") and ft.target_gloss == "PRO3" and any(tok.dep_ in ("nsubj", "nsubj:pass") and tok.pos_ in ("NOUN", "PROPN") and tok.i < t.i for tok in doc)) or (clean_word in ("mi", "mis") and ft.target_gloss == "PRO1" and any(it[4].get("deixis_gloss") == "PRO1" for it in tokens_info)): continue
                     is_pro = "PRO" in ft.target_gloss
                     meta["is_deixis" if is_pro else "is_functional_transfer"] = True
                     meta["deixis_gloss" if is_pro else "ft_gloss"] = ft.target_gloss
@@ -551,7 +551,10 @@ def extract_and_reorder_spacy_tokens(
                 meta["is_amod"] = True
                 meta["head_idx"] = target_head_idx
 
+        if (clean_word == "color" and t.i > 0 and doc[t.i - 1].text.lower() == "de" and t.i + 1 < len(doc) and doc[t.i + 1].pos_ in ("ADJ", "NOUN")) or (lemma == "ir" and clean_word in ("va", "van", "iba", "iban") and not any(tok.text.lower() in ("a", "al", "hacia", "para", "en") for tok in doc[t.i + 1:]) and any(tok.text.lower() in ("lento", "lenta", "lentos", "lentas", "rápido", "rápida", "rapido", "despacio") for tok in doc[t.i + 1:])):
+            continue
         if pos in ("AUX", "VERB") and lemma in _COPULATIVE_LEMMAS:
+            if clean_word in ("estés", "seas") and not any(it[4].get("deixis_gloss") == "PRO2" for it in tokens_info): tokens_info.append((t, "PRON", "nsubj", "pro2", {"is_deixis": True, "deixis_gloss": "PRO2"}))
             if (
                 active_rule_ids is not None
                 and "LSEC_COPULA_OMISSION" not in active_rule_ids
@@ -569,7 +572,7 @@ def extract_and_reorder_spacy_tokens(
                 elif not is_linking_copula:
                     tokens_info.append((t, pos, dep, lemma.upper(), {"is_copula": True}))
                 continue
-            elif active_rule_ids is not None and "LSEC_COPULA_EXISTENTIAL" in active_rule_ids and lemma == "haber":
+            elif active_rule_ids is not None and "LSEC_COPULA_EXISTENTIAL" in active_rule_ids and lemma == "haber" and any(tok.text.lower() == "no" for tok in doc):
                 tokens_info.append((t, "VERB", dep, "haber", {"is_existential": True}))
                 continue
             else:
@@ -583,7 +586,7 @@ def extract_and_reorder_spacy_tokens(
                 and head_clean not in SpanishVerbLexicon.NOMINAL_HOMOGRAPHS
                 and head_clean not in ("dibujo", "canto", "estudio", "trabajo")
             )
-            if not head_is_verb and clean_word not in ("manzana", "pan", "carne", "agua", "leche", "comida"):
+            if not head_is_verb and clean_word not in ("manzana", "pan", "carne", "agua", "leche", "comida") and not (head_clean == "color" and t.head.i > 0 and doc[t.head.i - 1].text.lower() == "de"):
                 meta["is_amod"] = True
                 meta["head_idx"] = mwe_span_head_map.get(t.head.i, t.head.i)
             else:
@@ -604,6 +607,8 @@ def extract_and_reorder_spacy_tokens(
             meta["head_idx"] = mwe_span_head_map.get(t.head.i, t.head.i)
 
         morph_number = t.morph.get("Number", [])
+        if clean_word in ("oyente", "oyentes", "sordo", "sorda", "sordos", "sordas") and not meta.get("is_amod") and t.i > 0 and doc[t.i - 1].pos_ in ("NOUN", "PROPN"):
+            pos, dep, meta["is_amod"], meta["head_idx"] = "ADJ", "amod", True, mwe_span_head_map.get(t.i - 1, t.i - 1)
         if pos in ("NOUN", "PROPN") and "Plur" in morph_number and not verb_lemma and clean_word.endswith("s"):
             meta["is_plural"] = True
         elif (
@@ -710,12 +715,17 @@ def extract_and_reorder_spacy_tokens(
     if linear_objs:
         linear_objs.sort(key=lambda it: it[0].i)
         objects = non_linear_objs + linear_objs
+    for y_item in list(objects):
+        if y_item[0].dep_ == "nmod" and any(c.text.lower() in ("de", "del") for c in y_item[0].children) and PunctuationAnalyzer.strip_punctuation(y_item[0].head.text.lower()) in ("dirección", "direccion", "nombre", "nombres", "cortina", "cortinas", "puerta", "puertas", "techo", "dueño", "capital"):
+            det_items = [m for m in modifiers_others if m[0].head.i == y_item[0].i and m[4].get("is_deixis")]; modifiers_others[:] = [m for m in modifiers_others if m not in det_items]; objects.remove(y_item)
+            for lst in (subjects, objects):
+                if (x_idx := next((idx for idx, it in enumerate(lst) if it[0].i == y_item[0].head.i), None)) is not None: lst[x_idx:x_idx] = det_items + [y_item]; break
 
     if len(verbs) > 1:
         sorted_verbs: List[Any] = []
         for v_item in verbs:
             v_tok = v_item[0]
-            if v_tok.dep_ in ("xcomp", "ccomp") and any(o[0].i == v_tok.head.i for o in verbs):
+            if (v_tok.dep_ in ("xcomp", "ccomp") or (v_tok.dep_ == "csubj" and v_tok.head.lemma_.lower() in ("gustar", "encantar", "fascinar", "interesar", "importar", "faltar"))) and any(o[0].i == v_tok.head.i for o in verbs):
                 head_tok = v_tok.head
                 if head_tok.lemma_.lower() not in ("querer", "poder", "deber", "soler"):
                     head_idx = next((i for i, it in enumerate(sorted_verbs) if it[0].i == head_tok.i), None)
@@ -730,7 +740,7 @@ def extract_and_reorder_spacy_tokens(
     apply_time = active_rule_ids is None or "LSEC_TIME_INITIAL" in active_rule_ids
     apply_wh = active_rule_ids is None or "LSEC_WH_FINAL" in active_rule_ids
     apply_neg = active_rule_ids is None or "LSEC_NEGATION_POSTVERBAL" in active_rule_ids
-    apply_sov = active_rule_ids is None or "LSEC_SOV_ORDER" in active_rule_ids
+    apply_sov = (active_rule_ids is None or "LSEC_SOV_ORDER" in active_rule_ids or bool(objects)) and not (exclude_rule_ids and "LSEC_SOV_ORDER" in exclude_rule_ids)
 
     if apply_time and apply_wh and apply_neg and apply_sov:
         reordered = connectors + time_tokens + location_tokens + subjects + objects + modifiers_others + verbs + manner_adverbs + wh_tokens + neg_tokens

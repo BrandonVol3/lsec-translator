@@ -81,6 +81,163 @@ class LinguisticComparisonView {
     return String(rawToken || '').toUpperCase().replace(/^FS:/i, '').replace(/\[[^\]]*\]/g, '').trim();
   }
 
+  describeGlossNotation(rawToken, glossObj = {}) {
+    const raw = String(rawToken || '').toUpperCase().replace(/^FS:/i, '').trim();
+    const personNames = {
+      '1': '1.ª persona singular (YO)',
+      '1-PL': '1.ª persona plural (NOSOTROS)',
+      '2': '2.ª persona singular (TÚ / USTED)',
+      '2-PL': '2.ª persona plural (USTEDES)',
+      '3': '3.ª persona singular (ÉL / ELLA)',
+      '3-PL': '3.ª persona plural (ELLOS / ELLAS)'
+    };
+    const proMap = {
+      'PRO1': {
+        label: 'YO',
+        badge: 'PRO1',
+        category: 'Pronombre Deíctico (PRO1)',
+        explanation: 'Indexación espacial de 1.ª persona singular: el dedo índice apunta hacia el pecho del propio signante («YO»).'
+      },
+      'PRO1-PL': {
+        label: 'NOSOTROS',
+        badge: 'PRO1-PL',
+        category: 'Pronombre Deíctico Plural (PRO1-PL)',
+        explanation: 'Indexación espacial de 1.ª persona plural («NOSOTROS/AS»).'
+      },
+      'PRO2': {
+        label: 'TÚ',
+        badge: 'PRO2',
+        category: 'Pronombre Deíctico (PRO2)',
+        explanation: 'Indexación espacial de 2.ª persona singular: el índice apunta hacia el interlocutor situado al frente («TÚ / USTED»).'
+      },
+      'PRO2-PL': {
+        label: 'USTEDES',
+        badge: 'PRO2-PL',
+        category: 'Pronombre Deíctico Plural (PRO2-PL)',
+        explanation: 'Indexación espacial de 2.ª persona plural hacia los interlocutores («USTEDES»).'
+      },
+      'PRO3': {
+        label: 'ÉL/ELLA',
+        badge: 'PRO3',
+        category: 'Pronombre Deíctico / Anafórico (PRO3)',
+        explanation: 'Indexación espacial de 3.ª persona singular: apunta a un punto (locus) lateral en el espacio de señado («ÉL / ELLA»).'
+      },
+      'PRO3-PL': {
+        label: 'ELLOS',
+        badge: 'PRO3-PL',
+        category: 'Pronombre Deíctico Plural (PRO3-PL)',
+        explanation: 'Indexación espacial hacia el locus de 3.ª persona plural («ELLOS / ELLAS»).'
+      },
+      'POSS1': {
+        label: 'MÍO',
+        badge: 'POSS1',
+        category: 'Posesivo de 1.ª Persona (POSS1)',
+        explanation: 'Posesivo en LSEC orientado hacia el signante («MÍO/A, MI»).'
+      },
+      'POSS2': {
+        label: 'TUYO',
+        badge: 'POSS2',
+        category: 'Posesivo de 2.ª Persona (POSS2)',
+        explanation: 'Posesivo en LSEC orientado hacia el interlocutor («TUYO/A, TU»).'
+      },
+      'POSS3': {
+        label: 'SUYO',
+        badge: 'POSS3',
+        category: 'Posesivo de 3.ª Persona (POSS3)',
+        explanation: 'Posesivo en LSEC orientado hacia el referente lateral («SUYO/A, SU»).'
+      }
+    };
+
+    if (proMap[raw]) {
+      return { ...proMap[raw], raw };
+    }
+
+    const dirMatch = raw.match(/^(.+?)\[([^\]]+)\]$/);
+    if (dirMatch) {
+      const baseVerb = dirMatch[1].replace(/\++$/, '').trim();
+      const hasPlus = dirMatch[1].endsWith('++') || raw.endsWith('++');
+      const rawVec = dirMatch[2].trim();
+      const arrowParts = rawVec.split('->').map(s => s.trim());
+      const fromP = personNames[arrowParts[0]] || `persona ${arrowParts[0]}`;
+      const toP = personNames[arrowParts[1]] || `persona ${arrowParts[1]}`;
+      const prettyVec = rawVec.replace('->', '→') + (hasPlus ? ' ++' : '');
+      return {
+        label: baseVerb,
+        badge: prettyVec,
+        raw,
+        category: `Verbo Direccional de Concordancia [${rawVec}]`,
+        explanation: `En LSEC el verbo «${baseVerb}» modifica la trayectoria espacial de las manos desde la ${fromP} hacia la ${toP}, absorbiendo los pronombres dentro del propio movimiento verbal.`
+      };
+    }
+
+    if (raw.endsWith('++')) {
+      const baseWord = raw.replace(/\++$/, '').trim();
+      return {
+        label: baseWord,
+        badge: '++',
+        raw,
+        category: 'Reduplicación Segmental de Intensidad (++)',
+        explanation: `La marca «++» indica reduplicación o énfasis cinemático de la seña «${baseWord}». En LSEC sustituye adverbios de grado («muy», «mucho», «demasiado») o superlativos («-ísimo»).`
+      };
+    }
+
+    if (/^NO-(SABER|PODER|QUERER|GUSTAR|HABER|OÍR|OIR|ALCANZAR)$/.test(raw)) {
+      return {
+        label: raw,
+        badge: 'NEG-INC',
+        raw,
+        category: 'Negación Léxica Incorporada (FENASEC)',
+        explanation: `En LSEC ciertos verbos frecuentes («${raw.replace('NO-', '')}») no colocan «NO» separado al final, sino que poseen una seña léxica propia con negación incorporada («${raw}»).`
+      };
+    }
+
+    if (TIME_MARKERS_SET.has(raw)) {
+      return {
+        label: raw,
+        badge: 'TIEMPO',
+        raw,
+        category: 'Marcador de Marco Temporal Inicial',
+        explanation: `Los adverbios temporales («${raw}») se anteponen al inicio de la oración en LSEC para fijar el tiempo de toda la proposición, ya que los verbos se señan en infinitivo.`
+      };
+    }
+
+    if (NEGATION_MARKERS_SET.has(raw)) {
+      return {
+        label: raw,
+        badge: 'NEG',
+        raw,
+        category: 'Negación Post-Verbal LSEC',
+        explanation: `En la gramática LSEC el operador negativo («${raw}») se ubica al cierre de la cláusula (después del verbo) acompañado de movimiento negativo de cabeza.`
+      };
+    }
+
+    const isFs = Boolean(
+      glossObj?.is_fingerspelling ||
+      glossObj?.gloss_type === 'DACTILOLOGÍA' ||
+      raw.startsWith('FS:') ||
+      (raw.includes('-') && raw.split('-').every(p => p.length === 1))
+    );
+    if (isFs) {
+      return {
+        label: raw,
+        badge: 'A-B-C',
+        raw,
+        category: 'Dactilología (Deletreo Manual)',
+        explanation: `Término o nombre propio deletreado grafema por grafema con el alfabeto dactilológico ecuatoriano (${raw}).`
+      };
+    }
+
+    const srcWord = glossObj?.source_word ? ` (desde «${glossObj.source_word}»)` : '';
+    const dictTitle = glossObj?.dictionary_metadata?.title ? ` — Ficha CONADIS: «${glossObj.dictionary_metadata.title}»` : '';
+    return {
+      label: raw.replace(/\[[^\]]*\]/g, '').trim(),
+      badge: null,
+      raw,
+      category: 'Seña Léxica Oficial CONADIS',
+      explanation: `Concepto léxico nuclear en forma base/lematizada${srcWord}${dictTitle}, ubicado según el orden sintáctico Sujeto–Objeto–Verbo (SOV).`
+    };
+  }
+
   getGlossObjectsForSegment(seg) {
     if (!seg || typeof appState === 'undefined' || !appState.state?.project) return [];
     const project = appState.state.project;
@@ -120,7 +277,7 @@ class LinguisticComparisonView {
       segment_id: seg.id,
       gloss: String(token).toUpperCase(),
       lemma: String(token).toUpperCase(),
-      status: seg.status === 'HUMAN_VERIFIED' ? 'HUMAN_VERIFIED' : 'VALIDATED',
+      status: seg.manually_edited ? 'EDITED' : 'READY',
       manually_edited: Boolean(seg.manually_edited),
       is_fingerspelling: String(token).includes('-') || String(token).startsWith('FS:')
     })));
@@ -130,7 +287,7 @@ class LinguisticComparisonView {
     const rawToken = String(glossObj?.gloss || glossObj?.lemma || '').toUpperCase();
     const isEdited = Boolean(
       glossObj?.manually_edited ||
-      glossObj?.status === 'HUMAN_VERIFIED' ||
+      glossObj?.status === 'EDITED' ||
       glossObj?.alignment_type === 'MANUAL_EDIT'
     );
     const isFingerspell = Boolean(
@@ -141,28 +298,9 @@ class LinguisticComparisonView {
       (rawToken.includes('-') && rawToken.split('-').every(part => part.length === 1))
     );
 
-    if (isEdited) {
-      return {
-        cssClass: 'gloss-chip-edited',
-        symbol: '✎',
-        badgeText: 'Editada por humano',
-        statusKey: 'HUMAN_VERIFIED'
-      };
-    }
-    if (isFingerspell) {
-      return {
-        cssClass: 'gloss-chip-fingerspell',
-        symbol: '✦',
-        badgeText: 'Dactilología',
-        statusKey: 'FINGERSPELLING'
-      };
-    }
-    return {
-      cssClass: 'gloss-chip-conadis',
-      symbol: '✓',
-      badgeText: 'Seña CONADIS',
-      statusKey: 'CONADIS'
-    };
+    if (isEdited) return { cssClass: 'gloss-chip-edited', symbol: '✎', badgeText: 'Editada manualmente', statusKey: 'EDITED' };
+    if (isFingerspell) return { cssClass: 'gloss-chip-fingerspell', symbol: '✦', badgeText: 'Dactilología', statusKey: 'FINGERSPELLING' };
+    return { cssClass: 'gloss-chip-conadis', symbol: '✓', badgeText: 'Seña CONADIS', statusKey: 'CONADIS' };
   }
 
   isInfinitiveVerb(wordUpper, glossTokensSet) {
@@ -200,7 +338,7 @@ class LinguisticComparisonView {
         total++;
         const info = this.classifyChipStatus(g);
         if (info.statusKey === 'CONADIS') conadisCount++;
-        if (info.statusKey === 'HUMAN_VERIFIED') editedCount++;
+        if (info.statusKey === 'EDITED') editedCount++;
       });
     });
     if (this.coverageBadgeEl) {
@@ -360,9 +498,14 @@ class LinguisticComparisonView {
             <span class="comparative-row-num">${rowNumFormatted}</span>
             <span class="comparative-row-time">${timeRange}</span>
           </button>
-          <button type="button" class="btn btn-sm comparative-retranslate-btn" data-action="retranslate-row" title="Re-traducir esta oración con el motor LSEC">
-            Re-traducir
-          </button>
+          <div style="display:inline-flex; align-items:center; gap:6px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-sm comparative-explain-btn" data-action="explain-row" title="Ver explicación paso a paso de las reglas lingüísticas aplicadas en esta oración" style="font-size:0.74rem; padding:3px 9px; border-color:#0284c7; color:#0369a1; background:#f0f9ff; font-weight:700;">
+              ¿Cómo se tradujo?
+            </button>
+            <button type="button" class="btn btn-sm comparative-retranslate-btn" data-action="retranslate-row" title="Re-traducir esta oración con el motor LSEC">
+              Re-traducir
+            </button>
+          </div>
         </div>
         <textarea id="comparative-seg-input-${rowIndex + 1}" name="comparative_segment_${rowIndex + 1}" class="transcript-seg-input comparative-spanish-input" rows="${estRows}" aria-label="Oración en español fila ${rowIndex + 1}">${this.escapeHtml(spanishText)}</textarea>
       `;
@@ -382,6 +525,17 @@ class LinguisticComparisonView {
 
       const textarea = leftCell.querySelector('.transcript-seg-input');
       const retranslateBtn = leftCell.querySelector('[data-action="retranslate-row"]');
+      const explainBtn = leftCell.querySelector('[data-action="explain-row"]');
+
+      if (explainBtn) {
+        explainBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.selectedSegmentIndex = rowIndex;
+          this.renderGrammarMonitor(seg, rowIndex);
+          this.highlightSelectedRow();
+          this.openSentenceExplanationModal(seg, rowIndex);
+        });
+      }
 
       if (textarea) {
         textarea.addEventListener('focus', () => {
@@ -474,17 +628,21 @@ class LinguisticComparisonView {
   createTactileGlossChip(seg, glossObj, gIdx, totalGlosses, rowIndex) {
     const info = this.classifyChipStatus(glossObj);
     const rawToken = String(glossObj.gloss || glossObj.lemma || '').toUpperCase();
-    const displayToken = this.formatCleanGlossLabel(rawToken) || rawToken;
+    const notation = this.describeGlossNotation(rawToken, glossObj);
+    const displayToken = notation.label || this.formatCleanGlossLabel(rawToken) || rawToken;
+    const badgeHtml = notation.badge
+      ? `<span class="gloss-chip-ling-badge" style="font-size:0.66rem; font-weight:800; padding:1px 5px; border-radius:4px; background:rgba(15,23,42,0.10); color:inherit; margin-left:3px; letter-spacing:0.02em;">${this.escapeHtml(notation.badge)}</span>`
+      : '';
 
     const chip = document.createElement('div');
     chip.className = `gloss-chip-tactile ${info.cssClass}`;
     chip.dataset.glossId = glossObj.id || `${seg.id}_${gIdx}`;
     chip.dataset.glossIndex = String(gIdx);
-    chip.title = `${rawToken} · ${info.badgeText} (Clic para editar)`;
+    chip.title = `${displayToken}${notation.badge ? ` [${notation.badge}]` : ''} · ${notation.category}: ${notation.explanation} (Clic para editar)`;
 
     chip.innerHTML = `
       <span class="gloss-chip-symbol" aria-hidden="true">${info.symbol}</span>
-      <span class="gloss-chip-text" data-action="edit-gloss">${this.escapeHtml(displayToken)}</span>
+      <span class="gloss-chip-text" data-action="edit-gloss">${this.escapeHtml(displayToken)}${badgeHtml}</span>
       <span class="gloss-chip-actions">
         ${gIdx > 0 ? '<button type="button" class="gloss-chip-btn" data-action="move-left" title="Mover a la izquierda" aria-label="Mover glosa a la izquierda">&lt;</button>' : ''}
         ${gIdx < totalGlosses - 1 ? '<button type="button" class="gloss-chip-btn" data-action="move-right" title="Mover a la derecha" aria-label="Mover glosa a la derecha">&gt;</button>' : ''}
@@ -618,8 +776,8 @@ class LinguisticComparisonView {
       appState.pushHistory();
     }
     seg.gloss_sequence = updatedGlossObjects.map(g => String(g.gloss || g.lemma || '').toUpperCase());
-    seg.status = 'HUMAN_VERIFIED';
-    seg.human_reviewed = true;
+    seg.status = 'CORRECTED';
+    seg.manually_edited = true;
 
     const project = appState?.state?.project;
     if (!project) return;
@@ -682,7 +840,7 @@ class LinguisticComparisonView {
       ...list[gIdx],
       gloss: newToken,
       lemma: newToken,
-      status: 'HUMAN_VERIFIED',
+      status: 'EDITED',
       manually_edited: true,
       alignment_type: 'MANUAL_EDIT',
       is_fingerspelling: newToken.includes('-') || newToken.startsWith('FS:')
@@ -699,7 +857,7 @@ class LinguisticComparisonView {
       segment_id: seg.id,
       gloss: newToken,
       lemma: newToken,
-      status: 'HUMAN_VERIFIED',
+      status: 'EDITED',
       manually_edited: true,
       alignment_type: 'MANUAL_EDIT',
       is_fingerspelling: newToken.includes('-') || newToken.startsWith('FS:')
@@ -720,7 +878,7 @@ class LinguisticComparisonView {
     const list = [...this.getGlossObjectsForSegment(seg)];
     if (toIdx < 0 || toIdx >= list.length) return;
     const [rawMoved] = list.splice(fromIdx, 1);
-    const moved = { ...rawMoved, status: 'HUMAN_VERIFIED', manually_edited: true, alignment_type: 'MANUAL_EDIT' };
+    const moved = { ...rawMoved, status: 'EDITED', manually_edited: true, alignment_type: 'MANUAL_EDIT' };
     list.splice(toIdx, 0, moved);
     this.syncSegmentGlossesToProject(seg, list);
   }
@@ -785,6 +943,179 @@ class LinguisticComparisonView {
       const idx = Number(row.dataset.rowIndex || '-1');
       row.classList.toggle('selected-row', idx === this.selectedSegmentIndex);
     });
+  }
+
+  openSentenceExplanationModal(seg, rowIndex = 0) {
+    if (!seg) return;
+    const backdrop = document.getElementById('generic-modal-backdrop');
+    const titleEl = document.getElementById('generic-modal-title');
+    const bodyEl = document.getElementById('generic-modal-body');
+    const footerEl = document.getElementById('generic-modal-footer');
+    const closeBtn = document.getElementById('generic-modal-close');
+    if (!backdrop || !titleEl || !bodyEl || !footerEl) return;
+
+    const spanishText = seg.normalized_text || seg.raw_text || seg.original_text || '';
+    const rawWords = spanishText.split(/\s+/).filter(Boolean);
+    const glossObjects = this.getGlossObjectsForSegment(seg);
+    const glossTokens = glossObjects.map(g => String(g.gloss || g.lemma || '').toUpperCase());
+    const glossSet = new Set(glossTokens.map(t => t.replace(/\[[^\]]*\]|\++$/g, '')));
+
+    let elidedWords = [];
+    let infinitivePairs = [];
+    const wordSpansHtml = rawWords.map((rawWord) => {
+      const cleanLower = rawWord.toLowerCase().replace(/[.,;!?¿¡"()]/g, '');
+      if (ELIDED_SPANISH_WORDS.has(cleanLower)) {
+        elidedWords.push(rawWord);
+        return `<span class="grammar-token-elided" title="Palabra funcional omitida en LSEC">${this.escapeHtml(rawWord)}</span>`;
+      }
+      const matchedInf = this.isInfinitiveVerb(cleanLower, glossSet);
+      if (matchedInf) {
+        const infLabel = typeof matchedInf === 'string' ? matchedInf : rawWord.toUpperCase();
+        infinitivePairs.push({ from: rawWord, to: infLabel });
+        return `<span class="grammar-token-infinitive" title="Verbo lematizado a infinitivo">${this.escapeHtml(rawWord)} → ${this.escapeHtml(infLabel)}</span>`;
+      }
+      return `<span class="grammar-token-word">${this.escapeHtml(rawWord)}</span>`;
+    }).join(' ');
+
+    let hasTime = false;
+    let hasNeg = false;
+    let hasIncNeg = false;
+    let hasDir = false;
+    let hasPlus = false;
+    let hasPro = false;
+
+    const glossRowsHtml = glossObjects.map((g, idx) => {
+      const rawTok = String(g.gloss || g.lemma || '').toUpperCase();
+      const notInfo = this.describeGlossNotation(rawTok, g);
+      const chipInfo = this.classifyChipStatus(g);
+      if (notInfo.badge === 'TIEMPO') hasTime = true;
+      if (notInfo.badge === 'NEG') hasNeg = true;
+      if (notInfo.badge === 'NEG-INC') hasIncNeg = true;
+      if (notInfo.badge && notInfo.badge.includes('→')) hasDir = true;
+      if (notInfo.badge && notInfo.badge.includes('++')) hasPlus = true;
+      if (notInfo.badge && (notInfo.badge.startsWith('PRO') || notInfo.badge.startsWith('POSS'))) hasPro = true;
+
+      return `
+        <div style="display:grid; grid-template-columns: 36px minmax(150px, 210px) 1fr; gap:12px; align-items:start; padding:10px 12px; border-radius:10px; background:var(--color-canvas-bg); border:1px solid var(--color-border-subtle);">
+          <div style="font-weight:800; color:var(--color-accent-cobalt); font-family:var(--font-mono); padding-top:3px;">#${idx + 1}</div>
+          <div>
+            <span class="gloss-chip-tactile ${chipInfo.cssClass}" style="padding:4px 10px; font-size:0.82rem; display:inline-flex;">
+              <span class="gloss-chip-symbol" aria-hidden="true">${chipInfo.symbol}</span>
+              <span>${this.escapeHtml(notInfo.label)}</span>
+              ${notInfo.badge ? `<span style="font-size:0.68rem; font-weight:800; padding:1px 5px; border-radius:4px; background:rgba(15,23,42,0.12); margin-left:4px;">${this.escapeHtml(notInfo.badge)}</span>` : ''}
+            </span>
+            <div style="font-size:0.71rem; font-weight:700; color:var(--color-text-secondary); margin-top:4px; font-family:var(--font-mono);">
+              Glosa técnica: ${this.escapeHtml(notInfo.raw)}
+            </div>
+          </div>
+          <div>
+            <div style="font-size:0.8rem; font-weight:800; color:var(--color-text-primary); margin-bottom:2px;">
+              ${this.escapeHtml(notInfo.category)}
+            </div>
+            <div style="font-size:0.79rem; color:var(--color-text-secondary); line-height:1.45;">
+              ${this.escapeHtml(notInfo.explanation)}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const rulesSummary = [
+      {
+        title: '1. Reordenamiento Sintáctico Español (SVO) → LSEC (TIEMPO + TÓPICO + SOV + NEGACIÓN)',
+        desc: 'En español el verbo suele ir en medio (Sujeto–Verbo–Objeto). En LSEC primero se presentan los referentes/participantes en el espacio (Sujeto y Objeto) y al final se ejecuta la acción (Verbo).'
+      }
+    ];
+    if (elidedWords.length > 0) {
+      rulesSummary.push({
+        title: `2. Elisión de Palabras Funcionales (${elidedWords.length} omitidas: ${elidedWords.join(', ')})`,
+        desc: 'Artículos determinados/indeterminados, verbos copulativos («ser/estar» sin valor locativo) y preposiciones gramaticales vacías se eliden porque LSEC establece las relaciones mediante el orden espacial y rasgos no manuales.'
+      });
+    }
+    if (infinitivePairs.length > 0) {
+      rulesSummary.push({
+        title: '3. Reducción Morfológica Verbal a Infinitivo (Lematización)',
+        desc: `Los verbos conjugados (${infinitivePairs.map(p => `«${p.from}» → ${p.to}`).join(', ')}) pasan a su forma infinitiva canónica; el tiempo verbal recae sobre el marcador temporal al inicio de la oración.`
+      });
+    }
+    if (hasTime) {
+      rulesSummary.push({
+        title: '4. Frontalización del Marco Temporal (TIEMPO al inicio)',
+        desc: 'Los adverbios de tiempo (hoy, ayer, mañana, ahora, antes) se colocan al inicio absoluto de la oración para fijar la línea temporal antes de presentar a los participantes.'
+      });
+    }
+    if (hasPro) {
+      rulesSummary.push({
+        title: '5. Indexación Pronominal Deíctica (PRO1 = YO, PRO2 = TÚ, PRO3 = ÉL/ELLA)',
+        desc: 'Los pronombres personales y posesivos se codifican como indexación espacial: 1.ª persona apunta al pecho del signante (PRO1), 2.ª persona al interlocutor (PRO2) y 3.ª persona a un locus lateral (PRO3).'
+      });
+    }
+    if (hasDir) {
+      rulesSummary.push({
+        title: '6. Verbos Direccionales de Concordancia ([1→2], [2→1], [2→3])',
+        desc: 'Los verbos direccionales (como AYUDAR, EXPLICAR, AVISAR, DAR, DECIR) mueven las manos desde el locus del sujeto hacia el locus del objeto/destinatario, absorbiendo los pronombres clíticos («me», «te», «le»).'
+      });
+    }
+    if (hasPlus) {
+      rulesSummary.push({
+        title: '7. Reduplicación Segmental de Intensidad (++)',
+        desc: 'Los intensificadores («muy», «mucho», «demasiado») y superlativos («-ísimo») se transforman en la marca «++», que indica repetir o enfatizar el movimiento de la seña base.'
+      });
+    }
+    if (hasNeg || hasIncNeg) {
+      rulesSummary.push({
+        title: '8. Negación Post-Verbal y Negación Léxica Incorporada (FENASEC)',
+        desc: 'En LSEC el adverbio NO se sitúa después del verbo, salvo en verbos con negación léxica fusionada propia del diccionario (NO-SABER, NO-PODER, NO-QUERER, NO-GUSTAR, NO-HABER).'
+      });
+    }
+
+    titleEl.textContent = `¿Cómo se tradujo la Oración #${rowIndex + 1} a LSEC?`;
+    bodyEl.innerHTML = `
+      <div style="display:flex; flex-direction:column; gap:14px; max-height:68vh; overflow-y:auto; padding-right:4px;">
+        <div style="padding:12px 14px; border-radius:12px; background:#f8fafc; border:2px solid var(--color-border-subtle);">
+          <div style="font-size:0.74rem; font-weight:800; text-transform:uppercase; color:var(--color-text-secondary); margin-bottom:6px;">
+            Paso 1 · Análisis de la Oración en Español (Palabras tachadas = Elisión · Azul = Infinitivo)
+          </div>
+          <div class="grammar-tokens-flow" style="margin-bottom:6px;">${wordSpansHtml}</div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <div style="font-size:0.76rem; font-weight:800; text-transform:uppercase; color:#065f46;">
+            Paso 2 · Secuencia de Glosas LSEC y Significado de cada Notación (${glossObjects.length} señas)
+          </div>
+          ${glossRowsHtml}
+        </div>
+
+        <div style="padding:12px 14px; border-radius:12px; background:#f0fdf4; border:1.5px solid #86efac;">
+          <div style="font-size:0.76rem; font-weight:800; text-transform:uppercase; color:#065f46; margin-bottom:8px;">
+            Paso 3 · Reglas Gramaticales LSEC / FENASEC Aplicadas
+          </div>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            ${rulesSummary.map(r => `
+              <div>
+                <div style="font-size:0.8rem; font-weight:800; color:#064e3b;">${this.escapeHtml(r.title)}</div>
+                <div style="font-size:0.78rem; color:#1e293b; line-height:1.4;">${this.escapeHtml(r.desc)}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+
+    const closeModal = () => {
+      backdrop.classList.remove('open');
+      backdrop.setAttribute('aria-hidden', 'true');
+    };
+
+    footerEl.innerHTML = `
+      <button type="button" class="btn btn-primary" id="btn-close-explain-modal">Entendido</button>
+    `;
+    const btnOk = document.getElementById('btn-close-explain-modal');
+    if (btnOk) btnOk.onclick = closeModal;
+    if (closeBtn) closeBtn.onclick = closeModal;
+
+    backdrop.classList.add('open');
+    backdrop.setAttribute('aria-hidden', 'false');
   }
 
   escapeHtml(str) {

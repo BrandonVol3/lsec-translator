@@ -43,15 +43,14 @@ class LSECStateStore {
         selectedItem: null // { type: 'segment'|'gloss'|'locus'|'non_manual'|'issue', id: '...', data: {...} }
       },
 
-      // 2. Datos del Proyecto y Validación Humana
+      // 2. Datos del Proyecto
       project: null,
       saveStatus: 'saved', // 'saved' | 'saving' | 'unsaved'
       unsavedChangesCount: 0,
       currentUser: {
-        id: 'usr_reviewer',
-        name: 'Revisor Lingüístico',
-        role: 'Intérprete / Revisor LSEC',
-        isNativeSigner: true
+        id: 'usr_editor',
+        name: 'Editor LSEC',
+        role: 'Usuario Académico'
       },
 
       // 3. Preferencias de Capas Overlays
@@ -219,26 +218,13 @@ class LSECStateStore {
       };
     }
     if (filename) projectData.media_info.filename = filename;
-    if (!projectData.execution_status) projectData.execution_status = 'REVIEW_REQUIRED';
 
     if (projectData.segments) {
       projectData.segments = projectData.segments.map((s, idx) => {
         const start = s.start_seconds != null ? s.start_seconds : (s.start_time != null ? s.start_time : (s.start != null ? s.start : idx * 3.0));
         const end = s.end_seconds != null ? s.end_seconds : (s.end_time != null ? s.end_time : (s.end != null ? s.end : (idx + 1) * 3.0));
 
-        let status = s.status || 'DRAFT';
-        if (status === 'VALIDATED') status = 'VALIDATED';
-        else if (status === 'CORRECTED') status = 'CORRECTED';
-        else if (status === 'REVIEW_REQUIRED' || status === 'NATIVE_REVIEW' || status === 'AUDIO_REVIEW' || status === 'BLOCKED') status = 'REVIEW_REQUIRED';
-        else status = 'DRAFT';
-
-        let secondaryCause = s.secondary_cause || null;
-        if (!secondaryCause) {
-          if (s.requires_audio_review || s.status === 'AUDIO_REVIEW') secondaryCause = 'Audio';
-          else if (s.requires_native_review || s.status === 'NATIVE_REVIEW') secondaryCause = 'Sintaxis LSEC';
-          else if (s.original_text !== s.normalized_text) secondaryCause = 'Corrección Léxica';
-        }
-
+        const status = s.status === 'CORRECTED' ? 'CORRECTED' : 'READY';
         const segText = s.normalized_text || s.original_text || s.source_text || s.text || '';
         const isQuestionSeg = segText.includes('?') || segText.includes('¿');
         const derivedLoci = Array.isArray(s.glosses) && s.glosses.length > 0
@@ -259,13 +245,7 @@ class LSECStateStore {
           normalized_text: segText,
           status: status,
           status_label: this.getStatusLabel ? this.getStatusLabel(status) : status,
-          secondary_cause: secondaryCause,
           confidence: s.confidence || 0.94,
-          confidence_explanation: this.explainConfidence ? this.explainConfidence(s.confidence || 0.94, 'audio') : '',
-          human_reviewed: !!s.human_reviewed,
-          validated_by: s.validated_by || null,
-          validated_at: s.validated_at || null,
-          comments: s.comments || [],
           words: s.words || [],
           gloss_sequence: s.gloss_sequence || (s.glosses ? s.glosses.map(g => g.gloss || g.lemma) : []),
           spatial_loci: s.spatial_loci || derivedLoci,
@@ -530,7 +510,7 @@ class LSECStateStore {
     this.state.workspace.translationConfirmed = true;
     this.state.workspace.workflowStep = 'completed';
     if (this.state.project) {
-      this.state.project.execution_status = 'VALIDATED';
+      this.state.project.execution_status = 'COMPLETED';
     }
     this.emit('workflowChanged', this.state.workspace);
     this.emit('stateChanged', this.state);

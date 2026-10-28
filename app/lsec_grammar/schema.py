@@ -63,7 +63,7 @@ class RuleAction(BaseModel):
     """Acción que ejecuta una regla cuando se cumple la condición."""
     action_type: str = Field(description=(
         "'reorder', 'insert_gloss', 'remove_gloss', 'replace_gloss', "
-        "'set_non_manual', 'assign_locus', 'mark_review', 'set_field', "
+        "'set_non_manual', 'assign_locus', 'set_field', "
         "'apply_paraphrase', 'resolve_prodrop', 'set_negation_scope'"
     ))
     parameters: Dict[str, Any] = Field(default_factory=dict)
@@ -108,9 +108,3 @@ class GrammarRule(BaseModel):
     def reduces_confidence(self) -> bool:
         return self.validation_status == RuleValidationStatus.PROVISIONAL
 
-    @property
-    def requires_review(self) -> bool:
-        return self.validation_status in (
-            RuleValidationStatus.PROVISIONAL,
-            RuleValidationStatus.BASELINE_LEGACY,
-        )

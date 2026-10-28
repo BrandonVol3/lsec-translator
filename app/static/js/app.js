@@ -175,6 +175,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Sincronizar con el estado global antes de acoplar el escenario para que SubtitleEngine conozca la etapa activa
     if (typeof appState !== 'undefined') {
       appState.state.workspace.stage = normalized;
+      try {
+        sessionStorage.setItem('lsec_studio_active_stage', normalized);
+      } catch (_) {}
       appState.emit('stageChanged', normalized);
     }
 
@@ -203,7 +206,14 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
       }
-      if ((appState?.state?.project?.glosses || []).length === 0) {
+      const needsTranslation = (appState?.state?.project?.glosses || []).length === 0 ||
+        segments.some(s =>
+          s.status === 'CORRECTED' ||
+          s.status === 'DRAFT' ||
+          (!Array.isArray(s.glosses) || s.glosses.length === 0) &&
+          (!Array.isArray(s.gloss_sequence) || s.gloss_sequence.length === 0)
+        );
+      if (needsTranslation) {
         await window.pipelineProcessor.translateProjectGlosses();
       }
     }
@@ -366,7 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 6. Monitor en Vivo de Señas para la Ventana 3
   function classifyGlossSignType(glossItem) {
-    if (!glossItem) return { label: '✓ Seña CONADIS', symbol: '✓', css: 'gloss-chip-conadis', badgeBg: '#047857' };
+    if (!glossItem) return { label: '✓ Seña LSEC', symbol: '✓', css: 'gloss-chip-conadis', badgeBg: '#047857' };
     const token = String(glossItem.gloss || glossItem.lemma || glossItem.text || glossItem || '').toUpperCase();
     const isManual = Boolean(
       glossItem.manually_edited ||
@@ -388,7 +398,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (isFingerspell) {
       return { label: '✦ Dactilología', symbol: '✦', css: 'gloss-chip-fingerspell', badgeBg: '#0369a1' };
     }
-    return { label: '✓ Seña CONADIS', symbol: '✓', css: 'gloss-chip-conadis', badgeBg: '#047857' };
+    return { label: '✓ Seña LSEC', symbol: '✓', css: 'gloss-chip-conadis', badgeBg: '#047857' };
   }
 
   function escapeHtml(str) {
@@ -400,12 +410,38 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/'/g, '&#39;');
   }
 
+  function formatGlossReadableWithBadge(rawToken) {
+    const raw = String(rawToken || '').toUpperCase().replace(/^FS:/i, '').trim();
+    const proMap = {
+      'PRO1': { label: 'YO', badge: 'PRO1' },
+      'PRO1-PL': { label: 'NOSOTROS', badge: 'PRO1-PL' },
+      'PRO2': { label: 'TÚ', badge: 'PRO2' },
+      'PRO2-PL': { label: 'USTEDES', badge: 'PRO2-PL' },
+      'PRO3': { label: 'ÉL/ELLA', badge: 'PRO3' },
+      'PRO3-PL': { label: 'ELLOS', badge: 'PRO3-PL' },
+      'POSS1': { label: 'MÍO', badge: 'POSS1' },
+      'POSS2': { label: 'TUYO', badge: 'POSS2' },
+      'POSS3': { label: 'SUYO', badge: 'POSS3' },
+    };
+    if (proMap[raw]) return proMap[raw];
+    const dirMatch = raw.match(/^(.+?)\[([^\]]+)\]$/);
+    if (dirMatch) {
+      const base = dirMatch[1].replace(/\++$/, '').trim();
+      const vec = dirMatch[2].replace('->', '→');
+      return { label: base, badge: vec };
+    }
+    if (raw.endsWith('++')) {
+      return { label: raw.replace(/\++$/, '').trim(), badge: '++' };
+    }
+    if (/^NO-(SABER|PODER|QUERER|GUSTAR|HABER|OÍR|OIR|ALCANZAR)$/.test(raw)) {
+      return { label: raw, badge: 'NEG-INC' };
+    }
+    return { label: raw.replace(/\[[^\]]*\]/g, '').trim(), badge: null };
+  }
+
   function cleanGlossDisplay(rawToken) {
-    return String(rawToken || '')
-      .toUpperCase()
-      .replace(/^FS:/i, '')
-      .replace(/\[[^\]]*\]/g, '')
-      .trim();
+    const info = formatGlossReadableWithBadge(rawToken);
+    return info.badge ? `${info.label} (${info.badge})` : info.label;
   }
 
   function renderStep3LiveSignMonitor(currentTime = null) {
@@ -453,13 +489,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (wordEl && typeEl) {
       if (activeGloss) {
         const info = classifyGlossSignType(activeGloss);
-        wordEl.textContent = activeGloss.gloss || 'SEÑA';
+        wordEl.textContent = cleanGlossDisplay(activeGloss.gloss || 'SEÑA');
         typeEl.textContent = info.label;
         typeEl.style.background = info.badgeBg;
         if (pipSourceEl) pipSourceEl.textContent = info.label.toUpperCase();
       } else if (activeSeg && Array.isArray(activeSeg.gloss_sequence) && activeSeg.gloss_sequence.length > 0) {
-        wordEl.textContent = activeSeg.gloss_sequence[0];
-        typeEl.textContent = 'Seña CONADIS';
+        wordEl.textContent = cleanGlossDisplay(activeSeg.gloss_sequence[0]);
+        typeEl.textContent = 'Seña LSEC';
         typeEl.style.background = '#10b981';
       } else {
         wordEl.textContent = 'EN ESPERA';
@@ -598,6 +634,22 @@ document.addEventListener('DOMContentLoaded', () => {
       if (listEl) listEl.dataset.renderedCount = '';
       renderStep3LiveSignMonitor();
     });
+
+    try {
+      if (sessionStorage.getItem('lsec_studio_active_session') === '1') {
+        const savedProjRaw = localStorage.getItem('lsec_studio_project');
+        if (savedProjRaw) {
+          const parsedProj = JSON.parse(savedProjRaw);
+          if (parsedProj && Array.isArray(parsedProj.segments)) {
+            appState.loadProject(parsedProj);
+            const savedStage = sessionStorage.getItem('lsec_studio_active_stage');
+            if (savedStage && STEP_ORDER.includes(savedStage)) {
+              window.switchWizardStep(savedStage);
+            }
+          }
+        }
+      }
+    } catch (_) {}
   }
 
   // Utilidad Global de Notificaciones Toast (WCAG 2.2 Criterio 4.1.3 Status Messages)

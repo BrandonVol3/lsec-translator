@@ -275,37 +275,6 @@ const LSECStatePersistenceStyles = {
     }
   },
 
-  resolveAudioReview(segId, finalWord, comment) {
-    const seg = (this.state.project?.segments || []).find(s => s.id === segId);
-    if (seg) {
-      const comments = [...(seg.comments || [])];
-      if (comment) comments.push(comment);
-      this.updateSegment(segId, {
-        normalized_text: seg.normalized_text.replace(seg.words?.[0]?.word || '', finalWord),
-        status: 'CORRECTED',
-        secondary_cause: null,
-        comments: comments
-      });
-    }
-  },
-
-  resolveNativeReview(segId, action, glossList, comment) {
-    const seg = (this.state.project?.segments || []).find(s => s.id === segId);
-    if (seg) {
-      const comments = [...(seg.comments || [])];
-      if (comment) comments.push(comment);
-      const changes = {
-        status: action === 'approved' ? 'VALIDATED' : 'CORRECTED',
-        secondary_cause: null,
-        comments: comments
-      };
-      if (glossList && glossList.length > 0) {
-        changes.gloss_sequence = glossList;
-      }
-      this.updateSegment(segId, changes);
-    }
-  },
-
   loadPreferencesFromStorage() {
     try {
       const rawTheme = localStorage.getItem('lsec_studio_theme') || 'light';
@@ -320,18 +289,10 @@ const LSECStatePersistenceStyles = {
   getStatusLabel(status) {
     const map = {
       'DRAFT': 'Borrador',
-      'REVIEW_REQUIRED': 'Revisar',
-      'CORRECTED': 'Corregido',
-      'VALIDATED': 'Validado'
+      'READY': 'Listo',
+      'CORRECTED': 'Editado'
     };
     return map[status] || status;
-  },
-
-  explainConfidence(score, type = 'audio') {
-    const pct = Math.round(score * 100);
-    if (pct >= 90) return `${pct}% — Habla acústica clara y sin solapamiento`;
-    if (pct >= 75) return `${pct}% — Claridad moderada con posible ruido leve`;
-    return `${pct}% — Baja confianza acústica, requiere verificación humana`;
   }
 };
 

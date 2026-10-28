@@ -381,7 +381,21 @@ class VideoPlayerController {
       this.updatePlayButton(isPlaying);
       if (isPlaying) {
         if (this.videoEl && !this.isUsingCanvasFallback) {
-          this.videoEl.play().catch(e => console.warn('Video play error:', e));
+          const vDur = (Number.isFinite(this.videoEl.duration) && this.videoEl.duration > 0)
+            ? this.videoEl.duration
+            : (appState.state.playback.videoDuration || 0);
+          const curTime = Number(appState.state.playback.currentTime) || 0;
+          const seqEnd = Math.max(
+            Number(appState.state.playback.duration) || 0,
+            Number(appState.state.playback.sequenceEndTime) || 0,
+            window.studioAvatarBridge?.getSequenceEndTime ? window.studioAvatarBridge.getSequenceEndTime(vDur) : vDur
+          );
+          if (vDur > 0 && curTime >= vDur - 0.05 && seqEnd > curTime + 0.05) {
+            this.videoEl.pause();
+            this.startExtendedTailPlaybackLoop(curTime, seqEnd);
+          } else {
+            this.videoEl.play().catch(e => console.warn('Video play error:', e));
+          }
         } else {
           this.startCanvasAnimationLoop();
         }

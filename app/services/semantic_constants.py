@@ -187,6 +187,21 @@ KNOWN_VERB_FORMS: Dict[str, str] = {
     "huelo": "oler", "hueles": "oler", "huele": "oler", "olemos": "oler", "huelen": "oler", "oler": "oler",
     "duelo": "doler", "dueles": "doler", "duele": "doler", "duelen": "doler", "dolió": "doler",
     "cuido": "cuidar", "cuidas": "cuidar", "cuida": "cuidar", "cuidamos": "cuidar", "cuidan": "cuidar", "cuidó": "cuidar",
+    "siento": "sentir", "sientes": "sentir", "siente": "sentir", "sentimos": "sentir", "sienten": "sentir",
+    "sentí": "sentir", "sintió": "sentir", "sintieron": "sentir", "sintiendo": "sentir", "sentido": "sentir", "sentir": "sentir",
+    "rompí": "romper", "rompió": "romper", "rompimos": "romper", "romper": "romper",
+    "equivoqué": "equivocar", "equivocó": "equivocar", "equivocas": "equivocar", "equivoca": "equivocar", "equivocar": "equivocar",
+    "discúlpame": "disculpar", "disculpa": "disculpar", "disculpe": "disculpar", "disculpar": "disculpar",
+    "descuidas": "descuidar", "descuida": "descuidar", "descuidar": "descuidar",
+    "asaltar": "asaltar", "asaltan": "asaltar", "asaltó": "asaltar",
+    "engordan": "engordar", "engorda": "engordar", "engordar": "engordar",
+    "apaga": "apagar", "apagar": "apagar", "cierra": "cerrar", "cerrar": "cerrar", "camina": "caminar", "caminar": "caminar",
+    "adjunto": "adjuntar", "adjunta": "adjuntar", "adjuntar": "adjuntar",
+    "esté": "estar", "estés": "estar", "estemos": "estar", "estén": "estar", "estuviera": "estar", "estuvieras": "estar", "estuvieran": "estar",
+    "sea": "ser", "seas": "ser", "seamos": "ser", "sean": "ser", "fuera": "ser", "fueras": "ser", "fueran": "ser",
+    "enojo": "enojar", "enojas": "enojar", "enoja": "enojar", "enojamos": "enojar", "enojan": "enojar", "enojé": "enojar", "enojó": "enojar", "enojar": "enojar",
+    "molesto": "molestar", "molestas": "molestar", "molesta": "molestar", "molestando": "molestar", "molestar": "molestar",
+    "casarme": "casar", "casarse": "casar", "casar": "casar", "conversamos": "conversar", "conversar": "conversar",
 }
 
 NOMINAL_HOMOGRAPHS: Set[str] = {
@@ -198,6 +213,7 @@ NOMINAL_HOMOGRAPHS: Set[str] = {
     "vestido", "contenido", "pedido", "mercado", "chocolate", "chocolates", "tomate", "tomates",
     "aguacate", "aguacates", "combate", "debate", "empate", "rescate", "pescado", "pescados",
     "helado", "helados", "enfermo", "enferma", "enfermos", "enfermas", "cansado", "cansada",
+    "casa", "casas", "carta", "cartas",
 }
 
 POS_GATED_LEMMAS: Set[str] = {
@@ -208,7 +224,9 @@ POS_GATED_LEMMAS: Set[str] = {
 
 COPULA_FORMS: Set[str] = {
     "ser", "soy", "eres", "es", "somos", "son", "era", "eras", "éramos", "eran", "fue", "fueron", "sido",
+    "sea", "seas", "seamos", "sean", "fuera", "fueras", "fueran",
     "estar", "estoy", "estás", "está", "estamos", "están", "estaba", "estaban", "estuvo", "estuvieron", "estado",
+    "esté", "estés", "estemos", "estén", "estuviera", "estuvieras", "estuvieran",
     "haber", "hay", "había", "hubo", "habrá", "he", "has", "ha", "hemos", "han",
 }
 

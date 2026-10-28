@@ -8,8 +8,6 @@ guarda el archivo en ``data/lsec_database.sqlite`` (configurable con
 
 Tablas:
 - ``translations``: log de cada traducción solicitada.
-- ``reviews``: revisiones lingüísticas / nativas (registro de solo adición).
-- ``annotation_snapshots``: último estado persistido de cada anotación.
 """
 
 from __future__ import annotations
@@ -35,20 +33,6 @@ CREATE TABLE IF NOT EXISTS translations (
     original_text TEXT,
     glosses_count INTEGER,
     schema_version TEXT,
-    payload_json TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS reviews (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    review_id TEXT NOT NULL UNIQUE,
-    timestamp TEXT NOT NULL,
-    session_id TEXT,
-    reviewer_id TEXT,
-    decision TEXT,
-    payload_json TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS annotation_snapshots (
-    example_id TEXT PRIMARY KEY,
-    updated_at TEXT NOT NULL,
     payload_json TEXT NOT NULL
 );
 """
@@ -129,25 +113,8 @@ class LocalStorageService:
             self._conn.commit()
             return int(cur.lastrowid)
 
-    def _insert_review(self, record: Dict[str, Any]) -> None:
-        with self._lock:
-            assert self._conn is not None
-            self._conn.execute(
-                "INSERT INTO reviews (review_id, timestamp, session_id, reviewer_id, decision, payload_json)"
-                " VALUES (?, ?, ?, ?, ?, ?)",
-                (
-                    record["review_id"],
-                    record.get("timestamp") or datetime.now(timezone.utc).isoformat(),
-                    record.get("session_id"),
-                    record.get("reviewer_id"),
-                    record.get("decision"),
-                    json.dumps(record, ensure_ascii=False, default=str),
-                ),
-            )
-            self._conn.commit()
-
     def _select(self, table: str, limit: int) -> List[Dict[str, Any]]:
-        if table not in ("translations", "reviews"):
+        if table != "translations":
             raise ValueError(f"Tabla no permitida: {table}")
         with self._lock:
             assert self._conn is not None
@@ -164,45 +131,5 @@ class LocalStorageService:
         row_id = await asyncio.to_thread(self._insert_translation, log_data)
         return str(row_id)
 
-    async def save_review(self, record: Dict[str, Any]) -> str:
-        """Almacena una revisión lingüística (solo adición)."""
-        await asyncio.to_thread(self._insert_review, record)
-        return record["review_id"]
-
     async def get_translation_logs(self, limit: int = 100) -> List[Dict[str, Any]]:
         return await asyncio.to_thread(self._select, "translations", limit)
-
-    async def get_reviews(self, limit: int = 500) -> List[Dict[str, Any]]:
-        return await asyncio.to_thread(self._select, "reviews", limit)
-
-    def _upsert_annotation_snapshot(self, item: Dict[str, Any]) -> None:
-        with self._lock:
-            assert self._conn is not None
-            self._conn.execute(
-                "INSERT INTO annotation_snapshots (example_id, updated_at, payload_json) "
-                "VALUES (?, ?, ?) ON CONFLICT(example_id) DO UPDATE SET "
-                "updated_at=excluded.updated_at, payload_json=excluded.payload_json",
-                (
-                    item["example_id"],
-                    item.get("updated_at") or datetime.now(timezone.utc).isoformat(),
-                    json.dumps(item, ensure_ascii=False, default=str),
-                ),
-            )
-            self._conn.commit()
-
-    def _select_annotation_snapshot(self, example_id: str) -> Optional[Dict[str, Any]]:
-        with self._lock:
-            assert self._conn is not None
-            row = self._conn.execute(
-                "SELECT payload_json FROM annotation_snapshots WHERE example_id = ?",
-                (example_id,),
-            ).fetchone()
-        return json.loads(row[0]) if row else None
-
-    async def save_annotation_snapshot(self, item: Dict[str, Any]) -> None:
-        """Persiste el estado completo de una anotación sin modificar el corpus base."""
-        await asyncio.to_thread(self._upsert_annotation_snapshot, item)
-
-    async def get_annotation_snapshot(self, example_id: str) -> Optional[Dict[str, Any]]:
-        """Recupera el último estado persistido de una anotación."""
-        return await asyncio.to_thread(self._select_annotation_snapshot, example_id)

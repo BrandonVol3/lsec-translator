@@ -117,7 +117,7 @@ class AdversarialStressHarness:
                 if (!window.appState.state.project) {
                     window.appState.resetToDefaultProject();
                 }
-                const cards = document.querySelectorAll('#transcript-segments-container .transcript-seg-card');
+                const cards = document.querySelectorAll('#transcript-segments-container .transcript-seg-card, #transcript-segments-container .transcript-unified-sentence');
                 const stepBtns = document.querySelectorAll('#workflow-stepper .step-btn');
                 return {
                     stepperCount: stepBtns.length,

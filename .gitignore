@@ -1,52 +1,38 @@
-# Entornos virtuales
+# Entornos virtuales de Python
 venv/
-env/
 .venv/
 ENV/
 
-# Archivos de configuración y secretos (¡NUNCA subir a GitHub!)
-.env
-.env.local
-firebase-credentials.json
-*.pem
-*.key
-
-# Caché de Python
+# Cachés de Python y pruebas
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
-.Python
-
-# Pruebas y cobertura
 .pytest_cache/
 .coverage
 htmlcov/
 
-# Editor e IDE
-.vscode/
-.idea/
-*.swp
-*.swo
+# Archivos de configuración local y bases de datos temporales
+.env
+data/*.sqlite
+data/*.sqlite-journal
+data/export_preferences.json
+*.db
 
-# Sistema operativo
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-$RECYCLE.BIN/
-.DS_Store
-
-# Archivos temporales y de scratch
+# Respaldos, archivos temporales y capturas de depuración
+_archive/
 scratch/
+.playwright-mcp/
+audit_screenshots/
+reports/
+app/tests/tools/.asr_cache/
+app/tests/videos_4_10_gloss_audit.json
 *.log
 
-# Assets grandes externos (no versionar catálogos, modelos ni multimedia)
-Avatar/
-Diccionario LSEC/
-Videos de Prueba/
-senas_vrm_standardized_v2.7/
-senas_vrm_direct_v2.6/
-senas_vrm_direct/
-senas_ultra_hd/
-senas/
+# Cachés de modelos locales
 data/models/
+
+# Sistema operativo e IDEs
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

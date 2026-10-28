@@ -3,7 +3,8 @@
  * Conecta el estado central (appState) con AvatarPanelController y SequenceCompiler.
  */
 
-import { AvatarPanelController } from './avatar-controller.js?v=3.1.8';
+import { AvatarPanelController } from './avatar-controller.js?v=3.4.1';
+import { resolveTimingOptions } from './timing-presets.js';
 import { SequenceCompiler, applyCompiledSampleToModel } from './sequence-compiler.js';
 
 export class StudioAvatarBridge {
@@ -17,9 +18,9 @@ export class StudioAvatarBridge {
     this.solidBgColor = '#cfe5da';
     this.fluidMode = true;
     this.compiler = new SequenceCompiler({
-      maxSpeed: 1.0,
+      allowAdaptiveSpeed: true, ...resolveTimingOptions('clarity'),
       minSpeed: 0.70,
-      maxLagSec: Infinity,
+      maxLagSec: 1.2,
       restGapThresholdSec: 1.5,
       extendEndForLag: true
     });
@@ -178,7 +179,7 @@ export class StudioAvatarBridge {
       this.isManualPreviewActive = false;
       if (!isPlaying) {
         const currentTime = Number(window.appState.state?.playback?.currentTime) || 0;
-        const duration = Number(window.appState.state?.playback?.duration) || Number(window.appState.state?.project?.media_info?.duration_seconds) || 0;
+        const duration = Number(window.appState.state?.playback?.videoDuration) || Number(window.appState.state?.project?.media_info?.duration_seconds) || Number(window.appState.state?.playback?.duration) || 0;
         const seqEnd = this.getSequenceEndTime(duration);
         if (this.fluidMode && duration > 0 && currentTime >= duration - 0.05 && seqEnd > currentTime + 0.03) {
           this._extendedTailActive = true;
@@ -294,9 +295,9 @@ export class StudioAvatarBridge {
       Number(window.appState?.state?.playback?.duration) || 0;
 
     const plan = this.compiler.compile(project, this.clipMap, {
-      maxSpeed: 1.0,
+      allowAdaptiveSpeed: true, ...resolveTimingOptions(this.timingPriority),
       minSpeed: 0.70,
-      maxLagSec: Infinity,
+      maxLagSec: 1.2,
       restGapThresholdSec: 1.5,
       extendEndForLag: true,
       videoDuration
@@ -406,9 +407,6 @@ export class StudioAvatarBridge {
         if (resMeta) {
           this.controller.lastPlayedResolutionMeta = resMeta;
         }
-        if (window.glossOverlay && typeof window.glossOverlay.refreshBadgeWarning === 'function') {
-          window.glossOverlay.refreshBadgeWarning(activeEntry.gloss);
-        }
       } else if (window.glossOverlay && typeof window.glossOverlay.render === 'function' && !this.isExportingDeterministic) {
         window.glossOverlay.render(timeSec);
       }
@@ -441,8 +439,9 @@ export class StudioAvatarBridge {
     } else if (this._extendedTailActive) {
       const rate = Number(window.appState?.state?.playback?.playbackRate) || 1.0;
       this._extendedTailTime += Math.max(0, Math.min(delta, 0.1)) * rate;
-      const duration = Number(window.appState?.state?.playback?.duration) ||
-        Number(project.media_info?.duration_seconds) || 0;
+      const duration = Number(window.appState?.state?.playback?.videoDuration) ||
+        Number(project.media_info?.duration_seconds) ||
+        Number(window.appState?.state?.playback?.duration) || 0;
       const seqEnd = this.getSequenceEndTime(duration);
 
       this.applyFluidSampleAtTime(this._extendedTailTime);
@@ -530,8 +529,7 @@ export class StudioAvatarBridge {
   }
 
   /**
-   * Devuelve los metadatos de resolución (matchType, needsReview, warning, resolvedGloss)
-   * para mostrar avisos discretos en el PiP cuando una seña usa aproximación o requiere revisión.
+   * Devuelve los metadatos de resolución léxica (matchType, resolvedGloss) para la glosa dada.
    * @param {string} glossName
    * @returns {Object|null}
    */
@@ -657,10 +655,6 @@ export class StudioAvatarBridge {
         coarticulate: true,
         coarticulationDurationSec: 0.14,
         returnToNeutralOnEnd: !entry.hasContiguousNextGloss
-      }).then(() => {
-        if (window.glossOverlay && typeof window.glossOverlay.refreshBadgeWarning === 'function') {
-          window.glossOverlay.refreshBadgeWarning(glossName);
-        }
       }).catch(() => {});
     } else if (this.controller.player && this.controller.clips?.NEUTRAL) {
       this.controller.player.play(this.controller.clips.NEUTRAL, {
@@ -764,8 +758,19 @@ export class StudioAvatarBridge {
     (project.segments || []).forEach(seg => (seg?.glosses || []).forEach(addIfLexical));
 
     const targetVersion = String(this.controller?.syncController?.preferredVersion || this.controller?.preferredVersion || '2.7');
+    const contextParts = [];
+    if (typeof project.text === 'string' && project.text.trim()) contextParts.push(project.text.trim());
+    (project.segments || []).forEach(seg => { if (seg?.text) contextParts.push(seg.text); });
+    glosses.forEach(g => { if (g?.source_word || g?.gloss) contextParts.push(g.source_word || g.gloss); });
+    const projectContext = contextParts.join(' ').slice(0, 320).trim();
+    for (const name of uniqueNames) {
+      if (/^(RAT[OÓ]N|LLAMAR|CARRERA|RECETA|LIMPIO|MENOS|BLANC[OA]|EXPLOTAR|BABEAR|TORRE|POLVO|CURAS?|REGISTRAR|MEDIO|COLA|BANCO|PLANTA|ROMPER|LENGUA|DEBER)(\+{1,2})?$/i.test(name)) {
+        this.clipMap.delete(name);
+      }
+    }
+
     await Promise.all(Array.from(uniqueNames).map(name =>
-      this.controller.syncController.loadClipAsync(name, { version: targetVersion })
+      this.controller.syncController.loadClipAsync(name, { version: targetVersion, context: projectContext })
         .then((clip) => {
           if (clip && this.clipMapVersion === targetVersion) {
             this.clipMap.set(name, clip);

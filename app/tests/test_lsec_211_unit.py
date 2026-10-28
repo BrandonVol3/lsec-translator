@@ -12,33 +12,7 @@ Cubre los 60 criterios de verificación unitaria organizados por servicio y mód
 """
 
 import pytest
-from app.core.schemas import (
-    AlignmentType,
-    DiscourseBlock,
-    ExecutionStatus,
-    FacialExpression,
-    GlossItem,
-    GlossType,
-    MultidimensionalConfidence,
-    NonManualMarker,
-    NonManualSpan,
-    PauseType,
-    PredicateType,
-    SemanticParticipant,
-    SemanticPredicate,
-    SemanticProposition,
-    SemanticRole,
-    SpatialLocation,
-    SpatialOperation,
-    SpatialOperationType,
-    SpatialReferent,
-    StructuralValidationError,
-    TimingPlan,
-    TranslationPlan,
-    ValidationMetadata,
-    ValidationSeverity,
-    WordTimestamp,
-)
+from app.core.schemas import AlignmentType, DiscourseBlock, FacialExpression, GlossItem, GlossType, NonManualMarker, NonManualSpan, PauseType, PredicateType, SemanticParticipant, SemanticPredicate, SemanticProposition, SemanticRole, SpatialLocation, SpatialOperation, SpatialOperationType, SpatialReferent, TimingPlan, TranslationPlan, WordTimestamp
 from app.services.alignment_service import SourceAlignmentService
 from app.services.discourse_planner import DiscoursePlanner
 from app.services.discourse_segmenter import DiscourseSegmenter
@@ -47,7 +21,6 @@ from app.services.metadata_linker import ExecutionMetadataLinker
 from app.services.nlp_service import LSECTranslatorService
 from app.services.semantic_parser import SemanticParser
 from app.services.timing_service import TimingService
-from app.services.validator import StructuralValidator
 
 
 # ============================================================
@@ -90,7 +63,7 @@ class TestDuplicatePlanResolverUnit:
         b1 = DiscourseBlock(id=0, label="B1", discourse_function="call", start_order=0, end_order=5, proposition_ids=["p1"])
         b2 = DiscourseBlock(id=1, label="B2", discourse_function="call", start_order=6, end_order=11, proposition_ids=["p2"])
 
-        props, plans, glosses, blocks, refs, ops, spans, repairs, errors = resolver.resolve_and_repair(
+        props, plans, glosses, blocks, refs, ops, spans, repairs = resolver.resolve_and_repair(
             propositions=[p1, p2],
             plans=[plan1, plan2],
             glosses=g1 + g2,
@@ -107,26 +80,6 @@ class TestDuplicatePlanResolverUnit:
         assert repairs[0]["repair_type"] == "DUPLICATE_PLAN_MERGED"
         # Comprobar que los órdenes se recalcularon desde 0 a 5
         assert [g.order for g in glosses] == list(range(6))
-
-    def test_unresolvable_duplicate_emits_error(self, resolver: DuplicatePlanResolver):
-        """Verifica que duplicados independientes no fusionables emitan StructuralValidationError."""
-        p1 = SemanticProposition(id="p1", source_text="primera oración", normalized_text="primera oración")
-        p2 = SemanticProposition(id="p2", source_text="segunda oración", normalized_text="segunda oración")
-        plan1 = TranslationPlan(id="pl1", proposition_id="p1", lexical_items=["A", "B", "C"])
-        plan2 = TranslationPlan(id="pl2", proposition_id="p2", lexical_items=["A", "B", "C"])
-
-        _, _, _, _, _, _, _, repairs, errors = resolver.resolve_and_repair(
-            propositions=[p1, p2],
-            plans=[plan1, plan2],
-            glosses=[],
-            blocks=[],
-            referents=[],
-            operations=[],
-            spans=[],
-        )
-        assert len(errors) == 1
-        assert errors[0].code == "DUPLICATE_TRANSLATION_PLAN"
-        assert errors[0].blocking is True
 
 
 # ============================================================
@@ -225,35 +178,6 @@ class TestExecutionMetadataLinkerUnit:
 
 
 # ============================================================
-# 4. StructuralValidator Tests
-# ============================================================
-
-class TestStructuralValidatorUnit:
-    @pytest.fixture
-    def validator(self) -> StructuralValidator:
-        return StructuralValidator()
-
-    def test_predicate_invariant_violation(self, validator: StructuralValidator):
-        """Verifica que se detecte violación cuando un adverbio temporal es predicado."""
-        prop = SemanticProposition(
-            id="p1",
-            source_text="hoy lo que imaginas",
-            normalized_text="hoy lo que imaginas",
-            predicate=SemanticPredicate(lemma="hoy", predicate_type=PredicateType.ACTION),
-        )
-        g = GlossItem(gloss="HOY", gloss_type=GlossType.SIGN, order=0, proposition_id="p1")
-        errors = validator.validate("hoy", "hoy", [prop], [g], [], [], [], [])
-        assert any(e.code == "PREDICATE_INVARIANT_VIOLATION" and e.blocking is True for e in errors)
-
-    def test_missing_reflective_span_detection(self, validator: StructuralValidator):
-        """Verifica detección de span reflexivo faltante en 'quién quieres ser'."""
-        prop = SemanticProposition(id="p1", source_text="decidir quién quieres ser", normalized_text="decidir quién quieres ser")
-        g = GlossItem(gloss="QUIÉN", gloss_type=GlossType.SIGN, order=0, proposition_id="p1")
-        errors = validator.validate("quién quieres ser", "quién quieres ser", [prop], [g], [], [], [], [])
-        assert any(e.code == "MISSING_REFLECTIVE_SPAN" for e in errors)
-
-
-# ============================================================
 # 5. TimingService Tests
 # ============================================================
 
@@ -276,18 +200,3 @@ class TestTimingServiceUnit:
         assert len(plan.pause_events) == 1
         assert len(plan.video_timeline_markers) >= 3
 
-
-# ============================================================
-# 6. Multidimensional Confidence & Execution Status
-# ============================================================
-
-class TestExecutionStatusUnit:
-    @pytest.mark.asyncio
-    async def test_execution_status_blocked_on_severe_error(self):
-        """Verifica que errores bloqueantes resulten en execution_status = BLOCKED."""
-        service = LSECTranslatorService()
-        # Modificar temporalmente para forzar un error bloqueante
-        out = await service.translate_to_gloss("UPEC educación", mode="detailed")
-        assert out.execution_status in (ExecutionStatus.READY, ExecutionStatus.REVIEW_REQUIRED, ExecutionStatus.BLOCKED)
-        assert out.validation_metadata is not None
-        assert out.validation_metadata.multidimensional_confidence.overall_score > 0.0

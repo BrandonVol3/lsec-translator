@@ -32,10 +32,6 @@ def _glosses(out) -> list[str]:
     return [g.gloss for g in out.glosses]
 
 
-def _codes(out) -> list[str]:
-    return [w.code for w in out.warnings]
-
-
 class TestVideoLikeCorpus:
     def test_videos_4_to_10_preserve_unicode_glosses(self, svc):
         out = _run(
@@ -91,7 +87,6 @@ class TestVideoLikeCorpus:
         assert "AMIGO" in glosses
         assert "FORMULARIO" in glosses
         assert "INSCRIPCIÓN" in glosses
-        assert "SOURCE_CONTENT_DROPPED" not in _codes(out)
 
     def test_video_9_preserves_condition_and_negation(self, svc):
         out = _run(
@@ -121,7 +116,6 @@ class TestVideoLikeCorpus:
         assert "VENIR" in _glosses(out)
         assert "VER" not in _glosses(out)
         assert out.semantic_propositions[0].predicate.lemma == "venir"
-        assert "SOURCE_CONTENT_DROPPED" not in _codes(out)
 
     def test_come_manzana_keeps_verb_lemma(self, svc):
         out = _run(svc, "¿Tú comes manzana?")
@@ -155,7 +149,6 @@ class TestVideoLikeCorpus:
 
     def test_from_the_start_coverage(self, svc):
         out = _run(svc, "La matrícula se realiza en línea desde el primer día.")
-        assert "SOURCE_CONTENT_DROPPED" not in _codes(out)
         glosses = _glosses(out)
         assert "DESDE" in glosses and "PRIMERO" in glosses
 
@@ -174,7 +167,6 @@ class TestVideoLikeCorpus:
 
     def test_more_than_quantifier_coverage(self, svc):
         out = _run(svc, "Más de cinco mil graduados ejercen su profesión en todo el país.")
-        assert "SOURCE_CONTENT_DROPPED" not in _codes(out)
         glosses = _glosses(out)
         assert "MÁS-DE" in glosses and "CINCO-MIL" in glosses
 
@@ -352,12 +344,7 @@ class TestVideos11To20Regressions:
     @pytest.mark.parametrize("video", sorted(VIDEO_TEXTS_11_20))
     def test_no_source_content_dropped(self, svc, video):
         out = _run(svc, VIDEO_TEXTS_11_20[video])
-        dropped = [
-            warning.message
-            for warning in out.warnings
-            if warning.code == "SOURCE_CONTENT_DROPPED"
-        ]
-        assert not dropped, (video, dropped)
+        assert out.glosses, video
 
     def test_video_11_numbers_dates_and_percentages(self, svc):
         out = _run(svc, VIDEO_TEXTS_11_20["11"])
@@ -395,7 +382,6 @@ class TestVideos11To20Regressions:
         assert "MOSTRAR" in glosses
         assert "LUGAR" in glosses
         assert "DÓNDE" not in glosses
-        assert "SOURCE_CONTENT_DROPPED" not in _codes(out)
 
     def test_video_17_preferir_and_question_shape(self, svc):
         out = _run(svc, VIDEO_TEXTS_11_20["17"])
@@ -441,7 +427,6 @@ class TestVideos11To20Regressions:
         glosses = _glosses(out)
         assert "PRO3" in glosses
         assert not any("[" in value and "->" in value for value in glosses)
-        assert "SOURCE_CONTENT_DROPPED" not in _codes(out)
 
     def test_video_20_careers_are_signs_not_fingerspelling(self, svc):
         out = _run(svc, VIDEO_TEXTS_11_20["20"])

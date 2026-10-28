@@ -100,6 +100,9 @@ DEFAULT_BASE_RESOLUTIONS: Dict[str, str] = {
     "día": "Día",
     "ano": "Año",
     "año": "Año",
+    "romper": "Romper, Roto(a)",
+    "lengua": "Lengua",
+    "deber": "Obligación",
 }
 
 # Reglas de desambiguación contextual: (sign_target, keywords)
@@ -271,6 +274,34 @@ _CONTEXTUAL_RULES: Dict[str, List[Tuple[str, Set[str]]]] = {
         ("Planta", {
             "hoja", "verde", "flor", "vegetal", "semilla", "arbol", "raiz", "regar",
             "jardin", "botanica", "maceta",
+        }),
+    ],
+    "romper": [
+        ("Separarse  Terminar", {
+            "enamorado", "enamorada", "novio", "novia", "pareja", "esposo", "esposa",
+            "matrimonio", "relacion", "relaciones", "amor", "divorcio", "separar", "terminar",
+        }),
+        ("Romper, Roto(a)", {
+            "vaso", "vidrio", "plato", "papel", "objeto", "ventana", "hueso", "madera", "quebrar",
+        }),
+    ],
+    "lengua": [
+        ("Lengua de señas", {
+            "sordo", "sorda", "sordos", "sordas", "señas", "senas", "identidad", "idioma",
+            "comunidad", "interprete", "lsec", "cultura", "hablar", "comunicacion", "asociacion",
+        }),
+        ("Lengua", {
+            "boca", "diente", "dientes", "anatomia", "sabor", "lamer", "garganta", "labio",
+        }),
+    ],
+    "deber": [
+        ("Deberes", {
+            "escuela", "colegio", "tarea", "tareas", "clase", "clases", "profesor", "profesora",
+            "estudiante", "estudiar", "cuaderno", "hacer",
+        }),
+        ("Obligación", {
+            "respetar", "comunidad", "oyente", "sordo", "sorda", "ley", "derecho", "obligacion",
+            "cumplir", "norma", "regla", "cuidar",
         }),
     ],
 }

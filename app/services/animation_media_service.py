@@ -198,7 +198,6 @@ def resolve_sign_animation_response(sign_name: str, version: Optional[str] = Non
         version_served = "2.7" if v27_dir else ("2.6" if v26_dir else "2.5")
     match_type: str = "exact"
     status_label: str = "EXACT"
-    needs_review: bool = False
     warning_msg: Optional[str] = None
 
     name_variants = list(dict.fromkeys([
@@ -233,12 +232,10 @@ def resolve_sign_animation_response(sign_name: str, version: Optional[str] = Non
             version_served = res.get("version_served") or version_served
             match_type = res.get("match_type") or match_type
             status_label = res.get("status") or status_label
-            needs_review = bool(res.get("needs_review", False))
             warning_msg = res.get("warning")
         elif res.get("match_type") == "exact":
             resolved_name = res.get("resolved_gloss") or resolved_name
             status_label = res.get("status") or status_label
-            needs_review = bool(res.get("needs_review", False))
             warning_msg = res.get("warning")
 
     if not anim_file or not anim_file.is_file():
@@ -263,7 +260,6 @@ def resolve_sign_animation_response(sign_name: str, version: Optional[str] = Non
         "X-Sign-Version": str(version_served),
         "X-Sign-Status": str(status_label),
         "X-Sign-Match-Type": str(match_type),
-        "X-Sign-Needs-Review": "true" if needs_review else "false",
     }
     if warning_msg:
         headers["X-Sign-Warning"] = unicodedata.normalize("NFKD", warning_msg).encode("ascii", "ignore").decode("ascii")
@@ -281,7 +277,6 @@ def resolve_sign_animation_response(sign_name: str, version: Optional[str] = Non
             meta["requested_gloss"] = clean_name
             meta["match_type"] = match_type
             meta["status_label"] = status_label
-            meta["needs_review"] = needs_review
             meta["warning"] = warning_msg
             if version_served == "2.7":
                 meta["pipelineVersion"] = "2.7_Estandarizado"
@@ -638,7 +633,7 @@ def encode_deterministic_mp4_response(
     out_vstream.width = width
     out_vstream.height = height
     out_vstream.pix_fmt = "yuv420p"
-    out_vstream.options = {"preset": "ultrafast", "crf": "20"}
+    out_vstream.options = {"preset": "ultrafast", "crf": "20", "threads": "0"}
 
     in_aud = None
     out_astream = None
@@ -659,10 +654,7 @@ def encode_deterministic_mp4_response(
     tb = Fraction(1, target_fps)
     frame_idx = 0
     for frame in in_vid.decode(video=0):
-        rgb = frame.to_ndarray(format="rgb24")
-        if rgb.shape[1] != width or rgb.shape[0] != height:
-            rgb = rgb[:height, :width, :]
-        new_vf = av.VideoFrame.from_ndarray(rgb, format="rgb24")
+        new_vf = frame.reformat(width=width, height=height, format="yuv420p")
         new_vf.pts = frame_idx
         new_vf.time_base = tb
         for packet in out_vstream.encode(new_vf):

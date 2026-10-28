@@ -6,6 +6,35 @@
  * las glosas LSEC una por una en tiempo real.
  */
 
+/**
+ * Devuelve la letra (displayChar) que el avatar está articulando en el instante 	imeSec dentro de una
+ * palabra deletreada, usando clip.metadata.letterSegments y el mapeo tiempo-de-video -> tiempo-de-clip
+ * del plan compilado. Retorna null si la entrada no es una palabra deletreada o aún no hay letra activa.
+ */
+function lsecFingerspellingLetterAt(entry, timeSec) {
+  const segs = entry && entry.clip && entry.clip.metadata && entry.clip.metadata.letterSegments;
+  if (!Array.isArray(segs) || segs.length === 0) return null;
+  const st = Number(entry.startSec);
+  const en = Number(entry.endSec);
+  const cs = Number(entry.strokeStart);
+  const ce = Number(entry.strokeEnd);
+  if (![st, en, cs, ce].every(Number.isFinite) || en <= st) return null;
+  if (timeSec < st - 1e-3 || timeSec > en + 1e-3) return null;
+  const u = Math.min(1, Math.max(0, (timeSec - st) / (en - st)));
+  const localSec = cs + u * (ce - cs);
+  for (const seg of segs) {
+    if (localSec >= seg.startSec - 1e-3 && localSec <= seg.endSec + 1e-3) return seg.displayChar || seg.grapheme || null;
+  }
+  let best = segs[0];
+  for (const seg of segs) {
+    if (Math.abs(localSec - seg.endSec) < Math.abs(localSec - best.endSec)) best = seg;
+  }
+  return best.displayChar || best.grapheme || null;
+}
+if (typeof window !== 'undefined') {
+  window.lsecFingerspellingLetterAt = lsecFingerspellingLetterAt;
+}
+
 class GlossOverlayController {
   constructor(containerId = 'gloss-overlay-container') {
     this.container = document.getElementById(containerId);
@@ -153,7 +182,8 @@ class GlossOverlayController {
     }
 
     // 2. Comprobar si la glosa cambió para no reescribir innecesariamente el DOM
-    const currentKey = activeGloss ? (activeGloss.id || activeGloss.gloss || activeGloss.lemma) : (project ? 'idle' : 'empty');
+    const activeLetter = (activeGloss && sampleEntry) ? lsecFingerspellingLetterAt(sampleEntry, time) : null;
+    const currentKey = activeGloss ? ((activeGloss.id || activeGloss.gloss || activeGloss.lemma) + (activeLetter ? '|' + activeLetter : '')) : (project ? 'idle' : 'empty');
     if (this.lastRenderedKey === currentKey) return;
     this.lastRenderedKey = currentKey;
 
@@ -164,16 +194,13 @@ class GlossOverlayController {
       const isParaphrase = activeGloss.is_paraphrase || (activeGloss.type_badge === 'paráfrasis');
       
       let typeLabel = activeGloss.gloss_type || 'SEÑA LÉXICA';
-      if (isFingerspelling) typeLabel = 'DACTILOLOGÍA LSEC';
+      if (isFingerspelling) typeLabel = activeLetter ? `DELETREO LSEC · LETRA [ ${activeLetter} ]` : 'DELETREO LSEC';
       if (isParaphrase) typeLabel = 'PARÁFRASIS LSEC';
-
-      const warningHtml = this.buildWarningSublabelHtml(glossName, isFingerspelling);
 
       this.glossHost.innerHTML = `
         <div class="avatar-pip-gloss-badge ${isFingerspelling ? 'fs' : ''}" data-gloss-name="${glossName}">
           <span class="avatar-pip-gloss-type">${typeLabel}</span>
           <span class="avatar-pip-gloss-text">${glossName}</span>
-          ${warningHtml}
         </div>
       `;
     } else if (project) {
@@ -189,40 +216,6 @@ class GlossOverlayController {
           <span>Esperando video</span>
         </div>
       `;
-    }
-  }
-
-  buildWarningSublabelHtml(glossName, isFingerspelling = false) {
-    if (isFingerspelling || !window.studioAvatarBridge) return '';
-    const meta = window.studioAvatarBridge.getResolutionMetaForGloss(glossName);
-    if (!meta) return '';
-
-    const matchType = meta.matchType || meta.match_type;
-    const isApprox = matchType && !['exact', 'compound', 'fingerspelling', 'none'].includes(matchType);
-    const needsRev = Boolean(meta.needsReview !== undefined ? meta.needsReview : meta.needs_review);
-    if (!isApprox && !needsRev) return '';
-
-    const resolvedGloss = meta.resolvedGloss || meta.resolved_gloss;
-    let badgeText = '⚠ Revisión';
-    if (isApprox && resolvedGloss) {
-      badgeText = `⚠ Aprox: ${resolvedGloss}`;
-    }
-    const titleText = (meta.warning || 'Seña resuelta por aproximación o marcada para revisión QA').replace(/"/g, '&quot;');
-    return `<span class="avatar-pip-gloss-warn" title="${titleText}" style="font-size:0.60rem; color:#f6ad55; display:block; margin-top:1px; line-height:1.1;">${badgeText}</span>`;
-  }
-
-  refreshBadgeWarning(glossName) {
-    if (!this.glossHost || !glossName) return;
-    if (appState?.state?.playback) {
-      this.render(appState.state.playback.currentTime || 0);
-    }
-    const badgeEl = this.glossHost.querySelector('.avatar-pip-gloss-badge');
-    if (!badgeEl || badgeEl.getAttribute('data-gloss-name') !== glossName.toUpperCase().trim()) return;
-    const existingWarn = badgeEl.querySelector('.avatar-pip-gloss-warn');
-    if (existingWarn) existingWarn.remove();
-    const html = this.buildWarningSublabelHtml(glossName, badgeEl.classList.contains('fs'));
-    if (html) {
-      badgeEl.insertAdjacentHTML('beforeend', html);
     }
   }
 }

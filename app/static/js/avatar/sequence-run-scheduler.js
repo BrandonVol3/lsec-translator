@@ -71,6 +71,8 @@ export function extractRawEntries(project) {
       slotEnd: et,
       slotDuration: Math.max(0.05, et - st),
       propositionId: item.proposition_id || item.origin_proposition_id || item.prop_id || item.segment_id || null,
+      // Oración (idea completa) de origen: permite medir desfase y velocidad por idea.
+      sentenceId: (item.sentence_id !== undefined && item.sentence_id !== null) ? item.sentence_id : null,
       isFingerspelling: Boolean(
         item.is_fingerspelling ||
         item.isFingerspelling ||
@@ -86,6 +88,34 @@ export function extractRawEntries(project) {
   }
 
   parsed.sort((a, b) => (a.slotStart - b.slotStart) || (a.slotEnd - b.slotEnd) || (a.index - b.index));
+  const vidDur = (!Array.isArray(project) && project && Number(project.media_info?.duration_seconds)) || 0;
+  if (vidDur > 20 && parsed.length > 1) {
+    const deduped = [parsed[0]];
+    let lastPro2End = /^PRO2$/.test(parsed[0].glossKey) ? parsed[0].slotEnd : -Infinity;
+    for (let i = 1; i < parsed.length; i++) {
+      const prev = deduped[deduped.length - 1];
+      const curr = parsed[i];
+      // Whisper duplica palabras en los bordes de segmento (TECNOLOGÍA x2, FORMAR x2...): se fusionan
+      // glosas idénticas adyacentes separadas por < 1.5 s aunque pertenezcan a proposiciones distintas.
+      if (curr.glossKey === prev.glossKey && curr.slotStart - prev.slotEnd < 1.5) {
+        prev.slotEnd = Math.max(prev.slotEnd, curr.slotEnd);
+        prev.slotDuration = Math.max(0.05, prev.slotEnd - prev.slotStart);
+        continue;
+      }
+      // Un segundo PRO2 (señalamiento a la 2.ª persona) dentro de una ventana < 2.2 s es redundante.
+      if (curr.glossKey === 'PRO2') {
+        if (curr.slotStart - lastPro2End < 2.2) {
+          const host = deduped[deduped.length - 1];
+          host.slotEnd = Math.max(host.slotEnd, curr.slotEnd);
+          host.slotDuration = Math.max(0.05, host.slotEnd - host.slotStart);
+          continue;
+        }
+        lastPro2End = curr.slotEnd;
+      }
+      deduped.push(curr);
+    }
+    return deduped;
+  }
   return parsed;
 }
 
@@ -207,11 +237,14 @@ export function schedulePlayableRunsWithLagBudget(entries, runs, params) {
       }
     }
 
+    // La dactilología jamás se acelera (se lee a 1.0x); el resto de las señas puede llegar a maxSpeed.
+    const speedCapOf = (j) => (runItems[j].isFingerspelling ? 1.0 : maxSpeed);
+
     const downstreamDeficit = new Float64Array(m);
     let accDeficit = 0;
     for (let j = m - 1; j >= 0; j--) {
       const it = runItems[j];
-      const minPossibleDur = effStrokeLen[j] / maxSpeed + (j > 0 ? transDur[j] : 0);
+      const minPossibleDur = effStrokeLen[j] / speedCapOf(j) + (j > 0 ? transDur[j] : 0);
       const slotBudget = it.slotEnd - it.slotStart;
       const localDeficit = minPossibleDur - slotBudget;
       downstreamDeficit[j] = accDeficit;
@@ -237,24 +270,33 @@ export function schedulePlayableRunsWithLagBudget(entries, runs, params) {
         const minAfterPrev = j > 0 ? (prevStrokeEndSec + T_tr) : earliestAllowed;
         const startSec = Math.max(0.0, Math.max(earliestAllowed, minAfterPrev));
 
-        const targetEnd = Math.max(startSec + 0.12, it.slotEnd - Math.min(maxLagSec, downstreamDeficit[j]));
+        let targetEnd = Math.max(startSec + 0.12, it.slotEnd - Math.min(maxLagSec, downstreamDeficit[j]));
+        // Si tras esta seña existe tiempo libre antes de que la siguiente pueda comenzar,
+        // se aprovecha toda esa ventana a 1.0x en lugar de comprimir la seña.
+        if (j + 1 < m) {
+          const nxt = runItems[j + 1];
+          const nxtLead = downstreamDeficit[j + 1] > 0.02 ? Math.min(0.35, downstreamDeficit[j + 1]) : 0.0;
+          const nxtEarliest = Math.max(minRunStartAllowed, nxt.slotStart - nxtLead);
+          targetEnd = Math.max(targetEnd, nxtEarliest - transDur[j + 1]);
+        }
         const availForTarget = Math.max(0.10, targetEnd - startSec);
         const availForSlotEnd = Math.max(0.10, it.slotEnd - startSec);
 
+        const capJ = speedCapOf(j);
         let speed = 1.0;
         const strokeLen = effStrokeLen[j];
-        if (maxSpeed > 1.0 && strokeLen > availForTarget) {
+        if (capJ > 1.0 && strokeLen > availForTarget) {
           const neededSpeed = strokeLen / availForTarget;
-          speed = Math.max(1.0, Math.min(maxSpeed, neededSpeed));
+          speed = Math.max(1.0, Math.min(capJ, neededSpeed));
         }
-        speed = Math.min(Math.min(1.0, maxSpeed), Math.max(minSpeedFloor[j], speed));
+        speed = Math.min(capJ, Math.max(minSpeedFloor[j], speed));
         const playDur = strokeLen / speed;
         const endSec = startSec + playDur;
 
         startArr[j] = startSec;
         endArr[j] = endSec;
         speedArr[j] = speed;
-        if (maxSpeed > 1.0 && (strokeLen / availForSlotEnd) > maxSpeed + 0.05) {
+        if (capJ > 1.0 && (strokeLen / availForSlotEnd) > capJ + 0.05) {
           adjArr[j] = 1;
         }
         prevStrokeEndSec = endSec;
@@ -263,7 +305,7 @@ export function schedulePlayableRunsWithLagBudget(entries, runs, params) {
 
     runForwardSchedule();
 
-    const maxCompressIters = (maxSpeed > 1.0) ? Math.max(16, m * 2) : 0;
+    const maxCompressIters = (maxSpeed > 1.0) ? Math.max(24, m * 4) : 0;
     for (let iter = 0; iter < maxCompressIters; iter++) {
       let violIdx = -1;
       let violExcess = 0;
@@ -294,17 +336,20 @@ export function schedulePlayableRunsWithLagBudget(entries, runs, params) {
       const strokeRangeEnd = (isStartViol && violIdx > j0) ? (violIdx - 1) : violIdx;
       let neededReduction = violExcess + 0.002;
 
-      for (let k = j0; k <= strokeRangeEnd; k++) {
-        if (speedArr[k] < maxSpeed - 1e-4) {
-          const curDur = effStrokeLen[k] / speedArr[k];
-          const minDurAtMax = effStrokeLen[k] / maxSpeed;
-          const saved = Math.max(0, curDur - minDurAtMax);
-          minSpeedFloor[k] = maxSpeed;
-          speedArr[k] = maxSpeed;
-          neededReduction = Math.max(0, neededReduction - saved);
-        } else {
-          minSpeedFloor[k] = maxSpeed;
-        }
+      // Compresión gradual y acotada: se recorre hacia atrás y solo se acelera lo estrictamente
+      // necesario para absorber el exceso (nunca se aceleran en bloque señas que tienen holgura).
+      for (let k = strokeRangeEnd; k >= j0 && neededReduction > 1e-4; k--) {
+        const capK = speedCapOf(k);
+        if (capK <= 1.0 + 1e-4 || speedArr[k] >= capK - 1e-4) continue;
+        const curDur = effStrokeLen[k] / speedArr[k];
+        const minDurAtMax = effStrokeLen[k] / capK;
+        const maxSavable = Math.max(0, curDur - minDurAtMax);
+        const saved = Math.min(maxSavable, neededReduction);
+        if (saved <= 1e-6) continue;
+        const newSpeed = Math.min(capK, effStrokeLen[k] / Math.max(1e-3, curDur - saved));
+        minSpeedFloor[k] = newSpeed;
+        speedArr[k] = newSpeed;
+        neededReduction = Math.max(0, neededReduction - saved);
       }
 
       for (let k = j0 + 1; k <= violIdx && neededReduction > 1e-5; k++) {
@@ -321,7 +366,7 @@ export function schedulePlayableRunsWithLagBudget(entries, runs, params) {
       accDeficit = 0;
       for (let j = m - 1; j >= 0; j--) {
         const it = runItems[j];
-        const minPossibleDur = effStrokeLen[j] / maxSpeed + (j > 0 ? transDur[j] : 0);
+        const minPossibleDur = effStrokeLen[j] / speedCapOf(j) + (j > 0 ? transDur[j] : 0);
         const slotBudget = it.slotEnd - it.slotStart;
         downstreamDeficit[j] = accDeficit;
         accDeficit = Math.max(0, accDeficit + (minPossibleDur - slotBudget));
@@ -358,7 +403,7 @@ export function schedulePlayableRunsWithLagBudget(entries, runs, params) {
       const rawStartVel = it.prepared.sampleClipVelocityAt(sStart, 'forward');
       const rawEndVel = it.prepared.sampleClipVelocityAt(sEnd, 'backward');
       const sweepRate = playDur > 1e-6 ? (sEnd - sStart) / playDur : speed;
-      const exactSpeed = Math.min(1.0, Math.min(maxSpeed, speed));
+      const exactSpeed = Math.min(maxSpeed, speed);
 
       it.origStrokeDuration = origLen;
       it.strokeRetainedPct = strokeRetainedPct;

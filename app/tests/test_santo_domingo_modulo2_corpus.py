@@ -251,14 +251,17 @@ def test_reverse_cherological_search_filters() -> None:
 
 
 # ============================================================================
-# MEJORA 1: Cumplimiento NTE INEN 3198 y Reglamento LOC Abril 2026
+# MEJORA 1: Diseño PiP Legible (>= 1/9 de pantalla) y Aviso de Prototipo Académico
 # ============================================================================
 
 
-def test_nte_inen_3198_and_loc_2026_frontend_contracts() -> None:
-    """Verifica el cumplimiento matemático >= 1/9 NTE INEN 3198 y subtítulos accesibles LOC 2026."""
+def test_pip_layout_and_prototype_disclaimer_contracts() -> None:
+    """Verifica el área mínima legible >= 1/9 para el recuadro del intérprete y el aviso de prototipo académico."""
     exporter_js = (
         PROJECT_ROOT / "app" / "static" / "js" / "components" / "video-exporter.js"
+    ).read_text(encoding="utf-8")
+    disclaimer_js = (
+        PROJECT_ROOT / "app" / "static" / "js" / "components" / "export-disclaimer.js"
     ).read_text(encoding="utf-8")
     subtitle_js = (
         PROJECT_ROOT / "app" / "static" / "js" / "components" / "subtitle-engine.js"
@@ -267,29 +270,26 @@ def test_nte_inen_3198_and_loc_2026_frontend_contracts() -> None:
         PROJECT_ROOT / "app" / "static" / "js" / "components" / "modals-and-export.js"
     ).read_text(encoding="utf-8")
 
-    # 1. NTE INEN 3198: >= 1/9 (11.11%) del área total de pantalla en 16:9
+    # 1. Proporción mínima >= 1/9 (11.11%) del área total de pantalla en 16:9 para legibilidad
     for width, height in ((1920, 1080), (1280, 720)):
         total_area = width * height
-        min_inen_area = total_area / 9.0
+        min_pip_area = total_area / 9.0
         aspect_ratio = 1.15
-        min_inen_width = math.ceil(math.sqrt(min_inen_area / aspect_ratio))
-        card_width = max(round(width * 0.245), min_inen_width)
+        min_pip_width = math.ceil(math.sqrt(min_pip_area / aspect_ratio))
+        card_width = max(round(width * 0.245), min_pip_width)
         card_height = round(card_width * aspect_ratio)
         pip_area = card_width * card_height
-        assert pip_area >= min_inen_area, (
-            f"Área PiP ({pip_area}) menor a 1/9 ({min_inen_area}) en {width}x{height}"
+        assert pip_area >= min_pip_area, (
+            f"Área PiP ({pip_area}) menor a 1/9 ({min_pip_area}) en {width}x{height}"
         )
         ratio_pct = (pip_area / total_area) * 100.0
         assert ratio_pct >= 11.11
 
-    # 2. Verificar que video-exporter.js expone getComplianceMetrics, buildComplianceReport y footer externo
-    assert "getComplianceMetrics" in exporter_js
-    assert "buildComplianceReport" in exporter_js
-    assert "NTE INEN 3198" in exporter_js
-    assert "CDPIC-DTN-PNRD-2B-26" in exporter_js
+    # 2. Verificar que video-exporter.js expone getPipLayoutMetrics, footer externo y aviso académico
+    assert "getPipLayoutMetrics" in exporter_js
     assert "badgeFooterH" in exporter_js
-    assert "noSigningSpaceOcclusion: true" in exporter_js
-    assert "meetsInen3198MinimumArea" in exporter_js
+    assert "LSECExportDisclaimer" in exporter_js
+    assert "Propuesta computacional pendiente de validación por personas sordas nativas o profesional intérprete de LSEC" in disclaimer_js
 
     # 3. Verificar que subtitle-engine.js formatea identificadores de hablante y descriptores sonoros
     assert "formatAccessibleSubtitleText" in subtitle_js
@@ -298,6 +298,7 @@ def test_nte_inen_3198_and_loc_2026_frontend_contracts() -> None:
     assert "effectiveSafeLeft" in subtitle_js
     assert "effectiveSafeRight" in subtitle_js
 
-    # 4. Verificar que el modal de exportación incluye el botón de descarga del Reporte Art. 26 (.json)
-    assert "btn-download-inen-compliance-report" in modals_js
-    assert "Reporte Art. 26 (.json)" in modals_js
+    # 4. Verificar que se retiraron las declaraciones regulatorias NTE INEN 3198 / Reporte Art. 26
+    assert "btn-download-inen-compliance-report" not in modals_js
+    assert "Reporte Art. 26" not in modals_js
+    assert "buildComplianceReport" not in exporter_js

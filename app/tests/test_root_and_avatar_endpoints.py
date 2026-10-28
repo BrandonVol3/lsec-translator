@@ -152,7 +152,7 @@ def test_animations_and_dictionary_endpoints(client: TestClient):
     resolve_data = resolve_resp.json()
     assert "metadata" in resolve_data or "frames" in resolve_data or "sign" in resolve_data
 
-    # 3. Estadísticas del diccionario oficial LSEC
+    # 3. Estadísticas del diccionario LSEC
     dict_stats_resp = client.get("/api/v1/dictionary/stats")
     assert dict_stats_resp.status_code == 200
     dict_stats = dict_stats_resp.json()

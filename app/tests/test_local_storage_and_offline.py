@@ -32,16 +32,6 @@ async def test_translation_log_roundtrip(storage):
 
 
 @pytest.mark.asyncio
-async def test_reviews_are_append_only_and_ordered(storage):
-    for i in range(3):
-        await storage.save_review({"review_id": f"rev_{i}", "reviewer_id": "r", "decision": "APPROVE"})
-    reviews = await storage.get_reviews()
-    assert [r["review_id"] for r in reviews] == ["rev_0", "rev_1", "rev_2"]
-    with pytest.raises(Exception):  # review_id único: no se sobrescribe
-        await storage.save_review({"review_id": "rev_0", "decision": "REJECT"})
-
-
-@pytest.mark.asyncio
 async def test_data_survives_reopen(tmp_path):
     path = tmp_path / "persist.sqlite"
     first = LocalStorageService(path)
@@ -51,25 +41,6 @@ async def test_data_survives_reopen(tmp_path):
     second = LocalStorageService(path)
     assert second.is_persistent
     assert (await second.get_translation_logs())[0]["original_text"] == "persistente"
-    second.close()
-
-
-@pytest.mark.asyncio
-async def test_annotation_snapshot_survives_reopen(tmp_path):
-    path = tmp_path / "annotations.sqlite"
-    item = {
-        "example_id": "pilot_ex_001",
-        "annotation_status": "NATIVE_VALIDATED",
-        "validated_glosses": ["COMER", "MANZANA"],
-        "audit_history": [{"audit_id": "audit_1"}],
-        "updated_at": "2026-10-21T20:00:00+00:00",
-    }
-    first = LocalStorageService(path)
-    await first.save_annotation_snapshot(item)
-    first.close()
-
-    second = LocalStorageService(path)
-    assert await second.get_annotation_snapshot("pilot_ex_001") == item
     second.close()
 
 

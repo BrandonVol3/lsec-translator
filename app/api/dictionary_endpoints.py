@@ -1,11 +1,11 @@
 """
-Endpoints REST del Diccionario Oficial LSEC "Gabriel Román" (CONADIS).
+Endpoints REST del Diccionario LSEC "Gabriel Román" (CONADIS).
 
   GET /api/v1/dictionary/search?q=...&limit=20   Búsqueda y autocompletado (exacta, prefijo, difusa)
   GET /api/v1/dictionary/stats                   Métricas de cobertura del catálogo
   GET /api/v1/dictionary/{slug}                  Ficha completa de una seña
 
-Nota: las fichas provienen del diccionario oficial; no sustituyen la validación por personas
+Nota: las fichas provienen del diccionario LSEC; no sustituyen la validación por personas
 sordas usuarias nativas de LSEC.
 """
 
@@ -23,7 +23,7 @@ from app.services.dictionary_service import (
     to_gloss_form,
 )
 
-dictionary_router = APIRouter(prefix="/api/v1/dictionary", tags=["Diccionario Oficial LSEC (CONADIS)"])
+dictionary_router = APIRouter(prefix="/api/v1/dictionary", tags=["Diccionario LSEC (CONADIS)"])
 
 
 class DictionaryEntryResponse(BaseModel):
@@ -138,7 +138,7 @@ async def dictionary_stats() -> Dict[str, Any]:
 
 @dictionary_router.get("/{slug}", response_model=DictionaryEntryResponse)
 async def get_dictionary_entry(slug: str) -> DictionaryEntryResponse:
-    """Ficha completa de una seña del diccionario oficial por su `slug`."""
+    """Ficha completa de una seña del diccionario LSEC por su `slug`."""
     svc = _service()
     entry = svc.get_by_slug(slug)
     if entry is None:

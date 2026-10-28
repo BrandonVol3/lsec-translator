@@ -303,7 +303,7 @@ class SpanishVerbLexicon:
     def normalize_verb_lemma(cls, word: str, raw_lemma: str, pos: Optional[str] = None) -> str:
         """
         Corrige errores de lematización estadística de spaCy usando desinencias morfológicas
-        y validación con el Diccionario Oficial LSEC.
+        y validación con el Diccionario LSEC.
         """
         w_clean = PunctuationAnalyzer.strip_punctuation(word.lower())
         known = cls.KNOWN_VERB_FORMS.get(w_clean)

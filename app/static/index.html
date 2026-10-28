@@ -11,12 +11,12 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Nunito:wght@700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
 
   <!-- Sistema de Diseño Modular («Pedagogical Tactile Light» · Paleta Institucional Sutil UPEC · WCAG 2.2 AA/AAA) -->
-  <link rel="stylesheet" href="/static/css/base-tokens.css?v=3.3.1">
-  <link rel="stylesheet" href="/static/css/modals-panels.css?v=3.3.1">
-  <link rel="stylesheet" href="/static/css/avatar-studio.css?v=3.3.1">
-  <link rel="stylesheet" href="/static/css/app.css?v=3.3.1">
-  <link rel="stylesheet" href="/static/css/layout-workspace.css?v=3.3.1">
-  <link rel="stylesheet" href="/static/css/components-ui.css?v=3.3.1">
+  <link rel="stylesheet" href="/static/css/base-tokens.css?v=3.4.0">
+  <link rel="stylesheet" href="/static/css/modals-panels.css?v=3.4.0">
+  <link rel="stylesheet" href="/static/css/avatar-studio.css?v=3.4.0">
+  <link rel="stylesheet" href="/static/css/app.css?v=3.4.0">
+  <link rel="stylesheet" href="/static/css/layout-workspace.css?v=3.4.0">
+  <link rel="stylesheet" href="/static/css/components-ui.css?v=3.4.0">
 
   <!-- Import Map local para Three.js y @pixiv/three-vrm (100% Offline) -->
   <script type="importmap">
@@ -160,7 +160,7 @@
                     </div>
                     <div class="interpreter-pip-footer">
                       <div class="gloss-overlay-pill" id="gloss-overlay-text">EN ESPERA</div>
-                      <span style="font-size:0.66rem; color:#94a3b8;" id="pip-sign-source-badge">CONADIS</span>
+                      <span style="font-size:0.66rem; color:#94a3b8;" id="pip-sign-source-badge">LSEC</span>
                     </div>
                   </div>
                 </div>
@@ -272,7 +272,7 @@
                   <span class="comparative-col-subhint">Orden gramatical que ejecutará el Avatar 3D</span>
                 </div>
                 <div class="comparative-legend-dots" aria-label="Leyenda de tipos de glosa">
-                  <span class="legend-dot-item"><span class="legend-dot dot-conadis" aria-hidden="true"></span>Oficial CONADIS</span>
+                  <span class="legend-dot-item"><span class="legend-dot dot-conadis" aria-hidden="true"></span>Diccionario LSEC</span>
                   <span class="legend-dot-item"><span class="legend-dot dot-fingerspell" aria-hidden="true"></span>Dactilología</span>
                   <span class="legend-dot-item"><span class="legend-dot dot-edited" aria-hidden="true"></span>Editada</span>
                 </div>
@@ -334,7 +334,7 @@
                     <div class="live-current-sign-word" id="live-current-sign-word">EN ESPERA</div>
                   </div>
                   <span class="grammar-rule-badge" id="live-current-sign-type" style="background:var(--color-primary-emerald);">
-                    ✓ Seña CONADIS
+                    ✓ Seña LSEC
                   </span>
                 </div>
               </div>
@@ -395,8 +395,34 @@
             <!-- Contenedor del Personalizador de Estilos de Subtítulos (RF-03) -->
             <div id="view-side-subtitles" style="flex:1 1 auto; overflow-y:auto; min-height:0;"></div>
 
-            <!-- Botón CTA Primario + Acción Secundaria SRT y Retorno a Paso 3 -->
+            <!-- Selector de Carpeta de Guardado (Por defecto en Escritorio + Ruta Personalizada) y Botones de Exportación -->
             <div class="export-actions-stack">
+              <div id="step4-export-dir-card" style="display:flex; flex-direction:column; gap:6px; padding:10px 12px; border-radius:10px; background:var(--color-canvas-bg); border:2px solid var(--color-border-subtle);">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+                  <label for="step4-export-dir-input" style="font-size:0.76rem; font-weight:800; color:var(--color-text-primary);">
+                    Carpeta de guardado (se crea automáticamente si no existe):
+                  </label>
+                  <div style="display:inline-flex; gap:6px; align-items:center;">
+                    <button class="btn btn-sm" id="btn-step4-browse-export-dir" type="button" title="Seleccionar otra carpeta personalizada en tu equipo" style="padding:3px 8px; font-size:0.74rem;">
+                      Elegir Carpeta...
+                    </button>
+                    <button class="btn btn-sm" id="btn-step4-reset-export-dir" type="button" title="Restaurar carpeta por defecto en el Escritorio" style="padding:3px 8px; font-size:0.74rem;">
+                      Escritorio
+                    </button>
+                    <button class="btn btn-sm" id="btn-step4-open-export-dir" type="button" title="Abrir carpeta en el Explorador de Windows" style="padding:3px 8px; font-size:0.74rem;">
+                      Abrir
+                    </button>
+                  </div>
+                </div>
+                <input
+                  type="text"
+                  id="step4-export-dir-input"
+                  class="transcript-seg-input"
+                  style="min-height:34px; font-family:var(--font-mono); font-size:0.75rem; padding:4px 8px;"
+                  placeholder="C:\Users\...\Desktop\Videos Exportados LSEC Studio"
+                  aria-label="Ruta de carpeta para guardar videos exportados"
+                >
+              </div>
               <button class="btn btn-primary btn-tactile-cta" id="btn-step3-export-mp4" type="button" style="width:100%;">
                 EXPORTAR VIDEO MP4
               </button>
@@ -442,25 +468,25 @@
   </div>
 
   <!-- Scripts Modulares de LSEC Studio (Sin timeline.js en la interfaz) -->
-  <script src="/static/js/demo-data.js?v=3.3.1"></script>
-  <script src="/static/js/state/state-project-hydration.js?v=3.3.1"></script>
-  <script src="/static/js/state/state-gloss-mutations.js?v=3.3.1"></script>
-  <script src="/static/js/state/state-persistence-styles.js?v=3.3.1"></script>
-  <script src="/static/js/state.js?v=3.3.1"></script>
-  <script src="/static/js/components/subtitle-engine.js?v=3.3.1"></script>
-  <script src="/static/js/components/pipeline-processor.js?v=3.3.1"></script>
-  <script src="/static/js/components/video-player.js?v=3.3.1"></script>
-  <script src="/static/js/components/subtitle-overlay.js?v=3.3.1"></script>
-  <script src="/static/js/components/subtitle-editor-panel.js?v=3.3.1"></script>
-  <script src="/static/js/components/gloss-overlay.js?v=3.3.1"></script>
-  <script src="/static/js/components/structural-validator.js?v=3.3.1"></script>
-  <script src="/static/js/components/sentence-engine.js?v=3.3.1"></script>
-  <script src="/static/js/components/transcript-window.js?v=3.3.1"></script>
-  <script src="/static/js/components/linguistic-comparison-view.js?v=3.3.1"></script>
-  <script src="/static/js/components/sidebar-panels.js?v=3.3.1"></script>
-  <script src="/static/js/components/video-exporter.js?v=3.3.1"></script>
-  <script src="/static/js/components/modals-and-export.js?v=3.3.1"></script>
-  <script src="/static/js/app.js?v=3.3.1"></script>
-  <script type="module" src="/static/js/avatar/studio-avatar-bridge.js?v=3.3.1"></script>
+  <script src="/static/js/demo-data.js?v=3.4.0"></script>
+  <script src="/static/js/state/state-project-hydration.js?v=3.4.0"></script>
+  <script src="/static/js/state/state-gloss-mutations.js?v=3.4.0"></script>
+  <script src="/static/js/state/state-persistence-styles.js?v=3.4.0"></script>
+  <script src="/static/js/state.js?v=3.4.0"></script>
+  <script src="/static/js/components/subtitle-engine.js?v=3.4.0"></script>
+  <script src="/static/js/components/pipeline-processor.js?v=3.4.0"></script>
+  <script src="/static/js/components/video-player.js?v=3.4.0"></script>
+  <script src="/static/js/components/subtitle-overlay.js?v=3.4.0"></script>
+  <script src="/static/js/components/subtitle-editor-panel.js?v=3.4.0"></script>
+  <script src="/static/js/components/gloss-overlay.js?v=3.4.0"></script>
+  <script src="/static/js/components/sentence-engine.js?v=3.4.0"></script>
+  <script src="/static/js/components/transcript-window.js?v=3.4.0"></script>
+  <script src="/static/js/components/linguistic-comparison-view.js?v=3.4.0"></script>
+  <script src="/static/js/components/sidebar-panels.js?v=3.4.0"></script>
+  <script src="/static/js/components/export-disclaimer.js?v=3.4.0"></script>
+<script src="/static/js/components/video-exporter.js?v=3.4.0"></script>
+  <script src="/static/js/components/modals-and-export.js?v=3.4.0"></script>
+  <script src="/static/js/app.js?v=3.4.0"></script>
+  <script type="module" src="/static/js/avatar/studio-avatar-bridge.js?v=3.4.1"></script>
 </body>
 </html>

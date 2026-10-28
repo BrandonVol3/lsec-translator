@@ -426,7 +426,12 @@ export function createLSECFingerspellingWordClip(wordOrGloss, options = {}) {
           seg.repeatPulseOffset[1] * pulseWeight,
           seg.repeatPulseOffset[2] * pulseWeight
         ];
-        const stepEval = evaluateGraphemeStateAtPhase(seg.spec, uLocal, offset, prevArm);
+        // Letras dinámicas (J, Z, Ñ, LL, RR): el trazo se completa en el primer 72 % de la ventana
+        // y el 28 % final se sostiene en apex para que la letra sea identificable antes de transicionar.
+        const uPhase = seg.spec.isStaticHold ? uLocal : Math.min(1.0, uLocal / 0.72);
+        const stepEval = evaluateGraphemeStateAtPhase(seg.spec, uPhase, offset, prevArm);
+        // Conserva 100 % la configuración manual de los 30 huesos falángicos (sin difuminado One-Euro).
+        poseMap._preserveExactStaticHold = true;
         poseMap.rightShoulder = stepEval.arm.rightShoulder;
         poseMap.rightUpperArm = stepEval.arm.rightUpperArm;
         poseMap.rightLowerArm = stepEval.arm.rightLowerArm;
@@ -452,6 +457,7 @@ export function createLSECFingerspellingWordClip(wordOrGloss, options = {}) {
             ], prevArm)
             : nextSeg.startEval;
 
+          poseMap._preserveExactStaticHold = true;
           poseMap.rightShoulder = slerpQuatAntipodal(seg.endEval.arm.rightShoulder, nextStartEval.arm.rightShoulder, uBridge);
           poseMap.rightUpperArm = slerpQuatAntipodal(seg.endEval.arm.rightUpperArm, nextStartEval.arm.rightUpperArm, uBridge);
           poseMap.rightLowerArm = slerpQuatAntipodal(seg.endEval.arm.rightLowerArm, nextStartEval.arm.rightLowerArm, uBridge);
@@ -484,6 +490,10 @@ export function createLSECFingerspellingWordClip(wordOrGloss, options = {}) {
     framePoses.push(poseMap);
   }
 
+  // Todas las muestras (preparación, letras, puentes y recuperación) ya están suavizadas por easing
+  // coseno/SLERP; el filtro One-Euro (1 Hz) solo difuminaría las configuraciones manuales de cada letra
+  // y provocaría un salto al entrar en el trazo, por lo que se omite en todo el clip deletreado.
+  for (const fp of framePoses) fp._preserveExactStaticHold = true;
   const boneTracks = buildFull54BoneTracks(times, framePoses, true);
   const cleanGloss = String(wordOrGloss).trim().toUpperCase();
   const graphemeList = tokens.map(tk => tk.grapheme);

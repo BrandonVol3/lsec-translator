@@ -140,6 +140,20 @@ _CANONICAL_SOURCE_LEMMAS: Dict[str, str] = {
     "frontera": "frontera",
     "mutuamente": "mutuamente",
     "alguien": "alguien",
+    "nublado": "nube",
+    "nublada": "nube",
+    "embutido": "salchicha",
+    "embutidos": "salchicha",
+    "riquísimo": "rico",
+    "riquísima": "rico",
+    "riquisimo": "rico",
+    "riquisima": "rico",
+    "buenísimo": "bueno",
+    "buenísima": "bueno",
+    "fuertísimo": "fuerte",
+    "fuertísima": "fuerte",
+    "grandísimo": "grande",
+    "grandísima": "grande",
 }
 
 # Formas canónicas que deben conservarse como nombre/adjetivo aunque spaCy
@@ -164,13 +178,12 @@ _CANONICAL_NOMINAL_FORMS: Set[str] = {
     "movilidad", "entusiasmo", "equipamiento", "intercultural",
     "lingüístico", "linguistico", "lingüística", "linguistica",
     "antigüedad", "antiguedad", "prestigio", "frontera",
-    "mutuamente", "alguien",
+    "mutuamente", "alguien", "nublado", "nublada", "embutido", "embutidos",
 }
 
 # Conjunciones subordinantes con contenido semántico que no deben omitirse.
 _SEMANTIC_SCONJ_GLOSS: Dict[str, str] = {
     "aunque": "AUNQUE",
-    "si": "SI",
     "cuando": "CUANDO",
     "mientras": "MIENTRAS",
     "porque": "PORQUE",
@@ -244,7 +257,7 @@ DEFAULT_TIME_MARKERS: Set[str] = {
     "ayer", "hoy", "mañana", "ahora", "antes", "después", "siempre",
     "nunca", "jamás", "futuro", "pasado", "año", "mes", "día",
     "tarde", "noche", "temprano", "pronto", "semana", "desde",
-    "primero", "luego",
+    "primero", "luego", "ojalá", "ojala",
 }
 
 DEFAULT_DURATION_MS: Dict[str, int] = {

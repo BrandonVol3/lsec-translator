@@ -24,13 +24,10 @@ from typing import List, Dict, Any
 
 from app.core.schemas import (
     AlignmentType,
-    ExecutionStatus,
     FacialExpression,
     GlossItem,
     GlossType,
-    ReviewStatus,
     SemanticRole,
-    ValidationSeverity,
 )
 from app.services.nlp_service import LSECTranslatorService
 
@@ -380,15 +377,6 @@ class TestLSEC211PropertyInvariants:
         assert any(op.get("type") == "NEGATION" for op in prop.operators)
 
     # Propiedad 10: Determinismo de la Máquina de Estados (Inconsistencias Bloquean)
-    @pytest.mark.asyncio
-    async def test_property_10_state_machine_determinism(self, translator: LSECTranslatorService):
-        """Si errors_count > 0, execution_status NUNCA puede ser READY ni review_status VERIFIED."""
-        out = await translator.translate_to_gloss("¿Tú comes manzana?", mode="detailed")
-        if out.validation_metadata.errors_count > 0:
-            assert out.execution_status == ExecutionStatus.BLOCKED
-            assert out.validation_metadata.review_status == ReviewStatus.BLOCKED
-        else:
-            assert out.execution_status in (ExecutionStatus.READY, ExecutionStatus.REVIEW_REQUIRED)
 
     # Propiedad 11: Coherencia Aritmética Temporal
     @pytest.mark.asyncio
@@ -410,14 +398,3 @@ class TestLSEC211PropertyInvariants:
             assert "FINAL_PAUSE" in last_pause.reason or "Transición" in last_pause.reason
 
     # Propiedad 12: Aviso Obligatorio de Propuesta Computacional LSEC
-    @pytest.mark.asyncio
-    @pytest.mark.parametrize("sentence", [
-        "¿Tú comes manzana?",
-        "¿Qué comes?",
-        "Yo no como carne",
-    ])
-    async def test_property_12_computational_proposal_notice(self, translator: LSECTranslatorService, sentence: str):
-        """La salida debe incluir explícitamente el aviso de validación por personas sordas nativas."""
-        out = await translator.translate_to_gloss(sentence, mode="detailed")
-        assert "Propuesta computacional sujeta a validación por personas sordas usuarias nativas de LSEC." in out.validation_metadata.computational_proposal_notice
-        assert "Propuesta computacional sujeta a validación por personas sordas usuarias nativas de LSEC." in out.validation_summary["computational_proposal_notice"]

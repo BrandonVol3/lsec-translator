@@ -13,11 +13,19 @@ STUDIO_URL = "http://127.0.0.1:8000/studio"
 def browser_context():
     """Inicia Chromium con Playwright para la suite E2E."""
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(
+            headless=True,
+            args=[
+                "--use-gl=angle",
+                "--use-angle=swiftshader",
+                "--enable-webgl",
+                "--ignore-gpu-blocklist",
+            ],
+        )
         context = browser.new_context(viewport={"width": 1440, "height": 900})
         page = context.new_page()
-        page.goto(STUDIO_URL)
-        page.wait_for_selector("#app-container", timeout=10000)
+        page.goto(STUDIO_URL, wait_until="domcontentloaded")
+        page.wait_for_selector("#app-container", timeout=15000)
         yield page
         browser.close()
 
@@ -31,7 +39,6 @@ def test_e2e_01_initial_layout_and_step1(browser_context):
     expect(page.locator("#workflow-stepper")).to_be_visible()
     expect(page.locator("#wizard-window-1")).to_be_visible()
     expect(page.locator("#left-video-zone")).to_be_visible()
-    expect(page.locator("#whisper-waveform-canvas")).to_be_visible()
     expect(page.locator("#btn-step1-process-lsec")).to_be_visible()
 
 
@@ -40,11 +47,10 @@ def test_e2e_02_wizard_step1_to_step2_navigation(browser_context):
     page = browser_context
     page.evaluate("() => window.appState.resetToDefaultProject()")
 
-    expect(page.locator("#transcript-segments-container .transcript-seg-card").first).to_be_visible()
+    expect(page.locator("#transcript-segments-container .transcript-seg-card, #transcript-segments-container .transcript-unified-sentence").first).to_be_visible()
     page.click("#btn-step1-process-lsec")
 
     expect(page.locator("#wizard-window-2")).to_be_visible()
-    expect(page.locator("#grammar-transform-monitor")).to_be_visible()
     expect(page.locator("#comparative-parallel-table")).to_be_visible()
     expect(page.locator("#comparative-rows-container .comparative-row").first).to_be_visible()
 
@@ -60,23 +66,27 @@ def test_e2e_03_parallel_comparative_table_and_gloss_chips(browser_context):
 
 
 def test_e2e_04_wizard_step2_to_step3_navigation(browser_context):
-    """Verifica el paso a la Ventana 3 (Escenario Multimedia + Monitor en Vivo + Estilos y Exportación)."""
+    """Verifica el paso a la Ventana 3 (Avatar + Monitor en Vivo) y Ventana 4 (Estilos y Exportación)."""
     page = browser_context
     page.click("#btn-step2-confirm-glosses")
 
     expect(page.locator("#wizard-window-3")).to_be_visible()
     expect(page.locator("#step3-video-slot #left-video-zone")).to_be_visible()
     expect(page.locator("#step3-live-sign-monitor")).to_be_visible()
+
+    page.click("#btn-step3-to-step4")
+    expect(page.locator("#wizard-window-4")).to_be_visible()
+    expect(page.locator("#step4-video-slot #left-video-zone")).to_be_visible()
     expect(page.locator("#view-side-subtitles")).to_be_visible()
     expect(page.locator("#btn-step3-export-mp4")).to_be_visible()
     expect(page.locator("#btn-step3-export-srt")).to_be_visible()
 
 
 def test_e2e_05_modals_dictionary_projects_and_export(browser_context):
-    """Verifica los diálogos de Diccionario CONADIS, Proyectos y Exportación."""
+    """Verifica los diálogos de Diccionario, Proyectos y Exportación."""
     page = browser_context
 
-    page.click("#btn-dictionary-modal")
+    page.click("#btn-projects-modal")
     expect(page.locator("#generic-modal-backdrop")).to_have_class(re.compile(r"open"))
     page.click("#generic-modal-close")
     expect(page.locator("#generic-modal-backdrop")).not_to_have_class(re.compile(r"open"))

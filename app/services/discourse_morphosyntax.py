@@ -116,9 +116,7 @@ def detect_periphrasis_in_doc(doc: Any) -> List[Tuple[str, str, Set[int]]]:
         )
 
         # ir + a + infinitivo -> FUTURO (solo si 'a' e infinitivo son contiguos)
-        if lemma_lower == "ir" and (
-            token.pos_ in ("AUX", "VERB") or clean_tok in ("voy", "vas", "va", "vamos", "van")
-        ):
+        if lemma_lower == "ir" and clean_tok in ("voy", "vas", "va", "vamos", "van", "iré", "irás", "irá", "iremos", "irán"):
             if (
                 token.i + 2 < len(doc)
                 and doc[token.i + 1].text.lower() == "a"
@@ -531,6 +529,14 @@ def sanitize_contextual_glosses(
         for item in glosses:
             if item.gloss == "MEDIA":
                 item.gloss = "TREINTA"
+
+    # En interrogativas parciales (WH / POR-QUÉ), garantizar que la partícula WH quede al final tras el verbo.
+    _wh_final_set = {"QUÉ", "QUIÉN", "QUIÉNES", "DÓNDE", "CUÁNDO", "CÓMO", "CUÁL", "CUÁLES", "CUÁNTO", "CUÁNTA", "CUÁNTOS", "CUÁNTAS", "POR-QUÉ"}
+    if any(g.gloss in _wh_final_set for g in glosses) and len(glosses) >= 2:
+        wh_items = [g for g in glosses if g.gloss in _wh_final_set]
+        non_wh_items = [g for g in glosses if g.gloss not in _wh_final_set]
+        if wh_items and non_wh_items and glosses[-1].gloss not in _wh_final_set:
+            glosses = non_wh_items + wh_items
 
     for index, gloss in enumerate(glosses):
         gloss.order = start_order + index

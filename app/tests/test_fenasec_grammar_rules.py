@@ -77,7 +77,6 @@ def test_verbo_direccional_3_a_1_pl(svc):
 def test_duplicacion_intensidad(svc, text, expected):
     out = _run(svc, text)
     assert [g.gloss for g in out.glosses] == expected
-    assert not [w for w in out.warnings if w.blocking]
 
 
 # --- Regla 6: preguntas retóricas -----------------------------------------
@@ -85,7 +84,6 @@ def test_pregunta_retorica(svc):
     out = _run(svc, "¿Por qué estudiamos? Para progresar")
     g = [x.gloss for x in out.glosses]
     assert "POR-QUÉ" in g
-    assert not [w for w in out.warnings if w.blocking]
     porque = next(x for x in out.glosses if x.gloss == "POR-QUÉ")
     assert porque.non_manual.expression == FacialExpression.RHETORICAL
 
@@ -235,46 +233,6 @@ def test_pure_unit_apply_incorporated_negation_mock_doc():
     ]
     apply_incorporated_negation(items, mock_doc)
     assert [it.gloss for it in items] == ["NO-SABER", "NO-PODER", "NO-QUERER"]
-
-
-def test_f24_possible_conjugated_gloss_warning():
-    from app.core.schemas import DictionarySignMetadata, GlossItem, GlossType, ValidationSeverity
-    from app.services.validator import StructuralValidator
-
-    validator = StructuralValidator()
-    bad_gloss = GlossItem(
-        gloss="DEJASTAR",
-        gloss_type=GlossType.SIGN,
-        order=0,
-        source_word="dejaste",
-        normalized_word="dejastar",
-    )
-    ok_gloss = GlossItem(
-        gloss="CAMINAR",
-        gloss_type=GlossType.SIGN,
-        order=1,
-        source_word="caminamos",
-        normalized_word="caminar",
-        dictionary_metadata=DictionarySignMetadata(
-            verified_in_conadis=True,
-            status="VERIFICADO_CONADIS",
-        ),
-    )
-    errs = validator._validate_lsec_211_invariants(
-        original_text="dejaste",
-        normalized_text="dejaste",
-        propositions=[],
-        glosses=[bad_gloss, ok_gloss],
-        blocks=[],
-        plans=[],
-        timing_plan=None,
-        validation_metadata=None,
-    )
-    conj_warns = [e for e in errs if e.code == "POSSIBLE_CONJUGATED_GLOSS"]
-    assert len(conj_warns) == 1
-    assert conj_warns[0].severity == ValidationSeverity.WARNING
-    assert conj_warns[0].blocking is False
-    assert str(bad_gloss.id) in conj_warns[0].affected_ids
 
 
 def test_double_enclitics_and_multiword_proper_nouns(svc):

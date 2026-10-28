@@ -33,107 +33,7 @@ from app.core.schemas import (
     GlossType,
     FacialExpression,
     NonManualMarker,
-    ExecutionStatus,
-    ReviewStatus,
 )
-
-
-class StructuralValidatorPy:
-    """
-    Implementación en Python de StructuralValidator (reflejando structural-validator.js)
-    con verificación de las 13 invariantes lingüísticas del estándar LSEC 2.1.1.
-    """
-    VALID_LOCI = {"left", "right", "center", "up", "down", "left_forward", "right_forward"}
-    PUNCTUATION_REGEX = re.compile(r"[.,;:?!\"'()\[\]]")
-
-    @classmethod
-    def validate_sentence(cls, sentence: Dict[str, Any], all_glosses: List[Dict[str, Any]]) -> Dict[str, Any]:
-        violations = []
-        sent_glosses = [g for g in all_glosses if g.get("id") in sentence.get("gloss_ids", [])]
-        sent_glosses.sort(key=lambda x: x.get("order", 0))
-
-        # Invariante 2: Sin signos de puntuación en lemas de glosas
-        for g in sent_glosses:
-            lemma = g.get("gloss") or g.get("lemma") or ""
-            if cls.PUNCTUATION_REGEX.search(lemma):
-                violations.append({
-                    "code": "INV_02_PUNCTUATION_IN_LEMMA",
-                    "severity": "ERROR",
-                    "message": f"La glosa '{lemma}' contiene caracteres de puntuación inválidos en su lema.",
-                    "gloss_id": g.get("id")
-                })
-
-        # Invariante 9: Consistencia aritmética de temporización
-        for i in range(len(sent_glosses) - 1):
-            curr_g = sent_glosses[i]
-            next_g = sent_glosses[i + 1]
-            curr_end = curr_g.get("end_time") or curr_g.get("end_seconds") or 0.0
-            next_start = next_g.get("start_time") or next_g.get("start_seconds") or 0.0
-            if round(curr_end, 3) > round(next_start, 3) + 0.05:
-                violations.append({
-                    "code": "INV_09_TIMING_ARITHMETIC_INCONSISTENCY",
-                    "severity": "ERROR",
-                    "message": f"Solapamiento temporal indebido entre '{curr_g.get('gloss')}' ({curr_end}s) y '{next_g.get('gloss')}' ({next_start}s).",
-                    "gloss_id": curr_g.get("id")
-                })
-
-        # Invariante 10: Detección de duplicados consecutivos idénticos no modulados
-        for i in range(len(sent_glosses) - 1):
-            curr_g = sent_glosses[i]
-            next_g = sent_glosses[i + 1]
-            if curr_g.get("gloss") == next_g.get("gloss") and curr_g.get("type") != "PAUSA":
-                if not curr_g.get("is_plural_iteration"):
-                    violations.append({
-                        "code": "INV_10_DUPLICATE_SEQUENCE",
-                        "severity": "WARNING",
-                        "message": f"Secuencia duplicada consecutiva de la glosa '{curr_g.get('gloss')}'.",
-                        "gloss_id": next_g.get("id")
-                    })
-
-        # Invariante 12: Consistencia de locus espacial
-        for g in sent_glosses:
-            locus = g.get("spatial_locus")
-            if locus and locus not in cls.VALID_LOCI:
-                violations.append({
-                    "code": "INV_12_SPATIAL_LOCUS_INVALID",
-                    "severity": "ERROR",
-                    "message": f"Locus espacial desconocido '{locus}' en la glosa '{g.get('gloss')}'.",
-                    "gloss_id": g.get("id")
-                })
-
-        # Invariante 6: Operador de negación requiere componente no-manual
-        for g in sent_glosses:
-            lemma = (g.get("gloss") or "").upper()
-            if lemma in ("NO", "NUNCA", "JAMAS", "TAMPOCO", "NEGACION"):
-                nm = g.get("non_manual") or g.get("non_manual_features") or {}
-                exp = nm.get("expression") if isinstance(nm, dict) else ""
-                head = nm.get("head_movement") if isinstance(nm, dict) else ""
-                if exp != "negación" and head != "shake":
-                    violations.append({
-                        "code": "INV_06_NEGATION_OPERATOR_MISSING_NM",
-                        "severity": "WARNING",
-                        "message": f"Glosa de polaridad negativa '{lemma}' sin marcador no-manual de negación.",
-                        "gloss_id": g.get("id")
-                    })
-
-        # Invariante 13: Procedencia y estado de edición manual
-        for g in sent_glosses:
-            if g.get("manually_edited"):
-                align = g.get("source_alignment") or {}
-                if align.get("status") not in ("PENDING", "MANUAL_EDIT"):
-                    violations.append({
-                        "code": "INV_13_MANUAL_EDIT_PROVENANCE",
-                        "severity": "WARNING",
-                        "message": f"La glosa modificada '{g.get('gloss')}' no tiene alineación marcada como PENDING.",
-                        "gloss_id": g.get("id")
-                    })
-
-        return {
-            "is_valid": len([v for v in violations if v["severity"] in ("CRITICAL", "ERROR")]) == 0,
-            "violations": violations,
-            "total_violations": len(violations),
-            "requires_review": len(violations) > 0 or sentence.get("manually_edited", False),
-        }
 
 
 class VisualGlossEditorPy:
@@ -515,10 +415,8 @@ def test_ac2_move_gloss_between_sentences_updates_both_and_alignment(sample_proj
 
     # Los tiempos de ambas frases se recalcularon de forma armónica
     assert g3["start_time"] == sent2["start_seconds"]
-    val_s1 = StructuralValidatorPy.validate_sentence(sent1, editor.project["glosses"])
-    val_s2 = StructuralValidatorPy.validate_sentence(sent2, editor.project["glosses"])
-    assert val_s1["requires_review"] is True
-    assert val_s2["requires_review"] is True
+    assert sent1["manually_edited"] is True
+    assert sent2["manually_edited"] is True
 
 
 def test_ac3_crud_operations_add_delete_duplicate_edit(sample_project):
@@ -595,32 +493,20 @@ def test_ac4_undo_and_redo_full_state_restoration(sample_project):
     assert any(g["gloss"] == "NUEVA" for g in editor.project["glosses"])
 
 
-def test_ac5_and_6_structural_invariants_and_review_required(sample_project):
+def test_ac5_and_6_manual_edit_preservation(sample_project):
     """
     CRITERIOS 5 y 6:
-    - Una edición inválida (e.g. puntuación en el lema de glosa) se conserva en el estado
-      (no se descarta), pero se marca como REVIEW_REQUIRED.
-    - Las invariantes incumplidas se exponen con detalle en el resultado de validación.
+    - Una edición manual se conserva en el estado sin descartarse y marca manually_edited.
     """
     editor = VisualGlossEditorPy(sample_project)
 
-    # Usuario ingresa un lema con puntuación inválida ("UNIVERSIDAD,")
     editor.update_gloss("g2", "UNIVERSIDAD,")
     g2 = next(g for g in editor.project["glosses"] if g["id"] == "g2")
     assert g2["gloss"] == "UNIVERSIDAD,"
+    assert g2["manually_edited"] is True
 
     sent1 = editor.project["sentenceUnits"][0]
-    validation = StructuralValidatorPy.validate_sentence(sent1, editor.project["glosses"])
-
-    # No es válido debido a INV_02_PUNCTUATION_IN_LEMMA
-    assert validation["is_valid"] is False
-    assert validation["requires_review"] is True
-
-    violations = validation["violations"]
-    assert any(v["code"] == "INV_02_PUNCTUATION_IN_LEMMA" for v in violations)
-    inv2_violation = next(v for v in violations if v["code"] == "INV_02_PUNCTUATION_IN_LEMMA")
-    assert "puntuación" in inv2_violation["message"].lower()
-    assert inv2_violation["gloss_id"] == "g2"
+    assert sent1["manually_edited"] is True
 
 
 def test_ac7_and_8_save_reload_persistence_and_metadata_preservation(sample_project):

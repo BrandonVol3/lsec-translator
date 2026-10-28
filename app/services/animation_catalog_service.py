@@ -557,7 +557,7 @@ def build_animations_list_payload(
             "by_alphabet": alfa_facets, "by_geolect": geo_facets,
             "by_bimanual": bim_facets, "by_facial_archetype": arch_facets,
         },
-        "order": "Catálogo Oficial Diccionario LSEC (CONADIS)",
+        "order": "Catálogo de señas derivado del Diccionario LSEC (CONADIS)",
         "signs": filtered_signs[offset : offset + limit],
         "items": filtered_items[offset : offset + limit],
     }
@@ -652,43 +652,36 @@ def build_handshapes_catalog_payload(include_signs: bool = False) -> Dict[str, A
 
 
 def build_animation_stats_payload(version: Optional[str] = None) -> Dict[str, Any]:
-    """Construye las estadísticas globales de cobertura y QA para /api/v1/animations/stats."""
+    """Construye las estadísticas globales de cobertura para /api/v1/animations/stats."""
     v27_dir, v26_dir, v25_dir = get_v27_dir(), get_v26_dir(), get_v25_dir()
     eff_version = version or ("2.7" if v27_dir else ("2.6" if v26_dir else "2.5"))
     target_dir = v27_dir if (eff_version == "2.7" and v27_dir) else (v26_dir if (eff_version == "2.6" and v26_dir) else v25_dir)
     all_signs = get_available_signs()
     summary_csv = target_dir / "qa_summary.csv"
-    approved, needs_review = 0, 0
     fps_counts: Dict[str, int] = {}
     if summary_csv.is_file():
         try:
             with open(summary_csv, "r", encoding="utf-8", errors="replace") as fp:
                 for row in csv.DictReader(fp):
-                    if row.get("needs_review") == "True":
-                        needs_review += 1
-                    else:
-                        approved += 1
                     fps_val = str(row.get("fps", "60.0"))
                     fps_counts[fps_val] = fps_counts.get(fps_val, 0) + 1
         except Exception as exc:
             logger.warning("Error leyendo qa_summary.csv: %s", exc)
     ver_tag = "2.7_Estandarizado" if (eff_version == "2.7" and v27_dir) else ("2.6_Directo_1a1_corregido" if (eff_version == "2.6" and v26_dir) else "2.5_Directo_1a1")
-    v26_approved, v26_needs_review = 0, 0
+    v26_total = 0
     if v26_dir and (v26_dir / "qa_summary.csv").is_file():
         try:
             with open(v26_dir / "qa_summary.csv", "r", encoding="utf-8", errors="replace") as fp:
                 for row in csv.DictReader(fp):
-                    v26_needs_review += int(row.get("needs_review") == "True")
-                    v26_approved += int(row.get("needs_review") != "True")
+                    v26_total += 1
         except Exception:
             pass
-    v27_approved, v27_needs_review, v27_standardized, v27_skipped = 0, 0, 0, 0
+    v27_total, v27_standardized, v27_skipped = 0, 0, 0
     if v27_dir and (v27_dir / "qa_summary.csv").is_file():
         try:
             with open(v27_dir / "qa_summary.csv", "r", encoding="utf-8", errors="replace") as fp:
                 for row in csv.DictReader(fp):
-                    v27_needs_review += int(row.get("needs_review") == "True")
-                    v27_approved += int(row.get("needs_review") != "True")
+                    v27_total += 1
                     h_status = (row.get("hand_std_status") or "").strip()
                     v27_standardized += int(h_status == "STANDARDIZED")
                     v27_skipped += int(bool(h_status and h_status != "STANDARDIZED"))
@@ -696,19 +689,18 @@ def build_animation_stats_payload(version: Optional[str] = None) -> Dict[str, An
             pass
     return {
         "total_signs": len(all_signs), "directory": str(target_dir),
-        "approved_high_quality": approved if approved else len(all_signs),
-        "needs_review": needs_review, "fps_distribution": fps_counts,
+        "fps_distribution": fps_counts,
         "pipeline_version": ver_tag, "version_active": eff_version,
         "active_default_version": "2.7" if v27_dir else ("2.6" if v26_dir else "2.5"),
-        "order": "Catálogo Oficial Diccionario LSEC (CONADIS)",
+        "order": "Catálogo de señas derivado del Diccionario LSEC (CONADIS)",
         "v27_stats": {
-            "available": bool(v27_dir), "approved": v27_approved, "needs_review": v27_needs_review,
-            "standardized": v27_standardized, "skipped": v27_skipped, "total": v27_approved + v27_needs_review,
+            "available": bool(v27_dir),
+            "standardized": v27_standardized, "skipped": v27_skipped, "total": v27_total,
             "version": "2.7_Estandarizado", "directory": str(v27_dir) if v27_dir else None,
         },
         "v26_stats": {
-            "available": bool(v26_dir), "approved": v26_approved, "needs_review": v26_needs_review,
-            "total": v26_approved + v26_needs_review, "version": "2.6_Directo_1a1_corregido",
+            "available": bool(v26_dir),
+            "total": v26_total, "version": "2.6_Directo_1a1_corregido",
         },
     }
 

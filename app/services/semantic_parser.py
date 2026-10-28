@@ -208,14 +208,6 @@ class SemanticParser:
         is_imparable = "imparable" in text_lower
         is_cercania = "cercanía" in text_lower
 
-        review_reasons = []
-        if is_liberan:
-            review_reasons.append(
-                "Palabra con alta confianza acústica pero baja coherencia contextual publicitaria (requiere revisión auditiva)"
-            )
-        if is_imparable or is_cercania:
-            review_reasons.append("Paráfrasis conceptual pendiente de validación nativa")
-
         # Operadores semánticos estructurados (NEGATION, QUESTION_YN, QUESTION_WH)
         operators = list(getattr(unit, "operators", []))
         if polarity == "negative" and not any(
@@ -273,8 +265,6 @@ class SemanticParser:
             modality=modality,
             is_embedded=unit.is_embedded,
             confidence=0.88,
-            requires_review=bool(review_reasons),
-            review_reasons=review_reasons,
         )
 
         return [prop]

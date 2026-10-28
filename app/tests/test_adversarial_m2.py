@@ -229,23 +229,6 @@ def test_adversarial_abstract_sobre_omitted_in_multiple_clauses(translator: LSEC
 # ==============================================================================
 
 
-@pytest.mark.parametrize(
-    "text",
-    [
-        "Desarrolla la etapa de evaluación en el laboratorio asignado.",
-        "Los aspirantes deben desarrollar la prueba de admisión con puntualidad.",
-        "El equipo desarrolla el proceso de registro universitario.",
-    ],
-)
-def test_adversarial_desarrollar_does_not_trigger_semantic_leak(
-    translator: LSECTranslatorService, text: str
-):
-    """Verifica que cualquier variante de 'desarrollar' en contexto procesal/etapa no emita SEMANTIC_CONTENT_LEAK."""
-    out = _translate_sync(translator, text)
-    warning_codes = [w.code for w in out.warnings]
-    assert "SEMANTIC_CONTENT_LEAK" not in warning_codes, f"Fuga semántica detectada en '{text}': {warning_codes}"
-
-
 # ==============================================================================
 # 6. Robustez ante Entradas Degeneradas y Extremas
 # ==============================================================================

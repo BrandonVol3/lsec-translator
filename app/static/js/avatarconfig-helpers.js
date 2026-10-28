@@ -1,10 +1,8 @@
 /**
  * avatarconfig-helpers.js
  * Constantes de catálogo, funciones auxiliares de ordenamiento, reproductor UHD,
- * visor Lightbox, tarjeta de Configuración Manual y formulario de auditoría Fase 3 para /avatarconfig.
+ * visor Lightbox y tarjeta de Configuración Manual para /avatarconfig.
  */
-
-export const PHASE3_REVIEW_STORAGE_KEY = 'lsec_phase3_reviews_v1';
 
 // Lista de las 56 señas re-extraídas en GPU en Google Colab (antes truncadas <= 30 frames)
 export const TRUNCATED_REEXTRACTED_SIGNS = new Set([
@@ -362,62 +360,6 @@ export function syncVersionUIElements(preferredVersion) {
   }
 }
 
-export function getPhase3FieldIds() {
-  return [
-    'visualAgainstSource',
-    'avatarFidelity',
-    'abruptRotation',
-    'handPenetration',
-    'handConfiguration',
-    'nonManualExpression',
-    'sourceQuality',
-    'decision',
-  ];
-}
-
-export function getPhase3ReviewFromForm() {
-  const review = {};
-  for (const field of getPhase3FieldIds()) {
-    const el = document.getElementById(`phase3-${field}`);
-    review[field] = el ? el.value : 'PENDING';
-  }
-  review.errorCodes = Array.from(document.querySelectorAll('.phase3-review-errors input:checked'))
-    .map(input => input.value);
-  review.notes = document.getElementById('phase3-notes')?.value.trim() || '';
-  return review;
-}
-
-export function setPhase3Form(review = {}) {
-  for (const field of getPhase3FieldIds()) {
-    const el = document.getElementById(`phase3-${field}`);
-    if (el) el.value = review[field] || 'PENDING';
-  }
-  const selectedErrors = new Set(Array.isArray(review.errorCodes) ? review.errorCodes : []);
-  document.querySelectorAll('.phase3-review-errors input').forEach(input => {
-    input.checked = selectedErrors.has(input.value);
-  });
-  const notes = document.getElementById('phase3-notes');
-  if (notes) notes.value = review.notes || '';
-}
-
-export function exportPhase3ReviewsData(phase3Reviews) {
-  const payload = {
-    format: 'lsec-phase3-reviews-v1',
-    generatedAt: new Date().toISOString(),
-    totalSaved: Object.keys(phase3Reviews).length,
-    reviews: Object.values(phase3Reviews),
-  };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = `lsec_phase3_reviews_${new Date().toISOString().slice(0, 10)}.json`;
-  anchor.click();
-  URL.revokeObjectURL(url);
-  const status = document.getElementById('phase3-review-status');
-  if (status) status.textContent = `Exportadas ${payload.totalSaved.toLocaleString()} fichas.`;
-}
-
 export function openLightboxModal(src, title, fallbackSignName = '') {
   const modal = document.getElementById('illustration-lightbox');
   const img = document.getElementById('lightbox-img');
@@ -428,7 +370,7 @@ export function openLightboxModal(src, title, fallbackSignName = '') {
   if (titleEl && title) {
     titleEl.textContent = title;
   } else if (titleEl && fallbackSignName) {
-    titleEl.textContent = `Ilustración Oficial LSEC: ${fallbackSignName}`;
+    titleEl.textContent = `Ilustración LSEC: ${fallbackSignName}`;
   }
   modal.style.display = 'flex';
 }
@@ -471,7 +413,7 @@ export function loadSignIllustrationPreview(signName, meta, onResult, onUnavaila
     if (overlayImg) overlayImg.src = illUrl;
     if (overlayTitle) {
       const catNum = meta?.catalog_index ? `#${meta.catalog_index} ` : '';
-      overlayTitle.textContent = `Ilustración Oficial: ${catNum}${signName}`;
+      overlayTitle.textContent = `Ilustración LSEC: ${catNum}${signName}`;
     }
     if (btnToggleUhdIll) btnToggleUhdIll.style.display = 'inline-flex';
   };
@@ -499,7 +441,7 @@ export function loadSignIllustrationPreview(signName, meta, onResult, onUnavaila
   testImg.src = illUrl;
 }
 
-export function renderSignSelectOptions(signsList, itemsList, currentSignName, verifiedSigns, activeVariantFilter, activeCmFilter) {
+export function renderSignSelectOptions(signsList, itemsList, currentSignName, activeVariantFilter, activeCmFilter) {
   const selectEl = document.getElementById('select-avatar-clip');
   const hintEl = document.getElementById('select-sign-index-hint');
   if (!selectEl) return;
@@ -528,9 +470,8 @@ export function renderSignSelectOptions(signsList, itemsList, currentSignName, v
     const itemMeta = itemsList[idx] || {};
     const catIdx = itemMeta.catalog_index ? `#${itemMeta.catalog_index}` : `#${renderedCount}`;
     const vLbl = itemMeta.hand_variant_label ? ` [${itemMeta.hand_variant_label}]` : '';
-    const isVerif = verifiedSigns.has(sign) ? '✓ ' : '';
     const isRe = isReextractedSign(sign) ? '✨ ' : '';
-    opt.textContent = `${isVerif}${isRe}${catIdx}${vLbl}: ${sign}`;
+    opt.textContent = `${isRe}${catIdx}${vLbl}: ${sign}`;
     if (sign === curNfc) opt.selected = true;
     frag.appendChild(opt);
   });

@@ -6,8 +6,7 @@ Audio/Texto → Transcripción → Normalización Trazable → Alineación de To
 → Segmentación en Proposiciones → Representación Semántica Intermedia
 → Detección y Reparación de Duplicados → Planificación Discursiva
 → Glosas LSEC → Operaciones Espaciales → Componentes No Manuales
-→ Enlace de Metadatos de Ejecución → Temporización → Validación Multidimensional
-→ Estado de Ejecución (READY / REVIEW_REQUIRED / BLOCKED) → Avatar Payload / API.
+→ Enlace de Metadatos de Ejecución → Temporización → Avatar Payload / API.
 """
 
 from __future__ import annotations
@@ -133,31 +132,11 @@ class SpatialLocation(str, Enum):
     LEFT = "left"; RIGHT = "right"; CENTER = "center"; UP = "up"; DOWN = "down"; LEFT_FORWARD = "left_forward"; RIGHT_FORWARD = "right_forward"
 
 
-class ReviewStatus(str, Enum):
-    """Estado de validación lingüística de una propuesta computacional."""
-    VERIFIED = "VERIFIED"; AUTO_VERIFIED = "AUTO_VERIFIED"; COMPUTATIONALLY_VALIDATED = "COMPUTATIONALLY_VALIDATED"; READY = "READY"; BLOCKED = "BLOCKED"; REJECTED = "REJECTED"; HIGH_CONFIDENCE = "HIGH_CONFIDENCE"; CANDIDATE = "CANDIDATE"; REQUIRES_CONTEXT_REVIEW = "REQUIRES_CONTEXT_REVIEW"; REQUIRES_AUDIO_REVIEW = "REQUIRES_AUDIO_REVIEW"; REQUIRES_NATIVE_REVIEW = "REQUIRES_NATIVE_REVIEW"; UNSUPPORTED = "UNSUPPORTED"; PENDING = "PENDING"; PENDING_NATIVE_REVIEW = "PENDING_NATIVE_REVIEW"; PENDING_AUDIO_REVIEW = "PENDING_AUDIO_REVIEW"; PENDING_NATIVE_AND_AUDIO_REVIEW = "PENDING_NATIVE_AND_AUDIO_REVIEW"
-
-
-class ExecutionStatus(str, Enum):
-    """Estado de ejecución y disponibilidad para el avatar / renderizador 3D."""
-    READY = "READY"
-    REVIEW_REQUIRED = "REVIEW_REQUIRED"
-    BLOCKED = "BLOCKED"
-
-
 class TranslationMode(str, Enum):
     """Modo de respuesta de la API."""
     LEGACY = "legacy"        # Contrato anterior 100% compatible
     DETAILED = "detailed"    # Incluye proposiciones, planes, operaciones espaciales y validación
     DEBUG = "debug"          # Incluye reglas aplicadas, candidatos descartados y trazabilidad exhaustiva
-
-
-class ValidationSeverity(str, Enum):
-    """Severidad de un hallazgo del validador automático."""
-    CRITICAL = "CRITICAL"
-    ERROR = "ERROR"
-    WARNING = "WARNING"
-    INFO = "INFO"
 
 
 # ============================================================
@@ -301,8 +280,8 @@ class SemanticProposition(BaseModel):
     focus: Optional[str] = None; topic: Optional[str] = None; contrast_pair_id: Optional[str] = None
     parent_proposition_id: Optional[str] = None; parent_participant_id: Optional[str] = None; dependency_type: Optional[str] = None
     embedded_propositions: List[Dict[str, Any]] = Field(default_factory=list); temporal_modifiers: List[Dict[str, Any]] = Field(default_factory=list)
-    is_embedded: bool = False; confidence: float = Field(default=0.85, ge=0.0, le=1.0); requires_review: bool = False
-    review_reasons: List[str] = Field(default_factory=list)
+    is_embedded: bool = False; confidence: float = Field(default=0.85, ge=0.0, le=1.0)
+    sentence_id: Optional[int] = None; sentence_text: Optional[str] = None
 
 
 class SemanticFrame(BaseModel):
@@ -367,7 +346,6 @@ class SemanticFrame(BaseModel):
 
     # ── Reglas aplicadas (trazabilidad) ────────────────────────
     applied_rule_ids: List[str] = Field(default_factory=list); confidence: float = Field(default=0.85, ge=0.0, le=1.0)
-    requires_review: bool = Field(default=False); review_reasons: List[str] = Field(default_factory=list)
 
     def to_eval_dict(self) -> Dict[str, Any]:
         """Convierte el frame a un diccionario para evaluación de reglas."""
@@ -455,8 +433,7 @@ class SemanticFrame(BaseModel):
             location=location_p.lemma if location_p else None,
             participants=[{"lemma": p.lemma, "role": p.semantic_role.value, "person": p.grammatical_person, "implicit": p.is_implicit} for p in prop.participants],
             topic=prop.topic, focus=prop.focus, discourse_relation=prop.discourse_relation, rhetorical_function=prop.rhetorical_function,
-            confidence=prop.confidence, requires_review=prop.requires_review or (pdrop_type == "ambiguous"),
-            review_reasons=list(prop.review_reasons) + (["Sujeto tácito ambiguo de 3ra persona"] if pdrop_type == "ambiguous" else []),
+            confidence=prop.confidence,
         )
 
 
@@ -533,7 +510,7 @@ class TranslationPlan(BaseModel):
     source_recall: float = Field(default=1.0, ge=0.0, le=1.0); extraction_coverage_ratio: float = Field(default=1.0, ge=0.0, le=1.0); realization_coverage_ratio: float = Field(default=1.0, ge=0.0, le=1.0); realization_precision: float = Field(default=1.0, ge=0.0, le=1.0); coverage_ratio: float = Field(default=1.0, ge=0.0, le=1.0)
     coverage_status: str = Field(default="COMPLETE", description="'COMPLETE' | 'PARTIAL' | 'CONTENT_LEAK' | 'FAILED'")
     pause_before_ms: int = Field(default=0, ge=0); pause_after_ms: int = Field(default=250, ge=0)
-    confidence: float = Field(default=0.85, ge=0.0, le=1.0); requires_native_review: bool = True; requires_audio_review: bool = False
+    confidence: float = Field(default=0.85, ge=0.0, le=1.0)
     applied_rule_ids: List[str] = Field(default_factory=list, description="IDs de reglas gramaticales aplicadas por el motor")
     confidence_vector: Optional[Dict[str, Any]] = Field(default=None, description="Vector de confianza multidimensional")
 
@@ -546,7 +523,7 @@ class DiscourseBlock(BaseModel):
     gloss_ids: List[str] = Field(default_factory=list, description="IDs de las glosas del bloque"); proposition_ids: List[str] = Field(default_factory=list); child_block_ids: List[int] = Field(default_factory=list); active_referents: List[str] = Field(default_factory=list)
     base_expression: FacialExpression = Field(default=FacialExpression.NEUTRAL)
     pause_before_ms: int = Field(default=0, ge=0); pause_after_ms: int = Field(default=300, ge=0)
-    confidence: float = Field(default=0.90, ge=0.0, le=1.0); requires_native_review: bool = False; requires_audio_review: bool = False
+    confidence: float = Field(default=0.90, ge=0.0, le=1.0)
 
 
 # ============================================================
@@ -555,15 +532,15 @@ class DiscourseBlock(BaseModel):
 
 class DictionarySignMetadata(BaseModel):
     """
-    Ficha de una seña del Diccionario Oficial LSEC "Gabriel Román" (CONADIS).
+    Ficha de una seña del Diccionario LSEC "Gabriel Román" (CONADIS).
 
-    `verified_in_conadis=True` solo indica que la seña existe en el diccionario oficial;
+    `in_dictionary=True` solo indica que la seña existe en el diccionario LSEC;
     no sustituye la validación por personas sordas usuarias nativas de LSEC.
     """
-    verified_in_conadis: bool = Field(default=False)
+    in_dictionary: bool = Field(default=False)
     status: str = Field(
-        default="NO_VERIFICADO",
-        description="'VERIFICADO_CONADIS' | 'NO_VERIFICADO' | 'EXENTO_GRAMATICAL' | 'DACTILOLOGIA'",
+        default="FUERA_DE_DICCIONARIO",
+        description="'EN_DICCIONARIO' | 'FUERA_DE_DICCIONARIO' | 'EXENTO_GRAMATICAL' | 'DACTILOLOGIA'",
     )
     conadis_slug: Optional[str] = None
     official_sign_title: Optional[str] = None
@@ -585,7 +562,7 @@ class GlossItem(BaseModel):
     gloss: str = Field(description="Texto de la glosa en mayúsculas")
     gloss_type: GlossType = Field(description="Tipo de glosa")
     order: int = Field(ge=0)
-    proposition_id: Optional[str] = None; discourse_unit_id: Optional[int] = None; discourse_block_id: Optional[int] = None
+    proposition_id: Optional[str] = None; discourse_unit_id: Optional[int] = None; discourse_block_id: Optional[int] = None; sentence_id: Optional[int] = None
     source_word: Optional[str] = None; normalized_word: Optional[str] = None; semantic_concept: Optional[str] = None
     source_token_indexes: List[int] = Field(default_factory=list); local_token_indexes: List[int] = Field(default_factory=list); global_source_token_indexes: List[int] = Field(default_factory=list)
     source_char_start: Optional[int] = None; source_char_end: Optional[int] = None; source_start_seconds: Optional[float] = None; source_end_seconds: Optional[float] = None
@@ -599,9 +576,7 @@ class GlossItem(BaseModel):
     notes: Optional[str] = None; spatial_ref: Optional[str] = None
     spatial_operation_ids: List[str] = Field(default_factory=list); non_manual_span_ids: List[str] = Field(default_factory=list)
     validation: Optional[Dict[str, Any]] = None; alternatives: List[str] = Field(default_factory=list)
-    requires_review: bool = False; requires_native_review: bool = False; requires_audio_review: bool = False
-    review_reasons: List[str] = Field(default_factory=list)
-    dictionary_metadata: Optional[DictionarySignMetadata] = Field(default=None, description="Ficha del Diccionario Oficial LSEC (CONADIS) asociada a la glosa, si aplica.")
+    dictionary_metadata: Optional[DictionarySignMetadata] = Field(default=None, description="Ficha del Diccionario LSEC (CONADIS) asociada a la glosa, si aplica.")
     facial_expression: Optional[FacialExpression] = Field(default=None, description="Expresión facial directa")
     spatial_location: Optional[SpatialLocation] = Field(default=None, description="Locus espacial de origen/asociación")
     target_spatial_location: Optional[SpatialLocation] = Field(default=None, description="Locus espacial de destino")
@@ -653,43 +628,6 @@ class TimingPlan(BaseModel):
     timing_warnings: List[str] = Field(default_factory=list); timing_warning: Optional[str] = None
 
 
-class MultidimensionalConfidence(BaseModel):
-    """Desglose multidimensional de confianza de traducción."""
-    overall_score: float = Field(default=0.88, ge=0.0, le=1.0); overall_linguistic_confidence: float = Field(default=0.88, ge=0.0, le=1.0); structural_confidence: float = Field(default=0.95, ge=0.0, le=1.0)
-    asr_confidence: float = Field(default=0.95, ge=0.0, le=1.0); normalization_confidence: float = Field(default=0.95, ge=0.0, le=1.0); alignment_confidence: float = Field(default=0.90, ge=0.0, le=1.0)
-    segmentation_confidence: float = Field(default=0.92, ge=0.0, le=1.0); semantic_confidence: float = Field(default=0.90, ge=0.0, le=1.0); coverage_confidence: float = Field(default=0.95, ge=0.0, le=1.0)
-    lexical_confidence: float = Field(default=0.90, ge=0.0, le=1.0); ordering_confidence: float = Field(default=0.92, ge=0.0, le=1.0); spatial_confidence: float = Field(default=0.95, ge=0.0, le=1.0)
-    non_manual_confidence: float = Field(default=0.90, ge=0.0, le=1.0); timing_confidence: float = Field(default=0.92, ge=0.0, le=1.0); native_validation_confidence: Optional[float] = Field(default=0.0, ge=0.0, le=1.0)
-    planning_confidence: float = Field(default=0.92, ge=0.0, le=1.0); structural_penalties: float = Field(default=0.0, ge=0.0, le=1.0)
-
-
-class ValidationMetadata(BaseModel):
-    """Metadatos exhaustivos de validación y control de calidad."""
-    schema_version: str = "2.1"; engine_version: str = "2.1.1"; pipeline_version: str = "2.1.1"
-    execution_status: ExecutionStatus = Field(default=ExecutionStatus.REVIEW_REQUIRED)
-    multidimensional_confidence: MultidimensionalConfidence = Field(default_factory=MultidimensionalConfidence)
-    overall_linguistic_confidence: float = Field(default=0.88, ge=0.0, le=1.0)
-    native_reviewed: bool = False; requires_native_review: bool = False; requires_audio_review: bool = False
-    review_status: str = "PENDING_NATIVE_REVIEW"; review_reasons: List[str] = Field(default_factory=list)
-    pending_native_review_gloss_ids: List[str] = Field(default_factory=list); pending_audio_review_ids: List[str] = Field(default_factory=list)
-    pending_semantic_review_ids: List[str] = Field(default_factory=list); pending_ordering_review_ids: List[str] = Field(default_factory=list); pending_review_types: List[str] = Field(default_factory=list)
-    blocking_issue_codes: List[str] = Field(default_factory=list)
-    warnings_count: int = 0; errors_count: int = 0; propositions_count: int = 0; plans_count: int = 0; glosses_count: int = 0; blocks_count: int = 0; spatial_referents_count: int = 0; spatial_operations_count: int = 0; non_manual_spans_count: int = 0
-    automatic_repairs_applied: List[Dict[str, Any]] = Field(default_factory=list)
-    computational_proposal_notice: str = "Propuesta computacional sujeta a validación por personas sordas usuarias nativas de LSEC."
-
-
-class StructuralValidationError(BaseModel):
-    """Error o advertencia detectado por el validador estructural automático."""
-    severity: ValidationSeverity = Field(default=ValidationSeverity.WARNING)
-    code: str = Field(description="Código del error")
-    message: str = Field(description="Descripción legible del hallazgo")
-    affected_ids: List[str] = Field(default_factory=list)
-    suggested_fix: Optional[str] = None
-    automatic_fix_available: bool = Field(default=False)
-    blocking: bool = Field(default=False)
-
-
 # ============================================================
 # Módulo 7 — Salida Completa GlossOutput (v2.1.1)
 # ============================================================
@@ -700,8 +638,7 @@ class GlossOutput(BaseModel):
 
     Ofrece trazabilidad completa, representación intermedia, bloques
     discursivos estructurados, operaciones espaciales, spans no manuales,
-    plan de temporización, cobertura semántica, resumen de validación
-    y estado de ejecución (READY / REVIEW_REQUIRED / BLOCKED).
+    plan de temporización y cobertura semántica.
     """
     schema_version: str = Field(default="2.1", description="Versión del esquema de salida (2.1 compatible)")
     engine_version: str = Field(default="2.1.1", description="Versión del motor lingüístico")
@@ -711,29 +648,23 @@ class GlossOutput(BaseModel):
     corrections_applied: List[Dict[str, Any]] = Field(default_factory=list); entities: List[Dict[str, Any]] = Field(default_factory=list)
 
     # Estado de ejecución para avatar / cliente
-    execution_status: ExecutionStatus = Field(default=ExecutionStatus.REVIEW_REQUIRED)
-    blocking_issue_codes: List[str] = Field(default_factory=list); automatic_repairs_applied: List[Dict[str, Any]] = Field(default_factory=list); remaining_issues: List[Dict[str, Any]] = Field(default_factory=list)
+    automatic_repairs_applied: List[Dict[str, Any]] = Field(default_factory=list)
 
     # Representación intermedia y salida lineal de glosas
     semantic_propositions: List[SemanticProposition] = Field(default_factory=list); translation_plans: List[TranslationPlan] = Field(default_factory=list)
     glosses: List[GlossItem] = Field(default_factory=list); discourse_blocks: List[DiscourseBlock] = Field(default_factory=list)
     spatial_referents: List[SpatialReferent] = Field(default_factory=list); spatial_operations: List[SpatialOperation] = Field(default_factory=list); non_manual_spans: List[NonManualSpan] = Field(default_factory=list)
 
-    # Temporización, métricas, validación y notas
+    # Temporización y notas
     timing_plan: Optional[TimingPlan] = Field(default=None); total_duration_ms: int = Field(default=0)
-    validation_metadata: Optional[ValidationMetadata] = Field(default=None); confidence: Optional[ValidationMetadata] = Field(default=None)
-    validation_summary: Optional[Dict[str, Any]] = Field(default=None); unresolved_items: List[Dict[str, Any]] = Field(default_factory=list)
-    warnings: List[StructuralValidationError] = Field(default_factory=list); grammar_notes: Optional[str] = Field(default=None)
+    grammar_notes: Optional[str] = Field(default=None)
     grammar_engine_version: str = Field(default="0.1.0", description="Versión del motor de gramática LSEC")
     semantic_frames: List[SemanticFrame] = Field(default_factory=list, description="Frames semánticos intermedios (modo debug)")
+    condensation_log: List[Dict[str, Any]] = Field(default_factory=list, description="Registro auditable de consolidaciones por oración (para revisión nativa)")
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     def model_post_init(self, __context: Any) -> None:
-        """Calcula duración total, plan de temporización y sincroniza metadatos si faltan."""
-        if self.validation_metadata is not None and self.confidence is None:
-            self.confidence = self.validation_metadata
-        elif self.confidence is not None and self.validation_metadata is None:
-            self.validation_metadata = self.confidence
+        """Calcula la duración total y el plan de temporización si faltan."""
         if self.total_duration_ms == 0 and self.glosses:
             self.total_duration_ms = sum(g.duration_ms for g in self.glosses)
         if self.timing_plan is None and self.total_duration_ms > 0:

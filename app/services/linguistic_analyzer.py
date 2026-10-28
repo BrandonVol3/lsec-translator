@@ -83,7 +83,6 @@ class ProDropResolution:
     locus: Optional[str] = None
     source: str = "morphological"  # "morphological", "contextual", "discourse"
     confidence: float = 0.75
-    requires_review: bool = False
 
 
 @dataclass
@@ -107,7 +106,6 @@ class ClassifierCandidate:
     classifier_type: str  # ej: "CL_VEHICULO", "CL_PERSONA"
     status: str = "CLASSIFIER_CANDIDATE"
     has_lexical_support: bool = False
-    requires_review: bool = True
     confidence: float = 0.60
 
 
@@ -122,7 +120,6 @@ class FunctionalTransfer:
     target_action: str   # e.g. "quantifier_one", "plural_quantifier", "deictic_demonstrative", "possessive_index", "source_locus", "direction_goal", "spatial_locus", "instrument_classifier", "beneficiary_marker", "purpose_marker", "temporal_operator", "omit_structural"
     target_gloss: Optional[str] = None
     locus_assignment: Optional[str] = None
-    requires_review: bool = False
     justification: str = ""
 
 
@@ -203,10 +200,10 @@ class EnhancedLinguisticAnalyzer:
             # Verbos estrictamente impersonales (clima, existencial)
             weather_verbs = {"llover", "nevar", "granizar", "tronar", "relampaguear", "amanecer", "anochecer"}
             if lemma_lower in weather_verbs or (lemma_lower == "haber" and token.dep_ == "ROOT"):
-                return ProDropResolution(person="3", category="impersonal", deixis_gloss=None, requires_deixis=False, source="lexical_impersonal", confidence=0.95, requires_review=False)
+                return ProDropResolution(person="3", category="impersonal", deixis_gloss=None, requires_deixis=False, source="lexical_impersonal", confidence=0.95)
 
             if has_se_impersonal:
-                return ProDropResolution(person="3", category="generic", deixis_gloss=None, requires_deixis=False, source="impersonal_se", confidence=0.85, requires_review=False)
+                return ProDropResolution(person="3", category="generic", deixis_gloss=None, requires_deixis=False, source="impersonal_se", confidence=0.85)
 
             # Extraer persona y número desde morfología
             person_morph = token.morph.get("Person", [])
@@ -219,12 +216,12 @@ class EnhancedLinguisticAnalyzer:
             person_key = f"{person}-PL" if is_plural else person
 
             if person == "1":
-                return ProDropResolution(person=person_key, category="pro1", deixis_gloss="PRO1-PL" if is_plural else "PRO1", requires_deixis=True, source="morphological", confidence=0.90, requires_review=False)
+                return ProDropResolution(person=person_key, category="pro1", deixis_gloss="PRO1-PL" if is_plural else "PRO1", requires_deixis=True, source="morphological", confidence=0.90)
             elif person == "2":
-                return ProDropResolution(person=person_key, category="pro2", deixis_gloss="PRO2-PL" if is_plural else "PRO2", requires_deixis=True, source="morphological", confidence=0.85, requires_review=False)
+                return ProDropResolution(person=person_key, category="pro2", deixis_gloss="PRO2-PL" if is_plural else "PRO2", requires_deixis=True, source="morphological", confidence=0.85)
             elif person == "3":
                 # En 3ra persona: no asumir deixis ciega
-                return ProDropResolution(person=person_key, category="ambiguous", deixis_gloss=None, requires_deixis=False, source="morphological_unanchored_3p", confidence=0.45, requires_review=True)
+                return ProDropResolution(person=person_key, category="ambiguous", deixis_gloss=None, requires_deixis=False, source="morphological_unanchored_3p", confidence=0.45)
 
         return None
 
@@ -417,7 +414,7 @@ class EnhancedLinguisticAnalyzer:
             elif text_l in ("tu", "tus"):
                 transfers.append(FunctionalTransfer(token_idx=token.i, source_word=token.text, lemma=lemma_l, pos=pos, function_type="possession", target_action="possessive_index", target_gloss="PRO2", justification="Posesivo de 2da persona transferido a deixis PRO2"))
             elif text_l in ("su", "sus"):
-                transfers.append(FunctionalTransfer(token_idx=token.i, source_word=token.text, lemma=lemma_l, pos=pos, function_type="possession", target_action="possessive_index", target_gloss="PRO3", requires_review=True, justification="Posesivo de 3ra persona transferido a índice anafórico"))
+                transfers.append(FunctionalTransfer(token_idx=token.i, source_word=token.text, lemma=lemma_l, pos=pos, function_type="possession", target_action="possessive_index", target_gloss="PRO3", justification="Posesivo de 3ra persona transferido a índice anafórico"))
 
             # 3. Definitud indefinida numeral vs. plural
             elif text_l in ("un", "una") and pos == "DET":
@@ -466,6 +463,7 @@ class EnhancedLinguisticAnalyzer:
                         "niño", "niña", "niños", "niñas", "hermano", "hermana", "amigo", "amiga",
                         "mamá", "papá", "familia", "persona", "personas", "gente", "cliente", "clientes",
                         "hora", "horas", "tiempo", "día", "días", "semana", "mes", "año", "cabo", "pesar",
+                        "carta", "cartas", "propuesta", "propuestas", "documento", "documentos", "comunidad", "asociación",
                     }
                     head_or_next_non_loc = (
                         head_tok.text.lower() in non_locative_targets
@@ -479,7 +477,7 @@ class EnhancedLinguisticAnalyzer:
                     ) or (dep == "case" and head_tok.dep_ in ("obj", "iobj") and head_tok.pos_ in ("NOUN", "PROPN", "PRON"))
 
                     head_verb_lemma = head_tok.head.lemma_.lower() if head_tok.head.pos_ in ("VERB", "AUX") else ""
-                    regime_a_verbs = {"asistir", "pertenecer", "ayudar", "invitar", "llamar", "aprender", "enseñar", "dedicarse", "acceder"}
+                    regime_a_verbs = {"asistir", "pertenecer", "ayudar", "invitar", "llamar", "aprender", "enseñar", "dedicarse", "acceder", "adjuntar", "respetar", "agregar", "añadir"}
                     head_governs_a = head_verb_lemma in regime_a_verbs
 
                     if text_l in ("a", "al") and (
@@ -509,7 +507,7 @@ class EnhancedLinguisticAnalyzer:
                     motion_verbs = {"ir", "venir", "caminar", "viajar", "pasar", "correr", "volver", "llegar", "salir", "entrar", "recorrer", "cruzar", "subir", "bajar"}
                     governor = head_tok.head.lemma_.lower() if head_tok.head.pos_ in ("VERB", "AUX") else ""
                     if governor in motion_verbs:
-                        transfers.append(FunctionalTransfer(token_idx=token.i, source_word=token.text, lemma=lemma_l, pos=pos, function_type="path", target_action="direction_goal", target_gloss="HACIA", justification="Preposición de trayectoria con verbo de movimiento"))
+                        transfers.append(FunctionalTransfer(token_idx=token.i, source_word=token.text, lemma=lemma_l, pos=pos, function_type="path", target_action="spatial_locus", justification="Preposición de trayectoria transferida a locus espacial"))
                     else:
                         transfers.append(FunctionalTransfer(token_idx=token.i, source_word=token.text, lemma=lemma_l, pos=pos, function_type="cause_or_agent", target_action="semantic_marker", target_gloss="POR", justification="Preposición 'por' causal o agentiva; se conserva para no deformar el significado"))
 
@@ -521,9 +519,9 @@ class EnhancedLinguisticAnalyzer:
 
                 elif text_l == "con":
                     if any(ch.dep_ in ("obj", "pobj") and ch.pos_ in ("NOUN", "PROPN") for ch in token.children):
-                        transfers.append(FunctionalTransfer(token_idx=token.i, source_word=token.text, lemma=lemma_l, pos=pos, function_type="instrument", target_action="instrument_classifier", requires_review=True, justification="Preposición instrumental transferible a clasificador de manipulación"))
+                        transfers.append(FunctionalTransfer(token_idx=token.i, source_word=token.text, lemma=lemma_l, pos=pos, function_type="instrument", target_action="instrument_classifier", justification="Preposición instrumental transferible a clasificador de manipulación"))
                     else:
-                        transfers.append(FunctionalTransfer(token_idx=token.i, source_word=token.text, lemma=lemma_l, pos=pos, function_type="accompaniment", target_action="accompaniment_sign", target_gloss="CON", justification="Preposición de compañía transferida a seña CON"))
+                        transfers.append(FunctionalTransfer(token_idx=token.i, source_word=token.text, lemma=lemma_l, pos=pos, function_type="accompaniment", target_action="omit_structural", justification="Preposición 'con' omitida en gramática LSEC por yuxtaposición"))
 
                 elif text_l == "para":
                     # Distinguir beneficiario vs. finalidad
@@ -538,9 +536,9 @@ class EnhancedLinguisticAnalyzer:
                     )
                     has_inf = head_is_inf or next_is_inf or any(ch.pos_ == "VERB" for ch in token.head.children if ch.i > token.i)
                     if has_inf:
-                        transfers.append(FunctionalTransfer(token_idx=token.i, source_word=token.text, lemma=lemma_l, pos=pos, function_type="purpose", target_action="purpose_marker", target_gloss="PROPÓSITO", justification="Preposición de finalidad transferida a conector de propósito"))
+                        transfers.append(FunctionalTransfer(token_idx=token.i, source_word=token.text, lemma=lemma_l, pos=pos, function_type="purpose", target_action="omit_structural", justification="Preposición de finalidad 'para' omitida por yuxtaposición en LSEC"))
                     else:
-                        transfers.append(FunctionalTransfer(token_idx=token.i, source_word=token.text, lemma=lemma_l, pos=pos, function_type="beneficiary", target_action="beneficiary_marker", requires_review=True, justification="Preposición de beneficiario transferida a concordancia de locus"))
+                        transfers.append(FunctionalTransfer(token_idx=token.i, source_word=token.text, lemma=lemma_l, pos=pos, function_type="beneficiary", target_action="beneficiary_marker", justification="Preposición de beneficiario transferida a concordancia de locus"))
 
                 else:
                     transfers.append(FunctionalTransfer(token_idx=token.i, source_word=token.text, lemma=lemma_l, pos=pos, function_type="structural_omission", target_action="omit_structural", justification="Preposición estructural sin contenido semántico independiente"))
@@ -588,7 +586,7 @@ class EnhancedLinguisticAnalyzer:
         Genera candidatos a clasificadores LSEC (CLASSIFIER_CANDIDATE).
 
         NO asigna clasificadores de manera puramente semántica o automática.
-        Exige respaldo léxico o marca el candidato con requires_review=True.
+        Exige respaldo léxico antes de proponer el candidato.
         """
         candidates: List[ClassifierCandidate] = []
         if doc is None:
@@ -599,7 +597,7 @@ class EnhancedLinguisticAnalyzer:
                 continue
             lemma_lower = token.lemma_.lower()
             if lemma_lower in _SEMANTIC_CLASSIFIERS:
-                candidates.append(ClassifierCandidate(token_idx=token.i, referent_lemma=lemma_lower, token_text=token.text, classifier_type=_SEMANTIC_CLASSIFIERS[lemma_lower], status="CLASSIFIER_CANDIDATE", has_lexical_support=False, requires_review=True, confidence=0.60))
+                candidates.append(ClassifierCandidate(token_idx=token.i, referent_lemma=lemma_lower, token_text=token.text, classifier_type=_SEMANTIC_CLASSIFIERS[lemma_lower], status="CLASSIFIER_CANDIDATE", has_lexical_support=False, confidence=0.60))
 
         return candidates
 

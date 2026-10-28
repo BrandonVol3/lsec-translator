@@ -23,9 +23,7 @@ from app.core.schemas import (
     SemanticProposition,
     SpatialOperation,
     SpatialReferent,
-    StructuralValidationError,
     TranslationPlan,
-    ValidationSeverity,
 )
 
 logger = logging.getLogger(__name__)
@@ -57,13 +55,11 @@ class DuplicatePlanResolver:
         List[SpatialOperation],
         List[NonManualSpan],
         List[Dict[str, Any]],  # automatic_repairs_applied
-        List[StructuralValidationError],
     ]:
         """
         Analiza planes y proposiciones, ejecuta reparaciones y recalcula órdenes.
         """
         repairs_applied: List[Dict[str, Any]] = []
-        unresolvable_errors: List[StructuralValidationError] = []
 
         # 1. Identificar planes duplicados por secuencia léxica o de glosas
         plan_by_prop_id: Dict[str, TranslationPlan] = {p.proposition_id: p for p in plans}
@@ -107,16 +103,9 @@ class DuplicatePlanResolver:
                         logger.info("Reparación automática aplicada: %s", repair_record["reason"])
                     else:
                         # Si no se puede fusionar con seguridad
-                        unresolvable_errors.append(
-                            StructuralValidationError(
-                                severity=ValidationSeverity.ERROR,
-                                code="DUPLICATE_TRANSLATION_PLAN",
-                                message=f"Planes duplicados no fusionables: '{plan.proposition_id}' y '{prior_prop_id}' generan '{seq_key}'.",
-                                affected_ids=[plan.proposition_id, prior_prop_id],
-                                suggested_fix="Revisar la segmentación o aplicar una estrategia léxica diferenciada.",
-                                automatic_fix_available=False,
-                                blocking=True,
-                            )
+                        logger.warning(
+                            "Planes duplicados no fusionables: '%s' y '%s' generan '%s'.",
+                            plan.proposition_id, prior_prop_id, seq_key,
                         )
             else:
                 seen_sequences[seq_key] = plan.proposition_id
@@ -171,4 +160,4 @@ class DuplicatePlanResolver:
                 if r.established_at_order is not None and r.established_at_order in order_mapping:
                     r.established_at_order = order_mapping[r.established_at_order]
 
-        return propositions, plans, glosses, blocks, referents, operations, spans, repairs_applied, unresolvable_errors
+        return propositions, plans, glosses, blocks, referents, operations, spans, repairs_applied

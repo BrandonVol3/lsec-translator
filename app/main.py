@@ -37,11 +37,6 @@ from typing import AsyncGenerator
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.annotation_endpoints import (
-    annotation_router,
-    set_annotation_nlp_service,
-    set_annotation_storage,
-)
 from app.api.dictionary_endpoints import dictionary_router
 from app.api.animation_direct_endpoints import animation_router, animation_direct_alias_router
 from app.api.endpoints import router as api_router, set_services
@@ -115,8 +110,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     if asr_service and nlp_service:
         set_services(asr_service, nlp_service, storage_service)
         set_ws_services(asr_service, nlp_service)
-    set_annotation_storage(storage_service)
-    set_annotation_nlp_service(nlp_service)
+
+    try:
+        from app.services.video_export_service import get_default_export_directory
+        export_dir = get_default_export_directory(ensure_exists=True)
+        logger.info("✓ Carpeta de exportación por defecto lista: %s", export_dir)
+    except Exception as exc:
+        logger.warning("Aviso verificando carpeta de exportación en Escritorio: %s", exc)
 
     logger.info("=" * 60)
     logger.info("Servicios inicializados. Servidor listo.")
@@ -161,12 +161,26 @@ app.add_middleware(
     allow_headers=["Accept", "Authorization", "Content-Type", "Range"],
 )
 
+
+@app.middleware("http")
+async def no_cache_static_code(request, call_next):
+    """Fuerza revalidación (ETag/Last-Modified) de JS/HTML/CSS servidos desde /static.
+
+    Los módulos ES internos (p. ej. ``sequence-run-scheduler.js``) se importan sin query string de
+    versión, por lo que el navegador podía conservar copias obsoletas tras un cambio y seguir
+    ejecutando lógica antigua del avatar (señas zurdas, dactilología difuminada, etc.).
+    """
+    response = await call_next(request)
+    path = request.url.path
+    if path.startswith("/static/") and path.lower().endswith((".js", ".mjs", ".html", ".css")):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
+
 # ============================================================
 # Montar Routers
 # ============================================================
 
 app.include_router(api_router)
-app.include_router(annotation_router)
 app.include_router(dictionary_router)
 app.include_router(animation_router)
 app.include_router(animation_direct_alias_router)
@@ -203,33 +217,6 @@ async def favicon():
 
 # Montar carpeta de modelos VRM desde la carpeta Avatar del proyecto
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-
-@app.get("/api/v1/phase3/sample", tags=["Quality"])
-async def phase3_sample_endpoint():
-    """Returns the official v2.8 phase 3 calibration sample metadata."""
-    report_path = Path(project_root) / "reports" / "v28_phase3_calibration_sample.json"
-    if not report_path.is_file():
-        raise HTTPException(status_code=404, detail="No se encontró la muestra de calibración de fase 3.")
-    try:
-        with report_path.open("r", encoding="utf-8") as report_file:
-            report = json.load(report_file)
-    except (OSError, json.JSONDecodeError) as exc:
-        logger.error("No se pudo leer la muestra de fase 3: %s", exc)
-        raise HTTPException(status_code=500, detail="No se pudo leer la muestra de calibración de fase 3.") from exc
-    return {
-        "audit": report.get("audit"),
-        "totalSelected": report.get("sampling", {}).get("totalSelected", 0),
-        "items": [
-            {
-                "sampleId": item.get("sampleId"),
-                "signId": item.get("signId"),
-                "risk": item.get("risk"),
-                "decision": item.get("manualReview", {}).get("decision", "PENDING"),
-            }
-            for item in report.get("items", [])
-        ],
-    }
 
 
 avatar_dir = external_path(settings.lsec_avatar_dir, "Avatar")

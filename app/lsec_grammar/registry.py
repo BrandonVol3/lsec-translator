@@ -378,8 +378,7 @@ class RuleRegistry:
                     RuleCondition(field="patient", operator="exists", value=True),
                 ],
                 actions=[
-                    RuleAction(action_type="set_classifier", parameters={"status": "CLASSIFIER_CANDIDATE", "requires_lexical_support": True, "requires_review": True}),
-                    RuleAction(action_type="mark_review", parameters={"reason": "Clasificador candidato requiere respaldo léxico o revisión humana"}),
+                    RuleAction(action_type="set_classifier", parameters={"status": "CLASSIFIER_CANDIDATE", "requires_lexical_support": True}),
                 ],
                 required_evidence=["predicate_type:MOVEMENT|LOCATION", "patient:exists"],
                 validation_status=RuleValidationStatus.PROVISIONAL,

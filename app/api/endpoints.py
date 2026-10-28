@@ -41,10 +41,6 @@ _asr_service: WhisperASRService | None = None
 _nlp_service: LSECTranslatorService | None = None
 _storage_service: LocalStorageService | None = None
 
-# Almacén en memoria de revisiones (para auditoría, delimitado a 500 registros)
-_MAX_REVIEW_LOG_SIZE = 500
-_REVIEW_LOG: List[Dict[str, Any]] = []
-
 
 def validate_media_magic_bytes(file_path: str) -> bool:
     """
@@ -145,6 +141,8 @@ class TextInput(BaseModel):
     text: str = Field(min_length=1, max_length=5000, description="Texto en español a traducir")
     mode: Optional[str] = Field(default="detailed", description="Modo de salida: 'legacy', 'detailed', 'debug'")
     paraphrase_budget: Optional[str] = Field(default="compact", description="'compact', 'medium', 'expanded'")
+    context_before: Optional[str] = Field(default=None, max_length=1500, description="Oración(es) previas: solo aportan contexto (correferencia, relaciones de discurso); no se traducen")
+    word_timestamps: Optional[List[Dict[str, Any]]] = Field(default=None, description="Marcas de tiempo por palabra del texto (alineación fuente real en lugar de reparto uniforme)")
 
 
 class PipelineResponse(BaseModel):
@@ -164,27 +162,6 @@ class HealthResponse(BaseModel):
     output_schema_version: str = settings.output_schema_version
     default_animation_version: str = settings.default_animation_version
     hardware: Optional[Dict[str, Any]] = None
-
-
-class ReviewSubmission(BaseModel):
-    """Envío de revisión lingüística por persona sorda usuaria nativa o lingüista."""
-    session_id: Optional[UUID] = None
-    reviewer_id: str = Field(min_length=1, description="ID o nombre del revisor autorizado")
-    is_native_signer: bool = Field(default=False, description="¿El revisor es persona sorda usuaria nativa de LSEC?")
-    regional_variant: Optional[str] = Field(default=None, description="Variante regional evaluada (ej. Sierra, Costa)")
-    decision: str = Field(description="'approved', 'rejected', 'modified'")
-    target_type: str = Field(default="gloss_sequence", description="'gloss_sequence', 'paraphrase', 'spatial_operation', 'non_manual'")
-    target_id: Optional[str] = None
-    suggested_glosses: Optional[List[str]] = None
-    comments: Optional[str] = None
-
-
-class ReviewRecordResponse(BaseModel):
-    """Confirmación de registro de revisión."""
-    review_id: str
-    status: str
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    message: str
 
 
 # ============================================================
@@ -312,10 +289,19 @@ async def translate_text(
         selected_mode = mode_query or body.mode or "detailed"
         budget = body.paraphrase_budget or "compact"
 
+        transcription_in = None
+        if body.word_timestamps:
+            from app.core.schemas import TranscriptionInput, WordTimestamp
+            _words = [WordTimestamp.model_validate(w) for w in body.word_timestamps if isinstance(w, dict) and 'word' in w and 'start' in w and 'end' in w]
+            if _words:
+                transcription_in = TranscriptionInput(text=body.text, word_timestamps=_words)
+
         result = await _nlp_service.translate_to_gloss(
             text=body.text,
             mode=selected_mode,
             paraphrase_budget=budget,
+            transcription=transcription_in,
+            context_before=body.context_before,
         )
 
         if _storage_service is not None:
@@ -426,66 +412,3 @@ async def full_pipeline(
                 os.unlink(tmp_path)
             except OSError:
                 pass
-
-
-# ============================================================
-# Endpoints de Revisión Lingüística (Fase 26)
-# ============================================================
-
-@router.post(
-    "/review/validate",
-    response_model=ReviewRecordResponse,
-    summary="Registrar Revisión Lingüística / Nativa",
-    description="Permite a personas sordas nativas o lingüistas documentar validación o ajustes.",
-    status_code=status.HTTP_200_OK,
-)
-async def submit_linguistic_review(review: ReviewSubmission) -> ReviewRecordResponse:
-    """Registra una revisión formal de una propuesta computacional."""
-    review_id = f"rev_{uuid4().hex[:8]}"
-    record = {
-        "review_id": review_id,
-        "session_id": str(review.session_id) if review.session_id else None,
-        "reviewer_id": review.reviewer_id,
-        "is_native_signer": review.is_native_signer,
-        "regional_variant": review.regional_variant,
-        "decision": review.decision,
-        "target_type": review.target_type,
-        "target_id": review.target_id,
-        "suggested_glosses": review.suggested_glosses,
-        "comments": review.comments,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-    }
-    _REVIEW_LOG.append(record)
-    if len(_REVIEW_LOG) > _MAX_REVIEW_LOG_SIZE:
-        _REVIEW_LOG.pop(0)
-    if _storage_service is not None:
-        try:
-            await _storage_service.save_review(record)
-        except (OSError, sqlite3.Error) as exc:
-            logger.warning("No se pudo persistir la revisión en la base local: %s", exc)
-
-    logger.info(
-        "Revisión registrada [%s]: revisor=%s (nativo=%s), decisión=%s",
-        review_id, review.reviewer_id, review.is_native_signer, review.decision,
-    )
-
-    return ReviewRecordResponse(
-        review_id=review_id,
-        status="recorded",
-        message="Revisión documentada exitosamente para trazabilidad y entrenamiento del motor.",
-    )
-
-
-@router.get(
-    "/review/history",
-    summary="Consultar Historial de Revisiones",
-    description="Devuelve el registro de revisiones documentadas en la sesión.",
-)
-async def get_review_history() -> List[Dict[str, Any]]:
-    """Consulta el registro histórico de revisiones."""
-    if _storage_service is not None:
-        try:
-            return await _storage_service.get_reviews(_MAX_REVIEW_LOG_SIZE)
-        except (OSError, sqlite3.Error) as exc:
-            logger.warning("No se pudo leer el historial desde la base local; se usa la memoria: %s", exc)
-    return list(_REVIEW_LOG)

@@ -29,7 +29,6 @@ class MWEMatch:
     prevent_verb_generation: List[str] = field(default_factory=list)
     preferred_gloss: Optional[str] = None
     candidate_realizations: List[List[str]] = field(default_factory=list)
-    requires_native_review: bool = True
     confidence: float = 0.90
     token_span: Optional[Tuple[int, int]] = None
 
@@ -44,7 +43,6 @@ class MWEDefinition:
     prevent_verb_generation: List[str] = field(default_factory=list)
     preferred_gloss: Optional[str] = None
     candidate_realizations: List[List[str]] = field(default_factory=list)
-    requires_native_review: bool = True
     confidence: float = 0.90
     regex_pattern: Optional[re.Pattern] = None
 
@@ -59,7 +57,6 @@ _DEFAULT_MWE_DEFINITIONS: List[MWEDefinition] = [
         prevent_verb_generation=["SER"],
         preferred_gloss="PERSONA",
         candidate_realizations=[["PERSONA"], ["PERSONA", "HUMANA"], ["PERSONA", "ÍNTEGRA"]],
-        requires_native_review=True,
         confidence=0.88,
     ),
     MWEDefinition(
@@ -69,7 +66,6 @@ _DEFAULT_MWE_DEFINITIONS: List[MWEDefinition] = [
         prevent_component_parsing=True,
         preferred_gloss="DÍA-PRIMERO",
         candidate_realizations=[["DÍA", "PRIMERO"], ["INICIO", "DESDE"]],
-        requires_native_review=True,
         confidence=0.90,
     ),
     MWEDefinition(
@@ -79,7 +75,6 @@ _DEFAULT_MWE_DEFINITIONS: List[MWEDefinition] = [
         prevent_component_parsing=True,
         preferred_gloss="EXCELENCIA-ACADÉMICA",
         candidate_realizations=[["EXCELENCIA", "ACADÉMICA"], ["CALIDAD", "EDUCACIÓN", "ALTA"]],
-        requires_native_review=True,
         confidence=0.92,
     ),
     MWEDefinition(
@@ -89,7 +84,6 @@ _DEFAULT_MWE_DEFINITIONS: List[MWEDefinition] = [
         prevent_component_parsing=True,
         preferred_gloss="CARRERA-GRADO",
         candidate_realizations=[["CARRERA", "GRADO"], ["CARRERA", "UNIVERSIDAD"]],
-        requires_native_review=True,
         confidence=0.90,
     ),
     MWEDefinition(
@@ -99,7 +93,6 @@ _DEFAULT_MWE_DEFINITIONS: List[MWEDefinition] = [
         prevent_component_parsing=True,
         preferred_gloss="UNIVERSIDAD-PÚBLICA",
         candidate_realizations=[["UNIVERSIDAD", "PÚBLICA"], ["UNIVERSIDAD", "ESTADO"]],
-        requires_native_review=True,
         confidence=0.92,
     ),
     MWEDefinition(
@@ -109,7 +102,6 @@ _DEFAULT_MWE_DEFINITIONS: List[MWEDefinition] = [
         prevent_component_parsing=True,
         preferred_gloss="REALIDAD-HACER",
         candidate_realizations=[["REALIDAD", "HACER"], ["LOGRAR", "PODER"]],
-        requires_native_review=True,
         confidence=0.89,
     ),
     MWEDefinition(
@@ -119,7 +111,6 @@ _DEFAULT_MWE_DEFINITIONS: List[MWEDefinition] = [
         prevent_component_parsing=True,
         preferred_gloss="MUNDO-TRANSFORMAR",
         candidate_realizations=[["MUNDO", "TRANSFORMAR"], ["SOCIEDAD", "CAMBIAR", "MEJORAR"]],
-        requires_native_review=True,
         confidence=0.91,
     ),
     MWEDefinition(
@@ -129,7 +120,6 @@ _DEFAULT_MWE_DEFINITIONS: List[MWEDefinition] = [
         prevent_component_parsing=True,
         preferred_gloss="MÁS-DE",
         candidate_realizations=[["MÁS-DE"], ["SUPERAR"]],
-        requires_native_review=True,
         confidence=0.95,
     ),
     MWEDefinition(
@@ -139,7 +129,6 @@ _DEFAULT_MWE_DEFINITIONS: List[MWEDefinition] = [
         prevent_component_parsing=True,
         preferred_gloss="SOLAMENTE-NO",
         candidate_realizations=[["SOLAMENTE-NO"], ["ADEMÁS"]],
-        requires_native_review=True,
         confidence=0.90,
     ),
     MWEDefinition(
@@ -149,7 +138,6 @@ _DEFAULT_MWE_DEFINITIONS: List[MWEDefinition] = [
         prevent_component_parsing=True,
         preferred_gloss="SOLAMENTE-NO",
         candidate_realizations=[["SOLAMENTE-NO"]],
-        requires_native_review=False,
         confidence=0.95,
     ),
     MWEDefinition(
@@ -159,7 +147,6 @@ _DEFAULT_MWE_DEFINITIONS: List[MWEDefinition] = [
         prevent_component_parsing=False,
         preferred_gloss="QUIÉN-SER-QUERER",
         candidate_realizations=[["PRO2", "QUIÉN", "SER", "QUERER"]],
-        requires_native_review=True,
         confidence=0.88,
     ),
     MWEDefinition(
@@ -169,7 +156,6 @@ _DEFAULT_MWE_DEFINITIONS: List[MWEDefinition] = [
         prevent_component_parsing=True,
         preferred_gloss="YA LOGRAR",
         candidate_realizations=[["YA", "LOGRAR"], ["YA", "HACER"]],
-        requires_native_review=True,
         confidence=0.90,
     ),
     MWEDefinition(
@@ -179,7 +165,6 @@ _DEFAULT_MWE_DEFINITIONS: List[MWEDefinition] = [
         prevent_component_parsing=True,
         preferred_gloss="PERO",
         candidate_realizations=[["PERO"]],
-        requires_native_review=False,
         confidence=0.95,
     ),
     MWEDefinition(
@@ -189,7 +174,6 @@ _DEFAULT_MWE_DEFINITIONS: List[MWEDefinition] = [
         prevent_component_parsing=True,
         preferred_gloss="PERO",
         candidate_realizations=[["PERO"]],
-        requires_native_review=False,
         confidence=0.95,
     ),
     MWEDefinition(
@@ -199,7 +183,6 @@ _DEFAULT_MWE_DEFINITIONS: List[MWEDefinition] = [
         prevent_component_parsing=True,
         preferred_gloss="AUNQUE",
         candidate_realizations=[["AUNQUE"]],
-        requires_native_review=False,
         confidence=0.95,
     ),
     MWEDefinition(
@@ -209,7 +192,6 @@ _DEFAULT_MWE_DEFINITIONS: List[MWEDefinition] = [
         prevent_component_parsing=True,
         preferred_gloss="DESDE",
         candidate_realizations=[["DESDE"], ["A-PARTIR-DE"]],
-        requires_native_review=False,
         confidence=0.95,
         regex_pattern=re.compile(r"\ba\s+partir\s+de(?:l)?\b", re.IGNORECASE),
     ),
@@ -220,7 +202,6 @@ _DEFAULT_MWE_DEFINITIONS: List[MWEDefinition] = [
         prevent_component_parsing=True,
         preferred_gloss="REALIZAR",
         candidate_realizations=[["REALIZAR"]],
-        requires_native_review=False,
         confidence=0.95,
         regex_pattern=re.compile(r"\bllev[a-záéíóúñ]+\s+a\s+cabo\b", re.IGNORECASE),
     ),
@@ -231,7 +212,6 @@ _DEFAULT_MWE_DEFINITIONS: List[MWEDefinition] = [
         prevent_component_parsing=True,
         preferred_gloss="PRESTAR-ATENCIÓN",
         candidate_realizations=[["PRESTAR-ATENCIÓN"]],
-        requires_native_review=False,
         confidence=0.95,
         regex_pattern=re.compile(r"\bprest[a-záéíóúñ]*\s+atenci[oó]n\b", re.IGNORECASE),
     ),
@@ -242,8 +222,49 @@ _DEFAULT_MWE_DEFINITIONS: List[MWEDefinition] = [
         prevent_component_parsing=True,
         preferred_gloss="OTRA-VEZ",
         candidate_realizations=[["OTRA-VEZ"]],
-        requires_native_review=False,
         confidence=0.95,
+    ),
+    MWEDefinition(
+        id="mwe_hacer_reir_mucho",
+        source_phrase="hizo reír mucho",
+        semantic_concept="matarse_de_la_risa",
+        prevent_component_parsing=True,
+        preferred_gloss="MATARSE-DE-LA-RISA",
+        candidate_realizations=[["MATARSE-DE-LA-RISA"]],
+        confidence=0.96,
+        regex_pattern=re.compile(
+            r"\b(?:(?:era|fue|es)\s+(?:muy\s+)?c[oó]mic[ao]\s+)?(?:me\s+|nos\s+|te\s+|le\s+|les\s+)?(?:hizo|hace|hacen|hacer)\s+re[íi]r\s+mucho\b",
+            re.IGNORECASE,
+        ),
+    ),
+    MWEDefinition(
+        id="mwe_matarse_de_la_risa",
+        source_phrase="matarse de la risa",
+        semantic_concept="matarse_de_la_risa",
+        prevent_component_parsing=True,
+        preferred_gloss="MATARSE-DE-LA-RISA",
+        candidate_realizations=[["MATARSE-DE-LA-RISA"]],
+        confidence=0.96,
+        regex_pattern=re.compile(r"\bmat(?:ar(?:se)?|[oó]|amos|aron)\s+de\s+la\s+risa\b", re.IGNORECASE),
+    ),
+    MWEDefinition(
+        id="mwe_de_nuevo_alt",
+        source_phrase="de nuevo",
+        semantic_concept="otra_vez",
+        prevent_component_parsing=True,
+        preferred_gloss="OTRA-VEZ",
+        candidate_realizations=[["OTRA-VEZ"]],
+        confidence=0.95,
+    ),
+    MWEDefinition(
+        id="mwe_cara_sucia",
+        source_phrase="cara sucia",
+        semantic_concept="cara_sucia",
+        prevent_component_parsing=True,
+        preferred_gloss="CARA-SUCIA",
+        candidate_realizations=[["CARA-SUCIA"]],
+        confidence=0.98,
+        regex_pattern=re.compile(r"\bcaras?\s+sucias?\b", re.IGNORECASE),
     ),
 ]
 
@@ -281,7 +302,6 @@ class MWEDetector:
                     prevent_verb_generation=item.get("prevent_verb_generation", []),
                     preferred_gloss=item.get("preferred_gloss"),
                     candidate_realizations=item.get("candidate_realizations", []),
-                    requires_native_review=item.get("requires_native_review", True),
                     confidence=item.get("confidence", 0.90),
                 )
                 pattern_str = r"\b" + re.escape(phrase).replace(r"\ ", r"\s+") + r"\b"
@@ -318,7 +338,6 @@ class MWEDetector:
                         prevent_verb_generation=d.prevent_verb_generation,
                         preferred_gloss=d.preferred_gloss,
                         candidate_realizations=d.candidate_realizations,
-                        requires_native_review=d.requires_native_review,
                         confidence=d.confidence,
                     )
                 )

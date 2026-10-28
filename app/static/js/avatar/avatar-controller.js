@@ -12,12 +12,12 @@
  * - Monitoreo de rendimiento en tiempo real (FPS, memoria, tiempos de carga, consola).
  */
 
-import { AvatarEngine } from './avatar-engine.js?v=3.1.8';
+import { AvatarEngine } from './avatar-engine.js?v=3.4.0';
 import { TechnicalRig } from './technical-rig.js';
 import { VRMLoaderService } from './vrm-loader.js';
 import { SignPlayer } from './sign-player.js';
 import { SignSequencer } from './sign-sequencer.js';
-import { AvatarSyncController } from './avatar-sync-controller.js';
+import { AvatarSyncController } from './avatar-sync-controller.js?v=3.4.1';
 import { NonManualController } from './non-manual-controller.js';
 import {
   getAllTechnicalClips,

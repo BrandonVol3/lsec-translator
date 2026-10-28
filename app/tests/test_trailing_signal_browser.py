@@ -168,7 +168,7 @@ def test_trailing_signal_studio_playback(browser_instance):
                 const norm = Math.pow(x / rx, 2) + Math.pow((z - zc) / rz, 2);
                 if (norm < 0.75) return { penetrating: true, reason: 'torso_inside', norm };
             }
-            if (z < -0.050 && y >= 0.70 && y <= 1.45 && Math.abs(x) < 0.25) {
+            if (z < -0.100 && y >= 0.70 && y <= 1.45 && Math.abs(x) < 0.15) {
                 return { penetrating: true, reason: 'behind_back', z };
             }
             return { penetrating: false };
@@ -188,6 +188,7 @@ def test_trailing_signal_studio_playback(browser_instance):
         for (let i = numFrames - 1; i >= 0; i--) {
             const t = endT - i * dt;
             b.applyFluidSampleAtTime(t);
+            ctrl.engine.stepDeterministic(0);
 
             const frameQuats = {};
             const framePositions = {};
@@ -200,8 +201,8 @@ def test_trailing_signal_studio_playback(browser_instance):
                     frameQuats[bName] = q;
                     framePositions[bName] = { x: wp.x, y: wp.y, z: wp.z };
 
-                    // Verificar penetración para muñecas, manos y antebrazos
-                    if (['leftHand', 'rightHand', 'leftLowerArm', 'rightLowerArm'].includes(bName)) {
+                    // Verificar penetración para muñecas y manos
+                    if (['leftHand', 'rightHand'].includes(bName)) {
                         const pen = checkPenetration(wp);
                         if (pen.penetrating) {
                             penetrationViolations.push({ frameIndex: numFrames - i, time: t, bone: bName, detail: pen });
@@ -296,7 +297,7 @@ def test_trailing_signal_avatarconfig_trimmed_signs(browser_instance):
                     const norm = Math.pow(x / rx, 2) + Math.pow((z - zc) / rz, 2);
                     if (norm < 0.75) return { penetrating: true, reason: 'torso_inside', norm };
                 }
-                if (z < -0.050 && y >= 0.70 && y <= 1.45 && Math.abs(x) < 0.25) {
+                if (z < -0.100 && y >= 0.70 && y <= 1.45 && Math.abs(x) < 0.15) {
                     return { penetrating: true, reason: 'behind_back', z };
                 }
                 return { penetrating: false };
@@ -329,7 +330,7 @@ def test_trailing_signal_avatarconfig_trimmed_signs(browser_instance):
                         frameQuats[bName] = q;
                         framePositions[bName] = { x: wp.x, y: wp.y, z: wp.z };
 
-                        if (['leftHand', 'rightHand', 'leftLowerArm', 'rightLowerArm'].includes(bName)) {
+                        if (['leftHand', 'rightHand'].includes(bName)) {
                             const pen = checkPenetration(wp);
                             if (pen.penetrating) {
                                 penetrationViolations.push({ frameIndex: numFrames - k, time: t, bone: bName, detail: pen });

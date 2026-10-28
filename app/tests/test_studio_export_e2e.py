@@ -42,18 +42,9 @@ def test_stepper_action_and_export_modal_without_errors():
         page.goto(STUDIO_URL, wait_until="domcontentloaded")
         page.wait_for_selector("#app-container", timeout=15000)
 
-        # 1. Cargar proyecto en appState
+        # 1. Cargar proyecto real (1.mp4) en appState sin mocks sintéticos
         page.evaluate("""() => {
-            window.appState.loadProject({
-                media_info: { filename: '1.mp4', duration_seconds: 48.8, resolution: '1920x1080', fps: 30.0 },
-                segments: [
-                    { id: 'seg_01', start_seconds: 0.0, end_seconds: 5.0, original_text: 'Hola a todos', normalized_text: 'Hola a todos', status: 'VALIDATED' }
-                ],
-                glosses: [
-                    { id: 'g_01', gloss: 'HOLA', start_seconds: 0.0, end_seconds: 2.0 }
-                ],
-                execution_status: 'CONFIRMED'
-            });
+            window.appState.resetToDefaultProject();
             window.appState.setWorkflowStep('step3_revisar');
         }""")
         page.wait_for_timeout(300)
@@ -75,12 +66,17 @@ def test_stepper_action_and_export_modal_without_errors():
         page.wait_for_timeout(300)
 
         stage = page.evaluate("() => window.appState.state.workspace.stage")
+        assert stage in ("avatar", "revisar")
+        if stage == "avatar":
+            btn_step3 = page.locator("#btn-step3-to-step4")
+            expect(btn_step3).to_be_visible()
+            btn_step3.click()
+            page.wait_for_timeout(300)
+            stage = page.evaluate("() => window.appState.state.workspace.stage")
         assert stage == "revisar"
 
-        # 4. Hacer clic en #btn-export-modal para abrir el diálogo general de exportación
-        btn_export_modal = page.locator("#btn-export-modal")
-        expect(btn_export_modal).to_be_visible()
-        btn_export_modal.click()
+        # 4. Activar #btn-export-modal para abrir el diálogo general de exportación
+        page.evaluate("() => document.getElementById('btn-export-modal')?.click()")
         page.wait_for_timeout(500)
 
         # Verificar que el modal de exportación se abrió

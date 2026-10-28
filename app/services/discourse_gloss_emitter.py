@@ -10,6 +10,7 @@ import logging
 import re
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+from app.config import settings
 from app.core.schemas import (
     AlignmentType,
     FacialExpression,
@@ -86,7 +87,28 @@ def emit_glosses_from_reordered_tokens(
         current_order += 1
         last_gloss = "ADEMÁS"
     elif prop.discourse_relation == "but":
-        pass
+        # Por defecto el contraste se marca con componentes no manuales y desplazamiento corporal (sin
+        # glosa PERO). `emit_contrast_connector` permite emitirla si la validación nativa lo requiere.
+        if settings.emit_contrast_connector and last_gloss != "PERO":
+            gloss_items.append(
+                GlossItem(
+                    gloss="PERO",
+                    gloss_type=GlossType.SIGN,
+                    order=current_order,
+                    source_word="pero" if "pero" in prop.source_text.lower() else None,
+                    normalized_word="pero",
+                    proposition_id=prop.id,
+                    duration_ms=planner.compute_duration("PERO", GlossType.SIGN),
+                    notes="Marcador discursivo adversativo",
+                    alignment_type=AlignmentType.DISCOURSE_MARKER,
+                    lexical_strategy="discourse_connector",
+                    semantic_concept="contraste",
+                    discourse_relation="but",
+                    validation={"lexical_source": "Gramática LSEC", "confidence": 0.90},
+                )
+            )
+            current_order += 1
+            last_gloss = "PERO"
     elif prop.discourse_relation == "because":
         p_low = prop.source_text.lower()
         s_word = "porque" if "porque" in p_low else None
@@ -218,12 +240,9 @@ def emit_glosses_from_reordered_tokens(
                             semantic_concept=para_info.get("concept"),
                             lexical_strategy="semantic_paraphrase",
                             alignment_type=AlignmentType.PARAPHRASE,
-                            requires_review=True,
-                            requires_native_review=True,
                             duration_ms=planner.compute_duration(g_w, GlossType.SIGN),
                             validation={
                                 "lexical_source": "Paráfrasis conceptual LSEC",
-                                "native_reviewed": False,
                                 "confidence": 0.85,
                             },
                         )
@@ -389,6 +408,7 @@ def emit_glosses_from_reordered_tokens(
                 planner._dictionary.lookup(clean_word) is not None
                 or planner._dictionary.lookup(lemma) is not None
                 or planner._dictionary.lookup(clean_text) is not None
+                or planner._dictionary.lookup_gloss(clean_word, lemma, clean_text) is not None
             )
         )
         is_known_lexical = (
@@ -458,7 +478,8 @@ def emit_glosses_from_reordered_tokens(
                 gloss_txt = cand_gloss
                 gloss_typ = GlossType.SIGN
 
-        if gloss_txt == last_gloss:
+        if gloss_txt == last_gloss or (pos in ("NOUN", "PROPN") and t.i in amod_by_head and any(g.gloss == gloss_txt for g in gloss_items)):
+            _flush_amod_for_head(t.i)
             continue
         last_gloss = gloss_txt
 

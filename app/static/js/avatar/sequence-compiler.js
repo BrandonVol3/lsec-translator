@@ -58,6 +58,8 @@ import {
   buildCompiledKinematicSegments
 } from './sequence-run-scheduler.js';
 
+import { buildNonManualMarkers, applyNonManualOverlay } from './non-manual-overlay.js';
+
 export {
   LEFT_ARM_BONES,
   RIGHT_ARM_BONES,
@@ -85,6 +87,38 @@ export {
   createLSECFingerspellingSignClip,
   createLSECFingerspellingWordClip
 };
+
+// ---------------------------------------------------------------------------
+// Utilidades de estadísticas por oración
+// ---------------------------------------------------------------------------
+
+/**
+ * Desfase y velocidad por oración (idea completa): permite saber qué ideas concentran el retraso.
+ */
+function buildSentenceLagStats(playableEntries) {
+  const bySentence = new Map();
+  for (const e of playableEntries) {
+    if (e.sentenceId === null || e.sentenceId === undefined) continue;
+    let acc = bySentence.get(e.sentenceId);
+    if (!acc) {
+      acc = { sentenceId: e.sentenceId, glosses: 0, startSec: e.startSec, endSec: e.endSec, maxLagSec: 0, speedSum: 0 };
+      bySentence.set(e.sentenceId, acc);
+    }
+    acc.glosses += 1;
+    acc.startSec = Math.min(acc.startSec, e.startSec);
+    acc.endSec = Math.max(acc.endSec, e.endSec);
+    acc.maxLagSec = Math.max(acc.maxLagSec, e.lagSec || 0);
+    acc.speedSum += e.speed || 1.0;
+  }
+  return [...bySentence.values()].sort((a, b) => a.sentenceId - b.sentenceId).map(a => ({
+    sentenceId: a.sentenceId,
+    glosses: a.glosses,
+    startSec: Number(a.startSec.toFixed(3)),
+    endSec: Number(a.endSec.toFixed(3)),
+    maxLagSec: Number(a.maxLagSec.toFixed(3)),
+    meanSpeed: Number((a.speedSum / a.glosses).toFixed(3))
+  }));
+}
 
 // ---------------------------------------------------------------------------
 // Clase Principal: SequenceCompiler
@@ -130,7 +164,8 @@ export class SequenceCompiler {
    */
   compile(project, clipMap, overrideOptions = {}) {
     const opts = { ...this.options, ...overrideOptions };
-    const maxSpeed = Math.min(1.0, Math.max(0.1, Number(opts.maxSpeed) || 1.0));
+    const speedCap = opts.allowAdaptiveSpeed ? 1.65 : 1.0;
+    const maxSpeed = Math.min(speedCap, Math.max(0.1, Number(opts.maxSpeed) || 1.0));
     const minSpeed = Math.max(0.4, Math.min(maxSpeed, Number(opts.minSpeed) || 0.70));
     const maxLagSec = (opts.maxLagSec !== undefined && opts.maxLagSec !== null)
       ? Number(opts.maxLagSec)
@@ -161,18 +196,19 @@ export class SequenceCompiler {
       if (effectiveFingerspelling && opts.synthesizeFingerspelling !== false) {
         const fsTarget = item.isFingerspelling
           ? item.gloss
-          : (item.raw?.validation?.fallback_fingerspelling_gloss || item.gloss || item.raw?.source_word);
+          : (item.gloss || item.raw?.source_word);
         const slotDur = Math.max(0.55, Number(item.slotDuration) || 1.0);
         const needsProceduralWordClip = !clip
           || clip.stroke?.source !== 'fingerspelling_word_lsec'
           || (clip.stroke?.durationSec > slotDur * maxSpeed * 1.05);
         if (needsProceduralWordClip) {
           clip = createLSECFingerspellingWordClip(fsTarget, {
-            targetDurationSec: Math.max(0.65, slotDur * 1.35)
+            targetDurationSec: Math.max(0.55, slotDur * (opts.allowAdaptiveSpeed ? 1.05 : 1.35)),
+            ...(opts.allowAdaptiveSpeed ? { perLetterSec: 0.30, interLetterTransitionSec: 0.08, prepSec: 0.12, recSec: 0.12 } : {})
           });
         }
       }
-      const prepared = clip ? buildPreparedClipDescriptor(clip) : null;
+      const prepared = clip ? buildPreparedClipDescriptor(clip, opts.allowAdaptiveSpeed ? { coreStrokeMaxSec: Number(opts.coreStrokeMaxSec) || 0.92 } : {}) : null;
       return {
         ...item,
         isFingerspelling: effectiveFingerspelling,
@@ -262,12 +298,18 @@ export class SequenceCompiler {
         intraSentenceRestDrops,
         interSentenceRestDrops,
         maxLagSec: Number(maxLagFound.toFixed(4)),
-        maxSpeedUsed: Number(Math.min(1.0, maxSpeedFound).toFixed(4)),
+        maxSpeedUsed: Number(Math.min(speedCap, maxSpeedFound).toFixed(4)),
         strokeRetainedPct: Number(minStrokeRetainedPct.toFixed(2)),
         minStrokeRetainedPct: Number(minStrokeRetainedPct.toFixed(2)),
         allStrokes100PctRetained: Boolean(minStrokeRetainedPct >= 99.99)
       }
     };
+    // Marcadores no manuales gramaticales (negación, interrogación, imperativo...) con ventanas reales.
+    const nmSpans = Array.isArray(opts.nonManualSpans)
+      ? opts.nonManualSpans
+      : ((project && !Array.isArray(project) && project.non_manual_spans) || []);
+    this.plan.stats.sentenceLag = buildSentenceLagStats(playableEntries);
+    this.plan.nonManualMarkers = opts.nonManualOverlay === false ? [] : buildNonManualMarkers(entries, nmSpans);
     this.compiled = this.plan;
 
     return this.plan;
@@ -318,6 +360,16 @@ export class SequenceCompiler {
    * Evalúa de forma pura y determinista la pose completa del avatar en el instante `tSec`.
    */
   sample(tSec) {
+    const t = Math.max(0.0, Number(tSec) || 0.0);
+    const base = this._sampleKinematic(tSec);
+    const markers = this.plan && this.plan.nonManualMarkers;
+    return (markers && markers.length) ? applyNonManualOverlay(base, markers, t) : base;
+  }
+
+  /**
+   * Pose cinemática (manos, brazos, tronco) sin la capa de marcadores no manuales gramaticales.
+   */
+  _sampleKinematic(tSec) {
     const t = Math.max(0.0, Number(tSec) || 0.0);
     const opts = (this.plan && this.plan.options) || this.options;
     const videoDur = (this.plan && this.plan.videoDurationSec) || 0;

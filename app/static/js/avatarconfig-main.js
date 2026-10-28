@@ -1,6 +1,6 @@
 /**
  * avatarconfig-main.js
- * Controlador principal de la vista de calibración y verificación /avatarconfig.
+ * Controlador principal de la vista de calibración 1:1 /avatarconfig.
  */
 
 import * as THREE from 'three';
@@ -9,19 +9,18 @@ import { AvatarPanelController } from '/static/js/avatar/avatar-controller.js?v=
 window.AvatarPanelController = AvatarPanelController;
 
 import {
-  PHASE3_REVIEW_STORAGE_KEY, isReextractedSign, getNextVersion,
+  isReextractedSign, getNextVersion,
   getCmSortKey, getVariantSortKey, fetchSignQA, fetchSignInfo,
   updateUHDVideoPlayer, buildActiveSignHandshapeMeta, syncVersionUIElements,
-  getPhase3ReviewFromForm, setPhase3Form, exportPhase3ReviewsData,
   openLightboxModal, closeLightboxModal, loadSignIllustrationPreview, renderSignSelectOptions,
 } from './avatarconfig-helpers.js?v=3.2.0';
 
 let allSigns = [], allItems = [], displayedSigns = [], displayedItems = [];
 let currentSignName = null, currentSignIndex = -1, isComparisonMode = true;
-let verifiedSigns = new Set(), currentIllustrationUrl = null, isUhdIllustrationOpen = false;
+let currentIllustrationUrl = null, isUhdIllustrationOpen = false;
 let preferredVersion = '2.7', handshapesCatalog = null, handshapesById = {};
 let activeCmFilter = '', activeVariantFilter = '', activeAlfaFilter = '', activeSortOrder = 'catalog';
-let activeSignCmMeta = null, phase3Reviews = {}, phase3SampleItems = [];
+let activeSignCmMeta = null;
 
 function setPreferredVersion(newVer) {
   if (newVer !== '2.7' && newVer !== '2.6' && newVer !== '2.5') return;
@@ -34,141 +33,6 @@ function setPreferredVersion(newVer) {
   }
   syncVersionUIElements(preferredVersion);
   if (currentSignName) playSign(currentSignName);
-}
-
-try {
-  const stored = localStorage.getItem('lsec_verified_signs_set');
-  if (stored) verifiedSigns = new Set(JSON.parse(stored));
-} catch (e) { console.warn('No se pudo leer localStorage:', e); }
-
-function updateVerificationBadge() {
-  const badge = document.getElementById('verification-progress-pill');
-  if (badge && allSigns.length > 0) badge.textContent = `✓ ${verifiedSigns.size.toLocaleString()} / ${allSigns.length.toLocaleString()} VERIFICADAS`;
-}
-
-function updatePhase3Progress() {
-  const progress = document.getElementById('phase3-review-progress');
-  if (!progress) return;
-  const reviewed = phase3SampleItems.filter(item => phase3Reviews[item.signId]?.decision && phase3Reviews[item.signId].decision !== 'PENDING').length;
-  const pending = Math.max(phase3SampleItems.length - reviewed, 0);
-  progress.textContent = phase3SampleItems.length
-    ? `${reviewed.toLocaleString()} revisadas · ${pending.toLocaleString()} pendientes`
-    : `${Object.keys(phase3Reviews).length.toLocaleString()} guardadas`;
-}
-
-function loadPhase3Reviews() {
-  try {
-    const stored = localStorage.getItem(PHASE3_REVIEW_STORAGE_KEY);
-    phase3Reviews = stored ? JSON.parse(stored) : {};
-    if (!phase3Reviews || typeof phase3Reviews !== 'object' || Array.isArray(phase3Reviews)) phase3Reviews = {};
-  } catch (e) {
-    phase3Reviews = {};
-    console.warn('No se pudieron cargar las revisiones de fase 3:', e);
-  }
-  updatePhase3Progress();
-}
-
-function renderPhase3SampleList() {
-  const select = document.getElementById('phase3-sample-sign');
-  const count = document.getElementById('phase3-sample-count');
-  if (!select) return;
-  select.replaceChildren();
-  if (!phase3SampleItems.length) {
-    select.add(new Option('No se pudo cargar la muestra oficial', ''));
-    if (count) count.textContent = 'no disponible';
-    updatePhase3Progress();
-    return;
-  }
-  phase3SampleItems.forEach(item => {
-    const review = phase3Reviews[item.signId];
-    const decision = review?.decision && review.decision !== 'PENDING' ? review.decision : 'PENDIENTE';
-    select.add(new Option(`${item.sampleId} · ${item.signId} · ${item.risk} · ${decision}`, item.signId));
-  });
-  if (currentSignName && phase3SampleItems.some(item => item.signId === currentSignName)) select.value = currentSignName;
-  if (count) count.textContent = `${phase3SampleItems.length} señas`;
-  updatePhase3Progress();
-}
-
-async function loadPhase3Sample() {
-  try {
-    const response = await fetch('/api/v1/phase3/sample');
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const payload = await response.json();
-    phase3SampleItems = Array.isArray(payload.items)
-      ? payload.items.map(item => ({ ...item, signId: String(item.signId || '').normalize('NFC').trim() }))
-        .filter(item => item.signId)
-      : [];
-  } catch (error) {
-    phase3SampleItems = [];
-    console.error('No se pudo cargar la muestra de fase 3:', error);
-  }
-  renderPhase3SampleList();
-}
-
-function updatePhase3ReviewForm(signName) {
-  setPhase3Form(signName && phase3Reviews[signName] ? phase3Reviews[signName] : {});
-  const status = document.getElementById('phase3-review-status');
-  if (status) {
-    status.textContent = signName
-      ? (phase3Reviews[signName]
-        ? `Ficha cargada para «${signName}». Puedes corregirla y guardar de nuevo.`
-        : `Sin ficha guardada para «${signName}».`)
-      : 'Selecciona una seña para comenzar.';
-  }
-}
-
-function savePhase3Review() {
-  if (!currentSignName) return;
-  if (phase3SampleItems.length && !phase3SampleItems.some(item => item.signId === currentSignName)) {
-    const status = document.getElementById('phase3-review-status');
-    if (status) status.textContent = 'Selecciona una seña de la muestra oficial de fase 3 antes de guardar.';
-    return;
-  }
-  phase3Reviews[currentSignName] = {
-    ...getPhase3ReviewFromForm(),
-    signId: currentSignName,
-    savedAt: new Date().toISOString(),
-    versionReviewed: preferredVersion,
-  };
-  try {
-    localStorage.setItem(PHASE3_REVIEW_STORAGE_KEY, JSON.stringify(phase3Reviews));
-  } catch (e) {
-    console.error('No se pudo guardar la revisión de fase 3:', e);
-    const status = document.getElementById('phase3-review-status');
-    if (status) status.textContent = 'No se pudo guardar localmente. Revisa el almacenamiento del navegador.';
-    return;
-  }
-  updatePhase3Progress();
-  renderPhase3SampleList();
-  const status = document.getElementById('phase3-review-status');
-  if (status) status.textContent = `Ficha guardada para «${currentSignName}».`;
-}
-
-function goToNextPhase3Pending() {
-  const list = phase3SampleItems.map(item => item.signId);
-  const next = list.find(sign => !phase3Reviews[sign] || phase3Reviews[sign].decision === 'PENDING');
-  if (!next) {
-    const status = document.getElementById('phase3-review-status');
-    if (status) status.textContent = 'No quedan señas pendientes en el filtro actual.';
-    return;
-  }
-  const select = document.getElementById('select-avatar-clip');
-  if (select) select.value = next;
-  playSign(next);
-}
-
-function updateVerifyButtonState(signName) {
-  const btn = document.getElementById('btn-verify-sign');
-  const label = document.getElementById('verify-sign-label');
-  if (!btn || !label) return;
-
-  if (verifiedSigns.has(signName)) {
-    btn.classList.add('btn-verify-active');
-    label.textContent = '✓ Verificada (Conforme)';
-  } else {
-    btn.classList.remove('btn-verify-active');
-    label.textContent = 'Marcar como Verificada';
-  }
 }
 
 function openLightbox(src, title) {
@@ -402,8 +266,6 @@ async function playSign(signName) {
   const statusBadge = document.getElementById('avatar-playback-status-badge');
   if (statusBadge) statusBadge.textContent = 'Cargando...';
 
-  updateVerifyButtonState(signName);
-  updatePhase3ReviewForm(signName);
   updateActiveSignHandshapeCard(signName, null);
 
   const reTag = document.getElementById('reextracted-sign-tag');
@@ -434,16 +296,8 @@ async function playSign(signName) {
     if (qa) {
       const statusPill = document.getElementById('qa-status-pill');
       if (statusPill) {
-        if (qa.needs_review === true || qa.needs_review === 'True') {
-          const reasons = Array.isArray(qa.review_reasons) && qa.review_reasons.length > 0
-            ? ` (${qa.review_reasons[0]})`
-            : '';
-          statusPill.textContent = `⚠️ Revisión${reasons}`;
-          statusPill.style.color = '#b45309';
-        } else {
-          statusPill.textContent = '✓ Aprobada';
-          statusPill.style.color = '#007a3d';
-        }
+        statusPill.textContent = `✓ v${preferredVersion === '2.7' ? '2.7.3' : preferredVersion}`;
+        statusPill.style.color = '#007a3d';
       }
     }
   });
@@ -489,7 +343,7 @@ async function playSign(signName) {
 }
 
 function renderSignOptions(signsList, itemsList = []) {
-  renderSignSelectOptions(signsList, itemsList, currentSignName, verifiedSigns, activeVariantFilter, activeCmFilter);
+  renderSignSelectOptions(signsList, itemsList, currentSignName, activeVariantFilter, activeCmFilter);
 }
 
 function navigateSign(delta) {
@@ -508,7 +362,6 @@ function navigateSign(delta) {
 
 async function initAvatarConfig() {
   try {
-    loadPhase3Reviews();
     if (!window.avatarController) {
       window.avatarController = new AvatarPanelController('avatar-config-workspace');
       console.info('✓ AvatarPanelController activo en /avatarconfig');
@@ -553,28 +406,6 @@ async function initAvatarConfig() {
       const targetSign = activeList[randIdx];
       if (selectEl) selectEl.value = targetSign;
       playSign(targetSign);
-    });
-
-    document.getElementById('phase3-save-review')?.addEventListener('click', savePhase3Review);
-    document.getElementById('phase3-next-pending')?.addEventListener('click', goToNextPhase3Pending);
-    document.getElementById('phase3-export-reviews')?.addEventListener('click', () => exportPhase3ReviewsData(phase3Reviews));
-    document.getElementById('phase3-sample-sign')?.addEventListener('change', (event) => {
-      const sign = event.target.value;
-      if (sign) playSign(sign);
-    });
-
-    document.getElementById('btn-verify-sign')?.addEventListener('click', () => {
-      if (!currentSignName) return;
-      if (verifiedSigns.has(currentSignName)) verifiedSigns.delete(currentSignName);
-      else verifiedSigns.add(currentSignName);
-      try {
-        localStorage.setItem('lsec_verified_signs_set', JSON.stringify(Array.from(verifiedSigns)));
-      } catch (e) {
-        console.warn(e);
-      }
-      updateVerifyButtonState(currentSignName);
-      updateVerificationBadge();
-      renderSignOptions(displayedSigns, displayedItems);
     });
 
     document.getElementById('nav-btn-v27')?.addEventListener('click', () => setPreferredVersion('2.7'));
@@ -744,7 +575,6 @@ async function initAvatarConfig() {
     });
 
     try {
-      await loadPhase3Sample();
       const [listRes, hsRes] = await Promise.all([
         fetch('/api/v1/animations/list?limit=6000'),
         fetch('/api/v1/animations/handshapes'),
@@ -780,7 +610,6 @@ async function initAvatarConfig() {
         if (badge) badge.textContent = `${allSigns.length.toLocaleString()} Señas`;
 
         renderCmExplorer();
-        updateVerificationBadge();
         renderSignOptions(allSigns, allItems);
 
         const defaultSign = allSigns.find(s => s === '¡Quieto!' || s.toLowerCase() === '¡quieto!') || allSigns[0];

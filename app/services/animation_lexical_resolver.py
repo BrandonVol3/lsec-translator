@@ -72,7 +72,7 @@ _LSEC_LEXICAL_ALIASES: Dict[str, Tuple[str, str]] = {
     "central": ("Centro", "lemma"), "gran": ("Grande", "lemma"), "joven": ("Joven, Juventud", "synonym"), "jovenes": ("Joven, Juventud", "synonym"),
     "inscribete": ("Inscribir", "synonym"), "inscribirse": ("Inscribir", "synonym"), "inscribir": ("Inscribir", "synonym"),
     "tecnologico": ("Tecnología", "synonym"), "tecnologia": ("Tecnología", "synonym"), "evaluacion": ("Examinar, Evaluar", "synonym"),
-    "aspirante": ("Aspirar", "synonym"), "periodo": ("Período de tiempo, Transcurrir", "synonym"), "deber": ("Deberes", "synonym"),
+    "aspirante": ("Aspirar", "synonym"), "periodo": ("Período de tiempo, Transcurrir", "synonym"), "deber": ("Obligación", "synonym"),
     "hora": ("¿Qué hora es", "synonym"), "informacion": ("Extraer información", "synonym"), "iniciar": ("Empezar", "synonym"),
     "registrar": ("Inscribir, Inscripción", "synonym"), "opcionar": ("Alternativa, Opción", "synonym"), "oferta": ("Ofrecer", "synonym"),
     "taller": ("Curso", "synonym"), "dificil": ("Difícil", "synonym"), "diseno": ("Dibujar", "synonym"),
@@ -112,7 +112,7 @@ _LSEC_LEXICAL_ALIASES: Dict[str, Tuple[str, str]] = {
     "linguistica": ("Lingüista", "synonym"), "antiguedad": ("Antiguo(a)", "synonym"), "prestigio": ("Importante", "approximate"),
     "frontera": ("Frontera", "synonym"), "mutuamente": ("Juntar, Juntos", "synonym"), "alguien": ("Algunos(as)", "approximate"),
     "asignatura": ("Curso", "synonym"), "asignaturas": ("Curso", "synonym"), "musica": ("Instrumento musical", "synonym"),
-    "experimental": ("E-X-P-E-R-I-M-E-N-T-A-L", "fingerspelling"), "seart": ("S-E-A-R-T-E-S", "fingerspelling"),
+    "experimental": ("Practicar", "synonym"), "seart": ("S-E-A-R-T-E-S", "fingerspelling"),
     "seartes": ("S-E-A-R-T-E-S", "fingerspelling"), "2026a": ("Dos mil", "synonym"), "2026": ("Dos mil", "synonym"),
     "estatal": ("Público, Pueblo", "synonym"), "estatales": ("Público, Pueblo", "synonym"), "constar": ("Tener", "synonym"),
     "consta": ("Tener", "synonym"), "constan": ("Tener", "synonym"), "momento": ("Ahora", "synonym"),
@@ -123,6 +123,27 @@ _LSEC_LEXICAL_ALIASES: Dict[str, Tuple[str, str]] = {
     "promover": ("Apoyar", "synonym"), "promueve": ("Apoyar", "synonym"), "optar": ("Alternativa, Opción", "synonym"),
     "optando": ("Alternativa, Opción", "synonym"), "seartesarrobaupeceduec": ("S-E-A-R-T-E-S", "fingerspelling"),
     "automovilismo": ("Carrera, De autos", "synonym"),
+    "equivocar": ("Equivocarse", "lemma"), "equivocarse": ("Equivocarse", "exact"),
+    "televisor": ("Televisión", "synonym"), "television": ("Televisión", "exact"),
+    "engordar": ("Gordo(a)", "lemma"), "salchipapa": ("Salchipapas", "lemma"), "salchipapas": ("Salchipapas", "exact"),
+    "embutido": ("Salchicha", "synonym"), "embutidos": ("Salchicha", "synonym"),
+    "nublado": ("Nube", "lemma"), "nublada": ("Nube", "lemma"),
+    "comico": ("Reír, Risa, Risueño(a)", "synonym"), "cómico": ("Reír, Risa, Risueño(a)", "synonym"),
+    "comica": ("Reír, Risa, Risueño(a)", "synonym"), "cómica": ("Reír, Risa, Risueño(a)", "synonym"),
+    "matarse de la risa": ("Matarse de la risa", "exact"), "matarse-de-la-risa": ("Matarse de la risa", "exact"),
+    "matarsedelarisa": ("Matarse de la risa", "exact"),
+    "carasucia": ("Hamburguesa", "synonym"), "cara sucia": ("Hamburguesa", "synonym"), "cara-sucia": ("Hamburguesa", "synonym"),
+    "clima": ("Tiempo", "synonym"), "color": ("Marcadores de colores", "synonym"),
+    "mantener": ("Guardar", "synonym"), "haber": ("Tener", "synonym"), "nacer": ("Bebé", "approximate"),
+    "poss1": ("Mío, a", "synonym"), "poss2": ("Tuyo, a", "synonym"), "poss3": ("Suyo, a", "synonym"),
+    "nohaber": ("No hay, No vale", "exact"), "nogustar": ("Desagradar", "synonym"),
+    "noquerer": ("Rechazar", "synonym"), "nooir": ("No oír", "exact"), "noalcanzar": ("No alcanzar", "exact"),
+    "mio": ("Mío, a", "exact"), "mío": ("Mío, a", "exact"), "mia": ("Mío, a", "exact"), "mía": ("Mío, a", "exact"),
+    "madre": ("Mamá", "synonym"), "almuerzo": ("Almorzar", "lemma"), "diario": ("A diario, Cotidiano(a)", "compound"),
+    "molestar": ("Fastidiar", "synonym"), "molesto": ("Fastidiar", "synonym"), "molesta": ("Fastidiar", "synonym"),
+    "enojar": ("Bravo", "synonym"), "enojarse": ("Bravo", "synonym"), "enojado": ("Bravo", "synonym"), "enojada": ("Bravo", "synonym"),
+    "casar": ("Casarse, Casado(a)", "lemma"), "casarse": ("Casarse, Casado(a)", "exact"), "conversar": ("Conversación", "lemma"),
+    "auto": ("Carro, Conducir, Manejar, Conductor", "synonym"), "autos": ("Carro, Conducir, Manejar, Conductor", "synonym"), "jardin": ("Patio", "synonym"), "descargar": ("Bajar", "synonym"),
 }
 
 
@@ -384,7 +405,7 @@ def resolve_gloss_to_sign(
     """
     Resuelve una glosa LSEC contra las carpetas reales del catálogo v2.7 (con respaldo v2.6 -> v2.5).
     Nunca lanza HTTPException 404; devuelve estructura trazable con:
-      found, gloss, resolved_gloss, sign, match_type, status, needs_review, warning,
+      found, gloss, resolved_gloss, sign, match_type, status, warning,
       version_served, is_fingerspelling, qa, animation (opcional).
     """
     geolect = geolect or preferred_geolect
@@ -397,7 +418,6 @@ def resolve_gloss_to_sign(
             "sign": None,
             "match_type": "none",
             "status": "EMPTY",
-            "needs_review": False,
             "warning": "Glosa vacía",
             "version_served": None,
             "is_fingerspelling": False,
@@ -406,6 +426,7 @@ def resolve_gloss_to_sign(
         }
     base_gloss_match = re.match(r"^(.+?)\[[^\]]+\]$", clean_gloss)
     lookup_gloss = base_gloss_match.group(1).strip() if base_gloss_match else clean_gloss
+    lookup_gloss = re.sub(r"\++$", "", lookup_gloss).strip() or lookup_gloss
 
     idx = _build_v26_lexical_index()
     exact_map: Dict[str, str] = idx["exact_map"]
@@ -421,7 +442,7 @@ def resolve_gloss_to_sign(
         fs_tokens = tokenize_lsec_fingerspelling(lookup_gloss)
         return {
             "found": False, "gloss": clean_gloss, "resolved_gloss": None, "sign": None,
-            "match_type": "fingerspelling", "status": "FINGERSPELLING", "needs_review": False,
+            "match_type": "fingerspelling", "status": "FINGERSPELLING",
             "warning": None, "version_served": "2.7", "is_fingerspelling": True,
             "graphemes": [t["grapheme"] for t in fs_tokens], "tokens": fs_tokens, "qa": None,
             "animation": synthesize_fingerspelling_animation(clean_gloss) if include_animation else None,
@@ -479,7 +500,7 @@ def resolve_gloss_to_sign(
                 match_type = "compound"
                 status_label = "DICTIONARY"
             else:
-                entry = dict_svc.lookup_gloss(lookup_gloss)
+                entry = dmatch.entry if dmatch else None
                 if entry:
                     for cand_title in [entry.title, entry.head_word] + list(entry.synonyms or []):
                         nc = normalize_text(cand_title)
@@ -513,7 +534,7 @@ def resolve_gloss_to_sign(
             fs_tokens = tokenize_lsec_fingerspelling(alias_target)
             return {
                 "found": False, "gloss": clean_gloss, "resolved_gloss": None, "sign": None,
-                "match_type": "fingerspelling", "status": "FINGERSPELLING", "needs_review": False,
+                "match_type": "fingerspelling", "status": "FINGERSPELLING",
                 "warning": None, "version_served": "2.7", "is_fingerspelling": True,
                 "graphemes": [t["grapheme"] for t in fs_tokens], "tokens": fs_tokens, "qa": None,
                 "animation": synthesize_fingerspelling_animation(alias_target) if include_animation else None,
@@ -556,7 +577,10 @@ def resolve_gloss_to_sign(
                 break
 
     if not resolved_sign and "-" in lookup_gloss:
-        sub_tokens = [t.strip() for t in lookup_gloss.split("-") if len(t.strip()) >= 2]
+        sub_tokens = [
+            t.strip() for t in lookup_gloss.split("-")
+            if len(t.strip()) >= 2 and t.strip().upper() != "NO"
+        ]
         for sub_tok in sub_tokens:
             sub_res = resolve_gloss_to_sign(sub_tok, version=version, include_animation=False, context=context)
             if sub_res.get("found"):
@@ -577,14 +601,14 @@ def resolve_gloss_to_sign(
         if fs_tokens:
             return {
                 "found": False, "gloss": clean_gloss, "resolved_gloss": None, "sign": None,
-                "match_type": "fingerspelling", "status": "FINGERSPELLING", "needs_review": False,
+                "match_type": "fingerspelling", "status": "FINGERSPELLING",
                 "warning": None, "version_served": "2.7", "is_fingerspelling": True,
                 "graphemes": [t["grapheme"] for t in fs_tokens], "tokens": fs_tokens, "qa": None,
                 "animation": synthesize_fingerspelling_animation(synth_source) if include_animation else None,
             }
         return {
             "found": False, "gloss": clean_gloss, "resolved_gloss": None, "sign": None,
-            "match_type": "none", "status": "MISSING", "needs_review": False,
+            "match_type": "none", "status": "MISSING",
             "warning": f"Sin animación en catálogo v2.7/v2.6 para '{lookup_gloss}'",
             "version_served": None, "is_fingerspelling": False, "qa": None, "animation": None,
         }
@@ -621,7 +645,6 @@ def resolve_gloss_to_sign(
             "sign": resolved_sign,
             "match_type": "none",
             "status": "MISSING",
-            "needs_review": False,
             "warning": f"Archivo animation.json ausente para '{resolved_sign}'",
             "version_served": None,
             "is_fingerspelling": False,
@@ -630,15 +653,11 @@ def resolve_gloss_to_sign(
         }
 
     qa_row = qa_map.get(resolved_sign) or qa_norm_map.get(normalize_text(resolved_sign)) or {}
-    needs_review = str(qa_row.get("needs_review", "False")).lower() == "true"
-
     warning_msg: Optional[str] = None
-    if match_type not in ("exact", "compound"):
-        warning_msg = f"⚠ Aprox: {resolved_sign}" + (" · Revisión QA" if needs_review else "")
-    elif needs_review:
-        warning_msg = f"⚠ Revisión: {resolved_sign}"
 
     stroke_entry: Optional[Dict[str, Any]] = get_sign_stroke_entry(resolved_sign) if version_served == "2.7" else None
+    if stroke_entry and norm_g in ("cinco", "5") and resolved_sign == "Cinco mil":
+        stroke_entry = {**stroke_entry, "strokeStart": 1.05, "strokeEnd": 1.80, "strokeDuration": 0.75}
 
     anim_payload: Optional[Dict[str, Any]] = None
     if include_animation:
@@ -658,7 +677,6 @@ def resolve_gloss_to_sign(
                 meta["resolved_sign"] = resolved_sign
                 meta["match_type"] = match_type
                 meta["status_label"] = status_label
-                meta["needs_review"] = needs_review
                 if version_served == "2.7":
                     meta["pipelineVersion"] = "2.7_Estandarizado"
                     if stroke_entry:
@@ -693,11 +711,10 @@ def resolve_gloss_to_sign(
     return {
         "found": True, "gloss": clean_gloss, "resolved_gloss": resolved_sign, "sign": resolved_sign,
         "geolect": resolved_geolect,
-        "match_type": match_type, "status": status_label, "needs_review": needs_review,
+        "match_type": match_type, "status": status_label,
         "warning": warning_msg, "version_served": version_served, "is_fingerspelling": False,
         "anim_path": str(anim_path), "stroke": stroke_entry,
         "qa": {
-            "needs_review": needs_review, "review_reasons": qa_row.get("review_reasons", ""),
             "duration": float(qa_row.get("duration", 0.0) or 0.0), "fps": float(qa_row.get("fps", 60.0) or 60.0),
             "frames": int(float(qa_row.get("frames", 0) or 0)), "hand_std_status": qa_row.get("hand_std_status", ""),
             "bimanual_mode": qa_row.get("bimanual_mode", ""), "frames_modified": int(float(qa_row.get("frames_modified", 0) or 0)),
@@ -716,7 +733,7 @@ def resolve_batch_glosses_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
 
     results: Dict[str, Dict[str, Any]] = {}
     items: List[Dict[str, Any]] = []
-    exact_count, approx_count, review_count, fs_count, missing_count = 0, 0, 0, 0, 0
+    resolved_count, fs_count, missing_count = 0, 0, 0
 
     for g in raw_glosses:
         g_str = str(g or "").strip()
@@ -727,12 +744,7 @@ def resolve_batch_glosses_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
         results[g_str] = res
         items.append(res)
         if res["found"]:
-            if res["match_type"] in ("exact", "compound"):
-                exact_count += 1
-            else:
-                approx_count += 1
-            if res["needs_review"]:
-                review_count += 1
+            resolved_count += 1
         elif res["is_fingerspelling"]:
             fs_count += 1
         else:
@@ -741,9 +753,8 @@ def resolve_batch_glosses_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "version": version, "results": results, "items": items,
         "summary": {
-            "total": len(items), "resolved": exact_count + approx_count,
-            "exact_or_compound": exact_count, "approximate": approx_count,
-            "needs_review": review_count, "fingerspelling": fs_count, "missing": missing_count,
+            "total": len(items), "resolved": resolved_count,
+            "fingerspelling": fs_count, "missing": missing_count,
         },
     }
 

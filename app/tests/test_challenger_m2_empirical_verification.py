@@ -123,14 +123,12 @@ def run_empirical_verification() -> Dict[str, Any]:
         batch_res = resolve_batch_glosses_payload({"glosses": gloss_tokens, "version": "2.7"})
         batch_missing = [it["gloss"] for it in batch_res["items"] if it.get("status") == "MISSING"]
 
-        warnings = [w.code for w in out.warnings]
         return {
             "total_glosses": total,
             "glosses": gloss_tokens,
             "missing_individual": missing_glosses,
             "missing_batch": batch_missing,
             "missing_count": len(missing_glosses),
-            "warnings": warnings,
         }
 
     # 1. Videos Reales (Whisper ASR completo)
@@ -140,7 +138,7 @@ def run_empirical_verification() -> Dict[str, Any]:
         results["videos_real"][k] = v_data
         results["total_glosses_all"] += v_data["total_glosses"]
         results["total_missing_all"] += v_data["missing_count"]
-        print(f"[{k}] Glosas: {v_data['total_glosses']}, MISSING: {v_data['missing_count']}, Warnings: {v_data['warnings']}")
+        print(f"[{k}] Glosas: {v_data['total_glosses']}, MISSING: {v_data['missing_count']}")
         if v_data["missing_count"] > 0:
             results["failures"].append(f"{k} has missing glosses: {v_data['missing_individual']}")
 
@@ -151,11 +149,9 @@ def run_empirical_verification() -> Dict[str, Any]:
         results["videos_snippets"][k] = v_data
         results["total_glosses_all"] += v_data["total_glosses"]
         results["total_missing_all"] += v_data["missing_count"]
-        print(f"[{k}] Glosas: {v_data['total_glosses']}, MISSING: {v_data['missing_count']}, Warnings: {v_data['warnings']}")
+        print(f"[{k}] Glosas: {v_data['total_glosses']}, MISSING: {v_data['missing_count']}")
         if v_data["missing_count"] > 0:
             results["failures"].append(f"{k} has missing glosses: {v_data['missing_individual']}")
-        if "SEMANTIC_CONTENT_LEAK" in v_data["warnings"]:
-            results["failures"].append(f"{k} triggered SEMANTIC_CONTENT_LEAK")
 
     # 3. Corpus 1 a 10
     print("\n=== PROCESANDO CORPUS TEXTOS 1 A 10 ===")

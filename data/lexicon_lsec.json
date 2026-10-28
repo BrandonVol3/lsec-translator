@@ -74,7 +74,6 @@
           "ÍNTEGRA"
         ]
       ],
-      "requires_native_review": true,
       "confidence": 0.88,
       "notes": "Evitar segmentación morfológica que produzca el verbo copulativo SER"
     },
@@ -94,7 +93,6 @@
           "DESDE"
         ]
       ],
-      "requires_native_review": true,
       "confidence": 0.9
     },
     {
@@ -114,7 +112,6 @@
           "ALTA"
         ]
       ],
-      "requires_native_review": true,
       "confidence": 0.92
     },
     {
@@ -133,7 +130,6 @@
           "UNIVERSIDAD"
         ]
       ],
-      "requires_native_review": true,
       "confidence": 0.9
     },
     {
@@ -152,7 +148,6 @@
           "ESTADO"
         ]
       ],
-      "requires_native_review": true,
       "confidence": 0.92
     },
     {
@@ -171,7 +166,6 @@
           "PODER"
         ]
       ],
-      "requires_native_review": true,
       "confidence": 0.89
     },
     {
@@ -191,7 +185,6 @@
           "MEJORAR"
         ]
       ],
-      "requires_native_review": true,
       "confidence": 0.91
     },
     {
@@ -208,7 +201,6 @@
           "SUPERAR"
         ]
       ],
-      "requires_native_review": true,
       "confidence": 0.95
     },
     {
@@ -225,7 +217,6 @@
           "ADEMÁS"
         ]
       ],
-      "requires_native_review": true,
       "confidence": 0.9
     },
     {
@@ -239,7 +230,6 @@
           "PRESTAR-ATENCIÓN"
         ]
       ],
-      "requires_native_review": false,
       "confidence": 0.95
     },
     {
@@ -253,7 +243,6 @@
           "SANTO-DOMINGO"
         ]
       ],
-      "requires_native_review": false,
       "confidence": 0.98
     }
   ],
@@ -265,7 +254,6 @@
       "asr_confidence": 0.588,
       "normalization_confidence": 0.99,
       "reason": "contextual: universidad tiene campus, no campos agrícolas",
-      "requires_human_review": false,
       "alternative_candidates": [
         "campus Tulcán"
       ]
@@ -277,7 +265,6 @@
       "asr_confidence": 0.65,
       "normalization_confidence": 0.99,
       "reason": "contextual: entorno universitario",
-      "requires_human_review": false,
       "alternative_candidates": [
         "campus Tulcán"
       ]
@@ -289,7 +276,6 @@
       "asr_confidence": 0.7,
       "normalization_confidence": 0.98,
       "reason": "topónimo oficial Carchi",
-      "requires_human_review": false,
       "alternative_candidates": [
         "Tulcán"
       ]
@@ -301,7 +287,6 @@
       "asr_confidence": 0.72,
       "normalization_confidence": 0.98,
       "reason": "topónimo oficial Pichincha",
-      "requires_human_review": false,
       "alternative_candidates": [
         "Cayambe"
       ]
@@ -313,7 +298,6 @@
       "asr_confidence": 0.55,
       "normalization_confidence": 0.99,
       "reason": "colocación semántica académica",
-      "requires_human_review": false,
       "alternative_candidates": [
         "excelencia académica"
       ]
@@ -325,7 +309,6 @@
       "asr_confidence": 0.6,
       "normalization_confidence": 0.97,
       "reason": "corrección fonética ASR",
-      "requires_human_review": false,
       "alternative_candidates": [
         "académica"
       ]
@@ -337,7 +320,6 @@
       "asr_confidence": 0.85,
       "normalization_confidence": 0.95,
       "reason": "corrección anafórica pronominal",
-      "requires_human_review": false,
       "alternative_candidates": [
         "ya lo hicieron"
       ]
@@ -349,7 +331,6 @@
       "asr_confidence": 0.9,
       "normalization_confidence": 0.99,
       "reason": "imperativo de hacer",
-      "requires_human_review": false,
       "alternative_candidates": [
         "haz posible"
       ]
@@ -361,25 +342,9 @@
       "asr_confidence": 0.8,
       "normalization_confidence": 0.93,
       "reason": "concordancia segunda persona",
-      "requires_human_review": false,
       "alternative_candidates": [
         "quién quieres ser"
       ]
-    }
-  ],
-  "dubious_words_registry": [
-    {
-      "word": "liberan",
-      "contextual_sense_confidence": 0.35,
-      "asr_confidence": 0.989,
-      "requires_audio_review": true,
-      "review_reason": "high_acoustic_confidence_but_low_contextual_coherence",
-      "alternative_candidates": [
-        "lideran",
-        "crean",
-        "proyectan"
-      ],
-      "suggested_action": "rehear_audio_segment"
     }
   ],
   "entity_registry": {

@@ -28,7 +28,6 @@ from app.core.schemas import (
     TranslationPlan,
 )
 from app.services.nlp_service import LSECTranslatorService
-from app.services.validator import StructuralValidator
 
 
 class TestLSEC21CoverageAndInference:
@@ -58,108 +57,6 @@ class TestLSEC21CoverageAndInference:
         )
         assert ic.origin == InferredConceptOrigin.DISCOURSE_INFERENCE
         assert ic.confidence == 0.95
-
-
-class TestLSEC21ValidatorRules:
-    """Pruebas para las nuevas validaciones del StructuralValidator."""
-
-    @pytest.fixture
-    def validator(self) -> StructuralValidator:
-        return StructuralValidator()
-
-    def test_validator_detects_dropped_concepts(self, validator: StructuralValidator) -> None:
-        """Detecta SOURCE_CONTENT_DROPPED cuando se omite un concepto fundamental."""
-        prop = SemanticProposition(
-            id="p_test",
-            source_text="ofrece carreras de grado",
-            normalized_text="ofrece carreras de grado",
-            predicate=SemanticPredicate(lemma="ofrecer", predicate_type=PredicateType.ACTION),
-            participants=[
-                SemanticParticipant(
-                    id="part_carrera",
-                    lemma="carrera",
-                    normalized_text="carrera",
-                    participant_type=ParticipantType.ABSTRACT_CONCEPT,
-                    semantic_role=SemanticRole.PATIENT,
-                )
-            ],
-        )
-        # Plan que no realiza 'carrera'
-        plan = TranslationPlan(
-            id="plan_test",
-            proposition_id="p_test",
-            source_concepts=["ofrecer", "carrera"],
-            realized_concepts=["OFRECER"],
-            omitted_concepts=["carrera"],
-            coverage_ratio=0.5,
-            coverage_status="PARTIAL",
-        )
-        glosses = [
-            GlossItem(gloss="OFRECER", gloss_type=GlossType.SIGN, order=0, proposition_id="p_test")
-        ]
-
-        warnings = validator.validate(
-            original_text="ofrece carreras de grado",
-            normalized_text="ofrece carreras de grado",
-            propositions=[prop],
-            glosses=glosses,
-            blocks=[],
-            referents=[],
-            operations=[],
-            spans=[],
-            plans=[plan],
-        )
-
-        dropped_warnings = [w for w in warnings if w.code == "SOURCE_CONTENT_DROPPED"]
-        assert len(dropped_warnings) > 0
-        assert "carrera" in dropped_warnings[0].message
-
-    def test_validator_detects_semantic_content_leak(self, validator: StructuralValidator) -> None:
-        """Detecta SEMANTIC_CONTENT_LEAK cuando una proposición genera glosas de otra ajena."""
-        prop = SemanticProposition(
-            id="p_1",
-            source_text="la universidad ofrece innovación",
-            normalized_text="la universidad ofrece innovación",
-            predicate=SemanticPredicate(lemma="ofrecer", predicate_type=PredicateType.ACTION),
-            participants=[
-                SemanticParticipant(
-                    id="part_u",
-                    lemma="universidad",
-                    normalized_text="universidad",
-                    participant_type=ParticipantType.ORGANIZATION,
-                    semantic_role=SemanticRole.AGENT,
-                )
-            ],
-        )
-        plan = TranslationPlan(
-            id="plan_1",
-            proposition_id="p_1",
-            source_concepts=["ofrecer", "universidad"],
-            realized_concepts=["UNIVERSIDAD", "OFRECER", "OPORTUNIDAD", "IDEA"],
-            coverage_ratio=1.0,
-            coverage_status="COMPLETE",
-        )
-        glosses = [
-            GlossItem(gloss="UNIVERSIDAD", gloss_type=GlossType.SIGN, order=0, proposition_id="p_1"),
-            GlossItem(gloss="OFRECER", gloss_type=GlossType.SIGN, order=1, proposition_id="p_1"),
-            GlossItem(gloss="OPORTUNIDAD", gloss_type=GlossType.SIGN, order=2, proposition_id="p_1"),
-            GlossItem(gloss="IDEA", gloss_type=GlossType.SIGN, order=3, proposition_id="p_1"),
-        ]
-
-        warnings = validator.validate(
-            original_text=prop.source_text,
-            normalized_text=prop.normalized_text,
-            propositions=[prop],
-            glosses=glosses,
-            blocks=[],
-            referents=[],
-            operations=[],
-            spans=[],
-            plans=[plan],
-        )
-
-        leak_warnings = [w for w in warnings if w.code == "SEMANTIC_CONTENT_LEAK"]
-        assert len(leak_warnings) > 0
 
 
 class TestLSEC21Generalization:
@@ -217,7 +114,6 @@ class TestLSEC21Generalization:
 
         # 1. Esquema 2.1
         assert result.schema_version == "2.1"
-        assert result.validation_summary["schema_version"] == "2.1"
 
         # 2. Cobertura de planes
         assert len(result.translation_plans) >= 10

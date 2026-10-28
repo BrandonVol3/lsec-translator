@@ -237,6 +237,24 @@ def generate_spans_for_prop(
             )
         )
 
+    # El contraste (pero / no solo… sino / más que…) se marca siempre con su propio span, aunque otra
+    # función retórica (p. ej. reflexiva) haya definido el span principal de la proposición: el sistema
+    # no emite la glosa PERO, de modo que este marcador (desplazamiento corporal + cejas) es la señal.
+    if prop.discourse_relation in ("but", "not_only", "more_than") and prop_span_type != "contrast":
+        spans.append(
+            NonManualSpan(
+                id=f"span_{p_idx + 1}_contrast",
+                type="contrast",
+                start_order=start_o,
+                end_order=end_o,
+                expression=FacialExpression.CONTRAST,
+                body_shift="left" if prop.discourse_relation == "not_only" else "right",
+                intensity=1.0,
+                priority=2,
+                proposition_id=prop.id,
+            )
+        )
+
     if prop.polarity == "negative" or contains_negation(p_text_lower):
         neg_items = [
             g for g in glosses
@@ -620,11 +638,6 @@ def build_translation_plan_and_block(
         coverage_ratio=source_recall,
         coverage_status=cov_status,
         confidence=confidence_vec.overall if confidence_vec.overall > 0 else prop.confidence,
-        requires_native_review=(
-            prop.requires_review
-            or any(g.requires_review for g in prop_glosses)
-            or strategy == StrategyType.SEMANTIC_PARAPHRASE
-        ),
         applied_rule_ids=frame.applied_rule_ids,
         confidence_vector=confidence_vec.to_dict(),
     )

@@ -18,14 +18,11 @@ const LSECStateGlossMutations = {
       const current = this.state.project.segments[segIndex];
       const updated = {
         ...current,
-        ...changes,
-        human_reviewed: true,
-        validated_by: changes.validated_by || this.state.currentUser.name,
-        validated_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        ...changes
       };
 
       if (changes.status) {
-        updated.status_label = this.getStatusLabel(changes.status);
+        updated.status_label = this.getStatusLabel ? this.getStatusLabel(changes.status) : changes.status;
       }
 
       const hasTextChange = changes.normalized_text !== undefined || changes.original_text !== undefined || changes.text !== undefined;
@@ -80,15 +77,6 @@ const LSECStateGlossMutations = {
         this.selectItem('segment', segId, updated);
       }
     }
-  },
-
-  validateSegment(segId) {
-    this.updateSegment(segId, {
-      status: 'VALIDATED',
-      secondary_cause: null,
-      human_reviewed: true,
-      validated_by: this.state.currentUser.name
-    });
   },
 
   addSegment(startTime = 0, endTime = 3.0, text = 'Nueva oración educativa en español.') {
@@ -329,38 +317,6 @@ const LSECStateGlossMutations = {
     }
   },
 
-  validateSentenceWithInvariants(sentence) {
-    if (typeof StructuralValidator !== 'undefined') {
-      const violations = StructuralValidator.validateSentence(sentence, this.state.project);
-      if (violations.length > 0) {
-        sentence.status = 'REVIEW_REQUIRED';
-        sentence.status_label = 'Requiere Revisión';
-        sentence.has_review = true;
-        sentence.review_reasons = violations.map(v => `[${v.code}] ${v.message}`);
-        (sentence.segments || []).forEach(s => {
-          s.status = 'REVIEW_REQUIRED';
-          s.status_label = 'Revisar';
-          s.requires_native_review = true;
-        });
-        if (this.state.project) this.state.project.execution_status = 'REVIEW_REQUIRED';
-        return violations;
-      } else {
-        sentence.status = 'CORRECTED';
-        sentence.status_label = 'Corregido';
-        sentence.has_review = false;
-        sentence.review_reasons = [];
-        (sentence.segments || []).forEach(s => {
-          if (s.status !== 'VALIDATED') {
-            s.status = 'CORRECTED';
-            s.status_label = 'Corregido';
-          }
-        });
-        return [];
-      }
-    }
-    return [];
-  },
-
   reorderGlossInSentence(sentenceId, glossId, newIndex) {
     if (!this.state.project) return false;
     const sentence = this.findSentence(sentenceId);
@@ -380,7 +336,6 @@ const LSECStateGlossMutations = {
     movedGloss.alignment_type = 'MANUAL_EDIT';
 
     this.recalculateSentenceTiming(sentence);
-    this.validateSentenceWithInvariants(sentence);
     this.syncSentenceToProject(sentence);
     this.markUnsavedChange();
 
@@ -433,29 +388,6 @@ const LSECStateGlossMutations = {
 
     this.recalculateSentenceTiming(source);
     this.recalculateSentenceTiming(target);
-
-    source.status = 'REVIEW_REQUIRED';
-    source.status_label = 'Requiere Revisión';
-    source.has_review = true;
-    source.review_reasons = [...(source.review_reasons || []), `Glosa '${movedGloss.gloss}' transferida hacia Frase ${target.index}. Requiere revisión.`];
-    (source.segments || []).forEach(s => {
-      s.status = 'REVIEW_REQUIRED';
-      s.status_label = 'Revisar';
-      s.requires_native_review = true;
-    });
-
-    target.status = 'REVIEW_REQUIRED';
-    target.status_label = 'Requiere Revisión';
-    target.has_review = true;
-    target.review_reasons = [...(target.review_reasons || []), `Glosa '${movedGloss.gloss}' recibida desde Frase ${source.index}. Requiere revisión.`];
-    (target.segments || []).forEach(s => {
-      s.status = 'REVIEW_REQUIRED';
-      s.status_label = 'Revisar';
-      s.requires_native_review = true;
-    });
-
-    this.validateSentenceWithInvariants(source);
-    this.validateSentenceWithInvariants(target);
 
     this.syncSentenceToProject(source);
     this.syncSentenceToProject(target);
@@ -510,7 +442,6 @@ const LSECStateGlossMutations = {
     sentence.glosses.splice(insertPos, 0, newGloss);
 
     this.recalculateSentenceTiming(sentence);
-    this.validateSentenceWithInvariants(sentence);
     this.syncSentenceToProject(sentence);
     this.markUnsavedChange();
 
@@ -544,7 +475,6 @@ const LSECStateGlossMutations = {
     }
 
     this.recalculateSentenceTiming(sentence);
-    this.validateSentenceWithInvariants(sentence);
     this.syncSentenceToProject(sentence);
     this.markUnsavedChange();
 
@@ -584,7 +514,6 @@ const LSECStateGlossMutations = {
     sentence.glosses.splice(idx + 1, 0, dup);
 
     this.recalculateSentenceTiming(sentence);
-    this.validateSentenceWithInvariants(sentence);
     this.syncSentenceToProject(sentence);
     this.markUnsavedChange();
 
@@ -634,7 +563,6 @@ const LSECStateGlossMutations = {
       if (safeChanges.duration !== undefined || safeChanges.start_seconds !== undefined) {
         this.recalculateSentenceTiming(parentSentence);
       }
-      this.validateSentenceWithInvariants(parentSentence);
       this.syncSentenceToProject(parentSentence);
     } else {
       const pIdx = (this.state.project.glosses || []).findIndex(it => it.id === glossId);

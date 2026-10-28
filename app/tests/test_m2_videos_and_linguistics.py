@@ -249,19 +249,6 @@ def test_registrar_resolves_to_inscribir_not_registro_civil():
 # ==============================================================================
 
 
-def test_semantic_leak_desarrollar_fixed(translator: LSECTranslatorService):
-    """Verifica que Video 3 no emita la advertencia SEMANTIC_CONTENT_LEAK por 'desarrollar'."""
-    out = _translate_sync(
-        translator,
-        "Si estás opcionando por una carrera focalizada, desarrolla la etapa de evaluación en el horario determinado.",
-    )
-    warning_codes = [w.code for w in out.warnings]
-    assert "SEMANTIC_CONTENT_LEAK" not in warning_codes
-
-    glosses = [g.gloss for g in out.glosses]
-    assert "REALIZAR" in glosses or "HACER" in glosses
-
-
 # ==============================================================================
 # 8. Pruebas de Remediación de Fallos de Puerta M2 (Gate Remediations)
 # ==============================================================================

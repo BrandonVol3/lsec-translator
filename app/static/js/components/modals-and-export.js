@@ -10,6 +10,8 @@ class ModalsAndExportController {
     this.modalBody = document.getElementById('generic-modal-body');
     this.modalFooter = document.getElementById('generic-modal-footer');
     this.modalCloseBtn = document.getElementById('generic-modal-close');
+    this.defaultExportDir = 'C:\\Users\\brana\\Desktop\\Videos Exportados LSEC Studio';
+    this.currentExportDir = localStorage.getItem('lsec_export_custom_dir') || this.defaultExportDir;
 
     this.init();
   }
@@ -49,6 +51,151 @@ class ModalsAndExportController {
     if (settingsBtn) {
       settingsBtn.addEventListener('click', () => this.openSettingsDialog());
     }
+
+    this.initExportDirectoryBindings();
+  }
+
+  async initExportDirectoryBindings() {
+    const step4Input = document.getElementById('step4-export-dir-input');
+    const step4BrowseBtn = document.getElementById('btn-step4-browse-export-dir');
+    const step4ResetBtn = document.getElementById('btn-step4-reset-export-dir');
+    const step4OpenBtn = document.getElementById('btn-step4-open-export-dir');
+
+    if (step4Input) {
+      step4Input.value = this.currentExportDir;
+      step4Input.addEventListener('change', () => {
+        this.setExportDirectory(step4Input.value);
+      });
+    }
+    step4BrowseBtn?.addEventListener('click', () => this.browseExportDirectory());
+    step4ResetBtn?.addEventListener('click', () => this.resetExportDirectory());
+    step4OpenBtn?.addEventListener('click', () => {
+      const dirVal = step4Input ? step4Input.value : this.currentExportDir;
+      this.openExportDirectoryInExplorer(dirVal);
+    });
+
+    try {
+      const res = await fetch('/api/v1/animations/export-directory');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.default_directory) {
+          this.defaultExportDir = data.default_directory;
+        }
+        const storedCustom = (localStorage.getItem('lsec_export_custom_dir') || '').trim();
+        if (storedCustom && storedCustom !== data.current_directory) {
+          await this.setExportDirectory(storedCustom, true);
+        } else if (data.current_directory) {
+          this.syncExportDirectoryInputs(data.current_directory, Boolean(data.is_custom));
+        }
+      }
+    } catch (_) {}
+  }
+
+  syncExportDirectoryInputs(dirPath, isCustom = false) {
+    const clean = String(dirPath || this.defaultExportDir).trim();
+    this.currentExportDir = clean;
+    if (isCustom && clean !== this.defaultExportDir) {
+      localStorage.setItem('lsec_export_custom_dir', clean);
+    } else {
+      localStorage.removeItem('lsec_export_custom_dir');
+    }
+    const step4Input = document.getElementById('step4-export-dir-input');
+    if (step4Input && step4Input.value !== clean) {
+      step4Input.value = clean;
+    }
+    const modalInput = this.modalBody?.querySelector('#cfg-export-dir');
+    if (modalInput && modalInput.value !== clean) {
+      modalInput.value = clean;
+    }
+  }
+
+  async setExportDirectory(customPath, silent = false) {
+    const trimmed = String(customPath || '').trim();
+    if (!trimmed) {
+      return this.resetExportDirectory(silent);
+    }
+    try {
+      const res = await fetch('/api/v1/animations/export-directory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ directory: trimmed })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        this.defaultExportDir = data.default_directory || this.defaultExportDir;
+        this.syncExportDirectoryInputs(data.current_directory, Boolean(data.is_custom));
+        if (!silent && typeof window.showToast === 'function') {
+          window.showToast(`Carpeta de guardado configurada: ${data.current_directory}`, 'success');
+        }
+        return data.current_directory;
+      } else {
+        const err = await res.json().catch(() => ({}));
+        if (!silent && typeof window.showToast === 'function') {
+          window.showToast(err.detail || 'No se pudo configurar la carpeta.', 'warning');
+        }
+      }
+    } catch (_) {
+      this.syncExportDirectoryInputs(trimmed, trimmed !== this.defaultExportDir);
+    }
+    return this.currentExportDir;
+  }
+
+  async resetExportDirectory(silent = false) {
+    try {
+      const res = await fetch('/api/v1/animations/export-directory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reset: true })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        this.defaultExportDir = data.default_directory || this.defaultExportDir;
+        this.syncExportDirectoryInputs(data.current_directory, false);
+        if (!silent && typeof window.showToast === 'function') {
+          window.showToast(`Restaurada carpeta por defecto en el Escritorio: ${data.current_directory}`, 'info');
+        }
+        return data.current_directory;
+      }
+    } catch (_) {}
+    this.syncExportDirectoryInputs(this.defaultExportDir, false);
+    return this.defaultExportDir;
+  }
+
+  async browseExportDirectory() {
+    try {
+      const res = await fetch('/api/v1/animations/select-export-directory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initial_dir: this.currentExportDir || this.defaultExportDir })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (!data.cancelled && data.selected_directory) {
+          this.defaultExportDir = data.default_directory || this.defaultExportDir;
+          this.syncExportDirectoryInputs(data.selected_directory, Boolean(data.is_custom));
+          if (typeof window.showToast === 'function') {
+            window.showToast(`Carpeta seleccionada: ${data.selected_directory}`, 'success');
+          }
+        }
+      }
+    } catch (err) {
+      if (typeof window.showToast === 'function') {
+        window.showToast('Puedes escribir o pegar la ruta deseada directamente en el campo de carpeta.', 'info');
+      }
+    }
+  }
+
+  async openExportDirectoryInExplorer(dirPath = null, filename = null) {
+    try {
+      await fetch('/api/v1/animations/open-export-directory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          directory: dirPath || this.currentExportDir || this.defaultExportDir,
+          filename: filename || null
+        })
+      });
+    } catch (_) {}
   }
 
   openBackdrop() {
@@ -84,10 +231,10 @@ class ModalsAndExportController {
       .replace(/"/g, '&quot;');
   }
 
-  // --- Diccionario Oficial CONADIS (4.252 Fichas) ---
+  // --- Diccionario LSEC CONADIS (4.252 Fichas) ---
   async openDictionaryDialog() {
     if (!this.modalBackdrop || !this.modalTitle || !this.modalBody) return;
-    this.modalTitle.textContent = 'Diccionario Oficial LSEC — CONADIS (4.252 Señas)';
+    this.modalTitle.textContent = 'Diccionario LSEC — CONADIS (4.252 Señas)';
     this.modalBody.innerHTML = `
       <div style="display:flex; flex-direction:column; gap:12px;">
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -337,6 +484,7 @@ class ModalsAndExportController {
     const mediaInfo = project.media_info || {};
     const duration = appState.state.playback.duration || mediaInfo.duration_seconds || 0;
     const filename = mediaInfo.filename || 'video.mp4';
+    const currentDir = this.currentExportDir || this.defaultExportDir;
 
     this.modalTitle.innerHTML = 'Exportar Video Compuesto con Avatar 3D LSEC y Subtítulos';
     this.modalBody.innerHTML = `
@@ -347,18 +495,21 @@ class ModalsAndExportController {
         </div>
 
         <div class="export-video-config-panel" id="composite-config-panel">
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; padding:8px 10px; border-radius:8px; background:var(--color-surface-mint); border:1.5px solid var(--color-primary-emerald);">
-            <div style="font-size:0.76rem; font-weight:700; color:var(--color-primary-emerald-dark);">
-              ✓ Cumple Norma NTE INEN 3198 (Recuadro ≥ 1/9 de pantalla · 12.3%) y Reglamento LOC Abril 2026
+          <div style="font-size:0.72rem; color:var(--color-text-secondary);">El video exportado incluye un aviso en letra pequeña: «Propuesta computacional pendiente de validación por personas sordas nativas o profesional intérprete de LSEC».</div>
+          <div class="export-config-row" style="flex-direction:column; align-items:stretch; gap:6px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+              <label class="export-config-label" for="cfg-export-dir">Carpeta de Destino (se crea automáticamente si no existe):</label>
+              <div style="display:inline-flex; gap:6px;">
+                <button type="button" class="btn btn-sm" id="btn-browse-export-dir" style="padding:3px 8px; font-size:0.75rem;">Elegir Carpeta...</button>
+                <button type="button" class="btn btn-sm" id="btn-reset-export-dir" style="padding:3px 8px; font-size:0.75rem;">Por defecto (Escritorio)</button>
+              </div>
             </div>
-            <button type="button" class="btn btn-sm" id="btn-download-inen-compliance-report" title="Descargar certificado JSON de cumplimiento técnico y normativo (Art. 26 Reglamento LOC 2026)">
-              Reporte Art. 26 (.json)
-            </button>
+            <input type="text" id="cfg-export-dir" class="transcript-seg-input" style="min-height:36px; font-family:var(--font-mono); font-size:0.78rem;" value="${this.escapeHtml(currentDir)}" placeholder="C:\\Users\\...\\Desktop\\Videos Exportados LSEC Studio">
           </div>
           <div class="export-config-row">
             <label class="export-config-label" for="cfg-pip-position">Posición del Avatar 3D (PiP):</label>
             <select id="cfg-pip-position" class="export-config-select">
-              <option value="bottom-right" selected>Inferior Derecha (Estándar LSEC)</option>
+              <option value="bottom-right" selected>Inferior Derecha</option>
               <option value="bottom-left">Inferior Izquierda</option>
             </select>
           </div>
@@ -370,17 +521,19 @@ class ModalsAndExportController {
             </select>
           </div>
           <div class="export-config-row">
+            <label class="export-config-label" for="cfg-timing-priority">Prioridad de ritmo del intérprete:</label>
+            <select id="cfg-timing-priority" class="export-config-select">
+              <option value="clarity" selected>Claridad (señas legibles, más desfase)</option>
+              <option value="sync">Sincronía (más ajustado al video)</option>
+            </select>
+            <span id="cfg-timing-estimate" style="font-size:0.74rem; color:var(--color-text-secondary);"></span>
+          </div>
+          <div class="export-config-row">
             <span class="export-config-label">Capas Incrustadas:</span>
             <div style="display:flex; gap:12px;">
-              <label style="display:flex; align-items:center; gap:4px; font-size:0.8rem;">
-                <input type="checkbox" id="cfg-include-avatar" checked> Avatar 3D
-              </label>
-              <label style="display:flex; align-items:center; gap:4px; font-size:0.8rem;">
-                <input type="checkbox" id="cfg-include-glosses" checked> Glosas LSEC
-              </label>
-              <label style="display:flex; align-items:center; gap:4px; font-size:0.8rem;">
-                <input type="checkbox" id="cfg-include-subs" checked> Subtítulos
-              </label>
+              <label style="display:flex; align-items:center; gap:4px; font-size:0.8rem;"><input type="checkbox" id="cfg-include-avatar" checked> Avatar 3D</label>
+              <label style="display:flex; align-items:center; gap:4px; font-size:0.8rem;"><input type="checkbox" id="cfg-include-glosses" checked> Glosas LSEC</label>
+              <label style="display:flex; align-items:center; gap:4px; font-size:0.8rem;"><input type="checkbox" id="cfg-include-subs" checked> Subtítulos</label>
             </div>
           </div>
         </div>
@@ -389,9 +542,7 @@ class ModalsAndExportController {
           <div class="export-preview-box">
             <canvas id="composite-export-preview-canvas" class="export-preview-canvas" width="640" height="360"></canvas>
           </div>
-          <div class="export-progress-wrap">
-            <div class="export-progress-fill" id="composite-export-progress-fill"></div>
-          </div>
+          <div class="export-progress-wrap"><div class="export-progress-fill" id="composite-export-progress-fill"></div></div>
           <div class="export-stats-row">
             <span id="composite-export-status-label">Preparando renderizado...</span>
             <span id="composite-export-timecode-label">00:00 / 00:00 (0%)</span>
@@ -399,15 +550,16 @@ class ModalsAndExportController {
         </div>
 
         <div id="composite-success-panel" style="display:none; flex-direction:column; gap:8px; background:var(--color-surface-mint); border:2px solid var(--color-primary-emerald); border-radius:12px; padding:14px; text-align:center;">
-          <div style="font-weight:800; font-size:0.95rem; color:var(--color-primary-emerald-dark);">¡Video compuesto exportado exitosamente!</div>
+          <div style="font-weight:800; font-size:0.95rem; color:var(--color-primary-emerald-dark);">¡Video compuesto guardado exitosamente!</div>
           <div style="font-size:0.78rem; color:var(--color-text-secondary);" id="composite-success-filename"></div>
+          <div style="font-size:0.76rem; font-family:var(--font-mono); color:var(--color-text-primary); word-break:break-all; background:#ffffff; padding:6px 10px; border-radius:8px; border:1px solid var(--color-border-subtle);" id="composite-success-path"></div>
         </div>
       </div>
     `;
 
     this.modalFooter.innerHTML = `
       <button class="btn" id="btn-back-export-options">Volver a Formatos</button>
-      <button class="btn btn-primary" id="btn-start-video-export">Iniciar Renderizado y Descarga</button>
+      <button class="btn btn-primary" id="btn-start-video-export">Iniciar Renderizado y Guardar</button>
     `;
 
     this.modalFooter.querySelector('#btn-back-export-options')?.addEventListener('click', () => {
@@ -417,24 +569,24 @@ class ModalsAndExportController {
       this.openExportDialog();
     });
 
-    this.modalBody.querySelector('#btn-download-inen-compliance-report')?.addEventListener('click', () => {
-      if (window.compositeVideoExporter && typeof window.compositeVideoExporter.buildComplianceReport === 'function') {
-        const pipPosition = this.modalBody.querySelector('#cfg-pip-position')?.value || 'bottom-right';
-        const resolution = this.modalBody.querySelector('#cfg-resolution')?.value || 'original';
-        const includeGlosses = this.modalBody.querySelector('#cfg-include-glosses')?.checked ?? true;
-        const report = window.compositeVideoExporter.buildComplianceReport({ pipPosition, resolution, includeGlosses });
-        this.downloadFile('reporte_cumplimiento_nte_inen_3198_loc_2026.json', JSON.stringify(report, null, 2), 'application/json;charset=utf-8');
-        if (typeof window.showToast === 'function') {
-          window.showToast('Reporte de cumplimiento NTE INEN 3198 / LOC 2026 descargado.', 'success');
-        }
-      }
-    });
+    const dirInput = this.modalBody.querySelector('#cfg-export-dir');
+    dirInput?.addEventListener('change', () => this.setExportDirectory(dirInput.value));
+    this.modalBody.querySelector('#btn-browse-export-dir')?.addEventListener('click', () => this.browseExportDirectory());
+    this.modalBody.querySelector('#btn-reset-export-dir')?.addEventListener('click', () => this.resetExportDirectory());
 
+    const timingSelect = this.modalBody.querySelector('#cfg-timing-priority');
+    const timingEstimate = this.modalBody.querySelector('#cfg-timing-estimate');
+    const refreshTimingEstimate = () => {
+      const r = typeof window.setLSECTimingPriority === 'function' ? window.setLSECTimingPriority(timingSelect.value) : null;
+      if (timingEstimate) timingEstimate.textContent = (r && r.sequenceEndSec) ? `Duración estimada: ${r.sequenceEndSec.toFixed(1)} s (video ${r.videoDurationSec.toFixed(1)} s, cola +${r.tailSec.toFixed(1)} s)` : '';
+    };
+    timingSelect?.addEventListener('change', refreshTimingEstimate);
+    refreshTimingEstimate();
     this.modalFooter.querySelector('#btn-start-video-export')?.addEventListener('click', () => this.runCompositeVideoExport());
     this.openBackdrop();
   }
 
-  runCompositeVideoExport() {
+  async runCompositeVideoExport() {
     if (!window.compositeVideoExporter) return;
 
     const configPanel = this.modalBody.querySelector('#composite-config-panel');
@@ -450,6 +602,8 @@ class ModalsAndExportController {
     const includeInterpreter = this.modalBody.querySelector('#cfg-include-avatar')?.checked ?? true;
     const includeGlosses = this.modalBody.querySelector('#cfg-include-glosses')?.checked ?? true;
     const includeSubtitles = this.modalBody.querySelector('#cfg-include-subs')?.checked ?? true;
+    const rawDirInput = (this.modalBody.querySelector('#cfg-export-dir')?.value || this.currentExportDir || this.defaultExportDir).trim();
+    const outputDir = await this.setExportDirectory(rawDirInput, true);
 
     if (configPanel) configPanel.style.display = 'none';
     if (progressPanel) progressPanel.style.display = 'flex';
@@ -468,7 +622,7 @@ class ModalsAndExportController {
     };
 
     window.compositeVideoExporter.startExport(
-      { pipPosition, resolution, includeInterpreter, includeGlosses, includeSubtitles, playbackSpeed: 1.0 },
+      { pipPosition, resolution, includeInterpreter, includeGlosses, includeSubtitles, playbackSpeed: 1.0, outputDir },
       (info) => {
         if (progressFill) progressFill.style.width = `${info.progress.toFixed(1)}%`;
         if (statusLabel) statusLabel.textContent = `Renderizando fotogramas (${info.progress.toFixed(0)}%)...`;
@@ -480,23 +634,51 @@ class ModalsAndExportController {
           pCtx.drawImage(info.exportCanvas, 0, 0, previewCanvas.width, previewCanvas.height);
         }
       },
-      (blob, filename) => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      (blob, filename, saveMeta = {}) => {
+        const savedPath = saveMeta.savedPath || '';
+        const savedDir = saveMeta.savedDir || outputDir || this.defaultExportDir;
+        const savedFilename = saveMeta.savedFilename || filename;
+
+        if (!savedPath) {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(url), 10000);
+        }
 
         if (progressPanel) progressPanel.style.display = 'none';
         if (successPanel) {
           successPanel.style.display = 'flex';
           const fnEl = successPanel.querySelector('#composite-success-filename');
-          if (fnEl) fnEl.textContent = `Archivo generado: ${filename} (${(blob.size / (1024 * 1024)).toFixed(2)} MB)`;
+          const pathEl = successPanel.querySelector('#composite-success-path');
+          if (fnEl) fnEl.textContent = `Archivo generado: ${savedFilename} (${(blob.size / (1024 * 1024)).toFixed(2)} MB)`;
+          if (pathEl) pathEl.textContent = `Guardado en: ${savedPath || (savedDir + '\\' + savedFilename)}`;
         }
-        this.modalFooter.innerHTML = `<button class="btn btn-primary" id="btn-done-export">Cerrar</button>`;
+        if (typeof window.showToast === 'function') {
+          window.showToast(`Video guardado en: ${savedPath || savedDir}`, 'success');
+        }
+        this.modalFooter.innerHTML = `
+          <button class="btn" id="btn-open-saved-folder">Abrir Carpeta</button>
+          <button class="btn btn-cobalt" id="btn-download-browser-copy">Descargar Copia en Navegador</button>
+          <button class="btn btn-primary" id="btn-done-export">Cerrar</button>
+        `;
+        this.modalFooter.querySelector('#btn-open-saved-folder')?.addEventListener('click', () => {
+          this.openExportDirectoryInExplorer(savedDir, savedFilename);
+        });
+        this.modalFooter.querySelector('#btn-download-browser-copy')?.addEventListener('click', () => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = savedFilename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(url), 10000);
+        });
         this.modalFooter.querySelector('#btn-done-export')?.addEventListener('click', () => this.close());
       },
       (errMsg) => {
@@ -510,11 +692,8 @@ class ModalsAndExportController {
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }
 
@@ -525,22 +704,15 @@ class ModalsAndExportController {
     const segments = appState.state.project?.segments || [];
     const formatSrtTime = (sec) => {
       const val = Number(sec) || 0;
-      const h = Math.floor(val / 3600);
-      const m = Math.floor((val % 3600) / 60);
-      const s = Math.floor(val % 60);
-      const ms = Math.floor((val % 1) * 1000);
+      const h = Math.floor(val / 3600), m = Math.floor((val % 3600) / 60), s = Math.floor(val % 60), ms = Math.floor((val % 1) * 1000);
       return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')},${String(ms).padStart(3, '0')}`;
     };
-
     let srt = '';
     segments.forEach((seg, i) => {
       const st = seg.start_seconds ?? seg.start_time ?? 0;
       const et = seg.end_seconds ?? seg.end_time ?? (st + 2);
-      srt += `${i + 1}\n`;
-      srt += `${formatSrtTime(st)} --> ${formatSrtTime(et)}\n`;
-      srt += `${seg.normalized_text || seg.original_text || seg.raw_text || ''}\n\n`;
+      srt += `${i + 1}\n${formatSrtTime(st)} --> ${formatSrtTime(et)}\n${seg.normalized_text || seg.original_text || seg.raw_text || ''}\n\n`;
     });
-
     this.downloadFile('subtitulos_lsec.srt', srt, 'text/plain;charset=utf-8');
     if (typeof window.showToast === 'function') window.showToast('Archivo subtitulos_lsec.srt descargado.', 'success');
   }
@@ -549,21 +721,15 @@ class ModalsAndExportController {
     const segments = appState.state.project?.segments || [];
     const formatVttTime = (sec) => {
       const val = Number(sec) || 0;
-      const m = Math.floor(val / 60);
-      const s = Math.floor(val % 60);
-      const ms = Math.floor((val % 1) * 1000);
+      const m = Math.floor(val / 60), s = Math.floor(val % 60), ms = Math.floor((val % 1) * 1000);
       return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(ms).padStart(3, '0')}`;
     };
-
     let vtt = 'WEBVTT - Subtítulos Generados LSEC Studio\n\n';
     segments.forEach((seg, i) => {
       const st = seg.start_seconds ?? seg.start_time ?? 0;
       const et = seg.end_seconds ?? seg.end_time ?? (st + 2);
-      vtt += `${i + 1}\n`;
-      vtt += `${formatVttTime(st)} --> ${formatVttTime(et)}\n`;
-      vtt += `${seg.normalized_text || seg.original_text || seg.raw_text || ''}\n\n`;
+      vtt += `${i + 1}\n${formatVttTime(st)} --> ${formatVttTime(et)}\n${seg.normalized_text || seg.original_text || seg.raw_text || ''}\n\n`;
     });
-
     this.downloadFile('subtitulos_lsec.vtt', vtt, 'text/vtt;charset=utf-8');
   }
 
@@ -574,9 +740,7 @@ class ModalsAndExportController {
       const st = Number(seg.start_seconds ?? seg.start_time ?? 0).toFixed(3);
       const et = Number(seg.end_seconds ?? seg.end_time ?? 0).toFixed(3);
       const norm = `"${(seg.normalized_text || seg.raw_text || '').replace(/"/g, '""')}"`;
-      const status = seg.status || 'VALIDATED';
-      const glosses = `"${(seg.gloss_sequence || []).join(' ')}"`;
-      csv += `${i + 1},${st},${et},${norm},${status},${glosses}\n`;
+      csv += `${i + 1},${st},${et},${norm},${seg.status || 'VALIDATED'},"${(seg.gloss_sequence || []).join(' ')}"\n`;
     });
     this.downloadFile('segmentos_lsec.csv', csv, 'text/csv;charset=utf-8');
   }
@@ -587,23 +751,17 @@ class ModalsAndExportController {
     segments.forEach((seg) => {
       const st = Number(seg.start_seconds ?? seg.start_time ?? 0).toFixed(2);
       const et = Number(seg.end_seconds ?? seg.end_time ?? 0).toFixed(2);
-      txt += `[${st}s - ${et}s] Fuente: "${seg.normalized_text || seg.raw_text || ''}"\n`;
-      txt += `GLOSAS: ${(seg.gloss_sequence || []).join(' ')}\n\n`;
+      txt += `[${st}s - ${et}s] Fuente: "${seg.normalized_text || seg.raw_text || ''}"\nGLOSAS: ${(seg.gloss_sequence || []).join(' ')}\n\n`;
     });
     this.downloadFile('glosas_lsec.txt', txt, 'text/plain;charset=utf-8');
   }
 
   downloadGlossJSON() {
-    const content = JSON.stringify(appState.state.project, null, 2);
-    this.downloadFile('lsec_export.json', content, 'application/json;charset=utf-8');
+    this.downloadFile('lsec_export.json', JSON.stringify(appState.state.project, null, 2), 'application/json;charset=utf-8');
   }
 
   downloadProjectBundle() {
-    const bundle = {
-      project: appState.state.project,
-      overlays: appState.state.overlays,
-      exportedAt: new Date().toISOString()
-    };
+    const bundle = { project: appState.state.project, overlays: appState.state.overlays, exportedAt: new Date().toISOString() };
     this.downloadFile('lsec_studio_project_bundle.json', JSON.stringify(bundle, null, 2), 'application/json;charset=utf-8');
   }
 
